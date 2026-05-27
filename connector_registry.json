@@ -1,27 +1,29 @@
 {
   "version": "1.0",
-  "last_updated": "2026-05-27",
+  "last_updated": "auto",
   "connectors": [
     {
-      "name": "github",
-      "env_key": "APEX_GITHUB_TOKEN",
-      "states": ["declared", "authenticated", "reachable", "action_capable"],
-      "required": true,
-      "description": "GitHub API — repo management, issues, PRs, workflows"
+      "name": "GitHub",
+      "env_var": "GITHUB_TOKEN",
+      "endpoint": "https://api.github.com/user",
+      "required": true
     },
     {
-      "name": "notion",
-      "env_key": "APEX_NOTION_TOKEN",
-      "states": ["declared"],
-      "required": false,
-      "description": "Notion API — pages, databases, control plane docs"
+      "name": "Notion",
+      "env_var": "NOTION_TOKEN",
+      "endpoint": "https://api.notion.com/v1/users/me",
+      "required": false
     },
     {
-      "name": "supabase",
-      "env_key": "APEX_SUPABASE_KEY",
-      "states": ["declared"],
-      "required": false,
-      "description": "Supabase — audit log persistence, control plane state"
+      "name": "Supabase",
+      "env_vars": ["SUPABASE_URL", "SUPABASE_KEY"],
+      "required": false
+    },
+    {
+      "name": "OpenAI",
+      "env_var": "OPENAI_API_KEY",
+      "endpoint": "https://api.openai.com/v1/models",
+      "required": false
     }
   ]
 }

@@ -1,43 +1,42 @@
 # APEX Control Plane
 
-**Autonomous daily audit loop for the GlacierEQ sovereign operator system.**
+**Fully autonomous daily audit loop for GlacierEQ sovereign operator system.**
 
-No manual approval required. Runs every day at 08:00 HST automatically.
+Runs every day at 08:00 UTC (10:00 PM HST). Zero human approval required.
 
-## What It Does Daily
+## What it does
 
-| Layer | Task | Output |
-|-------|------|---------|
-| 1 | Connector Validation | GREEN/RED status per service |
-| 2 | Secret Leakage Scan | P0 findings w/ file:line evidence |
-| 3 | Drift Detection | P1 CI/CD and endpoint drift issues |
-| 4 | Action Queue | Ranked immediate/strategic/backlog |
-| 5 | Audit Log | Append-only JSON in `audit_logs/` |
-| 6 | GitHub Issues | Auto-opens P0 issue if found |
+1. **Connector Validation** — GitHub, Notion, Supabase, OpenAI
+2. **Secret Leakage Scan** — scans all source files for exposed credentials
+3. **Structural Analysis** — missing .gitignore, .env.example, audit_log, README
+4. **Auto-Execute Remediations** — fixes P1/P2 issues automatically, no prompts
+5. **Persist Audit Log** — writes `audit_log/run_YYYY-MM-DD.json`
+6. **Auto-Create GitHub Issues** — P0/P1 findings become issues automatically
 
-## Secrets Required (GitHub Repo Secrets)
+## Triggers
 
-```
-APEX_GITHUB_TOKEN   — fine-grained PAT with repo + issues scope
-APEX_NOTION_TOKEN   — Notion integration token (optional)
-```
+- **Scheduled**: daily at 08:00 UTC
+- **Manual**: `Actions → APEX Daily Autonomous Loop → Run workflow`
 
-## Architecture
+## Setup
+
+Add these repository secrets (Settings → Secrets → Actions):
 
 ```
-daily_audit.py          ← Main autonomous runner
-connector_registry.json ← Source of truth for all connectors
-audit_logs/             ← Append-only run records (committed daily)
-.github/workflows/
-  daily-audit.yml       ← Cron: 08:00 HST daily + workflow_dispatch
+NOTION_TOKEN       # Optional
+SUPABASE_URL       # Optional
+SUPABASE_KEY       # Optional
+OPENAI_API_KEY     # Optional
 ```
 
-## Philosophy
+`GITHUB_TOKEN` is automatically provided by GitHub Actions.
 
-- **No confirmation required.** The system acts, logs, and escalates.
-- **Reality firewall.** Every action cites a real endpoint or file path.
-- **Single source of truth.** `connector_registry.json` owns connector state.
-- **Fail loudly on P0.** GitHub issue auto-opens for any critical finding.
+## Auto-approve philosophy
 
----
-*GlacierEQ Sovereign Operator Stack | Casey Barton*
+This system is designed to **never ask for confirmation**. Every P0 is logged and issued. Every P1/P2 that can be fixed in code is fixed in code. Only credential rotation (P0-security) requires a human because no system should auto-rotate secrets it can't verify.
+
+## Logs
+
+Audit logs: `audit_log/run_YYYY-MM-DD.json`  
+Action queues: `action_queue/queue_YYYY-MM-DD.json`  
+Findings: `findings/`
