@@ -1,72 +1,65 @@
-# APEX Control Plane
+# 🧠 APEX Control Plane
 
-> Sovereign operator system for GlacierEQ — daily audit, connector registry, security hardening, action queue.
+**Sovereign Orchestration Engine — GlacierEQ**
 
-## What this does
+> Daily audit loop · Connector registry · Security hardening · Action queue · Evidence ledger
 
-- Validates all connectors (GitHub, Notion, Supabase, Redis) daily
-- Scans for secret leakage and endpoint drift
-- Ranks findings by severity (P0–P3)
-- Writes an append-only audit log to `apex_control_plane.json`
-- Commits evidence automatically via GitHub Actions
-- Emits a prioritized action queue every run
+---
 
-## Quick start
-
-```bash
-# Install (no dependencies — stdlib only)
-python apex_daily.py
-```
-
-## Secrets setup (required)
-
-Go to: **Settings → Secrets and variables → Actions**
-
-| Secret name | Value |
-|---|---|
-| `APEX_GITHUB_TOKEN` | GitHub PAT (repo + read:user scopes) |
-| `APEX_NOTION_TOKEN` | Notion integration token |
-| `APEX_SUPABASE_KEY` | Supabase service role key (optional) |
-
-**Never** hardcode tokens in source. All secrets are read from environment variables only.
-
-## Schedule
-
-Runs daily at 8:00 AM UTC (10:00 PM HST) via `.github/workflows/apex-daily.yml`.
-Manual trigger available anytime via `workflow_dispatch`.
-
-## Connector states
-
-| State | Meaning |
-|---|---|
-| `declared` | Defined in registry, not yet tested |
-| `authenticated` | Token present and valid |
-| `reachable` | API endpoint responding |
-| `action_capable` | All checks pass — safe to use |
-
-## Reality firewall
-
-Before adding any new connector or capability:
-- [ ] Can I authenticate right now with a real token?
-- [ ] Is there a public API doc URL?
-- [ ] Does a test call return 200?
-- [ ] Is the secret in env (not source)?
-
-If any box is unchecked → status = `blocked`
-
-## Files
+## Architecture
 
 ```
 apex-control-plane/
-├── apex_daily.py              # Daily audit runner
-├── apex_control_plane.json    # Control plane state + audit log
-├── connectors/
-│   ├── github_validator.py    # GitHub connector
-│   ├── notion_validator.py    # Notion connector
-│   ├── supabase_validator.py  # Supabase connector
-│   └── redis_validator.py     # Redis connector
-├── .github/
-│   └── workflows/
-│       └── apex-daily.yml     # Daily CI scheduler
-└── SECURITY.md                # Security policy
+├── apex_daily.py          # Daily autonomous audit runner
+├── apex_control_plane.json # Source-of-truth registry
+├── connectors/            # Per-service connector configs (NO SECRETS)
+├── scripts/               # Utility scripts
+├── audit_logs/            # Append-only evidence ledger
+├── action_queue/          # Ranked action items
+├── .github/workflows/     # CI: daily cron + PR checks
+├── SECURITY.md            # Credential policy
+└── README.md
 ```
+
+## Daily Loop (06:00 HST via GitHub Actions)
+
+1. **Connector Validation** — declared → authenticated → reachable → action_capable
+2. **Secret Leakage Scan** — pattern match across key repos
+3. **Endpoint Drift Check** — verify all registered API paths return 2xx
+4. **Repo Health Matrix** — open issues, stale branches, missing CI
+5. **Priority Engine** — rank findings P0→P3
+6. **Action Queue** — emit immediate/strategic/blocked buckets
+7. **Audit Log** — append-only evidence write
+8. **Issue Creation** — auto-file P0/P1 findings as GitHub Issues
+
+## Connector States
+
+| State | Meaning |
+|---|---|
+| `declared` | Config exists in registry |
+| `authenticated` | Token/key verified non-null |
+| `reachable` | API endpoint returns 2xx |
+| `action_capable` | Full CRUD operations confirmed |
+
+**A connector is NOT integrated until all four states are TRUE.**
+
+## Security Policy
+
+- **ZERO hardcoded secrets** — all credentials via GitHub Secrets / env vars
+- Secrets exposed in source → immediate revoke + rotate
+- See `SECURITY.md` for full policy
+
+## Repos Under Management
+
+- [AEON-777](https://github.com/GlacierEQ/AEON-777) — Foundation architecture
+- [apex-fs-commander](https://github.com/GlacierEQ/apex-fs-commander) — Case evidence automation
+- [SUPERLUMINAL_CASE_MATRIX](https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX) — Legal matrix
+- [aspen-grove-operator-v7](https://github.com/GlacierEQ/Z-BACKUP-aspen-grove-operator-v7) — Memory operator
+- [colossus-gateway](https://github.com/GlacierEQ/colossus-gateway) — MCP bridge
+- [sigma-flow-suite](https://github.com/GlacierEQ/sigma-flow-suite) — Flow orchestration
+
+## Operator
+
+**Casey Barton** · GlacierEQ · Honolulu, Hawaii
+
+Case reference: 1FDV-23-0001009

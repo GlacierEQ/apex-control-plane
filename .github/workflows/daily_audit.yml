@@ -1,0 +1,57 @@
+name: APEX Daily Audit Loop
+
+on:
+  schedule:
+    # 06:00 HST = 16:00 UTC
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (no issues created)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  apex-daily-audit:
+    name: Daily Audit — Connector Validation + Repo Health
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout control plane
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests
+
+      - name: Run APEX daily audit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python apex_daily.py --dry-run
+          else
+            python apex_daily.py
+          fi
+
+      - name: Upload audit log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-log-${{ github.run_id }}
+          path: audit_logs/
+          retention-days: 90
