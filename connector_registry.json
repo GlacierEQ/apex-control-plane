@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-05-27",
+  "connectors": [
+    {
+      "name": "github",
+      "env_key": "APEX_GITHUB_TOKEN",
+      "states": ["declared", "authenticated", "reachable", "action_capable"],
+      "required": true,
+      "description": "GitHub API — repo management, issues, PRs, workflows"
+    },
+    {
+      "name": "notion",
+      "env_key": "APEX_NOTION_TOKEN",
+      "states": ["declared"],
+      "required": false,
+      "description": "Notion API — pages, databases, control plane docs"
+    },
+    {
+      "name": "supabase",
+      "env_key": "APEX_SUPABASE_KEY",
+      "states": ["declared"],
+      "required": false,
+      "description": "Supabase — audit log persistence, control plane state"
+    }
+  ]
+}
