@@ -1,65 +1,52 @@
-# 🧠 APEX Control Plane
+# APEX Control Plane
 
-**Sovereign Orchestration Engine — GlacierEQ**
+**Sovereign operator system for GlacierEQ — autonomous daily audit, connector registry, security hardening, and action queue.**
 
-> Daily audit loop · Connector registry · Security hardening · Action queue · Evidence ledger
+## What this does
 
----
+- Runs every day at 8 AM HST automatically via GitHub Actions
+- Validates all connectors (GitHub, Notion, and more)
+- Scans repos for health issues, open issue drift, and fragmentation
+- Ranks all findings by severity (P0 → P3)
+- Emits a prioritized action queue
+- Commits findings to `apex_control_plane.json` as a tamper-evident audit log
+- Auto-creates GitHub issues for any P0 critical findings
 
-## Architecture
+## Zero-approval operation
+
+The workflow runs fully autonomously. No human needs to press go.
 
 ```
-apex-control-plane/
-├── apex_daily.py          # Daily autonomous audit runner
-├── apex_control_plane.json # Source-of-truth registry
-├── connectors/            # Per-service connector configs (NO SECRETS)
-├── scripts/               # Utility scripts
-├── audit_logs/            # Append-only evidence ledger
-├── action_queue/          # Ranked action items
-├── .github/workflows/     # CI: daily cron + PR checks
-├── SECURITY.md            # Credential policy
-└── README.md
+Schedule: daily 8:00 AM HST
+Trigger: also fires on every push to main
+Auto-commit: yes — audit log written back to repo
+P0 escalation: auto-creates GitHub issue with full evidence
 ```
 
-## Daily Loop (06:00 HST via GitHub Actions)
+## Setup (one-time)
 
-1. **Connector Validation** — declared → authenticated → reachable → action_capable
-2. **Secret Leakage Scan** — pattern match across key repos
-3. **Endpoint Drift Check** — verify all registered API paths return 2xx
-4. **Repo Health Matrix** — open issues, stale branches, missing CI
-5. **Priority Engine** — rank findings P0→P3
-6. **Action Queue** — emit immediate/strategic/blocked buckets
-7. **Audit Log** — append-only evidence write
-8. **Issue Creation** — auto-file P0/P1 findings as GitHub Issues
+1. Go to repo **Settings → Secrets → Actions**
+2. Add `APEX_GITHUB_TOKEN` — your GitHub PAT with `repo` scope
+3. Add `APEX_NOTION_TOKEN` — your Notion integration token
+4. Push any change to `main` to trigger the first run immediately
 
-## Connector States
+## Files
 
-| State | Meaning |
+| File | Purpose |
 |---|---|
-| `declared` | Config exists in registry |
-| `authenticated` | Token/key verified non-null |
-| `reachable` | API endpoint returns 2xx |
-| `action_capable` | Full CRUD operations confirmed |
+| `apex_daily.py` | Core audit runner — connector validation, repo scan, finding ranking |
+| `apex_control_plane.json` | Live registry — connector states, findings, audit log |
+| `.github/workflows/apex-daily.yml` | Scheduler + auto-commit + P0 escalation |
 
-**A connector is NOT integrated until all four states are TRUE.**
+## Severity levels
 
-## Security Policy
+| Level | Meaning | Auto-action |
+|---|---|---|
+| P0 | Critical — broken auth, exposed secrets | Creates GitHub issue immediately |
+| P1 | High — connectivity failure, token expired | Added to immediate queue |
+| P2 | Medium — repo drift, stale issues | Added to strategic queue |
+| P3 | Low — hygiene, archiving | Added to blocked queue |
 
-- **ZERO hardcoded secrets** — all credentials via GitHub Secrets / env vars
-- Secrets exposed in source → immediate revoke + rotate
-- See `SECURITY.md` for full policy
+## Expanding connectors
 
-## Repos Under Management
-
-- [AEON-777](https://github.com/GlacierEQ/AEON-777) — Foundation architecture
-- [apex-fs-commander](https://github.com/GlacierEQ/apex-fs-commander) — Case evidence automation
-- [SUPERLUMINAL_CASE_MATRIX](https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX) — Legal matrix
-- [aspen-grove-operator-v7](https://github.com/GlacierEQ/Z-BACKUP-aspen-grove-operator-v7) — Memory operator
-- [colossus-gateway](https://github.com/GlacierEQ/colossus-gateway) — MCP bridge
-- [sigma-flow-suite](https://github.com/GlacierEQ/sigma-flow-suite) — Flow orchestration
-
-## Operator
-
-**Casey Barton** · GlacierEQ · Honolulu, Hawaii
-
-Case reference: 1FDV-23-0001009
+Add a new `validate_X()` function in `apex_daily.py` following the same pattern as `validate_github()` and `validate_notion()`. The system picks it up automatically on the next run.

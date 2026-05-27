@@ -1,62 +1,32 @@
 {
   "version": "2.0.0",
-  "operator": "GlacierEQ",
-  "updated": "2026-05-27",
-  "control_plane_repo": "GlacierEQ/apex-control-plane",
-  "daily_loop_schedule": "0 16 * * *",
-  "daily_loop_schedule_note": "06:00 HST = 16:00 UTC",
-  "connectors": [
-    {
-      "id": "github",
-      "name": "GitHub",
-      "state": "action_capable",
-      "base_url": "https://api.github.com",
-      "secret_ref": "GITHUB_TOKEN",
-      "capabilities": ["repos", "issues", "prs", "actions", "code_search"],
-      "last_validated": null
+  "owner": "GlacierEQ",
+  "created": "2026-05-27T21:33:00Z",
+  "run_count": 0,
+  "last_run": null,
+  "last_summary": null,
+  "connectors": {
+    "github": {
+      "status": "declared",
+      "owner": "GlacierEQ",
+      "auth_method": "PAT_ENV",
+      "env_key": "APEX_GITHUB_TOKEN",
+      "verified": false
     },
-    {
-      "id": "notion",
-      "name": "Notion",
-      "state": "declared",
-      "base_url": "https://api.notion.com/v1",
-      "secret_ref": "NOTION_TOKEN",
-      "capabilities": ["pages", "databases", "search", "comments"],
-      "last_validated": null
-    },
-    {
-      "id": "supabase",
-      "name": "Supabase",
-      "state": "declared",
-      "base_url": null,
-      "secret_ref": "SUPABASE_URL,SUPABASE_ANON_KEY",
-      "capabilities": ["database", "storage", "realtime"],
-      "last_validated": null
-    },
-    {
-      "id": "perplexity",
-      "name": "Perplexity AI",
-      "state": "declared",
-      "base_url": "https://api.perplexity.ai",
-      "secret_ref": "PERPLEXITY_API_KEY",
-      "capabilities": ["search", "reasoning"],
-      "last_validated": null
+    "notion": {
+      "status": "declared",
+      "auth_method": "INTEGRATION_TOKEN_ENV",
+      "env_key": "APEX_NOTION_TOKEN",
+      "verified": false
     }
-  ],
-  "repos_under_management": [
-    {"repo": "GlacierEQ/AEON-777", "priority": "P0", "domain": "foundation"},
-    {"repo": "GlacierEQ/apex-fs-commander", "priority": "P0", "domain": "case_evidence"},
-    {"repo": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX", "priority": "P0", "domain": "legal"},
-    {"repo": "GlacierEQ/Z-BACKUP-aspen-grove-operator-v7", "priority": "P1", "domain": "memory"},
-    {"repo": "GlacierEQ/colossus-gateway", "priority": "P1", "domain": "mcp_bridge"},
-    {"repo": "GlacierEQ/sigma-flow-suite", "priority": "P1", "domain": "orchestration"},
-    {"repo": "GlacierEQ/apex-control-plane", "priority": "P0", "domain": "control_plane"}
-  ],
-  "action_queue_buckets": ["immediate_fix", "strategic_consolidation", "blocked_by_auth"],
-  "severity_levels": ["P0", "P1", "P2", "P3"],
-  "audit_log_path": "audit_logs/",
+  },
   "reality_firewall": {
-    "rule": "No capability may be added to the registry unless it has a verified reachable API path and authenticated connector",
-    "enforced_by": "connector_validation step in daily loop"
-  }
+    "rules": [
+      "connector must be authenticated before marked active",
+      "no secrets in source files — env vars only",
+      "all findings must have evidence and action",
+      "P0 findings auto-create GitHub issues"
+    ]
+  },
+  "audit_log": []
 }
