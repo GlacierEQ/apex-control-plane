@@ -1,0 +1,39 @@
+name: APEX Daily Audit
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # 8:00 AM UTC = 10:00 PM HST
+  workflow_dispatch:        # manual trigger anytime via GitHub UI
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run APEX Daily Audit
+        env:
+          APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}
+          APEX_NOTION_TOKEN: ${{ secrets.APEX_NOTION_TOKEN }}
+          APEX_SUPABASE_URL: ${{ secrets.APEX_SUPABASE_URL }}
+          APEX_SUPABASE_KEY: ${{ secrets.APEX_SUPABASE_KEY }}
+          APEX_REDIS_URL:    ${{ secrets.APEX_REDIS_URL }}
+          GITHUB_OWNER:      GlacierEQ
+        run: python apex_daily.py
+
+      - name: Commit audit log
+        run: |
+          git config user.email "apex-bot@glaciereq.local"
+          git config user.name "APEX Audit Bot"
+          git add apex_control_plane.json || true
+          git diff --staged --quiet || git commit -m "chore(audit): APEX daily run $(date -u +%Y-%m-%dT%H:%M)Z"
+          git push || true

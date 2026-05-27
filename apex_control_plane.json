@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "operator": "casey / GlacierEQ",
+  "created": "2026-05-27T00:00:00Z",
+  "connectors": {
+    "github": {
+      "state": "declared",
+      "auth_method": "PAT_ENV",
+      "env_key": "APEX_GITHUB_TOKEN",
+      "owner": "GlacierEQ",
+      "verified": false
+    },
+    "notion": {
+      "state": "declared",
+      "auth_method": "INTEGRATION_TOKEN_ENV",
+      "env_key": "APEX_NOTION_TOKEN",
+      "verified": false
+    },
+    "supabase": {
+      "state": "declared",
+      "auth_method": "SERVICE_KEY_ENV",
+      "env_key": "APEX_SUPABASE_KEY",
+      "verified": false
+    },
+    "redis": {
+      "state": "declared",
+      "auth_method": "URL_ENV",
+      "env_key": "APEX_REDIS_URL",
+      "verified": false
+    }
+  },
+  "action_queue": {
+    "immediate": [
+      "Add APEX_GITHUB_TOKEN secret to this repo (Settings → Secrets → Actions)",
+      "Add APEX_NOTION_TOKEN secret to this repo",
+      "Revoke any previously exposed tokens and rotate"
+    ],
+    "strategic": [
+      "Wire Supabase and Redis connectors once keys are available",
+      "Review 910 repos for consolidation candidates",
+      "Establish single source-of-truth for system state"
+    ],
+    "blocked": []
+  },
+  "audit_log": [
+    {
+      "timestamp": "2026-05-27T00:00:00Z",
+      "event": "control_plane_initialized",
+      "operator": "apex-control-plane bootstrap",
+      "findings": [
+        {"severity": "P0", "domain": "security", "title": "Secrets not yet set", "action": "Add GitHub Secrets before first automated run"},
+        {"severity": "P1", "domain": "architecture", "title": "910 repos — no registry", "action": "Audit and tag repos by function; consolidate duplicates"},
+        {"severity": "P1", "domain": "architecture", "title": "No single source of truth", "action": "This file is now the canonical state — all automation writes here"}
+      ]
+    }
+  ]
+}
