@@ -1,57 +1,53 @@
-name: APEX Daily Audit Loop
+name: Daily Connector Audit
 
 on:
   schedule:
-    # 06:00 HST = 16:00 UTC
-    - cron: '0 16 * * *'
+    # 06:00 UTC daily (08:00 HST in summer, adjusts for DST)
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: 'Dry run mode (no issues created)'
+      reason:
+        description: 'Manual trigger reason'
         required: false
-        default: 'false'
-        type: boolean
+        default: 'manual run'
 
 jobs:
-  apex-daily-audit:
-    name: Daily Audit — Connector Validation + Repo Health
+  audit:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      contents: read
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout control plane
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install requests
+        run: pip install psycopg2-binary supermemory python-dotenv requests
 
-      - name: Run APEX daily audit
+      - name: Run audit loop
         env:
+          SUPERMEMORY_API_KEY: ${{ secrets.SUPERMEMORY_API_KEY }}
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          CLICKUP_API_KEY: ${{ secrets.CLICKUP_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          QDRANT_URL: ${{ secrets.QDRANT_URL }}
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
-        run: |
-          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            python apex_daily.py --dry-run
-          else
-            python apex_daily.py
-          fi
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python integration/supermemory_neon/audit_loop.py
 
-      - name: Upload audit log artifact
+      - name: Upload audit log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: audit-log-${{ github.run_id }}
-          path: audit_logs/
-          retention-days: 90
+          path: integration/supermemory_neon/audit_output/
+          retention-days: 30
+          if-no-files-found: ignore
