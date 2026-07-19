@@ -8,7 +8,10 @@ on:
 
 jobs:
   ci:
-    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-quick-ci.yml@main
+    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@main
     with:
       repo_name: ${{ github.event.repository.name }}
       language: python
+      run_tests: true
+      run_lint: true
+      run_security: true
