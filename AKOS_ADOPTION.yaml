@@ -1,0 +1,43 @@
+canonical_id: SYS-APEX-CONTROL-PLANE-001
+family_id: FAM-CASEBRAIN
+name: apex-control-plane
+version: 1.0.0
+status: sandbox_candidate
+owner: GlacierEQ
+repository: GlacierEQ/apex-control-plane
+primary_layer: Runtime Control Plane
+purpose: >
+  Bounded CASEBRAIN runtime for validated event envelopes, capacity-aware worker
+  dispatch, timeline calculation, threat-signal triage, deterministic
+  recommendations, immutable receipts, retries, circuit breakers, and dead-letter
+  handling. It does not own case facts, evidence, or filing authority.
+principles:
+  - identity_first
+  - provenance_required
+  - one_truth_many_views
+  - claim_classes_never_collapse
+  - external_actions_require_named_human_approval
+  - connector_presence_is_not_runtime_proof
+quality_gates:
+  naming: gate_checked
+  architecture: gate_checked
+  failure_handling: gate_checked
+  maintainability: gate_checked
+  authenticity: gate_checked
+  observability: gate_checked
+  documentation: gate_checked
+dependencies:
+  - repository: GlacierEQ/AKOS
+    path: contracts/AKOS-FEDERATION-CONTRACT-001.md
+    revision: review-required
+  - repository: GlacierEQ/AKOS
+    path: methodologies/pro_code/AKOS-PROCODE-001.md
+    revision: review-required
+security:
+  embedded_secrets: prohibited
+  secret_transport: environment_or_secret_manager_reference_only
+  external_action_default: deny
+verification:
+  runtime_state: dry_run_pending
+  verified_live: false
+  required_receipt: one audited read-only source-to-recall slice
