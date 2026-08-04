@@ -34,6 +34,14 @@ class PrimeDirectiveBootValidation:
     errors: tuple[str, ...]
 
 
+_IN_PROCESS_VALIDATION: PrimeDirectiveBootValidation | None = None
+
+
+def get_in_process_boot_validation() -> PrimeDirectiveBootValidation | None:
+    """Return only proof produced inside the current Python process."""
+    return _IN_PROCESS_VALIDATION
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -212,6 +220,11 @@ def build_prime_directive_boot_request(
 
 def automatic_prime_directive_boot() -> PrimeDirectiveBootValidation | None:
     """Validate the combined continuity and Prime Directive receipt."""
+    global _IN_PROCESS_VALIDATION
+
+    if _IN_PROCESS_VALIDATION is not None:
+        return _IN_PROCESS_VALIDATION
+
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
     if mode == "off" or os.getenv("CASEY_AUTO_BOOT_DISABLE") == "1":
         os.environ["GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS"] = "off"
@@ -258,15 +271,16 @@ def automatic_prime_directive_boot() -> PrimeDirectiveBootValidation | None:
         errors.append("no boot receipt supplied")
 
     if not errors:
-        os.environ["CASEY_BOOT_STATUS"] = "complete"
-        os.environ["GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS"] = "complete"
-        os.environ["GLACIEREQ_BOOT_RECEIPT_VERIFIED"] = "1"
-        return PrimeDirectiveBootValidation(
+        _IN_PROCESS_VALIDATION = PrimeDirectiveBootValidation(
             ok=True,
             status="complete",
             profiles=tuple(profiles),
             errors=(),
         )
+        os.environ["CASEY_BOOT_STATUS"] = "complete"
+        os.environ["GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS"] = "complete"
+        os.environ["GLACIEREQ_BOOT_RECEIPT_VERIFIED"] = "1"
+        return _IN_PROCESS_VALIDATION
 
     request = build_prime_directive_boot_request(
         manifest,
@@ -281,15 +295,16 @@ def automatic_prime_directive_boot() -> PrimeDirectiveBootValidation | None:
     sys.stderr.flush()
 
     if mode == "request":
-        os.environ["CASEY_BOOT_STATUS"] = "degraded"
-        os.environ["GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS"] = "degraded"
-        return PrimeDirectiveBootValidation(
+        _IN_PROCESS_VALIDATION = PrimeDirectiveBootValidation(
             ok=False,
             status="degraded",
             profiles=tuple(profiles),
             errors=tuple(errors),
         )
+        os.environ["CASEY_BOOT_STATUS"] = "degraded"
+        os.environ["GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS"] = "degraded"
+        return _IN_PROCESS_VALIDATION
 
     os.environ["CASEY_BOOT_STATUS"] = "blocked"
     os.environ["GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS"] = "blocked"
-    os._exit(EXIT_BOOT_BLOCKED)
+    raise SystemExit(EXIT_BOOT_BLOCKED)
