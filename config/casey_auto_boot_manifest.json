@@ -12,7 +12,7 @@
   },
   "prime_directive": {
     "policy_path": "config/prime_directive_policy.json",
-    "policy_schema_version": "1.0.1",
+    "policy_schema_version": "1.0.2",
     "agent_prompt_path": "AGENT_SYSTEM_PROMPT.md",
     "state_path": "STATE.md",
     "enforcer_module": "src/prime_directive_enforcer.py",
