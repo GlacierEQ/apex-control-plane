@@ -8,19 +8,19 @@ the boot gate.
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 import runpy
 
 
 if __name__ == "__main__":
-    from prime_directive_boot import automatic_prime_directive_boot
+    from prime_directive_boot import (
+        automatic_prime_directive_boot,
+        get_in_process_boot_validation,
+    )
 
-    # The optional site hook may already have completed the combined gate.
-    if os.getenv("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") not in {
-        "complete",
-        "degraded",
-    }:
+    # Caller-controlled environment variables are status projections, not proof.
+    # Skip only when this Python process already produced a validation object.
+    if get_in_process_boot_validation() is None:
         automatic_prime_directive_boot()
 
     runpy.run_path(
