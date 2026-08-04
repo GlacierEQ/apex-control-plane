@@ -19,6 +19,8 @@ from typing import Any, Mapping, Sequence
 LOGGER = logging.getLogger("glaciereq.gatekeeper")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "config" / "prime_directive_policy.json"
+_MAX_PENDING_CALLS = 256
+_TEXT_FIELDS = ("content", "refusal", "reasoning", "output", "output_text")
 
 
 class GateViolation(RuntimeError):
@@ -38,6 +40,8 @@ class GateSnapshot:
     memory_search_complete: bool
     ground_truth_files_loaded: tuple[str, ...]
     tool_inventory_complete: bool
+    current_source_complete: bool
+    receipt_validation_complete: bool
     tools_invoked: tuple[str, ...]
     successful_tools: tuple[str, ...]
     missing_stages: tuple[str, ...]
@@ -51,6 +55,8 @@ class _MutableState:
     memory_search_complete: bool = False
     ground_truth_files_loaded: set[str] = field(default_factory=set)
     tool_inventory_complete: bool = False
+    current_source_complete: bool = False
+    receipt_validation_complete: bool = False
     tools_invoked: list[str] = field(default_factory=list)
     successful_tools: list[str] = field(default_factory=list)
     pending_calls: dict[str, ToolInvocation] = field(default_factory=dict)
@@ -107,28 +113,30 @@ class StartupGateEnforcer:
     def intercept_llm_response(self, llm_output: Mapping[str, Any]) -> dict[str, Any]:
         """Return a tool-only message, allowed text, or a hard correction.
 
-        Pre-gate messages containing tool calls are allowed, but any accompanying
-        conversational content is removed. Pre-gate text without tool calls is
-        rejected regardless of whether it contains a configured failure phrase.
+        Pre-gate messages containing tool calls are allowed, but all supported
+        provider text fields are suppressed. Pre-gate text without tool calls is
+        rejected. Once terminally blocked, every later response remains blocked.
         """
         if not isinstance(llm_output, Mapping):
             raise TypeError("llm_output must be a mapping")
 
-        output = dict(llm_output)
-        calls = _extract_tool_calls(output)
-
         with self._lock:
+            if self._state.terminal_blocked:
+                return self._terminal_block_payload()
+
+            output = dict(llm_output)
+            calls = _extract_tool_calls(output)
             if calls:
                 for invocation in calls:
                     self._record_invocation(invocation)
-                if not self._state.gate_passed and output.get("content"):
-                    output["content"] = ""
+                if not self._state.gate_passed:
+                    output = _suppress_provider_text(output)
                 return output
 
             if self._state.gate_passed:
                 return output
 
-            return self._hard_correction(str(output.get("content", "")))
+            return self._hard_correction(_collect_provider_text(output))
 
     def record_tool_result(
         self,
@@ -142,6 +150,9 @@ class StartupGateEnforcer:
         """Record one executed tool result and advance only proven stages."""
         normalized = _normalize_tool_name(tool_name)
         with self._lock:
+            if self._state.terminal_blocked:
+                raise GateViolation("startup gate is terminally blocked")
+
             if call_id and call_id in self._state.pending_calls:
                 pending = self._state.pending_calls.pop(call_id)
                 if arguments is None:
@@ -175,14 +186,42 @@ class StartupGateEnforcer:
             self._complete_if_ready()
             return self.snapshot()
 
-    def mark_gate_passed(self) -> GateSnapshot:
-        """Complete the local middleware gate only from recorded stage proof.
+    def attach_boot_validation(self, validation: Any) -> GateSnapshot:
+        """Attach a sealed combined receipt validation issued in this process.
 
-        Provider-backed boot receipts are validated by ``prime_directive_boot``.
-        They are deliberately not accepted here as arbitrary mappings or objects,
-        because a caller could forge their fields and bypass every local stage.
+        A complete combined validation proves the memory search, ground-truth
+        bytes, loaded-tool inventory, current-source receipt, and receipt
+        validation stages. Arbitrary mappings and hand-built dataclasses are
+        rejected.
         """
+        from prime_directive_boot import is_authentic_validation
+
         with self._lock:
+            if self._state.terminal_blocked:
+                raise GateViolation("startup gate is terminally blocked")
+            if not is_authentic_validation(validation):
+                raise GateViolation("boot validation is not authentic")
+            if (
+                not bool(getattr(validation, "ok", False))
+                or str(getattr(validation, "status", "")) != "complete"
+                or bool(getattr(validation, "errors", ()))
+            ):
+                raise GateViolation("boot validation is not complete")
+
+            self._state.memory_search_complete = True
+            self._state.ground_truth_files_loaded.update(self._required_files)
+            self._state.tool_inventory_complete = True
+            self._state.current_source_complete = True
+            self._state.receipt_validation_complete = True
+            self._state.gate_passed = True
+            self._audit("gate_complete", source="sealed_combined_validation")
+            return self.snapshot()
+
+    def mark_gate_passed(self) -> GateSnapshot:
+        """Complete the local gate only when all five stages are recorded."""
+        with self._lock:
+            if self._state.terminal_blocked:
+                raise GateViolation("startup gate is terminally blocked")
             missing = self._missing_stages()
             if missing:
                 raise GateViolation("cannot mark gate passed; missing: " + ", ".join(missing))
@@ -199,6 +238,8 @@ class StartupGateEnforcer:
                     sorted(self._state.ground_truth_files_loaded)
                 ),
                 tool_inventory_complete=self._state.tool_inventory_complete,
+                current_source_complete=self._state.current_source_complete,
+                receipt_validation_complete=self._state.receipt_validation_complete,
                 tools_invoked=tuple(self._state.tools_invoked),
                 successful_tools=tuple(self._state.successful_tools),
                 missing_stages=tuple(self._missing_stages()),
@@ -216,6 +257,10 @@ class StartupGateEnforcer:
         if normalized and normalized not in self._state.tools_invoked:
             self._state.tools_invoked.append(normalized)
         if invocation.call_id:
+            if len(self._state.pending_calls) >= _MAX_PENDING_CALLS:
+                oldest = next(iter(self._state.pending_calls))
+                self._state.pending_calls.pop(oldest, None)
+                self._audit("pending_call_evicted", success=False)
             self._state.pending_calls[invocation.call_id] = ToolInvocation(
                 name=normalized,
                 arguments=invocation.arguments,
@@ -245,7 +290,7 @@ class StartupGateEnforcer:
         return any(tool_name.endswith(f".{alias}") for alias in aliases if "." not in alias)
 
     def _complete_if_ready(self) -> None:
-        if not self._missing_stages():
+        if not self._state.terminal_blocked and not self._missing_stages():
             self._state.gate_passed = True
             self._audit("gate_complete", source="recorded_tool_results")
 
@@ -258,6 +303,10 @@ class StartupGateEnforcer:
             missing.append("ground_truth_read:" + ",".join(missing_files))
         if not self._state.tool_inventory_complete:
             missing.append("tool_inventory")
+        if not self._state.current_source_complete:
+            missing.append("current_source_open")
+        if not self._state.receipt_validation_complete:
+            missing.append("receipt_validation")
         return missing
 
     def _hard_correction(self, content: str) -> dict[str, Any]:
@@ -273,18 +322,9 @@ class StartupGateEnforcer:
         limit = int(self.policy.get("max_corrections_before_terminal_block", 8))
         if self._state.corrections_issued > limit:
             self._state.terminal_blocked = True
+            self._state.gate_passed = False
             self._audit("terminal_block", trigger=trigger, success=False)
-            return {
-                "role": str(self.policy.get("hard_correction_role", "system")),
-                "type": "startup_gate_terminal_block",
-                "content": (
-                    "SYSTEM OVERRIDE: STARTUP GATE REMAINS BLOCKED. "
-                    "Do not emit user-facing text. Stop the execution loop and surface "
-                    "the unresolved startup-stage receipt to the runtime operator."
-                ),
-                "missing_stages": self._missing_stages(),
-                "gate_passed": False,
-            }
+            return self._terminal_block_payload()
 
         self._audit("hard_correction", trigger=trigger, success=False)
         numbered = []
@@ -294,8 +334,12 @@ class StartupGateEnforcer:
             elif stage.startswith("ground_truth_read:"):
                 files = stage.split(":", 1)[1]
                 instruction = f"Read and hash-verify the missing ground-truth file(s): {files}."
-            else:
+            elif stage == "tool_inventory":
                 instruction = "List the tools and connectors actually loaded in this worker."
+            elif stage == "current_source_open":
+                instruction = "Open the current task sources required by the active profile."
+            else:
+                instruction = "Build and validate the combined provider-backed startup receipt."
             numbered.append(f"{index}. {instruction}")
 
         return {
@@ -310,6 +354,19 @@ class StartupGateEnforcer:
             "missing_stages": self._missing_stages(),
             "gate_passed": False,
             "correction_number": self._state.corrections_issued,
+        }
+
+    def _terminal_block_payload(self) -> dict[str, Any]:
+        return {
+            "role": str(self.policy.get("hard_correction_role", "system")),
+            "type": "startup_gate_terminal_block",
+            "content": (
+                "SYSTEM OVERRIDE: STARTUP GATE REMAINS BLOCKED. "
+                "Do not emit user-facing text. Stop the execution loop and surface "
+                "the unresolved startup-stage receipt to the runtime operator."
+            ),
+            "missing_stages": self._missing_stages(),
+            "gate_passed": False,
         }
 
     def _audit(self, event_type: str, **fields: Any) -> None:
@@ -361,6 +418,46 @@ def _extract_tool_calls(output: Mapping[str, Any]) -> tuple[ToolInvocation, ...]
                 )
             )
     return tuple(calls)
+
+
+def _suppress_provider_text(output: Mapping[str, Any]) -> dict[str, Any]:
+    scrubbed = dict(output)
+    for field in _TEXT_FIELDS:
+        if field not in scrubbed:
+            continue
+        value = scrubbed[field]
+        if isinstance(value, str):
+            scrubbed[field] = ""
+        elif isinstance(value, list):
+            scrubbed[field] = [_scrub_nested_text(item) for item in value]
+        elif isinstance(value, Mapping):
+            scrubbed[field] = _scrub_nested_text(value)
+        else:
+            scrubbed[field] = None
+    return scrubbed
+
+
+def _scrub_nested_text(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_scrub_nested_text(item) for item in value]
+    if not isinstance(value, Mapping):
+        return value
+    scrubbed = dict(value)
+    for key, item in list(scrubbed.items()):
+        if key in _TEXT_FIELDS and isinstance(item, str):
+            scrubbed[key] = ""
+        elif isinstance(item, (Mapping, list)):
+            scrubbed[key] = _scrub_nested_text(item)
+    return scrubbed
+
+
+def _collect_provider_text(output: Mapping[str, Any]) -> str:
+    values: list[str] = []
+    for field in _TEXT_FIELDS:
+        value = output.get(field)
+        if isinstance(value, str):
+            values.append(value)
+    return "\n".join(values)
 
 
 def _stable_text(value: Any) -> str:
