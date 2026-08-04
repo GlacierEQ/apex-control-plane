@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1.1",
+  "schema_version": "1.2.0",
   "manifest_name": "Casey Continuity Auto-Boot",
   "mem_collection": {
     "title": "00 AUTO BOOT — Casey Continuity Gate",
@@ -9,6 +9,18 @@
     "title": "000 AUTO-BOOT MANIFEST — CASEY CONTINUITY GATE — CANONICAL v1.0.0",
     "id": "6925915b-33d6-5fc9-b499-4fbe78790413",
     "version": 1
+  },
+  "prime_directive": {
+    "policy_path": "config/prime_directive_policy.json",
+    "policy_schema_version": "1.0.0",
+    "agent_prompt_path": "AGENT_SYSTEM_PROMPT.md",
+    "state_path": "STATE.md",
+    "enforcer_module": "src/prime_directive_enforcer.py",
+    "boot_module": "src/prime_directive_boot.py",
+    "requires_memory_search": true,
+    "requires_ground_truth_hash_verification": true,
+    "requires_tool_inventory": true,
+    "blocks_user_facing_text_until_complete": true
   },
   "profiles": {
     "always": [
@@ -83,9 +95,19 @@
       "requires_matter_lane": true
     }
   },
-  "default_profiles": ["always", "systems"],
-  "receipt_statuses": ["complete", "degraded", "blocked"],
-  "deadline_check_statuses": ["verified", "not_relevant"],
+  "default_profiles": [
+    "always",
+    "systems"
+  ],
+  "receipt_statuses": [
+    "complete",
+    "degraded",
+    "blocked"
+  ],
+  "deadline_check_statuses": [
+    "verified",
+    "not_relevant"
+  ],
   "fail_closed": true,
   "security": {
     "never_embed_secrets": true,
