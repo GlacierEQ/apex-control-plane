@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Optional Python startup hook for the Casey continuity gate.
+"""Optional Python startup hook for the combined GlacierEQ startup gate.
 
 The canonical enforcement path is the explicit wrapper in
-``src/control_plane.py``. This hook supplies the same gate when ``src`` is
-already present on ``PYTHONPATH`` or when another entrypoint is forced with
-``CASEY_AUTO_BOOT=1``.
+``src/control_plane.py``. This hook supplies the same Prime Directive and
+continuity gate when ``src`` is already present on ``PYTHONPATH`` or when
+another entrypoint is forced with ``CASEY_AUTO_BOOT=1``.
 
-The hook skips the verifier CLI and pytest and fails closed with exit code 78
-unless the boot mode is explicitly ``request`` or ``off``.
+The hook skips verifier CLIs and pytest and fails closed with exit code 78 unless
+boot mode is explicitly ``request`` or ``off``.
 """
 from __future__ import annotations
 
@@ -43,7 +43,11 @@ def _should_boot() -> bool:
         return False
 
     entrypoint = _entrypoint_name()
-    if entrypoint == "auto_boot.py" or _is_pytest_startup():
+    if entrypoint in {
+        "auto_boot.py",
+        "prime_directive_boot.py",
+        "prime_directive_enforcer.py",
+    } or _is_pytest_startup():
         return False
 
     if os.getenv("CASEY_AUTO_BOOT", "0") == "1":
@@ -55,6 +59,7 @@ def _should_boot() -> bool:
 def _fail_closed(exc: BaseException) -> None:
     payload = {
         "boot_status": "blocked",
+        "prime_directive_status": "blocked",
         "error": f"{type(exc).__name__}: {exc}",
         "entrypoint": _entrypoint_path(),
         "external_action_authorized": False,
@@ -66,9 +71,9 @@ def _fail_closed(exc: BaseException) -> None:
 
 if _should_boot():
     try:
-        from auto_boot import automatic_boot
+        from prime_directive_boot import automatic_prime_directive_boot
 
-        automatic_boot()
+        automatic_prime_directive_boot()
     except SystemExit:
         raise
     except BaseException as exc:  # startup boundary must never fail open
