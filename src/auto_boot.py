@@ -60,6 +60,7 @@ def load_manifest(path: Path | None = None) -> dict[str, Any]:
         "mem_collection",
         "canonical_mem_manifest",
         "profiles",
+        "required_note_versions",
         "default_profiles",
     }
     missing = sorted(required_keys.difference(manifest))
@@ -67,6 +68,8 @@ def load_manifest(path: Path | None = None) -> dict[str, Any]:
         raise BootError(f"manifest missing keys: {', '.join(missing)}")
     if not isinstance(manifest["profiles"], dict):
         raise BootError("manifest.profiles must be an object")
+    if not isinstance(manifest["required_note_versions"], dict):
+        raise BootError("manifest.required_note_versions must be an object")
     return manifest
 
 
@@ -111,6 +114,33 @@ def required_note_ids(
     return tuple(output)
 
 
+def required_note_versions(
+    manifest: Mapping[str, Any],
+    profiles: Sequence[str],
+    *,
+    restricted_authorized: bool = False,
+) -> dict[str, int]:
+    ids = required_note_ids(
+        manifest,
+        profiles,
+        restricted_authorized=restricted_authorized,
+    )
+    version_map = manifest.get("required_note_versions", {})
+    output: dict[str, int] = {}
+    for note_id in ids:
+        raw_version = version_map.get(note_id)
+        if isinstance(raw_version, bool):
+            raise BootError(f"invalid required version for note {note_id}")
+        try:
+            version = int(raw_version)
+        except (TypeError, ValueError) as exc:
+            raise BootError(f"missing or invalid required version for note {note_id}") from exc
+        if version < 1:
+            raise BootError(f"required note version must be >= 1 for {note_id}")
+        output[note_id] = version
+    return output
+
+
 def build_boot_request(
     manifest: Mapping[str, Any],
     profiles: Sequence[str],
@@ -118,7 +148,7 @@ def build_boot_request(
     task: str = "resume highest-value unfinished material action",
     restricted_authorized: bool = False,
 ) -> dict[str, Any]:
-    notes = required_note_ids(
+    versions = required_note_versions(
         manifest,
         profiles,
         restricted_authorized=restricted_authorized,
@@ -130,10 +160,14 @@ def build_boot_request(
         "boot_manifest_version": manifest["canonical_mem_manifest"]["version"],
         "mem_collection_id": manifest["mem_collection"]["id"],
         "profiles": list(profiles),
-        "required_note_ids": list(notes),
+        "required_note_ids": list(versions),
+        "required_notes": [
+            {"id": note_id, "version": version}
+            for note_id, version in versions.items()
+        ],
         "task": task,
         "requirements": {
-            "fetch_each_note_by_exact_id": True,
+            "fetch_each_note_by_exact_id_and_version": True,
             "search_result_is_not_loaded_note": True,
             "open_current_task_sources": True,
             "emit_provider_receipt": True,
@@ -147,7 +181,10 @@ def build_boot_request(
             "boot_profile": "array[string]",
             "notes_loaded": "array[{id:string,version:integer}]",
             "sources_opened": "array[{system:string,object_id:string,version:string|null}]",
+            "repository_receipts": "array[{repository:string,revision:string,checked_at:string}]",
             "case_lane": "string|null",
+            "matter_lane": "string|null",
+            "deadline_check": "{status:verified|not_relevant,source_ids:array[string],reason:string|null}",
             "restricted_context": "boolean",
             "current_task": "string",
             "next_material_action": "string",
@@ -177,19 +214,105 @@ def _receipt_from_environment() -> dict[str, Any] | None:
     return None
 
 
-def _loaded_note_ids(receipt: Mapping[str, Any]) -> tuple[str, ...]:
-    loaded: list[str] = []
-    rows = receipt.get("notes_loaded", ())
+def _loaded_note_versions(receipt: Mapping[str, Any]) -> tuple[dict[str, int], list[str]]:
+    loaded: dict[str, int] = {}
+    errors: list[str] = []
+    rows = receipt.get("notes_loaded")
     if not isinstance(rows, list):
-        return ()
-    for row in rows:
-        if isinstance(row, Mapping):
-            note_id = str(row.get("id", "")).strip()
-        else:
-            note_id = str(row).strip()
-        if note_id and note_id not in loaded:
-            loaded.append(note_id)
-    return tuple(loaded)
+        return loaded, ["notes_loaded must be an array"]
+    for index, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            errors.append(f"notes_loaded[{index}] must be an object")
+            continue
+        note_id = str(row.get("id", "")).strip()
+        if not note_id:
+            errors.append(f"notes_loaded[{index}].id is required")
+            continue
+        raw_version = row.get("version")
+        if isinstance(raw_version, bool):
+            errors.append(f"notes_loaded[{index}].version must be an integer")
+            continue
+        try:
+            version = int(raw_version)
+        except (TypeError, ValueError):
+            errors.append(f"notes_loaded[{index}].version must be an integer")
+            continue
+        if version < 1:
+            errors.append(f"notes_loaded[{index}].version must be >= 1")
+            continue
+        if note_id in loaded and loaded[note_id] != version:
+            errors.append(f"conflicting loaded versions for note {note_id}")
+            continue
+        loaded[note_id] = version
+    return loaded, errors
+
+
+def _validate_sources(receipt: Mapping[str, Any]) -> tuple[int, list[str]]:
+    rows = receipt.get("sources_opened")
+    if not isinstance(rows, list):
+        return 0, ["sources_opened must be an array"]
+    valid = 0
+    errors: list[str] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            errors.append(f"sources_opened[{index}] must be an object")
+            continue
+        system = str(row.get("system", "")).strip()
+        object_id = str(row.get("object_id", "")).strip()
+        if not system:
+            errors.append(f"sources_opened[{index}].system is required")
+        if not object_id:
+            errors.append(f"sources_opened[{index}].object_id is required")
+        if "version" not in row:
+            errors.append(f"sources_opened[{index}].version key is required")
+        if system and object_id and "version" in row:
+            valid += 1
+    return valid, errors
+
+
+def _validate_repository_receipts(receipt: Mapping[str, Any]) -> tuple[int, list[str]]:
+    rows = receipt.get("repository_receipts")
+    if not isinstance(rows, list):
+        return 0, ["repository_receipts must be an array"]
+    valid = 0
+    errors: list[str] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            errors.append(f"repository_receipts[{index}] must be an object")
+            continue
+        repository = str(row.get("repository", "")).strip()
+        revision = str(row.get("revision", "")).strip()
+        checked_at = str(row.get("checked_at", "")).strip()
+        if not repository:
+            errors.append(f"repository_receipts[{index}].repository is required")
+        if not revision:
+            errors.append(f"repository_receipts[{index}].revision is required")
+        if not checked_at:
+            errors.append(f"repository_receipts[{index}].checked_at is required")
+        if repository and revision and checked_at:
+            valid += 1
+    return valid, errors
+
+
+def _validate_deadline_check(
+    manifest: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+) -> list[str]:
+    value = receipt.get("deadline_check")
+    if not isinstance(value, Mapping):
+        return ["deadline_check must be an object"]
+    status = str(value.get("status", "")).strip()
+    allowed = set(manifest.get("deadline_check_statuses", ()))
+    errors: list[str] = []
+    if status not in allowed:
+        errors.append("deadline_check.status must be verified or not_relevant")
+    if status == "verified":
+        source_ids = value.get("source_ids")
+        if not isinstance(source_ids, list) or not any(str(item).strip() for item in source_ids):
+            errors.append("verified deadline_check requires source_ids")
+    if status == "not_relevant" and not str(value.get("reason", "")).strip():
+        errors.append("not_relevant deadline_check requires reason")
+    return errors
 
 
 def validate_receipt(
@@ -199,13 +322,13 @@ def validate_receipt(
     *,
     restricted_authorized: bool = False,
 ) -> BootValidation:
-    required = required_note_ids(
+    required_versions = required_note_versions(
         manifest,
         profiles,
         restricted_authorized=restricted_authorized,
     )
-    loaded = _loaded_note_ids(receipt)
-    errors: list[str] = []
+    loaded_versions, note_errors = _loaded_note_versions(receipt)
+    errors: list[str] = list(note_errors)
 
     expected_manifest = manifest["canonical_mem_manifest"]
     if receipt.get("boot_manifest_id") != expected_manifest["id"]:
@@ -214,16 +337,21 @@ def validate_receipt(
         receipt_version = int(receipt.get("boot_manifest_version", 0))
     except (TypeError, ValueError):
         receipt_version = 0
-    if receipt_version < int(expected_manifest["version"]):
-        errors.append("boot_manifest_version is stale")
+    if receipt_version != int(expected_manifest["version"]):
+        errors.append("boot_manifest_version mismatch")
     if receipt.get("mem_collection_id") != manifest["mem_collection"]["id"]:
         errors.append("mem_collection_id mismatch")
 
-    missing_notes = [note_id for note_id in required if note_id not in loaded]
-    if missing_notes:
-        errors.append("missing loaded note IDs: " + ", ".join(missing_notes))
+    for note_id, expected_version in required_versions.items():
+        actual_version = loaded_versions.get(note_id)
+        if actual_version is None:
+            errors.append(f"missing loaded note ID: {note_id}")
+        elif actual_version != expected_version:
+            errors.append(
+                f"note version mismatch for {note_id}: expected {expected_version}, got {actual_version}"
+            )
 
-    receipt_profiles = receipt.get("boot_profile", ())
+    receipt_profiles = receipt.get("boot_profile")
     if not isinstance(receipt_profiles, list):
         errors.append("boot_profile must be an array")
         receipt_profiles = []
@@ -231,43 +359,61 @@ def validate_receipt(
     if missing_profiles:
         errors.append("missing boot profiles: " + ", ".join(missing_profiles))
 
+    valid_sources, source_errors = _validate_sources(receipt)
+    errors.extend(source_errors)
+    valid_repo_receipts, repository_errors = _validate_repository_receipts(receipt)
+    errors.extend(repository_errors)
+
     requirements = manifest.get("profile_requirements", {})
-    sources = receipt.get("sources_opened", ())
-    if not isinstance(sources, list):
-        sources = []
-        errors.append("sources_opened must be an array")
     for profile in profiles:
         rule = requirements.get(profile, {})
-        if rule.get("requires_current_sources") and not sources:
+        if rule.get("requires_current_sources") and valid_sources < 1:
             errors.append(f"profile {profile} requires current sources")
         if rule.get("requires_case_lane") and not str(receipt.get("case_lane", "")).strip():
             errors.append(f"profile {profile} requires case_lane")
-        if rule.get("requires_matter_lane") and not str(receipt.get("case_lane", "")).strip():
-            errors.append(f"profile {profile} requires matter lane")
+        if rule.get("requires_matter_lane") and not str(receipt.get("matter_lane", "")).strip():
+            errors.append(f"profile {profile} requires matter_lane")
+        if rule.get("requires_repository_receipt") and valid_repo_receipts < 1:
+            errors.append(f"profile {profile} requires repository receipt")
+        if rule.get("requires_live_deadline_check_when_relevant"):
+            errors.extend(_validate_deadline_check(manifest, receipt))
+
+    restricted_context = receipt.get("restricted_context")
+    if not isinstance(restricted_context, bool):
+        errors.append("restricted_context must be a boolean")
+    if "restricted_child" in profiles and restricted_context is not True:
+        errors.append("restricted_child profile requires restricted_context=true")
+
+    if not str(receipt.get("current_task", "")).strip():
+        errors.append("current_task is required")
+    if not str(receipt.get("next_material_action", "")).strip():
+        errors.append("next_material_action is required")
 
     status = str(receipt.get("boot_status", "blocked"))
     if status != "complete":
         errors.append(f"boot_status is {status!r}, not 'complete'")
-    blockers = receipt.get("blockers", ())
-    if isinstance(blockers, list) and blockers:
+    blockers = receipt.get("blockers")
+    if not isinstance(blockers, list):
+        errors.append("blockers must be an array")
+    elif blockers:
         errors.append("receipt contains blockers: " + "; ".join(map(str, blockers)))
 
     return BootValidation(
         ok=not errors,
         status="complete" if not errors else "blocked",
         profiles=tuple(profiles),
-        required_note_ids=required,
-        loaded_note_ids=loaded,
+        required_note_ids=tuple(required_versions),
+        loaded_note_ids=tuple(loaded_versions),
         errors=tuple(errors),
     )
 
 
 def automatic_boot() -> BootValidation | None:
-    """Run the environment-driven gate used by ``sitecustomize``.
+    """Run the environment-driven gate used by the canonical entrypoint.
 
     Modes:
     - ``strict`` (default): exit 78 when no valid receipt is available.
-    - ``request``: emit a request and continue with status ``degraded``.
+    - ``request``: emit a request and return a degraded validation.
     - ``off``: explicitly disable the gate.
     """
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
@@ -305,8 +451,9 @@ def automatic_boot() -> BootValidation | None:
             restricted_authorized=restricted_authorized,
         )
         request["receipt_errors"] = list(result.errors)
+        loaded_ids = result.loaded_note_ids
+        degraded_errors = result.errors
     else:
-        result = None
         request = build_boot_request(
             manifest,
             profiles,
@@ -314,12 +461,21 @@ def automatic_boot() -> BootValidation | None:
             restricted_authorized=restricted_authorized,
         )
         request["receipt_errors"] = ["no boot receipt supplied"]
+        loaded_ids = ()
+        degraded_errors = ("no boot receipt supplied",)
 
     print(json.dumps(request, ensure_ascii=False, sort_keys=True), file=sys.stderr)
     sys.stderr.flush()
     if mode == "request":
         os.environ["CASEY_BOOT_STATUS"] = "degraded"
-        return result
+        return BootValidation(
+            ok=False,
+            status="degraded",
+            profiles=tuple(profiles),
+            required_note_ids=tuple(request["required_note_ids"]),
+            loaded_note_ids=tuple(loaded_ids),
+            errors=tuple(degraded_errors),
+        )
 
     os.environ["CASEY_BOOT_STATUS"] = "blocked"
     os._exit(EXIT_BOOT_BLOCKED)
@@ -391,7 +547,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if result.ok else EXIT_BOOT_BLOCKED
 
     parser.error("choose --emit-request or --verify-receipt")
-    return 2
 
 
 if __name__ == "__main__":
