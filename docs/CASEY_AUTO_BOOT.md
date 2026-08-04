@@ -1,42 +1,36 @@
 # Casey Continuity Auto-Boot
 
-The APEX control plane has a deterministic, fail-closed continuity gate. It is
-designed for ephemeral workers that cannot safely assume they remember a prior
-chat, case run, repository decision, deadline, or source state.
+The APEX control plane has a deterministic, fail-closed startup gate for
+ephemeral workers that cannot safely assume they remember prior chats, case
+runs, repository decisions, deadlines, tools, or source state.
 
-## Canonical automatic startup
+The gate now combines two contracts:
 
-Running:
+1. **Continuity proof** — exact Mem notes and versions, current sources,
+   repository receipts, lanes, deadlines, task context, and blocker state.
+2. **Prime Directive proof** — an executed memory search, hash-verified
+   `STATE.md` and `AGENT_SYSTEM_PROMPT.md`, and a structured inventory of tools
+   actually loaded in the current worker.
+
+## Canonical startup
 
 ```bash
 python src/control_plane.py
 ```
 
-executes the small wrapper at `src/control_plane.py`. The wrapper calls
-`automatic_boot()` **before** it loads the preserved implementation in
+`src/control_plane.py` calls `automatic_prime_directive_boot()` before loading
 `src/control_plane_runtime.py`.
 
-Without a valid provider-backed receipt, strict mode emits a deterministic JSON
-boot request to stderr and exits with status `78`. The runtime does not load and
-the synthetic smoke test does not execute.
-
-`src/sitecustomize.py` is only a secondary hook for environments where `src` is
-already on `PYTHONPATH`, or when another entrypoint is explicitly forced with
-`CASEY_AUTO_BOOT=1`. The canonical startup command does not depend on automatic
-site discovery.
+Strict mode is the default. A missing, stale, malformed, or blocked receipt
+causes exit status `78` before runtime load.
 
 ## Modes
 
-### Strict — default
+### Strict
 
 ```bash
 CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py
 ```
-
-A complete receipt is mandatory. Missing notes, wrong note versions, malformed
-source receipts, incorrect case/matter lane, missing repository proof, missing
-deadline-check state, stale manifest identity, or explicit blockers stop
-startup.
 
 ### Request
 
@@ -44,9 +38,15 @@ startup.
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
 ```
 
-The wrapper prints a deterministic JSON boot request and continues with
-`CASEY_BOOT_STATUS=degraded`. This is for local inspection and connector-bridge
-development. It is not a claim of current case or repository awareness.
+Request mode emits the complete combined JSON request and continues only as:
+
+```text
+CASEY_BOOT_STATUS=degraded
+GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=degraded
+```
+
+It is for connector-bridge development and local inspection. It is not proof of
+current awareness.
 
 ### Off
 
@@ -60,12 +60,9 @@ or:
 CASEY_AUTO_BOOT_DISABLE=1 python src/control_plane.py
 ```
 
-Disabling the gate must be explicit. A disabled run cannot claim that connected
-continuity or current sources were loaded.
+A disabled run cannot claim continuity or Prime Directive completion.
 
-## Boot profiles
-
-Set profiles with a comma-separated environment variable:
+## Profiles
 
 ```bash
 CASEY_BOOT_PROFILE=legal_case python src/control_plane.py
@@ -75,7 +72,7 @@ CASEY_RESTRICTED_CONTEXT_AUTHORIZED=1 \
 python src/control_plane.py
 ```
 
-`always` is inserted automatically. Available profiles are:
+Available profiles:
 
 - `always`
 - `legal_case`
@@ -83,18 +80,90 @@ python src/control_plane.py
 - `systems`
 - `separate_matter`
 
-The machine-readable profile definitions are in
-`config/casey_auto_boot_manifest.json`. The canonical human-readable source is
-Mem note `6925915b-33d6-5fc9-b499-4fbe78790413` in collection
-`e9990f2e-affe-55b2-a402-1de35aeb1b73`.
+The manifest is `config/casey_auto_boot_manifest.json`. The canonical Mem
+collection is `e9990f2e-affe-55b2-a402-1de35aeb1b73`; its canonical manifest
+note is `6925915b-33d6-5fc9-b499-4fbe78790413`.
 
-The manifest pins every required Mem note to an exact version. A later or older
-note version blocks startup until the manifest is deliberately reconciled.
+## Ground truth
 
-## Request generation
+Every startup reads and verifies:
 
-A connector bridge can request the exact boot workload without starting the
-control plane:
+- `STATE.md`
+- `AGENT_SYSTEM_PROMPT.md`
+
+Their exact SHA-256 values are pinned in
+`config/prime_directive_policy.json`. A mismatched file does not complete the
+startup stage.
+
+## Combined receipt
+
+Supply one receipt as a file path:
+
+```bash
+CASEY_BOOT_RECEIPT_PATH=/secure/runtime/boot-receipt.json \
+CASEY_BOOT_PROFILE=legal_case \
+python src/control_plane.py
+```
+
+or as inline JSON:
+
+```bash
+CASEY_BOOT_RECEIPT_JSON="$(< /secure/runtime/boot-receipt.json)" \
+CASEY_BOOT_PROFILE=legal_case \
+python src/control_plane.py
+```
+
+The continuity portion proves:
+
+- exact boot-manifest ID and version;
+- exact Mem collection ID;
+- all required note IDs and pinned versions;
+- structured current-source rows;
+- repository revision receipts for systems work;
+- `case_lane` or `matter_lane` as required;
+- current deadline state for legal work;
+- boolean restricted-context state;
+- current task and next material action;
+- `boot_status=complete`;
+- an empty blocker array.
+
+The Prime Directive portion proves:
+
+```json
+{
+  "memory_search": {
+    "tool": "personal_context.search",
+    "query": "task topic and user/project context",
+    "status": "searched",
+    "hit_count": 3
+  },
+  "ground_truth_files_loaded": [
+    {
+      "path": "STATE.md",
+      "sha256": "<pinned sha256>",
+      "source": "GitHub.fetch_file:STATE.md"
+    },
+    {
+      "path": "AGENT_SYSTEM_PROMPT.md",
+      "sha256": "<pinned sha256>",
+      "source": "GitHub.fetch_file:AGENT_SYSTEM_PROMPT.md"
+    }
+  ],
+  "tool_inventory": {
+    "tool": "api_tool.list_resources",
+    "status": "complete",
+    "loaded_tools": ["personal_context.search", "GitHub.fetch_file"],
+    "gaps": []
+  }
+}
+```
+
+An empty memory result is valid when the search actually ran and reports
+`status=empty` with `hit_count=0`.
+
+## Base request and receipt validation
+
+The original continuity request remains available:
 
 ```bash
 python src/auto_boot.py \
@@ -103,60 +172,23 @@ python src/auto_boot.py \
   --emit-request
 ```
 
-The request identifies exact Mem note IDs and versions, collection and manifest
-identity, profiles, current task, and required receipt fields.
+The canonical control-plane entrypoint uses the combined Prime Directive
+request and validator. See `docs/PRIME_DIRECTIVE_ENFORCER.md`.
 
-## Receipt requirements
+## Response middleware
 
-Supply a receipt as either a file path or inline JSON, never both:
+`src/prime_directive_enforcer.py` blocks model text before startup completion.
 
-```bash
-CASEY_BOOT_RECEIPT_PATH=/secure/runtime/boot-receipt.json \
-CASEY_BOOT_PROFILE=legal_case \
-python src/control_plane.py
-```
+- Tool calls are allowed through.
+- Any accompanying pre-gate prose is removed.
+- A stage advances only after a successful tool result.
+- Text-only pre-gate output is replaced by a hard-correction system message.
+- Repeated bypass attempts produce a terminal startup block rather than an
+  infinite loop.
 
-To supply the same secure file through the inline environment variable:
+## Optional site hook
 
-```bash
-CASEY_BOOT_RECEIPT_JSON="$(< /secure/runtime/boot-receipt.json)" \
-CASEY_BOOT_PROFILE=legal_case \
-python src/control_plane.py
-```
-
-The verifier checks:
-
-- exact boot-manifest ID and version;
-- exact Mem collection ID;
-- every required note ID and pinned version;
-- structured `sources_opened` rows with `system`, `object_id`, and a `version`
-  key;
-- structured repository receipts for the systems profile;
-- `case_lane` for legal-case work;
-- `matter_lane` for separate matters;
-- a deadline check marked `verified` with sources or `not_relevant` with a
-  reason;
-- boolean `restricted_context`, including `true` for restricted-child work;
-- non-empty `current_task` and `next_material_action`;
-- `boot_status=complete` and an empty array of blockers.
-
-Search hits, filenames, connector configuration, inherited summaries, empty
-objects, and unversioned note claims do not satisfy the contract.
-
-## Validate a receipt without starting the runtime
-
-```bash
-python src/auto_boot.py \
-  --profile legal_case \
-  --verify-receipt /secure/runtime/boot-receipt.json
-```
-
-Success exits `0`. A failed gate exits `78` and reports every missing, malformed,
-or incompatible requirement.
-
-## Optional forced hook
-
-For another Python entrypoint already using `src` on `PYTHONPATH`:
+For another Python entrypoint with `src` already on `PYTHONPATH`:
 
 ```bash
 PYTHONPATH=src \
@@ -165,25 +197,23 @@ CASEY_AUTO_BOOT_MODE=request \
 python another_entrypoint.py
 ```
 
-The optional hook skips the verifier CLI and pytest. The explicit
-`src/control_plane.py` wrapper remains the primary enforcement path.
+The explicit `src/control_plane.py` wrapper remains the canonical enforcement
+path.
 
-## Security boundaries
+## Security
 
-The repository contains only note identifiers, pinned versions, collection
-identifiers, profile rules, and receipt schemas. It contains no API keys,
-tokens, passwords, private keys, restricted child records, medical source
-payloads, or sealed material.
+No credentials, restricted source payloads, sealed records, or original child
+or medical records belong in the repository, policy, or boot receipt.
 
-The `restricted_child` profile requires explicit authorization and remains
-excluded from portable memory and unrelated projections.
+The restricted-child profile requires explicit authorization and remains
+excluded from portable projections.
 
-## What this integration proves
+## Boundary
 
-It proves that the APEX control-plane Python entrypoint cannot load its runtime
-as fully booted without a receipt satisfying the checked contract.
+This implementation proves the startup contract in execution loops that import
+it and in the APEX Python entrypoint.
 
-It does **not** prove that the ChatGPT UI automatically executes this repository
-at the start of every conversation. For ChatGPT conversations, the dedicated
-Mem collection and canonical manifest are the connected-source boot target; the
-repository supplies executable enforcement wherever the APEX entrypoint runs.
+It does not cause the ChatGPT application to execute repository code at the
+start of every UI conversation. A compatible chat worker must still invoke the
+connected memory and source tools; the middleware prevents that worker from
+speaking before it does.

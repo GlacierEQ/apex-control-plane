@@ -1,0 +1,88 @@
+{
+  "allow_verified_boot_receipt": true,
+  "empty_memory_result_phrase": "searched memory, no matching entry",
+  "failure_triggers": [
+    "i don't have access",
+    "i do not have access",
+    "i cannot remember",
+    "i can't remember",
+    "i don't have memory",
+    "i do not have memory",
+    "i can't connect",
+    "i cannot connect",
+    "as an ai"
+  ],
+  "ground_truth_files": [
+    {
+      "path": "STATE.md",
+      "sha256": "3082531312a80ccbdf7c0fdc9383a6ac1b10991e47eebbcf47a0382940fc600d"
+    },
+    {
+      "path": "AGENT_SYSTEM_PROMPT.md",
+      "sha256": "66bb14813d1d7423fdf52ac428ad0f09f5b2060a943b19bdded14eac7210fe88"
+    }
+  ],
+  "hard_correction_role": "system",
+  "max_corrections_before_terminal_block": 8,
+  "receipt_requirements": {
+    "blockers_must_be_empty": true,
+    "boot_status": "complete",
+    "ground_truth_status": "complete",
+    "memory_search_statuses": [
+      "complete",
+      "searched",
+      "empty"
+    ],
+    "tool_inventory_status": "complete"
+  },
+  "required_stages": [
+    "memory_search",
+    "ground_truth_read",
+    "tool_inventory",
+    "current_source_open",
+    "receipt_validation"
+  ],
+  "schema_version": "1.0.2",
+  "security": {
+    "log_content": false,
+    "log_tool_names": true,
+    "never_embed_secrets": true,
+    "never_log_tool_arguments": true
+  },
+  "tool_aliases": {
+    "current_source_open": [
+      "github.fetch_file",
+      "files.read",
+      "google_drive.fetch_file",
+      "dropbox.fetch_file",
+      "box.get_file_content",
+      "mem.get_note"
+    ],
+    "ground_truth_read": [
+      "github.fetch_file",
+      "files.read",
+      "filesystem.read_file",
+      "read_file",
+      "container.exec"
+    ],
+    "memory_search": [
+      "memory_search",
+      "mem.search_notes",
+      "personal_context.search",
+      "supermemory.search",
+      "casebrain.memory_search",
+      "memory.search"
+    ],
+    "receipt_validation": [
+      "prime_directive_boot.validate_combined_receipt"
+    ],
+    "tool_inventory": [
+      "api_tool.list_resources",
+      "mcp.list_tools",
+      "list_tools",
+      "tool_inventory",
+      "tools.list",
+      "plugin_management.list"
+    ]
+  }
+}

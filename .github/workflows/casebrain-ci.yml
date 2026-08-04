@@ -5,6 +5,9 @@ on:
     paths:
       - "src/**"
       - "tests/**"
+      - "AGENT_SYSTEM_PROMPT.md"
+      - "STATE.md"
+      - "config/prime_directive_policy.json"
       - "AKOS_ADOPTION.yaml"
       - "docs/UNIFIED_CASEBRAIN.md"
       - ".github/workflows/casebrain-ci.yml"
@@ -12,6 +15,7 @@ on:
     branches:
       - main
       - "feat/unified-casebrain-*"
+      - "prime-directive-*"
 
 permissions:
   contents: read
@@ -37,7 +41,9 @@ jobs:
           python src/control_plane.py \
             > /tmp/casebrain-smoke.json \
             2> /tmp/casebrain-boot-request.json
-          grep -q 'casey_continuity_auto_boot' /tmp/casebrain-boot-request.json
+          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/casebrain-boot-request.json
+          grep -q 'ground_truth_files_loaded' /tmp/casebrain-boot-request.json
+          grep -q 'tool_inventory' /tmp/casebrain-boot-request.json
           python - <<'PY'
           import json
           from pathlib import Path
