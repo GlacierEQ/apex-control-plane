@@ -38,6 +38,7 @@ class ToolInvocation:
 class GateSnapshot:
     gate_passed: bool
     memory_search_complete: bool
+    memory_search_empty: bool
     ground_truth_files_loaded: tuple[str, ...]
     tool_inventory_complete: bool
     current_source_complete: bool
@@ -53,6 +54,8 @@ class GateSnapshot:
 class _MutableState:
     gate_passed: bool = False
     memory_search_complete: bool = False
+    memory_search_empty: bool = False
+    empty_result_phrase_emitted: bool = False
     ground_truth_files_loaded: set[str] = field(default_factory=set)
     tool_inventory_complete: bool = False
     current_source_complete: bool = False
@@ -75,7 +78,14 @@ def load_policy(path: Path | None = None) -> dict[str, Any]:
         raise GateViolation(f"Invalid Prime Directive policy JSON: {exc}") from exc
     if not isinstance(payload, dict):
         raise GateViolation("Prime Directive policy must be a JSON object")
-    for key in ("schema_version", "required_stages", "tool_aliases", "ground_truth_files"):
+    for key in (
+        "schema_version",
+        "required_stages",
+        "tool_aliases",
+        "ground_truth_files",
+        "empty_memory_result_phrase",
+        "allow_verified_boot_receipt",
+    ):
         if key not in payload:
             raise GateViolation(f"Prime Directive policy missing {key}")
     return payload
@@ -134,7 +144,7 @@ class StartupGateEnforcer:
                 return output
 
             if self._state.gate_passed:
-                return output
+                return self._enforce_empty_memory_phrase(output)
 
             return self._hard_correction(_collect_provider_text(output))
 
@@ -175,6 +185,7 @@ class StartupGateEnforcer:
 
             if self._matches_stage("memory_search", normalized):
                 self._state.memory_search_complete = True
+                self._state.memory_search_empty = _result_is_empty_search(result)
 
             if self._matches_stage("tool_inventory", normalized):
                 if _has_structured_inventory(result):
@@ -199,6 +210,8 @@ class StartupGateEnforcer:
         with self._lock:
             if self._state.terminal_blocked:
                 raise GateViolation("startup gate is terminally blocked")
+            if not bool(self.policy.get("allow_verified_boot_receipt", False)):
+                raise GateViolation("verified boot receipt attachment is disabled by policy")
             if not is_authentic_validation(validation):
                 raise GateViolation("boot validation is not authentic")
             if (
@@ -209,6 +222,9 @@ class StartupGateEnforcer:
                 raise GateViolation("boot validation is not complete")
 
             self._state.memory_search_complete = True
+            self._state.memory_search_empty = bool(
+                getattr(validation, "memory_search_empty", False)
+            )
             self._state.ground_truth_files_loaded.update(self._required_files)
             self._state.tool_inventory_complete = True
             self._state.current_source_complete = True
@@ -234,6 +250,7 @@ class StartupGateEnforcer:
             return GateSnapshot(
                 gate_passed=self._state.gate_passed,
                 memory_search_complete=self._state.memory_search_complete,
+                memory_search_empty=self._state.memory_search_empty,
                 ground_truth_files_loaded=tuple(
                     sorted(self._state.ground_truth_files_loaded)
                 ),
@@ -308,6 +325,20 @@ class StartupGateEnforcer:
         if not self._state.receipt_validation_complete:
             missing.append("receipt_validation")
         return missing
+
+    def _enforce_empty_memory_phrase(self, output: Mapping[str, Any]) -> dict[str, Any]:
+        if (
+            not self._state.memory_search_empty
+            or self._state.empty_result_phrase_emitted
+        ):
+            return dict(output)
+        phrase = str(self.policy.get("empty_memory_result_phrase", "")).strip()
+        if not phrase:
+            raise GateViolation("empty_memory_result_phrase is blank")
+        amended = _prepend_provider_text(output, phrase)
+        self._state.empty_result_phrase_emitted = True
+        self._audit("empty_memory_phrase_emitted", success=True)
+        return amended
 
     def _hard_correction(self, content: str) -> dict[str, Any]:
         self._state.corrections_issued += 1
@@ -451,6 +482,17 @@ def _scrub_nested_text(value: Any) -> Any:
     return scrubbed
 
 
+def _prepend_provider_text(output: Mapping[str, Any], phrase: str) -> dict[str, Any]:
+    amended = dict(output)
+    for field in ("content", "output_text", "output"):
+        value = amended.get(field)
+        if isinstance(value, str):
+            amended[field] = phrase if not value.strip() else f"{phrase}\n\n{value}"
+            return amended
+    amended["content"] = phrase
+    return amended
+
+
 def _collect_provider_text(output: Mapping[str, Any]) -> str:
     values: list[str] = []
     for field in _TEXT_FIELDS:
@@ -458,6 +500,19 @@ def _collect_provider_text(output: Mapping[str, Any]) -> str:
         if isinstance(value, str):
             values.append(value)
     return "\n".join(values)
+
+
+def _result_is_empty_search(result: Any) -> bool:
+    if isinstance(result, (list, tuple)):
+        return len(result) == 0
+    if not isinstance(result, Mapping):
+        return False
+    for key in ("results", "hits", "items", "data"):
+        if key in result:
+            value = result[key]
+            return isinstance(value, (list, tuple, dict)) and len(value) == 0
+    nested = result.get("result")
+    return _result_is_empty_search(nested) if nested is not None else False
 
 
 def _stable_text(value: Any) -> str:
