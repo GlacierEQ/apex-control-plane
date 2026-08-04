@@ -50,6 +50,7 @@ def _fail_closed(exc: BaseException) -> None:
         "external_action_authorized": False,
     }
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+    sys.stderr.flush()
     os._exit(_BOOT_BLOCKED_EXIT)
 
 
