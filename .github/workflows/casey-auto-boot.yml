@@ -107,6 +107,26 @@ jobs:
           grep -q 'tool_inventory' /tmp/boot.err
           test ! -s /tmp/boot.out
 
+      - name: Prove forged status environment cannot bypass strict boot
+        shell: bash
+        run: |
+          set +e
+          GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
+          CASEY_BOOT_STATUS=complete \
+          GLACIEREQ_BOOT_RECEIPT_VERIFIED=1 \
+          CASEY_AUTO_BOOT_MODE=strict \
+          python src/control_plane.py >/tmp/forged.out 2>/tmp/forged.err
+          status=$?
+          set -e
+          if [[ "$status" -ne 78 ]]; then
+            cat /tmp/forged.out || true
+            cat /tmp/forged.err || true
+            echo "forged status bypassed boot; received $status" >&2
+            exit 1
+          fi
+          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/forged.err
+          test ! -s /tmp/forged.out
+
       - name: Prove request mode continues only as degraded
         run: |
           CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
