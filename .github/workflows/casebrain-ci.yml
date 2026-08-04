@@ -31,9 +31,13 @@ jobs:
         run: python -m compileall -q src tests
       - name: Test safety and resilience invariants
         run: python -m pytest -q
-      - name: Synthetic read-only smoke test
+      - name: Synthetic read-only smoke test in explicit degraded mode
         run: |
-          python src/control_plane.py > /tmp/casebrain-smoke.json
+          CASEY_AUTO_BOOT_MODE=request \
+          python src/control_plane.py \
+            > /tmp/casebrain-smoke.json \
+            2> /tmp/casebrain-boot-request.json
+          grep -q 'casey_continuity_auto_boot' /tmp/casebrain-boot-request.json
           python - <<'PY'
           import json
           from pathlib import Path
