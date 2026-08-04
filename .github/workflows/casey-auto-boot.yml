@@ -107,6 +107,26 @@ jobs:
           grep -q 'tool_inventory' /tmp/boot.err
           test ! -s /tmp/boot.out
 
+      - name: Prove malformed receipt fails closed without traceback
+        shell: bash
+        run: |
+          set +e
+          CASEY_BOOT_RECEIPT_JSON='{' \
+          CASEY_AUTO_BOOT_MODE=strict \
+          python src/control_plane.py >/tmp/malformed.out 2>/tmp/malformed.err
+          status=$?
+          set -e
+          if [[ "$status" -ne 78 ]]; then
+            cat /tmp/malformed.out || true
+            cat /tmp/malformed.err || true
+            echo "malformed receipt returned $status instead of 78" >&2
+            exit 1
+          fi
+          grep -q '"boot_status": "blocked"' /tmp/malformed.err
+          grep -q 'CASEY_BOOT_RECEIPT_JSON is invalid' /tmp/malformed.err
+          ! grep -q 'Traceback' /tmp/malformed.err
+          test ! -s /tmp/malformed.out
+
       - name: Prove forged status environment cannot bypass strict boot
         shell: bash
         run: |
