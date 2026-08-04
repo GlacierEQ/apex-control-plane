@@ -1,0 +1,85 @@
+name: Casey Continuity Auto-Boot
+
+on:
+  push:
+    branches:
+      - main
+      - casey-mem-auto-boot-2026-08-03
+    paths:
+      - "config/casey_auto_boot_manifest.json"
+      - "src/auto_boot.py"
+      - "src/control_plane.py"
+      - "src/control_plane_runtime.py"
+      - "src/sitecustomize.py"
+      - "tests/test_auto_boot.py"
+      - "docs/CASEY_AUTO_BOOT.md"
+      - "README.md"
+      - ".github/workflows/casey-auto-boot.yml"
+  pull_request:
+    paths:
+      - "config/casey_auto_boot_manifest.json"
+      - "src/auto_boot.py"
+      - "src/control_plane.py"
+      - "src/control_plane_runtime.py"
+      - "src/sitecustomize.py"
+      - "tests/test_auto_boot.py"
+      - "docs/CASEY_AUTO_BOOT.md"
+      - "README.md"
+      - ".github/workflows/casey-auto-boot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Validate JSON manifest and emit deterministic request
+        run: |
+          python -m json.tool config/casey_auto_boot_manifest.json >/dev/null
+          python src/auto_boot.py --profile legal_case --task continue --emit-request > /tmp/casey-boot-request.json
+          python -m json.tool /tmp/casey-boot-request.json >/dev/null
+          grep -q '"required_notes"' /tmp/casey-boot-request.json
+
+      - name: Run auto-boot tests
+        run: python -m pytest -q tests/test_auto_boot.py
+
+      - name: Prove strict mode fails closed without receipt
+        shell: bash
+        run: |
+          set +e
+          CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/boot.out 2>/tmp/boot.err
+          status=$?
+          set -e
+          if [[ "$status" -ne 78 ]]; then
+            cat /tmp/boot.out || true
+            cat /tmp/boot.err || true
+            echo "expected exit 78, received $status" >&2
+            exit 1
+          fi
+          grep -q 'casey_continuity_auto_boot' /tmp/boot.err
+          test ! -s /tmp/boot.out
+
+      - name: Prove request mode continues only as degraded
+        run: |
+          CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
+          grep -q 'casey_continuity_auto_boot' /tmp/boot-request.json
+          python -m json.tool /tmp/control-plane.json >/dev/null
+          PYTHONPATH=src \
+          CASEY_AUTO_BOOT=1 \
+          CASEY_AUTO_BOOT_MODE=request \
+          python -c 'import os; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"'
