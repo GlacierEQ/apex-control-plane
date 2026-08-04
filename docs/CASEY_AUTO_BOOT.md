@@ -108,7 +108,7 @@ identity, profiles, current task, and required receipt fields.
 
 ## Receipt requirements
 
-Supply a receipt as either inline JSON or a file path, never both:
+Supply a receipt as either a file path or inline JSON, never both:
 
 ```bash
 CASEY_BOOT_RECEIPT_PATH=/secure/runtime/boot-receipt.json \
@@ -116,10 +116,10 @@ CASEY_BOOT_PROFILE=legal_case \
 python src/control_plane.py
 ```
 
-or:
+To supply the same secure file through the inline environment variable:
 
 ```bash
-CASEY_BOOT_RECEIPT_JSON='{"boot_status":"complete", ...}' \
+CASEY_BOOT_RECEIPT_JSON="$(< /secure/runtime/boot-receipt.json)" \
 CASEY_BOOT_PROFILE=legal_case \
 python src/control_plane.py
 ```
