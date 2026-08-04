@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import sys
+from typing import NoReturn
 
 _BOOT_BLOCKED_EXIT = 78
 
@@ -56,7 +57,7 @@ def _should_boot() -> bool:
     return entrypoint == "control_plane.py"
 
 
-def _fail_closed(exc: BaseException) -> None:
+def _fail_closed(exc: Exception) -> NoReturn:
     payload = {
         "boot_status": "blocked",
         "prime_directive_status": "blocked",
@@ -66,7 +67,7 @@ def _fail_closed(exc: BaseException) -> None:
     }
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True), file=sys.stderr)
     sys.stderr.flush()
-    os._exit(_BOOT_BLOCKED_EXIT)
+    raise SystemExit(_BOOT_BLOCKED_EXIT) from None
 
 
 if _should_boot():
@@ -76,5 +77,5 @@ if _should_boot():
         automatic_prime_directive_boot()
     except SystemExit:
         raise
-    except BaseException as exc:  # startup boundary must never fail open
+    except Exception as exc:  # startup boundary must never fail open
         _fail_closed(exc)
