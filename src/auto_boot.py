@@ -316,6 +316,7 @@ def automatic_boot() -> BootValidation | None:
         request["receipt_errors"] = ["no boot receipt supplied"]
 
     print(json.dumps(request, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+    sys.stderr.flush()
     if mode == "request":
         os.environ["CASEY_BOOT_STATUS"] = "degraded"
         return result
