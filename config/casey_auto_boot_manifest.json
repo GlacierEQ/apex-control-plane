@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.1.1",
   "manifest_name": "Casey Continuity Auto-Boot",
   "mem_collection": {
     "title": "00 AUTO BOOT — Casey Continuity Gate",
@@ -37,7 +37,8 @@
     "systems": [
       "035886f7-e0fd-5fcd-aeb6-55b282e09904",
       "1c5f821b-af89-5898-97fe-2789095e1163",
-      "0ff8b9aa-490c-5187-a495-61759a8bbe82"
+      "0ff8b9aa-490c-5187-a495-61759a8bbe82",
+      "cf749759-468a-5903-807a-078b20fca0e3"
     ],
     "separate_matter": [
       "9cb96498-23b3-501b-864b-a029d2e0f612"
@@ -64,6 +65,7 @@
     "035886f7-e0fd-5fcd-aeb6-55b282e09904": 1,
     "1c5f821b-af89-5898-97fe-2789095e1163": 4,
     "0ff8b9aa-490c-5187-a495-61759a8bbe82": 1,
+    "cf749759-468a-5903-807a-078b20fca0e3": 1,
     "9cb96498-23b3-501b-864b-a029d2e0f612": 1
   },
   "profile_requirements": {
