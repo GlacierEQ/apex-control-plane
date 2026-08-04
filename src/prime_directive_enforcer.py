@@ -175,29 +175,19 @@ class StartupGateEnforcer:
             self._complete_if_ready()
             return self.snapshot()
 
-    def mark_gate_passed(self, proof: Any = None) -> GateSnapshot:
-        """Complete the gate only from local stage proof or verified boot proof."""
+    def mark_gate_passed(self) -> GateSnapshot:
+        """Complete the local middleware gate only from recorded stage proof.
+
+        Provider-backed boot receipts are validated by ``prime_directive_boot``.
+        They are deliberately not accepted here as arbitrary mappings or objects,
+        because a caller could forge their fields and bypass every local stage.
+        """
         with self._lock:
-            if proof is None:
-                if self._missing_stages():
-                    raise GateViolation(
-                        "cannot mark gate passed; missing: " + ", ".join(self._missing_stages())
-                    )
-                self._state.gate_passed = True
-                self._audit("gate_complete", source="recorded_tool_results")
-                return self.snapshot()
-
-            ok = bool(_proof_value(proof, "ok", False))
-            status = str(_proof_value(proof, "status", "")).lower()
-            errors = _proof_value(proof, "errors", ())
-            if not ok or status != "complete" or bool(errors):
-                raise GateViolation("boot proof is not a complete successful validation")
-
-            self._state.memory_search_complete = True
-            self._state.ground_truth_files_loaded.update(self._required_files)
-            self._state.tool_inventory_complete = True
+            missing = self._missing_stages()
+            if missing:
+                raise GateViolation("cannot mark gate passed; missing: " + ", ".join(missing))
             self._state.gate_passed = True
-            self._audit("gate_complete", source="verified_boot_validation")
+            self._audit("gate_complete", source="recorded_tool_results")
             return self.snapshot()
 
     def snapshot(self) -> GateSnapshot:
@@ -407,19 +397,28 @@ def _result_path(result: Any) -> str:
 
 
 def _has_structured_inventory(result: Any) -> bool:
-    if isinstance(result, list):
-        return True
+    """Require at least one nonblank, identifiable inventory entry."""
+    if isinstance(result, (list, tuple)):
+        return any(_is_inventory_entry(item) for item in result)
     if not isinstance(result, Mapping):
         return False
     for key in ("tools", "resources", "results", "connectors"):
-        value = result.get(key)
-        if isinstance(value, (list, tuple, dict)):
+        if key in result and _has_structured_inventory(result[key]):
             return True
     nested = result.get("result")
     return _has_structured_inventory(nested) if nested is not None else False
 
 
-def _proof_value(proof: Any, key: str, default: Any) -> Any:
-    if isinstance(proof, Mapping):
-        return proof.get(key, default)
-    return getattr(proof, key, default)
+def _is_inventory_entry(value: Any) -> bool:
+    if isinstance(value, str):
+        return bool(value.strip())
+    if not isinstance(value, Mapping):
+        return False
+    for key in ("name", "uri", "id", "title", "tool_name"):
+        if str(value.get(key, "")).strip():
+            return True
+    return any(
+        _has_structured_inventory(value[key])
+        for key in ("tools", "resources", "results", "connectors")
+        if key in value
+    )
