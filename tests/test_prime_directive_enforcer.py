@@ -151,26 +151,33 @@ def test_ground_truth_requires_exact_pinned_hash() -> None:
     assert "STATE.md" in verified.ground_truth_files_loaded
 
 
-def test_inventory_requires_structured_result() -> None:
+def test_inventory_requires_nonempty_structured_result() -> None:
     enforcer = StartupGateEnforcer()
-    enforcer.intercept_llm_response(
-        _tool_call("api_tool.list_resources", {"paths": ["GitHub"]}, "tools-1")
-    )
-    bad = enforcer.record_tool_result(
-        "api_tool.list_resources",
-        "GitHub is loaded",
-        call_id="tools-1",
-        success=True,
-    )
-    assert bad.tool_inventory_complete is False
+
+    for call_id, result in (
+        ("tools-1", "GitHub is loaded"),
+        ("tools-2", {"resources": []}),
+        ("tools-3", {"tools": {}}),
+        ("tools-4", {"results": [{"name": ""}]}),
+    ):
+        enforcer.intercept_llm_response(
+            _tool_call("api_tool.list_resources", {"paths": ["GitHub"]}, call_id)
+        )
+        snapshot = enforcer.record_tool_result(
+            "api_tool.list_resources",
+            result,
+            call_id=call_id,
+            success=True,
+        )
+        assert snapshot.tool_inventory_complete is False
 
     enforcer.intercept_llm_response(
-        _tool_call("api_tool.list_resources", {"paths": ["GitHub"]}, "tools-2")
+        _tool_call("api_tool.list_resources", {"paths": ["GitHub"]}, "tools-5")
     )
     good = enforcer.record_tool_result(
         "api_tool.list_resources",
         {"resources": [{"name": "GitHub.fetch_file"}]},
-        call_id="tools-2",
+        call_id="tools-5",
         success=True,
     )
     assert good.tool_inventory_complete is True
@@ -187,23 +194,25 @@ def test_complete_gate_allows_normal_text() -> None:
     assert result["content"] == "Execution completed with receipts."
 
 
-def test_mark_gate_passed_rejects_unverified_proof() -> None:
+def test_mark_gate_passed_requires_recorded_local_stages() -> None:
     enforcer = StartupGateEnforcer()
 
-    with pytest.raises(GateViolation, match="not a complete"):
-        enforcer.mark_gate_passed(
-            {"ok": False, "status": "blocked", "errors": ["missing source"]}
-        )
+    with pytest.raises(GateViolation, match="cannot mark gate passed"):
+        enforcer.mark_gate_passed()
 
-
-def test_mark_gate_passed_accepts_complete_verified_boot_proof() -> None:
-    enforcer = StartupGateEnforcer()
-    snapshot = enforcer.mark_gate_passed(
-        {"ok": True, "status": "complete", "errors": []}
-    )
-
+    _complete_gate(enforcer)
+    snapshot = enforcer.mark_gate_passed()
     assert snapshot.gate_passed is True
     assert snapshot.missing_stages == ()
+
+
+def test_mark_gate_passed_does_not_accept_forged_proof_argument() -> None:
+    enforcer = StartupGateEnforcer()
+
+    with pytest.raises(TypeError):
+        enforcer.mark_gate_passed(
+            {"ok": True, "status": "complete", "errors": []}  # type: ignore[call-arg]
+        )
 
 
 def test_audit_log_never_contains_prompt_or_tool_arguments() -> None:
