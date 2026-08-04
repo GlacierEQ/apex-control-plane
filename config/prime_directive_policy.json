@@ -15,7 +15,7 @@
   "ground_truth_files": [
     {
       "path": "STATE.md",
-      "sha256": "62bd6fde487af9b89d454d0bc5a7f2d3d65166ca01d14c026f39a6ab533558ae"
+      "sha256": "3082531312a80ccbdf7c0fdc9383a6ac1b10991e47eebbcf47a0382940fc600d"
     },
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
@@ -24,8 +24,6 @@
   ],
   "hard_correction_role": "system",
   "max_corrections_before_terminal_block": 8,
-  "mode": "fail_closed",
-  "policy_name": "GlacierEQ Prime Directive Enforcer",
   "receipt_requirements": {
     "blockers_must_be_empty": true,
     "boot_status": "complete",
@@ -44,7 +42,7 @@
     "current_source_open",
     "receipt_validation"
   ],
-  "schema_version": "1.0.1",
+  "schema_version": "1.0.2",
   "security": {
     "log_content": false,
     "log_tool_names": true,
