@@ -36,6 +36,7 @@ class PrimeDirectiveBootValidation:
     status: str
     profiles: tuple[str, ...]
     errors: tuple[str, ...]
+    memory_search_empty: bool
     _seal: object = field(repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -54,12 +55,14 @@ def _issue_validation(
     status: str,
     profiles: Sequence[str],
     errors: Sequence[str],
+    memory_search_empty: bool = False,
 ) -> PrimeDirectiveBootValidation:
     return PrimeDirectiveBootValidation(
         ok=ok,
         status=status,
         profiles=tuple(profiles),
         errors=tuple(errors),
+        memory_search_empty=memory_search_empty,
         _seal=_VALIDATION_SEAL,
     )
 
@@ -369,11 +372,18 @@ def validate_combined_receipt(
             repo_root=repo_root,
         )
     )
+    memory = receipt.get("memory_search")
+    memory_search_empty = (
+        isinstance(memory, Mapping)
+        and str(memory.get("status", "")).strip().lower() == "empty"
+        and memory.get("hit_count") == 0
+    )
     return _issue_validation(
         ok=not errors,
         status="complete" if not errors else "blocked",
         profiles=profiles,
         errors=errors,
+        memory_search_empty=memory_search_empty,
     )
 
 
@@ -457,6 +467,7 @@ def automatic_prime_directive_boot() -> PrimeDirectiveBootValidation | None:
             status="degraded",
             profiles=profiles,
             errors=validation.errors,
+            memory_search_empty=validation.memory_search_empty,
         )
         os.environ["CASEY_BOOT_STATUS"] = "degraded"
         os.environ["GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS"] = "degraded"
