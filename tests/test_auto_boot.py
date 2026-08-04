@@ -70,8 +70,9 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["legal_case"])
     assert profiles == ("always", "legal_case")
-    assert manifest["schema_version"] == "1.1.1"
+    assert manifest["schema_version"] == "1.2.0"
     assert manifest["mem_collection"]["id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
+    assert manifest["prime_directive"]["policy_path"] == "config/prime_directive_policy.json"
 
 
 def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
@@ -238,4 +239,4 @@ def test_combined_legal_and_restricted_profiles_authorize_and_deduplicate() -> N
 def test_manifest_is_valid_json() -> None:
     manifest_path = ROOT / "config" / "casey_auto_boot_manifest.json"
     parsed = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert parsed["schema_version"] == "1.1.1"
+    assert parsed["schema_version"] == "1.2.0"
