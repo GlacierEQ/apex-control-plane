@@ -16,20 +16,25 @@ The original worker registry remains backward compatible. The runtime now adds:
 
 ## Casey continuity auto-boot
 
-`python src/control_plane.py` now enters through a fail-closed continuity gate
-before the control-plane smoke test runs. Python automatically loads
-`src/sitecustomize.py`, which invokes `src/auto_boot.py` and validates a
-provider-backed receipt against:
+`python src/control_plane.py` is now an explicit fail-closed wrapper. It runs
+`src/auto_boot.py` **before** loading the preserved runtime in
+`src/control_plane_runtime.py`.
+
+The boot verifier checks:
 
 - the canonical Mem boot collection and manifest;
-- exact required note IDs for the active profile;
-- current-source opening requirements;
-- case or matter lane requirements;
-- restricted-context authorization;
-- explicit blocker and completion status.
+- every required Mem note ID and its exact required version;
+- structured current-source receipts;
+- repository revision receipts for systems work;
+- case and separate-matter lanes;
+- deadline-check status for legal-case work;
+- restricted-context authorization and state;
+- current task and next material action;
+- blocker type, blocker contents, and final boot status.
 
-Strict mode is the default. Without a complete receipt, startup exits with
-status `78` instead of pretending the worker has current context.
+Strict mode is the default. Without a complete provider-backed receipt, startup
+emits the deterministic boot request and exits with status `78` instead of
+pretending the worker has current context.
 
 Generate an exact request for a connector bridge:
 
@@ -56,6 +61,10 @@ For local request inspection without claiming a complete boot:
 ```bash
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
 ```
+
+`src/sitecustomize.py` remains an optional secondary hook when `src` is already
+on `PYTHONPATH` or another entrypoint is explicitly forced with
+`CASEY_AUTO_BOOT=1`. The canonical command does not depend on that hook.
 
 See [`docs/CASEY_AUTO_BOOT.md`](docs/CASEY_AUTO_BOOT.md) and
 [`config/casey_auto_boot_manifest.json`](config/casey_auto_boot_manifest.json).
