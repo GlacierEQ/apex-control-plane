@@ -40,9 +40,11 @@
   "required_stages": [
     "memory_search",
     "ground_truth_read",
-    "tool_inventory"
+    "tool_inventory",
+    "current_source_open",
+    "receipt_validation"
   ],
-  "schema_version": "1.0.0",
+  "schema_version": "1.0.1",
   "security": {
     "log_content": false,
     "log_tool_names": true,
@@ -50,6 +52,14 @@
     "never_log_tool_arguments": true
   },
   "tool_aliases": {
+    "current_source_open": [
+      "github.fetch_file",
+      "files.read",
+      "google_drive.fetch_file",
+      "dropbox.fetch_file",
+      "box.get_file_content",
+      "mem.get_note"
+    ],
     "ground_truth_read": [
       "github.fetch_file",
       "files.read",
@@ -64,6 +74,9 @@
       "supermemory.search",
       "casebrain.memory_search",
       "memory.search"
+    ],
+    "receipt_validation": [
+      "prime_directive_boot.validate_combined_receipt"
     ],
     "tool_inventory": [
       "api_tool.list_resources",
