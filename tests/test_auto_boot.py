@@ -72,7 +72,10 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     assert profiles == ("always", "legal_case")
     assert manifest["schema_version"] == "1.2.0"
     assert manifest["mem_collection"]["id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
-    assert manifest["prime_directive"]["policy_path"] == "config/prime_directive_policy.json"
+    assert (
+        manifest.get("prime_directive", {}).get("policy_path")
+        == "config/prime_directive_policy.json"
+    )
 
 
 def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
