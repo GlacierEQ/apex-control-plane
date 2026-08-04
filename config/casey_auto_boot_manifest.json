@@ -12,7 +12,7 @@
   },
   "prime_directive": {
     "policy_path": "config/prime_directive_policy.json",
-    "policy_schema_version": "1.0.0",
+    "policy_schema_version": "1.0.1",
     "agent_prompt_path": "AGENT_SYSTEM_PROMPT.md",
     "state_path": "STATE.md",
     "enforcer_module": "src/prime_directive_enforcer.py",
@@ -20,6 +20,8 @@
     "requires_memory_search": true,
     "requires_ground_truth_hash_verification": true,
     "requires_tool_inventory": true,
+    "requires_current_source_open": true,
+    "requires_receipt_validation": true,
     "blocks_user_facing_text_until_complete": true
   },
   "profiles": {
