@@ -57,6 +57,7 @@ The response middleware separately prevents an LLM from emitting conversational 
 ## Case boundaries
 
 - `1FDV-23-0001009` and `1FDA-23-0000515` are separate legal matters.
+- The `1FDA` prefix is intentional: it identifies the domestic-abuse/TRO/OFP track and is not a typo for the divorce/custody `1FDV` case.
 - Restricted child or medical records require an authorized private case context.
 - Do not move restricted records into portable memory, public output, or unrelated systems.
 - Legal propositions must preserve the distinction among verified facts, corroborated facts, declarations, allegations, inferences, opinions, legal conclusions, and unresolved gaps.
