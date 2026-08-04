@@ -33,7 +33,7 @@ def _tool_call(name: str, arguments: object, call_id: str) -> dict:
     }
 
 
-def _valid_combined_validation():
+def _valid_combined_validation(*, empty_memory: bool = False):
     manifest = load_manifest()
     policy = load_policy()
     profiles = normalize_profiles(manifest, ["systems"])
@@ -72,8 +72,8 @@ def _valid_combined_validation():
         "memory_search": {
             "tool": "personal_context.search",
             "query": "current task and user project context",
-            "status": "empty",
-            "hit_count": 0,
+            "status": "empty" if empty_memory else "searched",
+            "hit_count": 0 if empty_memory else 1,
         },
         "ground_truth_files_loaded": [
             {
@@ -224,6 +224,7 @@ def test_empty_memory_search_result_still_counts_as_searched() -> None:
     )
 
     assert snapshot.memory_search_complete is True
+    assert snapshot.memory_search_empty is True
     assert snapshot.gate_passed is False
 
 
@@ -307,6 +308,23 @@ def test_sealed_combined_validation_completes_gate_and_allows_text() -> None:
         {"role": "assistant", "content": "Execution completed with receipts."}
     )
     assert result["content"] == "Execution completed with receipts."
+
+
+def test_empty_memory_phrase_is_prepended_once_after_complete_gate() -> None:
+    enforcer = StartupGateEnforcer()
+    enforcer.attach_boot_validation(_valid_combined_validation(empty_memory=True))
+
+    first = enforcer.intercept_llm_response(
+        {"role": "assistant", "content": "Execution continues."}
+    )
+    second = enforcer.intercept_llm_response(
+        {"role": "assistant", "content": "Second response."}
+    )
+
+    assert first["content"] == (
+        "searched memory, no matching entry\n\nExecution continues."
+    )
+    assert second["content"] == "Second response."
 
 
 def test_attach_boot_validation_rejects_forged_mapping() -> None:
