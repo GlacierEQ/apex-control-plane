@@ -70,7 +70,7 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["legal_case"])
     assert profiles == ("always", "legal_case")
-    assert manifest["schema_version"] == "1.1.0"
+    assert manifest["schema_version"] == "1.1.1"
     assert manifest["mem_collection"]["id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
 
 
@@ -83,9 +83,11 @@ def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
     assert request["mem_collection_id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
     assert "618140c7-bb34-404b-926c-8daffd28f162" in request["required_note_ids"]
     assert "035886f7-e0fd-5fcd-aeb6-55b282e09904" in request["required_note_ids"]
+    assert "cf749759-468a-5903-807a-078b20fca0e3" in request["required_note_ids"]
     required = {row["id"]: row["version"] for row in request["required_notes"]}
     assert required["618140c7-bb34-404b-926c-8daffd28f162"] == 7
     assert required["1c5f821b-af89-5898-97fe-2789095e1163"] == 4
+    assert required["cf749759-468a-5903-807a-078b20fca0e3"] == 1
     assert request["requirements"]["fetch_each_note_by_exact_id_and_version"] is True
 
 
@@ -236,4 +238,4 @@ def test_combined_legal_and_restricted_profiles_authorize_and_deduplicate() -> N
 def test_manifest_is_valid_json() -> None:
     manifest_path = ROOT / "config" / "casey_auto_boot_manifest.json"
     parsed = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert parsed["schema_version"] == "1.1.0"
+    assert parsed["schema_version"] == "1.1.1"
