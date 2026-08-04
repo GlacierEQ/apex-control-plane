@@ -5,25 +5,42 @@ on:
     branches:
       - main
       - casey-mem-auto-boot-2026-08-03
+      - prime-directive-enforcer-v2
     paths:
+      - "AGENT_SYSTEM_PROMPT.md"
+      - "STATE.md"
       - "config/casey_auto_boot_manifest.json"
+      - "config/prime_directive_policy.json"
       - "src/auto_boot.py"
+      - "src/prime_directive_boot.py"
+      - "src/prime_directive_enforcer.py"
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
       - "tests/test_auto_boot.py"
+      - "tests/test_prime_directive_boot.py"
+      - "tests/test_prime_directive_enforcer.py"
       - "docs/CASEY_AUTO_BOOT.md"
+      - "docs/PRIME_DIRECTIVE_ENFORCER.md"
       - "README.md"
       - ".github/workflows/casey-auto-boot.yml"
   pull_request:
     paths:
+      - "AGENT_SYSTEM_PROMPT.md"
+      - "STATE.md"
       - "config/casey_auto_boot_manifest.json"
+      - "config/prime_directive_policy.json"
       - "src/auto_boot.py"
+      - "src/prime_directive_boot.py"
+      - "src/prime_directive_enforcer.py"
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
       - "tests/test_auto_boot.py"
+      - "tests/test_prime_directive_boot.py"
+      - "tests/test_prime_directive_enforcer.py"
       - "docs/CASEY_AUTO_BOOT.md"
+      - "docs/PRIME_DIRECTIVE_ENFORCER.md"
       - "README.md"
       - ".github/workflows/casey-auto-boot.yml"
 
@@ -48,15 +65,29 @@ jobs:
       - name: Install test dependency
         run: python -m pip install --disable-pip-version-check pytest
 
-      - name: Validate JSON manifest and emit deterministic request
+      - name: Compile startup modules
+        run: |
+          python -m py_compile \
+            src/auto_boot.py \
+            src/prime_directive_boot.py \
+            src/prime_directive_enforcer.py \
+            src/control_plane.py \
+            src/sitecustomize.py
+
+      - name: Validate manifests and emit base request
         run: |
           python -m json.tool config/casey_auto_boot_manifest.json >/dev/null
+          python -m json.tool config/prime_directive_policy.json >/dev/null
           python src/auto_boot.py --profile legal_case --task continue --emit-request > /tmp/casey-boot-request.json
           python -m json.tool /tmp/casey-boot-request.json >/dev/null
           grep -q '"required_notes"' /tmp/casey-boot-request.json
 
-      - name: Run auto-boot tests
-        run: python -m pytest -q tests/test_auto_boot.py
+      - name: Run startup-gate tests
+        run: |
+          python -m pytest -q \
+            tests/test_auto_boot.py \
+            tests/test_prime_directive_boot.py \
+            tests/test_prime_directive_enforcer.py
 
       - name: Prove strict mode fails closed without receipt
         shell: bash
@@ -71,15 +102,17 @@ jobs:
             echo "expected exit 78, received $status" >&2
             exit 1
           fi
-          grep -q 'casey_continuity_auto_boot' /tmp/boot.err
+          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot.err
+          grep -q 'ground_truth_files_loaded' /tmp/boot.err
+          grep -q 'tool_inventory' /tmp/boot.err
           test ! -s /tmp/boot.out
 
       - name: Prove request mode continues only as degraded
         run: |
           CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
-          grep -q 'casey_continuity_auto_boot' /tmp/boot-request.json
+          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot-request.json
           python -m json.tool /tmp/control-plane.json >/dev/null
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \
-          python -c 'import os; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"'
+          python -c 'import os; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"'
