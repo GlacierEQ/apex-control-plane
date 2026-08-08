@@ -1,4 +1,39 @@
+import importlib.util
+import sys
+import types
 from pathlib import Path
+
+if importlib.util.find_spec("rich") is None:
+    rich = types.ModuleType("rich")
+    rich_console = types.ModuleType("rich.console")
+    rich_panel = types.ModuleType("rich.panel")
+    rich_table = types.ModuleType("rich.table")
+
+    class Console:
+        def print(self, *_args, **_kwargs):
+            return None
+
+    class Panel:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+    class Table:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def add_column(self, *_args, **_kwargs):
+            return None
+
+        def add_row(self, *_args, **_kwargs):
+            return None
+
+    rich_console.Console = Console
+    rich_panel.Panel = Panel
+    rich_table.Table = Table
+    sys.modules["rich"] = rich
+    sys.modules["rich.console"] = rich_console
+    sys.modules["rich.panel"] = rich_panel
+    sys.modules["rich.table"] = rich_table
 
 import apex_runner
 import daily_audit
