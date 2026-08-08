@@ -2,9 +2,10 @@
 """Optional Python startup hook for the combined GlacierEQ startup gate.
 
 The canonical enforcement path is the explicit wrapper in
-``src/control_plane.py``. This hook supplies the same Prime Directive and
-continuity gate when ``src`` is already present on ``PYTHONPATH`` or when
-another entrypoint is forced with ``CASEY_AUTO_BOOT=1``.
+``src/control_plane.py``. This hook supplies the same Notion-first continuity
+preflight plus Prime Directive/continuity gate when ``src`` is already present
+on ``PYTHONPATH`` or when another entrypoint is forced with
+``CASEY_AUTO_BOOT=1``.
 
 The hook skips verifier CLIs and pytest and fails closed with exit code 78 unless
 boot mode is explicitly ``request`` or ``off``.
@@ -46,6 +47,7 @@ def _should_boot() -> bool:
     entrypoint = _entrypoint_name()
     if entrypoint in {
         "auto_boot.py",
+        "notion_continuity_gate.py",
         "prime_directive_boot.py",
         "prime_directive_enforcer.py",
     } or _is_pytest_startup():
@@ -60,6 +62,7 @@ def _should_boot() -> bool:
 def _fail_closed(exc: Exception) -> NoReturn:
     payload = {
         "boot_status": "blocked",
+        "notion_continuity_status": "blocked",
         "prime_directive_status": "blocked",
         "error": f"{type(exc).__name__}: {exc}",
         "entrypoint": _entrypoint_path(),
@@ -72,8 +75,10 @@ def _fail_closed(exc: Exception) -> NoReturn:
 
 if _should_boot():
     try:
+        from notion_continuity_gate import automatic_notion_continuity_preflight
         from prime_directive_boot import automatic_prime_directive_boot
 
+        automatic_notion_continuity_preflight()
         automatic_prime_directive_boot()
     except SystemExit:
         raise

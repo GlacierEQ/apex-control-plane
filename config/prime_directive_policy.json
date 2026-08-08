@@ -19,7 +19,7 @@
     },
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
-      "sha256": "66bb14813d1d7423fdf52ac428ad0f09f5b2060a943b19bdded14eac7210fe88"
+      "sha256": "afa85f66bba54c5ac3f643c3de6f7fc50e6056a2a1c1068aebda439811c4da9e"
     }
   ],
   "hard_correction_role": "system",
