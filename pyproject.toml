@@ -1,0 +1,8 @@
+[tool.ruff]
+extend-exclude = [
+  "apex_runner.py",
+  "daily_audit.py",
+]
+
+[tool.mypy]
+exclude = "^(apex_runner\\.py|daily_audit\\.py)$"
