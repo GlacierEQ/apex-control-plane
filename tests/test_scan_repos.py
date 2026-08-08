@@ -47,6 +47,13 @@ def test_classification_priority_and_backup_detection():
     assert classify({}) == "unknown-ownership"
 
 
+def test_classification_matches_tokens_not_substrings():
+    assert classify(repo(6, "capital-project")) == "unknown-ownership"
+    assert classify(repo(7, "contest-results")) == "unknown-ownership"
+    assert classify(repo(8, "api-gateway")) == "production-runtime"
+    assert classify(repo(9, "apex_control_plane_runtime")) == "canonical-control-plane"
+
+
 def test_name_signature_collapses_backup_and_version_suffixes():
     assert name_signature("Z-BACKUP-apex-memory-v2") == "apexmemory"
     assert name_signature("apex_memory") == "apexmemory"
