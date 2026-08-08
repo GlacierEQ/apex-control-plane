@@ -15,6 +15,10 @@ permissions:
   issues: write
   pull-requests: write
 
+concurrency:
+  group: apex-daily-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   apex-daily:
     runs-on: ubuntu-latest
@@ -70,7 +74,8 @@ jobs:
       - name: Auto-create issues for P0/P1 findings
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
         run: |
           python apex_issue_writer.py --auto-approve
 
