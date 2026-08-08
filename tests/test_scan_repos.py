@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-import scripts.scan_repos as scan_repos
+from scripts import scan_repos
 from scripts.scan_repos import (
     build_registry,
     classify,
