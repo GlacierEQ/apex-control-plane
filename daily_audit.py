@@ -76,7 +76,9 @@ CREDENTIAL_PATTERNS = (
         re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b"),
     ),
     ("OpenAI-style API key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
+    ("xAI API key", re.compile(r"\bxai-[A-Za-z0-9_-]{20,}\b")),
     ("Notion token", re.compile(r"\bntn_[A-Za-z0-9]{20,}\b")),
+    ("Legacy Notion token", re.compile(r"\bsecret_[A-Za-z0-9]{20,}\b")),
     ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("Stripe live key", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
     (
@@ -92,7 +94,8 @@ CREDENTIAL_PATTERNS = (
     (
         "password assignment",
         re.compile(
-            r"\bpassword\s*=\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s#\"']{8,})",
+            r"(?:^|[\s{,\"'])(?:[A-Za-z0-9_]*PASSWORD[A-Za-z0-9_]*|password|\"password\"|'password')"
+            r"\s*(?:=|:)\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s,#}\]]{8,})",
             re.IGNORECASE,
         ),
     ),
@@ -126,6 +129,7 @@ SCAN_SUFFIXES = {
     ".ini",
     ".conf",
 }
+TOKEN_ASSIGNMENT = re.compile(r"(?m)^\s*GITHUB_TOKEN\s*:\s*(?P<value>.+?)\s*$")
 
 
 def _should_scan_secret_file(filename: str) -> bool:
@@ -188,16 +192,18 @@ def detect_drift() -> list[Finding]:
                     content = handle.read()
             except OSError:
                 continue
-            if "GITHUB_TOKEN" in content and not any(
-                source in content for source in accepted_token_sources
-            ):
+            for match in TOKEN_ASSIGNMENT.finditer(content):
+                value = match.group("value")
+                if any(source in value for source in accepted_token_sources):
+                    continue
+                line_number = content.count("\n", 0, match.start()) + 1
                 findings.append(
                     Finding(
                         severity="P1",
                         domain="cicd",
-                        title=f"Workflow {filename} may use default token insecurely",
+                        title=f"Workflow {filename}:{line_number} has an unsafe token source",
                         evidence=(
-                            "GITHUB_TOKEN referenced without an explicit GitHub token source"
+                            "GITHUB_TOKEN assignment lacks an approved explicit token source"
                         ),
                         action="Audit and tighten permissions in workflow",
                         auto_execute=False,
