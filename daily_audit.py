@@ -26,7 +26,9 @@ class Finding:
     action: str
     auto_execute: bool = False
     status: str = "open"
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
 
 @dataclass
@@ -136,7 +138,9 @@ def _should_scan_secret_file(filename: str) -> bool:
 def scan_secrets(root: str = ".") -> list[Finding]:
     findings: list[Finding] = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [directory for directory in dirnames if directory not in EXCLUDE_DIRS]
+        dirnames[:] = [
+            directory for directory in dirnames if directory not in EXCLUDE_DIRS
+        ]
         for filename in filenames:
             if not _should_scan_secret_file(filename):
                 continue
@@ -207,7 +211,9 @@ def build_action_queue(findings: list[Finding]) -> dict:
     order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
     ranked = sorted(findings, key=lambda finding: order.get(finding.severity, 9))
     return {
-        "immediate": [asdict(finding) for finding in ranked if finding.severity == "P0"],
+        "immediate": [
+            asdict(finding) for finding in ranked if finding.severity == "P0"
+        ],
         "strategic": [
             asdict(finding) for finding in ranked if finding.severity in ("P1", "P2")
         ],
