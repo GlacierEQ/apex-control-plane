@@ -144,21 +144,35 @@ def fetch_repos() -> list[dict[str, Any]]:
     raise RuntimeError("GitHub repository enumeration exceeded page limit")
 
 
+def _normalized_name(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
+
+
+def _has_marker(name: str, markers: tuple[str, ...]) -> bool:
+    normalized_name = _normalized_name(name)
+    padded_name = f"-{normalized_name}-"
+    return any(
+        f"-{_normalized_name(marker)}-" in padded_name
+        for marker in markers
+        if _normalized_name(marker)
+    )
+
+
 def classify(repo: dict[str, Any]) -> str:
     name = str(repo.get("name") or "").casefold()
     if repo.get("archived"):
         return "archived"
     if name.startswith(("z-backup", "backup-", "archive-")):
         return "archived"
-    if any(marker in name for marker in EXPERIMENT_MARKERS):
+    if _has_marker(name, EXPERIMENT_MARKERS):
         return "experimental"
-    if any(marker in name for marker in CONTROL_MARKERS):
+    if _has_marker(name, CONTROL_MARKERS):
         return "canonical-control-plane"
-    if any(marker in name for marker in LEGAL_MARKERS):
+    if _has_marker(name, LEGAL_MARKERS):
         return "legal-process"
-    if any(marker in name for marker in MEMORY_MARKERS):
+    if _has_marker(name, MEMORY_MARKERS):
         return "memory-connector"
-    if any(marker in name for marker in RUNTIME_MARKERS):
+    if _has_marker(name, RUNTIME_MARKERS):
         return "production-runtime"
     return "unknown-ownership"
 
