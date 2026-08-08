@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 import types
 from pathlib import Path
@@ -11,7 +12,7 @@ if importlib.util.find_spec("rich") is None:
 
     class Console:
         def print(self, *_args, **_kwargs):
-            return None
+            pass
 
     class Panel:
         def __init__(self, *_args, **_kwargs):
@@ -22,10 +23,10 @@ if importlib.util.find_spec("rich") is None:
             pass
 
         def add_column(self, *_args, **_kwargs):
-            return None
+            pass
 
         def add_row(self, *_args, **_kwargs):
-            return None
+            pass
 
     rich_console.Console = Console
     rich_panel.Panel = Panel
@@ -82,6 +83,36 @@ def test_daily_secret_scan_excludes_generated_history_and_redacts_value(tmp_path
     assert "value redacted" in findings[0].evidence
 
 
+def test_daily_secret_scan_covers_env_variants_uppercase_and_private_keys(tmp_path):
+    assert daily_audit._should_scan_secret_file(".env.local")
+    assert daily_audit._should_scan_secret_file("CONFIG.ENV")
+    assert daily_audit._should_scan_secret_file("server.PEM")
+
+    secret_dir = tmp_path / "config"
+    secret_dir.mkdir()
+    private_key_header = ("-" * 5) + "BEGIN RSA PRIVATE KEY" + ("-" * 5)
+    (secret_dir / "server.PEM").write_text(
+        f"{private_key_header}\nredacted-test-body\n",
+        encoding="utf-8",
+    )
+
+    findings = daily_audit.scan_secrets(str(tmp_path))
+    assert len(findings) == 1
+    assert "private key" in findings[0].evidence
+
+
+def test_daily_drift_accepts_env_github_token_source(tmp_path, monkeypatch):
+    workflow_dir = tmp_path / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "safe.yml").write_text(
+        "env:\n  GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert daily_audit.detect_drift() == []
+
+
 def test_apex_runner_secret_scan_does_not_match_scanner_vocabulary(tmp_path):
     source = tmp_path / "src"
     source.mkdir()
@@ -108,6 +139,75 @@ def test_apex_runner_secret_scan_does_not_match_scanner_vocabulary(tmp_path):
     assert "value redacted" in findings[0].evidence
 
 
+def test_apex_runner_degrades_on_malformed_github_json(monkeypatch):
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return []
+
+    fake_requests = types.SimpleNamespace(
+        RequestException=RuntimeError,
+        get=lambda *_args, **_kwargs: Response(),
+    )
+    monkeypatch.setattr(apex_runner, "requests", fake_requests)
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.delenv("NOTION_TOKEN", raising=False)
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+
+    github = apex_runner.validate_connectors()[0]
+    assert github.authenticated is False
+    assert github.reachable is False
+    assert github.action_capable is False
+    assert github.notes == "invalid_json_response"
+
+
+def test_apex_runner_does_not_treat_supabase_404_as_operational(monkeypatch):
+    class Response:
+        status_code = 404
+
+        def json(self):
+            return {}
+
+    fake_requests = types.SimpleNamespace(
+        RequestException=RuntimeError,
+        get=lambda *_args, **_kwargs: Response(),
+    )
+    monkeypatch.setattr(apex_runner, "requests", fake_requests)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.delenv("NOTION_TOKEN", raising=False)
+    monkeypatch.setenv("SUPABASE_URL", "https://example.invalid")
+    monkeypatch.setenv("SUPABASE_KEY", "test-key")
+
+    supabase = apex_runner.validate_connectors()[2]
+    assert supabase.authenticated is False
+    assert supabase.reachable is False
+    assert supabase.action_capable is False
+    assert supabase.notes == "http_status=404"
+
+
+def test_apex_runner_persists_run_unique_atomic_receipts(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    first = apex_runner.AuditRun(run_id="run-one", timestamp="2026-08-08T00:00:00Z")
+    second = apex_runner.AuditRun(run_id="run-two", timestamp="2026-08-08T00:01:00Z")
+
+    first_log, first_queue = apex_runner.persist_run(first)
+    second_log, second_queue = apex_runner.persist_run(second)
+
+    assert first_log.exists()
+    assert first_queue.exists()
+    assert second_log.exists()
+    assert second_queue.exists()
+    assert first_log != second_log
+    assert first_queue != second_queue
+    aliases = [path for path in Path("audit_log").glob("run_*.json") if path not in {first_log, second_log}]
+    assert len(aliases) == 1
+    assert json.loads(aliases[0].read_text(encoding="utf-8"))["run_id"] == "run-two"
+    assert not list(Path("audit_log").glob(".*.tmp"))
+    assert not list(Path("action_queue").glob(".*.tmp"))
+
+
 def test_apex_daily_workflow_defers_failure_until_after_receipt_steps():
     workflow = Path(".github/workflows/apex-daily.yml").read_text(encoding="utf-8")
 
@@ -119,3 +219,6 @@ def test_apex_daily_workflow_defers_failure_until_after_receipt_steps():
     assert run_pos < commit_pos < issue_pos < propagate_pos
     assert workflow.count("if: always()") >= 3
     assert 'echo "status=${audit_status}" >> "$GITHUB_OUTPUT"' in workflow
+    assert "group: apex-daily-${{ github.repository }}" in workflow
+    issue_step = workflow[issue_pos:propagate_pos]
+    assert "GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in issue_step
