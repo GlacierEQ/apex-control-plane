@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "name": "Notion-First Continuity + Integration Preflight",
+  "stage_order": [
+    "notion_boot_analysis",
+    "existing_work_discovery",
+    "integration_map"
+  ],
+  "block_user_facing_text_until_complete": true,
+  "canonical_notion_pages": [
+    {
+      "id": "6b2f21f8-a845-4aa6-9c53-3824900ea43b",
+      "role": "continuity_state",
+      "title": "SuperNova Continuity Ledger — Session Memory"
+    },
+    {
+      "id": "2d3a844d-19ad-4b36-a23f-7ea7e0a8cc6b",
+      "role": "identity_capability",
+      "title": "NOVA-001 — Highest Cognitive Structure"
+    },
+    {
+      "id": "a0db5ee6-49c4-4e7a-9d6a-f8366227bf96",
+      "role": "continuity_method",
+      "title": "SKILL 5 — Memory & Continuity Engineering"
+    },
+    {
+      "id": "44556054-f66e-4bf2-9d05-5a6e650ea082",
+      "role": "notion_governance",
+      "title": "Notion (Workspace) Connector"
+    },
+    {
+      "id": "3abb1e4f-3223-8118-9dd9-c11476bf446f",
+      "role": "chat_continuity_index",
+      "title": "H20 Holographic Continuity Index v0"
+    }
+  ],
+  "receipt_requirements": {
+    "notion_status": "complete",
+    "minimum_pages_loaded": 5,
+    "canonical_conflicts_must_be_empty": true,
+    "existing_work_statuses": [
+      "found",
+      "none_found"
+    ],
+    "minimum_existing_work_systems_searched": 2,
+    "integration_status": "complete"
+  },
+  "tool_aliases": {
+    "notion_search": [
+      "notion.search"
+    ],
+    "notion_fetch": [
+      "notion.fetch"
+    ],
+    "work_search": [
+      "notion.search",
+      "github.search",
+      "github.search_repositories",
+      "github.search_commits",
+      "github.search_issues",
+      "files.search",
+      "personal_context.search",
+      "google_drive.search",
+      "dropbox.search",
+      "box.search"
+    ]
+  },
+  "laws": [
+    "NOTION BEFORE SPEECH",
+    "BEFORE STARTING, DETERMINE WHETHER IT IS ALREADY STARTED",
+    "RESUME AND EXTEND THE CANONICAL OWNER BEFORE CREATING",
+    "BEFORE MAKING, DISCOVER WHO NEEDS, OWNS, CONSUMES, DEPENDS ON, OR OVERLAPS WITH IT",
+    "ADD AND LINK BEFORE FRAGMENTING",
+    "UNRESOLVED CANONICAL CONFLICTS BLOCK CREATION",
+    "NEW ROOTS ARE A LAST RESORT"
+  ],
+  "security": {
+    "never_embed_secrets": true,
+    "do_not_require_sensitive_payloads_in_receipts": true,
+    "store_pointers_and_roles_not_private_content": true
+  }
+}
