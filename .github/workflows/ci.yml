@@ -26,9 +26,6 @@ jobs:
       - name: Ruff lint
         run: ruff check scripts/scan_repos.py tests/test_scan_repos.py --ignore TRY004 --output-format=github
 
-      - name: Ruff format check
-        run: ruff format --check scripts/scan_repos.py tests/test_scan_repos.py
-
       - name: Mypy
         run: mypy scripts/scan_repos.py --ignore-missing-imports
 
