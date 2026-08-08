@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -40,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -61,7 +65,7 @@ jobs:
 
   repository-security:
     name: Repository security
-    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@main
+    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@418fb99ceaee8ba1623cef9c83c9360e20482fe3
     with:
       repo_name: ${{ github.event.repository.name }}
       language: python
