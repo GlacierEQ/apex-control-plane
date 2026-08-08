@@ -2,7 +2,7 @@ name: Daily Connector Audit
 
 on:
   schedule:
-    # 06:00 UTC daily (08:00 HST in summer, adjusts for DST)
+    # 06:00 UTC daily = 20:00 HST on the previous calendar day (Hawaii does not observe DST)
     - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
@@ -11,19 +11,79 @@ on:
         required: false
         default: 'manual run'
 
+permissions:
+  contents: write
+
+concurrency:
+  group: estate-registry-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Restore prior estate registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin estate-registry-state >/dev/null 2>&1; then
+            git fetch --no-tags origin \
+              refs/heads/estate-registry-state:refs/remotes/origin/estate-registry-state
+            git show refs/remotes/origin/estate-registry-state:repo_registry.json \
+              > repo_registry.json
+          fi
+
+      - name: Refresh estate registry
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/scan_repos.py
+
+      - name: Persist estate registry state
+        shell: bash
+        run: |
+          set -euo pipefail
+          state_dir="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$state_dir" >/dev/null 2>&1 || true
+            rm -rf "$state_dir"
+          }
+          trap cleanup EXIT
+
+          if git show-ref --verify --quiet refs/remotes/origin/estate-registry-state; then
+            git worktree add --detach "$state_dir" refs/remotes/origin/estate-registry-state
+          else
+            git worktree add --detach "$state_dir" HEAD
+            (
+              cd "$state_dir"
+              git switch --orphan estate-registry-state
+              git rm -rf . >/dev/null 2>&1 || true
+            )
+          fi
+
+          cp repo_registry.json repo_registry_delta.json repo_scan.json "$state_dir"/
+          (
+            cd "$state_dir"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add repo_registry.json repo_registry_delta.json repo_scan.json
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "state: refresh estate registry ${GITHUB_RUN_ID}"
+            git push origin HEAD:refs/heads/estate-registry-state
+          )
 
       - name: Install dependencies
         run: pip install psycopg2-binary supermemory python-dotenv requests
@@ -32,7 +92,7 @@ jobs:
         env:
           SUPERMEMORY_API_KEY: ${{ secrets.SUPERMEMORY_API_KEY }}
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           CLICKUP_API_KEY: ${{ secrets.CLICKUP_API_KEY }}
@@ -43,11 +103,23 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python integration/supermemory_neon/audit_loop.py
 
+      - name: Upload estate registry receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: estate-registry-${{ github.run_id }}
+          path: |
+            repo_registry.json
+            repo_registry_delta.json
+            repo_scan.json
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Upload audit log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: audit-log-${{ github.run_id }}
           path: integration/supermemory_neon/audit_output/
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: ignore
