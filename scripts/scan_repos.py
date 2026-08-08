@@ -1,14 +1,7 @@
-"""
-GlacierEQ repository estate scanner.
+"""Refresh the private Repo Atlas through GitHub Actions OIDC.
 
-Enumerates repositories visible to the authenticated GitHub identity, filters to
-the configured owner, writes a durable identity registry, and emits a delta
-against the prior registry.
-
-Outputs:
-  repo_scan.json
-  repo_registry.json
-  repo_registry_delta.json
+The full repository inventory never enters this public repository. The broker
+returns only aggregate counts, snapshot identifiers, and a hash-bound receipt.
 """
 
 from __future__ import annotations
@@ -19,390 +12,248 @@ import re
 import sys
 import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
-from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-TOKEN = os.environ.get("APEX_GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
-OWNER = os.environ.get("GITHUB_OWNER", "GlacierEQ")
+AUDIENCE = "apex-repo-atlas-estate-refresh"
+BROKER_URL = (
+    "https://dyhprklicgewmrimecey.supabase.co/functions/v1/"
+    "apex-github-oidc-estate-atlas-refresh"
+)
+MAX_RESPONSE_BYTES = 128 * 1024
 REGISTRY_PATH = Path(os.environ.get("REPO_REGISTRY_PATH", "repo_registry.json"))
-SCAN_PATH = Path(os.environ.get("REPO_SCAN_PATH", "repo_scan.json"))
 DELTA_PATH = Path(os.environ.get("REPO_DELTA_PATH", "repo_registry_delta.json"))
-
-CLASS_ORDER = (
-    "canonical-control-plane",
-    "production-runtime",
-    "memory-connector",
-    "legal-process",
-    "experimental",
-    "archived",
-    "unknown-ownership",
+SCAN_PATH = Path(os.environ.get("REPO_SCAN_PATH", "repo_scan.json"))
+UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    re.IGNORECASE,
 )
-
-CONTROL_MARKERS = ("control-plane", "control_plane", "command-center", "command_center")
-LEGAL_MARKERS = (
-    "legal",
-    "casebrain",
-    "case-brain",
-    "court",
-    "docket",
-    "motion",
-    "evidence",
+HEX64_RE = re.compile(r"^[0-9a-f]{64}$", re.IGNORECASE)
+DELTA_KEYS = (
+    "new",
+    "removed_or_transferred",
+    "renamed_or_transferred",
+    "state_changes",
 )
-MEMORY_MARKERS = (
-    "memory",
-    "mcp",
-    "connector",
-    "supermemory",
-    "mem0",
-    "pinecone",
-    "qdrant",
-    "smithery",
-    "broker",
-    "contextstream",
+COUNT_KEYS = (
+    "repository_count",
+    "original_count",
+    "fork_count",
+    "private_count",
+    "public_count",
+    "archived_count",
+    "canonical_candidate_count",
+    "verified_canonical_count",
+    "ignition_queue_count",
 )
-RUNTIME_MARKERS = (
-    "gateway",
-    "runtime",
-    "worker",
-    "server",
-    "api",
-    "relay",
-    "proxy",
-    "web",
-)
-EXPERIMENT_MARKERS = (
-    "probe",
-    "test",
-    "experiment",
-    "sandbox",
-    "prototype",
-    "poc",
-    "fragment",
-)
-MAX_REPOSITORY_PAGES = 100
+ALLOWED_TOP_LEVEL = {
+    "ok",
+    "status",
+    "snapshot_id",
+    "previous_snapshot_id",
+    *COUNT_KEYS,
+    "family_counts",
+    "lifecycle_counts",
+    "delta",
+    "inventory_root_sha256",
+    "scan_mode",
+    "github_writes",
+    "token_persisted",
+}
 
 
-def stale_days() -> int:
-    raw = os.environ.get("REPO_STALE_DAYS", "180")
+class EstateRefreshError(RuntimeError):
+    """Fail-closed refresh error without credential or private-repository data."""
+
+
+class _RejectRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        raise EstateRefreshError("redirect_rejected")
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_RejectRedirects())
+
+
+def _request_json(request: urllib.request.Request) -> dict[str, Any]:
     try:
-        value = int(raw)
-    except ValueError as error:
-        raise RuntimeError("REPO_STALE_DAYS must be an integer") from error
-    if value < 0:
-        raise RuntimeError("REPO_STALE_DAYS must be non-negative")
+        with _NO_REDIRECT_OPENER.open(request, timeout=30) as response:
+            raw = response.read(MAX_RESPONSE_BYTES + 1)
+    except EstateRefreshError:
+        raise
+    except urllib.error.HTTPError as error:
+        raise EstateRefreshError(f"http_{error.code}") from error
+    except urllib.error.URLError as error:
+        raise EstateRefreshError("transport_failed") from error
+    if len(raw) > MAX_RESPONSE_BYTES:
+        raise EstateRefreshError("response_too_large")
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise EstateRefreshError("invalid_json") from error
+    if not isinstance(payload, dict):
+        raise EstateRefreshError("invalid_payload")
+    return payload
+
+
+def _oidc_token() -> str:
+    request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "").strip()
+    request_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "").strip()
+    if not request_url or not request_token:
+        raise EstateRefreshError("github_oidc_environment_unavailable")
+    parsed = urllib.parse.urlsplit(request_url)
+    hostname = (parsed.hostname or "").lower()
+    suffix = ".actions.githubusercontent.com"
+    subdomain = hostname[: -len(suffix)] if hostname.endswith(suffix) else ""
+    if (
+        parsed.scheme != "https"
+        or not hostname.endswith(suffix)
+        or not subdomain
+        or subdomain.startswith(".")
+        or subdomain.endswith(".")
+    ):
+        raise EstateRefreshError("github_oidc_endpoint_rejected")
+    separator = "&" if "?" in request_url else "?"
+    url = f"{request_url}{separator}{urllib.parse.urlencode({'audience': AUDIENCE})}"
+    payload = _request_json(
+        urllib.request.Request(
+            url,
+            headers={"Authorization": f"Bearer {request_token}"},
+            method="GET",
+        )
+    )
+    value = payload.get("value")
+    if not isinstance(value, str) or value.count(".") != 2:
+        raise EstateRefreshError("github_oidc_token_invalid")
     return value
 
 
-def _request(url: str) -> urllib.request.Request:
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "GlacierEQ-Estate-Registry/1.0",
-    }
-    if TOKEN:
-        headers["Authorization"] = f"Bearer {TOKEN}"
-    return urllib.request.Request(url, headers=headers)
-
-
-def fetch_repos() -> list[dict[str, Any]]:
-    repos: list[dict[str, Any]] = []
-    for page in range(1, MAX_REPOSITORY_PAGES + 1):
-        url = (
-            "https://api.github.com/user/repos"
-            f"?per_page=100&page={page}&affiliation=owner,collaborator,organization_member"
-            "&sort=full_name&direction=asc"
-        )
-        try:
-            with urllib.request.urlopen(_request(url), timeout=30) as response:
-                batch = json.loads(response.read())
-        except (
-            urllib.error.URLError,
-            TimeoutError,
-            UnicodeDecodeError,
-            json.JSONDecodeError,
-        ) as error:
-            raise RuntimeError(
-                f"GitHub repository enumeration failed on page {page}"
-            ) from error
-        if not isinstance(batch, list):
-            raise TypeError(
-                f"GitHub repository enumeration returned invalid page {page}"
-            )
-        if not batch:
-            return repos
-        repos.extend(
-            repo
-            for repo in batch
-            if isinstance(repo, dict)
-            and repo.get("owner", {}).get("login", "").casefold() == OWNER.casefold()
-        )
-        if len(batch) < 100:
-            return repos
-    raise RuntimeError("GitHub repository enumeration exceeded page limit")
-
-
-def classify(repo: dict[str, Any]) -> str:
-    name = str(repo.get("name") or "").casefold()
-    if repo.get("archived"):
-        return "archived"
-    if name.startswith(("z-backup", "backup-", "archive-")):
-        return "archived"
-    if any(marker in name for marker in EXPERIMENT_MARKERS):
-        return "experimental"
-    if any(marker in name for marker in CONTROL_MARKERS):
-        return "canonical-control-plane"
-    if any(marker in name for marker in LEGAL_MARKERS):
-        return "legal-process"
-    if any(marker in name for marker in MEMORY_MARKERS):
-        return "memory-connector"
-    if any(marker in name for marker in RUNTIME_MARKERS):
-        return "production-runtime"
-    return "unknown-ownership"
-
-
-def _parse_repo_timestamp(value: Any) -> datetime | None:
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError as error:
-        raise ValueError(f"Invalid repository timestamp: {value}") from error
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed
-
-
-def lifecycle(repo: dict[str, Any], now: datetime) -> str:
-    name = str(repo.get("name") or "").casefold()
-    if repo.get("archived") or name.startswith(("z-backup", "backup-", "archive-")):
-        return "archived"
-    pushed = _parse_repo_timestamp(repo.get("pushed_at") or repo.get("updated_at"))
-    if pushed is None:
-        return "unknown"
-    age_days = max(0, (now - pushed).days)
-    return "stale-candidate" if age_days > stale_days() else "active"
-
-
-def name_signature(name: str) -> str:
-    value = name.casefold()
-    value = re.sub(r"^(z-?backup[-_]*|backup[-_]*|archive[-_]*)", "", value)
-    value = re.sub(r"[-_]?v\d+(?:[-_.]\d+)*$", "", value)
-    value = re.sub(r"[-_](copy|old|legacy|deprecated|archive|backup)$", "", value)
-    return re.sub(r"[^a-z0-9]+", "", value)
-
-
-def _identity(repo: dict[str, Any]) -> tuple[int, str, str]:
-    repo_id = repo.get("id")
-    name = repo.get("name")
-    if isinstance(repo_id, bool) or not isinstance(repo_id, int) or repo_id <= 0:
-        raise ValueError(f"Repository missing valid id: {repo_id!r}")
-    if not isinstance(name, str) or not name.strip():
-        raise ValueError(f"Repository missing valid name: {name!r}")
-    full_name = repo.get("full_name")
-    if not isinstance(full_name, str) or not full_name.strip():
-        full_name = f"{OWNER}/{name}"
-    return repo_id, name, full_name
-
-
-def to_entry(repo: dict[str, Any], now: datetime) -> dict[str, Any]:
-    repo_id, name, full_name = _identity(repo)
-    pushed_at = repo.get("pushed_at") or repo.get("updated_at")
-    pushed = _parse_repo_timestamp(pushed_at)
-    age_days = max(0, (now - pushed).days) if pushed else None
-    return {
-        "repository_id": repo_id,
-        "full_name": full_name,
-        "name": name,
-        "class": classify(repo),
-        "lifecycle": lifecycle(repo, now),
-        "visibility": repo.get(
-            "visibility", "private" if repo.get("private") else "public"
-        ),
-        "private": bool(repo.get("private")),
-        "fork": bool(repo.get("fork")),
-        "archived": bool(repo.get("archived")),
-        "disabled": bool(repo.get("disabled")),
-        "default_branch": repo.get("default_branch"),
-        "language": repo.get("language"),
-        "description": repo.get("description"),
-        "pushed_at": pushed_at,
-        "updated_at": repo.get("updated_at"),
-        "age_days": age_days,
-        "name_signature": name_signature(name),
-        "html_url": repo.get("html_url"),
-    }
-
-
-def build_registry(repos: list[dict[str, Any]]) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
-    entries = sorted(
-        (to_entry(repo, now) for repo in repos),
-        key=lambda entry: entry["full_name"].casefold(),
+def _broker_refresh(oidc_token: str) -> dict[str, Any]:
+    body = json.dumps({}, separators=(",", ":")).encode("utf-8")
+    request = urllib.request.Request(
+        BROKER_URL,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {oidc_token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
     )
-    duplicate_map: dict[str, list[str]] = defaultdict(list)
-    for entry in entries:
-        duplicate_map[entry["name_signature"]].append(entry["full_name"])
-    duplicate_candidates = {
-        signature: members
-        for signature, members in sorted(duplicate_map.items())
-        if signature and len(members) > 1
-    }
-    class_counts = Counter(entry["class"] for entry in entries)
-    lifecycle_counts = Counter(entry["lifecycle"] for entry in entries)
-    return {
-        "schema_version": 1,
-        "owner": OWNER,
-        "generated_at": now.isoformat(),
-        "source": "GitHub /user/repos authenticated enumeration",
-        "repository_count": len(entries),
-        "class_counts": {key: class_counts.get(key, 0) for key in CLASS_ORDER},
-        "lifecycle_counts": dict(sorted(lifecycle_counts.items())),
-        "duplicate_candidates": duplicate_candidates,
-        "repositories": entries,
-    }
+    return _request_json(request)
 
 
-def _validate_registry(data: Any, source: str) -> dict[str, Any]:
-    if (
-        not isinstance(data, dict)
-        or data.get("schema_version") != 1
-        or data.get("owner") != OWNER
-        or not isinstance(data.get("repositories"), list)
+def _nonnegative_int(payload: dict[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise EstateRefreshError(f"invalid_{key}")
+    return value
+
+
+def _count_map(payload: dict[str, Any], key: str, repository_count: int) -> dict[str, int]:
+    value = payload.get(key)
+    if not isinstance(value, dict):
+        raise EstateRefreshError(f"invalid_{key}")
+    output: dict[str, int] = {}
+    for name, count in value.items():
+        if not isinstance(name, str) or not name or isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise EstateRefreshError(f"invalid_{key}")
+        output[name] = count
+    if sum(output.values()) != repository_count:
+        raise EstateRefreshError(f"inconsistent_{key}")
+    return dict(sorted(output.items()))
+
+
+def validate_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    unexpected = set(payload) - ALLOWED_TOP_LEVEL
+    if unexpected:
+        raise EstateRefreshError("broker_response_not_redacted")
+    if payload.get("ok") is not True or payload.get("status") != "refreshed":
+        raise EstateRefreshError("refresh_not_confirmed")
+    snapshot_id = payload.get("snapshot_id")
+    if not isinstance(snapshot_id, str) or not UUID_RE.fullmatch(snapshot_id):
+        raise EstateRefreshError("invalid_snapshot_id")
+    previous_snapshot_id = payload.get("previous_snapshot_id")
+    if previous_snapshot_id is not None and (
+        not isinstance(previous_snapshot_id, str) or not UUID_RE.fullmatch(previous_snapshot_id)
     ):
-        raise RuntimeError(f"Invalid registry state in {source}")
-    seen_ids: set[int] = set()
-    for index, entry in enumerate(data["repositories"]):
-        if not isinstance(entry, dict):
-            raise TypeError(f"Invalid repository entry {index} in {source}")
-        repo_id = entry.get("repository_id")
-        full_name = entry.get("full_name")
-        if (
-            isinstance(repo_id, bool)
-            or not isinstance(repo_id, int)
-            or repo_id <= 0
-            or repo_id in seen_ids
-            or not isinstance(full_name, str)
-            or not full_name
-        ):
-            raise RuntimeError(
-                f"Invalid repository identity at index {index} in {source}"
-            )
-        seen_ids.add(repo_id)
-    return data
+        raise EstateRefreshError("invalid_previous_snapshot_id")
 
+    counts = {key: _nonnegative_int(payload, key) for key in COUNT_KEYS}
+    if counts["original_count"] + counts["fork_count"] != counts["repository_count"]:
+        raise EstateRefreshError("inconsistent_original_fork_counts")
+    if counts["private_count"] + counts["public_count"] != counts["repository_count"]:
+        raise EstateRefreshError("inconsistent_visibility_counts")
+    if counts["archived_count"] > counts["repository_count"]:
+        raise EstateRefreshError("inconsistent_archived_count")
+    if counts["verified_canonical_count"] > counts["canonical_candidate_count"]:
+        raise EstateRefreshError("inconsistent_canonical_counts")
+    if counts["ignition_queue_count"] > 25:
+        raise EstateRefreshError("invalid_ignition_queue_count")
 
-def load_previous() -> dict[str, Any] | None:
-    if not REGISTRY_PATH.exists():
-        return None
-    try:
-        data = json.loads(REGISTRY_PATH.read_text())
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise RuntimeError(f"Cannot load {REGISTRY_PATH}") from error
-    return _validate_registry(data, str(REGISTRY_PATH))
+    family_counts = _count_map(payload, "family_counts", counts["repository_count"])
+    lifecycle_counts = _count_map(payload, "lifecycle_counts", counts["repository_count"])
+    delta_value = payload.get("delta")
+    if not isinstance(delta_value, dict) or set(delta_value) != set(DELTA_KEYS):
+        raise EstateRefreshError("invalid_delta")
+    delta = {key: _nonnegative_int(delta_value, key) for key in DELTA_KEYS}
 
-
-def diff_registry(
-    previous: dict[str, Any] | None,
-    current: dict[str, Any],
-) -> dict[str, Any]:
-    current = _validate_registry(current, "current registry")
-    if previous is not None:
-        previous = _validate_registry(previous, "previous registry")
-    now = current["generated_at"]
-    if previous is None:
-        return {
-            "schema_version": 1,
-            "generated_at": now,
-            "baseline": True,
-            "new": [repo["full_name"] for repo in current["repositories"]],
-            "removed_or_transferred": [],
-            "renamed_or_transferred": [],
-            "state_changes": [],
-        }
-
-    old_by_id = {repo["repository_id"]: repo for repo in previous["repositories"]}
-    new_by_id = {repo["repository_id"]: repo for repo in current["repositories"]}
-
-    new_ids = sorted(set(new_by_id) - set(old_by_id))
-    removed_ids = sorted(set(old_by_id) - set(new_by_id))
-    renamed = []
-    state_changes = []
-
-    for repo_id in sorted(set(old_by_id) & set(new_by_id)):
-        old = old_by_id[repo_id]
-        new = new_by_id[repo_id]
-        if old.get("full_name") != new.get("full_name"):
-            renamed.append(
-                {
-                    "repository_id": repo_id,
-                    "before": old.get("full_name"),
-                    "after": new.get("full_name"),
-                }
-            )
-        fields = (
-            "archived",
-            "disabled",
-            "default_branch",
-            "class",
-            "lifecycle",
-            "visibility",
-            "fork",
-        )
-        changes = {
-            field: {"before": old.get(field), "after": new.get(field)}
-            for field in fields
-            if old.get(field) != new.get(field)
-        }
-        if changes:
-            state_changes.append(
-                {
-                    "repository_id": repo_id,
-                    "full_name": new.get("full_name"),
-                    "changes": changes,
-                }
-            )
+    inventory_root = payload.get("inventory_root_sha256")
+    if not isinstance(inventory_root, str) or not HEX64_RE.fullmatch(inventory_root):
+        raise EstateRefreshError("invalid_inventory_root")
+    if payload.get("scan_mode") != "metadata_only":
+        raise EstateRefreshError("invalid_scan_mode")
+    if payload.get("github_writes") != 0 or payload.get("token_persisted") is not False:
+        raise EstateRefreshError("unsafe_broker_receipt")
 
     return {
-        "schema_version": 1,
-        "generated_at": now,
-        "baseline": False,
-        "new": [new_by_id[repo_id]["full_name"] for repo_id in new_ids],
-        "removed_or_transferred": [
-            old_by_id[repo_id]["full_name"] for repo_id in removed_ids
-        ],
-        "renamed_or_transferred": renamed,
-        "state_changes": state_changes,
+        "schema_version": 2,
+        "redacted": True,
+        "source": "supabase_repo_atlas_oidc_refresh",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "snapshot_id": snapshot_id,
+        "previous_snapshot_id": previous_snapshot_id,
+        **counts,
+        "family_counts": family_counts,
+        "lifecycle_counts": lifecycle_counts,
+        "delta": delta,
+        "inventory_root_sha256": inventory_root.lower(),
+        "scan_mode": "metadata_only",
+        "github_writes": 0,
+        "token_persisted": False,
+        "private_repository_metadata_persisted_here": False,
     }
 
 
-def legacy_scan(registry: dict[str, Any]) -> dict[str, Any]:
-    registry = _validate_registry(registry, "legacy scan input")
-    buckets = {
-        "total": registry["repository_count"],
-        "stale": [],
-        "backup": [],
-        "no_description": [],
-        "active": [],
+def build_public_artifacts(receipt: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    registry = dict(receipt)
+    delta = {
+        "schema_version": 2,
+        "redacted": True,
+        "snapshot_id": receipt["snapshot_id"],
+        "previous_snapshot_id": receipt["previous_snapshot_id"],
+        "generated_at": receipt["generated_at"],
+        "delta": dict(receipt["delta"]),
+        "inventory_root_sha256": receipt["inventory_root_sha256"],
+        "detail_location": "private Supabase Repo Atlas snapshot",
     }
-    for entry in registry["repositories"]:
-        compact = {
-            "name": entry.get("name"),
-            "age_days": entry.get("age_days"),
-            "language": entry.get("language"),
-            "private": entry.get("private"),
-        }
-        if entry.get("class") == "archived":
-            buckets["backup"].append(compact)
-        elif entry.get("lifecycle") == "stale-candidate":
-            buckets["stale"].append(compact)
-        elif not entry.get("description"):
-            buckets["no_description"].append(compact)
-        else:
-            buckets["active"].append(compact)
-    return buckets
+    scan = {
+        "schema_version": 2,
+        "redacted": True,
+        "snapshot_id": receipt["snapshot_id"],
+        "generated_at": receipt["generated_at"],
+        "total": receipt["repository_count"],
+        "originals": receipt["original_count"],
+        "forks": receipt["fork_count"],
+        "private": receipt["private_count"],
+        "public": receipt["public_count"],
+        "archived": receipt["archived_count"],
+        "family_counts": dict(receipt["family_counts"]),
+        "lifecycle_counts": dict(receipt["lifecycle_counts"]),
+        "inventory_root_sha256": receipt["inventory_root_sha256"],
+    }
+    return registry, delta, scan
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -429,42 +280,37 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
             temp_path.unlink(missing_ok=True)
 
 
-def _failure(message: str) -> int:
-    print(
-        json.dumps({"ok": False, "error": message}, separators=(",", ":")),
-        file=sys.stderr,
-    )
-    return 1
-
-
 def main() -> int:
-    if not TOKEN:
-        return _failure("APEX_GITHUB_TOKEN or GITHUB_TOKEN not set")
+    oidc_token = ""
     try:
-        stale_days()
-        previous = load_previous()
-        repos = fetch_repos()
-        registry = build_registry(repos)
-        delta = diff_registry(previous, registry)
-        scan = legacy_scan(registry)
+        oidc_token = _oidc_token()
+        payload = _broker_refresh(oidc_token)
+        oidc_token = ""
+        receipt = validate_payload(payload)
+        registry, delta, scan = build_public_artifacts(receipt)
         write_json(REGISTRY_PATH, registry)
         write_json(DELTA_PATH, delta)
         write_json(SCAN_PATH, scan)
-    except (RuntimeError, TypeError, ValueError, OSError) as error:
-        return _failure(str(error))
+    except (EstateRefreshError, OSError) as error:
+        print(json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")), file=sys.stderr)
+        return 1
+    finally:
+        oidc_token = ""
 
-    print(f"Owner: {OWNER}")
-    print(f"Repositories: {registry['repository_count']}")
     print(
-        "Classes: "
-        + ", ".join(f"{key}={value}" for key, value in registry["class_counts"].items())
-    )
-    print(
-        "Delta: "
-        f"new={len(delta['new'])}, "
-        f"removed_or_transferred={len(delta['removed_or_transferred'])}, "
-        f"renamed_or_transferred={len(delta['renamed_or_transferred'])}, "
-        f"state_changes={len(delta['state_changes'])}"
+        json.dumps(
+            {
+                "ok": True,
+                "snapshot_id": registry["snapshot_id"],
+                "repository_count": registry["repository_count"],
+                "original_count": registry["original_count"],
+                "fork_count": registry["fork_count"],
+                "delta": registry["delta"],
+                "inventory_root_sha256": registry["inventory_root_sha256"],
+                "redacted": True,
+            },
+            separators=(",", ":"),
+        )
     )
     return 0
 
