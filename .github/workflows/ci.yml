@@ -6,12 +6,31 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  ci:
-    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@main
-    with:
-      repo_name: ${{ github.event.repository.name }}
-      language: python
-      run_tests: true
-      run_lint: true
-      run_security: true
+  estate-registry:
+    name: Estate registry quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install quality tools
+        run: python -m pip install --upgrade ruff mypy pytest
+
+      - name: Ruff lint
+        run: ruff check scripts/scan_repos.py tests/test_scan_repos.py --ignore TRY004 --output-format=github
+
+      - name: Ruff format check
+        run: ruff format --check scripts/scan_repos.py tests/test_scan_repos.py
+
+      - name: Mypy
+        run: mypy scripts/scan_repos.py --ignore-missing-imports
+
+      - name: Tests
+        run: pytest -q tests/test_scan_repos.py
