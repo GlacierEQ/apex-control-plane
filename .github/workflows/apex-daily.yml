@@ -60,6 +60,17 @@ jobs:
           echo "status=${audit_status}" >> "$GITHUB_OUTPUT"
           echo "APEX audit exit status captured: ${audit_status}; persistence and notification will run before final status propagation."
 
+      - name: Upload audit receipt fallback
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-audit-receipt-${{ github.run_id }}
+          path: |
+            audit_log/run_${{ github.run_id }}.json
+            action_queue/queue_${{ github.run_id }}.json
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Commit audit results
         if: always()
         shell: bash
@@ -68,8 +79,30 @@ jobs:
           git config user.name  "APEX Autonomous Agent"
           git config user.email "apex-bot@glaciereq.system"
           git add --ignore-errors audit_log/ findings/ action_queue/ connector_registry.json
-          git diff --staged --quiet || git commit -m "audit: daily run $(date -u +%Y-%m-%dT%H:%M:%SZ) [auto]"
-          git push
+          if git diff --staged --quiet; then
+            echo "No audit receipt changes to persist."
+            exit 0
+          fi
+          git commit -m "audit: daily run $(date -u +%Y-%m-%dT%H:%M:%SZ) [auto]"
+
+          target_branch="${GITHUB_REF_NAME:-main}"
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${target_branch}"; then
+              echo "Audit receipts persisted to ${target_branch}."
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "Audit receipt push failed after ${attempt} attempts; artifact fallback remains durable." >&2
+              exit 1
+            fi
+            echo "Remote advanced; synchronizing before retry ${attempt}/3."
+            git fetch --no-tags origin "${target_branch}"
+            if ! git rebase "origin/${target_branch}"; then
+              git rebase --abort || true
+              echo "Audit receipt rebase failed; artifact fallback remains durable." >&2
+              exit 1
+            fi
+          done
 
       - name: Auto-create issues for P0/P1 findings
         if: always()
