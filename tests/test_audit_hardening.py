@@ -201,7 +201,11 @@ def test_apex_runner_persists_run_unique_atomic_receipts(tmp_path, monkeypatch):
     assert second_queue.exists()
     assert first_log != second_log
     assert first_queue != second_queue
-    aliases = [path for path in Path("audit_log").glob("run_*.json") if path not in {first_log, second_log}]
+    aliases = [
+        path
+        for path in Path("audit_log").glob("run_*.json")
+        if path not in {first_log, second_log}
+    ]
     assert len(aliases) == 1
     assert json.loads(aliases[0].read_text(encoding="utf-8"))["run_id"] == "run-two"
     assert not list(Path("audit_log").glob(".*.tmp"))
