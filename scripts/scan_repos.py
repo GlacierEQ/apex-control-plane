@@ -128,7 +128,7 @@ def fetch_repos() -> list[dict[str, Any]]:
                 f"GitHub repository enumeration failed on page {page}"
             ) from error
         if not isinstance(batch, list):
-            raise RuntimeError(
+            raise TypeError(
                 f"GitHub repository enumeration returned invalid page {page}"
             )
         if not batch:
@@ -144,20 +144,18 @@ def fetch_repos() -> list[dict[str, Any]]:
     raise RuntimeError("GitHub repository enumeration exceeded page limit")
 
 
-def _has_marker(name: str, marker: str) -> bool:
-    normalized_name = name.casefold().replace("_", "-")
-    normalized_marker = marker.casefold().replace("_", "-")
-    return (
-        re.search(
-            rf"(?:^|-){re.escape(normalized_marker)}(?:-|$)",
-            normalized_name,
-        )
-        is not None
+def _normalized_name(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
+
+
+def _has_marker(name: str, markers: tuple[str, ...]) -> bool:
+    normalized_name = _normalized_name(name)
+    padded_name = f"-{normalized_name}-"
+    return any(
+        f"-{_normalized_name(marker)}-" in padded_name
+        for marker in markers
+        if _normalized_name(marker)
     )
-
-
-def _has_any_marker(name: str, markers: tuple[str, ...]) -> bool:
-    return any(_has_marker(name, marker) for marker in markers)
 
 
 def classify(repo: dict[str, Any]) -> str:
@@ -166,15 +164,15 @@ def classify(repo: dict[str, Any]) -> str:
         return "archived"
     if name.startswith(("z-backup", "backup-", "archive-")):
         return "archived"
-    if _has_any_marker(name, EXPERIMENT_MARKERS):
+    if _has_marker(name, EXPERIMENT_MARKERS):
         return "experimental"
-    if _has_any_marker(name, CONTROL_MARKERS):
+    if _has_marker(name, CONTROL_MARKERS):
         return "canonical-control-plane"
-    if _has_any_marker(name, LEGAL_MARKERS):
+    if _has_marker(name, LEGAL_MARKERS):
         return "legal-process"
-    if _has_any_marker(name, MEMORY_MARKERS):
+    if _has_marker(name, MEMORY_MARKERS):
         return "memory-connector"
-    if _has_any_marker(name, RUNTIME_MARKERS):
+    if _has_marker(name, RUNTIME_MARKERS):
         return "production-runtime"
     return "unknown-ownership"
 
@@ -208,11 +206,7 @@ def name_signature(name: str) -> str:
     while True:
         previous = value
         value = re.sub(r"[-_]?v\d+(?:[-_.]\d+)*$", "", value)
-        value = re.sub(
-            r"[-_](copy|old|legacy|deprecated|archive|backup)$",
-            "",
-            value,
-        )
+        value = re.sub(r"[-_](copy|old|legacy|deprecated|archive|backup)$", "", value)
         if value == previous:
             break
     return re.sub(r"[^a-z0-9]+", "", value)
@@ -300,7 +294,7 @@ def _validate_registry(data: Any, source: str) -> dict[str, Any]:
     seen_ids: set[int] = set()
     for index, entry in enumerate(data["repositories"]):
         if not isinstance(entry, dict):
-            raise RuntimeError(f"Invalid repository entry {index} in {source}")
+            raise TypeError(f"Invalid repository entry {index} in {source}")
         repo_id = entry.get("repository_id")
         full_name = entry.get("full_name")
         if (
@@ -474,7 +468,7 @@ def main() -> int:
         write_json(REGISTRY_PATH, registry)
         write_json(DELTA_PATH, delta)
         write_json(SCAN_PATH, scan)
-    except (RuntimeError, ValueError, OSError) as error:
+    except (RuntimeError, TypeError, ValueError, OSError) as error:
         return _failure(str(error))
 
     print(f"Owner: {OWNER}")
