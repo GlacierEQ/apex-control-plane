@@ -1,0 +1,225 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from notion_continuity_gate import (
+    build_notion_preflight_request,
+    load_notion_policy,
+    validate_notion_continuity_receipt,
+)
+
+
+def _valid_receipt(*, existing: bool = True) -> dict:
+    policy = load_notion_policy()
+    pages = [
+        {
+            "id": row["id"],
+            "role": row["role"],
+            "source": f"Notion.fetch:{row['id']}",
+        }
+        for row in policy["canonical_notion_pages"]
+    ]
+    return {
+        "tool_inventory": {
+            "tool": "api_tool.list_resources",
+            "status": "complete",
+            "loaded_tools": [
+                "api_tool.list_resources",
+                "Notion.search",
+                "Notion.fetch",
+                "GitHub.search",
+            ],
+            "gaps": [],
+        },
+        "notion_boot_analysis": {
+            "search_tool": "Notion.search",
+            "fetch_tool": "Notion.fetch",
+            "status": "complete",
+            "query": "continuity identity capabilities current state active build",
+            "pages_loaded": pages,
+            "identity_loaded": True,
+            "expectations_loaded": True,
+            "capabilities_loaded": True,
+            "current_state_loaded": True,
+            "canonical_conflicts": [],
+        },
+        "existing_work_discovery": {
+            "tool": "GitHub.search",
+            "status": "found" if existing else "none_found",
+            "query": "current requested capability and likely canonical owner",
+            "systems_searched": ["Notion", "GitHub"],
+            "candidates": (
+                [
+                    {
+                        "system": "GitHub",
+                        "id": "GlacierEQ/apex-control-plane",
+                        "relationship": "canonical_owner",
+                    }
+                ]
+                if existing
+                else []
+            ),
+            "canonical_owner": (
+                {
+                    "system": "GitHub",
+                    "id": "GlacierEQ/apex-control-plane",
+                    "kind": "repository",
+                }
+                if existing
+                else None
+            ),
+            "canonical_conflicts": [],
+            "decision": "extend" if existing else "create_if_needed",
+        },
+        "integration_map": {
+            "status": "complete",
+            "need_search_performed": True,
+            "searched_relationships": ["owner", "consumer", "dependency", "overlap"],
+            "owner": (
+                {
+                    "system": "GitHub",
+                    "id": "GlacierEQ/apex-control-plane",
+                    "kind": "repository",
+                }
+                if existing
+                else None
+            ),
+            "consumers": (
+                [{"system": "APEX", "id": "control-plane-runtime"}]
+                if existing
+                else []
+            ),
+            "dependencies": [],
+            "related_nodes": [],
+            "link_plan": [
+                "extend the existing startup gate and preserve the canonical entrypoint"
+            ],
+            "decision": "integrate" if existing else "standalone_last_resort",
+            "create_new_root": False if existing else True,
+            "abandon_existing": False,
+            "standalone_justification": (
+                "" if existing else "No existing owner or related consumer was found."
+            ),
+        },
+    }
+
+
+def test_policy_is_valid_and_requires_five_canonical_notion_pages() -> None:
+    policy = load_notion_policy()
+    assert policy["schema_version"] == "1.0.0"
+    assert policy["stage_order"] == [
+        "notion_boot_analysis",
+        "existing_work_discovery",
+        "integration_map",
+    ]
+    assert len(policy["canonical_notion_pages"]) == 5
+
+
+def test_valid_existing_work_receipt_passes() -> None:
+    policy = load_notion_policy()
+    assert validate_notion_continuity_receipt(policy, _valid_receipt()) == ()
+
+
+def test_valid_standalone_last_resort_receipt_passes() -> None:
+    policy = load_notion_policy()
+    assert validate_notion_continuity_receipt(policy, _valid_receipt(existing=False)) == ()
+
+
+def test_missing_canonical_notion_page_blocks() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt()
+    missing = receipt["notion_boot_analysis"]["pages_loaded"].pop()
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert any(f"missing canonical Notion page: {missing['id']}" == error for error in errors)
+    assert any("must load at least 5 canonical pages" in error for error in errors)
+
+
+def test_identity_expectations_capabilities_and_state_are_mandatory() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt()
+    fields = ("identity_loaded", "expectations_loaded", "capabilities_loaded", "current_state_loaded")
+    for field in fields:
+        receipt["notion_boot_analysis"][field] = False
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    for field in fields:
+        assert f"notion_boot_analysis.{field} must be true" in errors
+
+
+def test_unresolved_canonical_conflicts_block() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt()
+    receipt["existing_work_discovery"]["canonical_conflicts"] = [
+        "two competing control-plane roots"
+    ]
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert "existing_work_discovery.canonical_conflicts must be empty" in errors
+
+
+def test_found_work_must_extend_one_canonical_owner() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt()
+    receipt["existing_work_discovery"]["canonical_owner"] = None
+    receipt["existing_work_discovery"]["decision"] = "create_if_needed"
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert "found existing work requires canonical_owner" in errors
+    assert "found existing work requires decision=extend" in errors
+
+
+def test_existing_work_discovery_must_search_notion_and_another_system() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt()
+    receipt["existing_work_discovery"]["systems_searched"] = ["GitHub"]
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert "existing_work_discovery.systems_searched must include Notion" in errors
+    assert any("must search at least 2 systems" in error for error in errors)
+
+
+def test_integration_map_must_search_all_relationship_types() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt()
+    receipt["integration_map"]["searched_relationships"] = ["owner"]
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert any("must include consumer" in error for error in errors)
+    assert any("must include dependency" in error for error in errors)
+    assert any("must include overlap" in error for error in errors)
+
+
+def test_existing_work_cannot_create_new_root_or_abandon_existing() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt()
+    receipt["integration_map"]["create_new_root"] = True
+    receipt["integration_map"]["abandon_existing"] = True
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert "integration_map.create_new_root must be false when work exists" in errors
+    assert "integration_map.abandon_existing must be false" in errors
+
+
+def test_standalone_requires_none_found_and_justification() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt(existing=False)
+    receipt["integration_map"]["standalone_justification"] = ""
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert "standalone work requires integration_map.standalone_justification" in errors
+
+
+def test_request_declares_continuity_laws() -> None:
+    policy = load_notion_policy()
+    request = build_notion_preflight_request(policy, task="continue current build")
+    assert request["request_type"] == "glaciereq_notion_continuity_preflight"
+    assert request["requirements"]["notion_before_user_facing_text"] is True
+    assert request["requirements"]["determine_whether_work_already_exists_before_starting"] is True
+    assert request["requirements"]["discover_owner_consumers_dependencies_and_overlap_before_making"] is True
+    assert request["requirements"]["extend_and_link_before_creating_new_root"] is True
+
+
+def test_policy_file_is_valid_json() -> None:
+    policy_path = ROOT / "config" / "notion_continuity_policy.json"
+    parsed = json.loads(policy_path.read_text(encoding="utf-8"))
+    assert parsed["schema_version"] == "1.0.0"
