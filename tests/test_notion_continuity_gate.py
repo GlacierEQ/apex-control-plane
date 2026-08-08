@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -102,7 +102,7 @@ def _valid_receipt(*, existing: bool = True) -> dict:
                 "extend the existing startup gate and preserve the canonical entrypoint"
             ],
             "decision": "integrate" if existing else "standalone_last_resort",
-            "create_new_root": False if existing else True,
+            "create_new_root": not existing,
             "abandon_existing": False,
             "standalone_justification": (
                 "" if existing else "No existing owner or related consumer was found."
