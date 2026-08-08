@@ -10,6 +10,7 @@ Outputs:
   repo_registry.json
   repo_registry_delta.json
 """
+
 from __future__ import annotations
 
 import json
@@ -41,7 +42,15 @@ CLASS_ORDER = (
 )
 
 CONTROL_MARKERS = ("control-plane", "control_plane", "command-center", "command_center")
-LEGAL_MARKERS = ("legal", "casebrain", "case-brain", "court", "docket", "motion", "evidence")
+LEGAL_MARKERS = (
+    "legal",
+    "casebrain",
+    "case-brain",
+    "court",
+    "docket",
+    "motion",
+    "evidence",
+)
 MEMORY_MARKERS = (
     "memory",
     "mcp",
@@ -54,8 +63,25 @@ MEMORY_MARKERS = (
     "broker",
     "contextstream",
 )
-RUNTIME_MARKERS = ("gateway", "runtime", "worker", "server", "api", "relay", "proxy", "web")
-EXPERIMENT_MARKERS = ("probe", "test", "experiment", "sandbox", "prototype", "poc", "fragment")
+RUNTIME_MARKERS = (
+    "gateway",
+    "runtime",
+    "worker",
+    "server",
+    "api",
+    "relay",
+    "proxy",
+    "web",
+)
+EXPERIMENT_MARKERS = (
+    "probe",
+    "test",
+    "experiment",
+    "sandbox",
+    "prototype",
+    "poc",
+    "fragment",
+)
 MAX_REPOSITORY_PAGES = 100
 
 
@@ -98,9 +124,13 @@ def fetch_repos() -> list[dict[str, Any]]:
             UnicodeDecodeError,
             json.JSONDecodeError,
         ) as error:
-            raise RuntimeError(f"GitHub repository enumeration failed on page {page}") from error
+            raise RuntimeError(
+                f"GitHub repository enumeration failed on page {page}"
+            ) from error
         if not isinstance(batch, list):
-            raise TypeError(f"GitHub repository enumeration returned invalid page {page}")
+            raise TypeError(
+                f"GitHub repository enumeration returned invalid page {page}"
+            )
         if not batch:
             return repos
         repos.extend(
@@ -188,7 +218,9 @@ def to_entry(repo: dict[str, Any], now: datetime) -> dict[str, Any]:
         "name": name,
         "class": classify(repo),
         "lifecycle": lifecycle(repo, now),
-        "visibility": repo.get("visibility", "private" if repo.get("private") else "public"),
+        "visibility": repo.get(
+            "visibility", "private" if repo.get("private") else "public"
+        ),
         "private": bool(repo.get("private")),
         "fork": bool(repo.get("fork")),
         "archived": bool(repo.get("archived")),
@@ -255,7 +287,9 @@ def _validate_registry(data: Any, source: str) -> dict[str, Any]:
             or not isinstance(full_name, str)
             or not full_name
         ):
-            raise RuntimeError(f"Invalid repository identity at index {index} in {source}")
+            raise RuntimeError(
+                f"Invalid repository identity at index {index} in {source}"
+            )
         seen_ids.add(repo_id)
     return data
 
