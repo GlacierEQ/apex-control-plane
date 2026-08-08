@@ -47,9 +47,18 @@ def test_classification_priority_and_backup_detection():
     assert classify({}) == "unknown-ownership"
 
 
+def test_classification_uses_name_boundaries():
+    assert classify(repo(6, "latest-research")) == "unknown-ownership"
+    assert classify(repo(7, "capital-model")) == "unknown-ownership"
+    assert classify(repo(8, "test-runner")) == "experimental"
+    assert classify(repo(9, "capital-api")) == "production-runtime"
+
+
 def test_name_signature_collapses_backup_and_version_suffixes():
     assert name_signature("Z-BACKUP-apex-memory-v2") == "apexmemory"
     assert name_signature("apex_memory") == "apexmemory"
+    assert name_signature("apex-memory-v2-backup") == "apexmemory"
+    assert name_signature("apex-memory-backup-v2") == "apexmemory"
 
 
 def test_delta_tracks_stable_id_rename_and_state_change():
