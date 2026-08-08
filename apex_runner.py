@@ -51,7 +51,9 @@ class ConnectorStatus:
     notes: str = ""
 
     def score(self) -> int:
-        return sum([self.declared, self.authenticated, self.reachable, self.action_capable])
+        return sum(
+            [self.declared, self.authenticated, self.reachable, self.action_capable]
+        )
 
     def state(self) -> str:
         if self.score() == 4:
