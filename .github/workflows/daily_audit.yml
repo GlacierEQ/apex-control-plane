@@ -34,7 +34,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      # SECURITY HOLD: this repository is public. Full estate metadata must remain
+      # in the private Repo Atlas backend. Re-enable only after the OIDC broker is
+      # merged, migrated, deployed, and runtime-verified, using redacted receipts.
       - name: Restore prior estate registry
+        if: ${{ false }}
         shell: bash
         run: |
           set -euo pipefail
@@ -59,6 +63,7 @@ jobs:
           esac
 
       - name: Refresh estate registry
+        if: ${{ false }}
         env:
           APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}
         shell: bash
@@ -71,6 +76,7 @@ jobs:
           python scripts/scan_repos.py
 
       - name: Persist estate registry state
+        if: ${{ false }}
         shell: bash
         run: |
           set -euo pipefail
@@ -124,7 +130,7 @@ jobs:
         run: python integration/supermemory_neon/audit_loop.py
 
       - name: Upload estate registry receipt
-        if: always()
+        if: ${{ false }}
         uses: actions/upload-artifact@v4
         with:
           name: estate-registry-${{ github.run_id }}
