@@ -24,9 +24,7 @@ jobs:
         run: python -m pip install --upgrade ruff mypy pytest
 
       - name: Ruff lint
-        # The registry intentionally normalizes invalid external/state shapes into
-        # RuntimeError at its operational boundary rather than exposing TypeError.
-        run: ruff check scripts/scan_repos.py tests/test_scan_repos.py --ignore TRY004 --output-format=github
+        run: ruff check scripts/scan_repos.py tests/test_scan_repos.py --output-format=github
 
       - name: Ruff format check
         run: ruff format --check scripts/scan_repos.py tests/test_scan_repos.py
@@ -36,3 +34,14 @@ jobs:
 
       - name: Tests
         run: pytest -q tests/test_scan_repos.py
+
+  repository-security:
+    name: Repository security
+    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@main
+    with:
+      repo_name: ${{ github.event.repository.name }}
+      language: python
+      run_tests: false
+      run_lint: false
+      run_security: true
+      run_build: false
