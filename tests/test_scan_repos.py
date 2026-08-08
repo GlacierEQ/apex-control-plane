@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from scripts.scan_repos import build_registry, classify, diff_registry, name_signature
 
 
