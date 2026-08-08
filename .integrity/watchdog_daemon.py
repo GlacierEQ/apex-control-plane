@@ -1,11 +1,8 @@
-"""Integrity watchdog — SHA-256 baselines for this leaf."""
-
 from __future__ import annotations
-
+"""Integrity watchdog — SHA-256 baselines for this leaf."""
 import hashlib
 import json
 from pathlib import Path
-
 
 class WatchdogDaemon:
     def __init__(self, repo_root: str | None = None):
@@ -18,8 +15,8 @@ class WatchdogDaemon:
 
     def scan(self) -> dict:
         cur = {}
-        for pattern in ("src/**/*.py", "*.py", "connectors/**/*.py"):
-            for path in self.repo_root.glob(pattern):
+        for pat in ("src/**/*.py", "*.py", "connectors/**/*.py"):
+            for path in self.repo_root.glob(pat):
                 if "__pycache__" in path.parts or ".git" in path.parts:
                     continue
                 if path.is_file():
@@ -33,12 +30,11 @@ class WatchdogDaemon:
 
     def verify(self) -> dict:
         cur = self.scan()
-        return {path: self.baseline.get(path) == digest for path, digest in cur.items()}
-
+        return {p: self.baseline.get(p) == h for p, h in cur.items()}
 
 if __name__ == "__main__":
-    watchdog = WatchdogDaemon()
-    watchdog.update_baseline()
-    result = watchdog.verify()
-    ok = all(result.values()) if result else True
-    print("Integrity check:", "PASS" if ok else "FAIL", f"({len(result)} files)")
+    w = WatchdogDaemon()
+    w.update_baseline()
+    r = w.verify()
+    ok = all(r.values()) if r else True
+    print("Integrity check:", "PASS" if ok else "FAIL", f"({len(r)} files)")
