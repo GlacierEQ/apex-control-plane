@@ -2,7 +2,7 @@ name: Daily Connector Audit
 
 on:
   schedule:
-    # 06:00 UTC daily (08:00 HST in summer, adjusts for DST)
+    # 06:00 UTC daily = 20:00 HST on the previous calendar day (Hawaii does not observe DST)
     - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
@@ -49,5 +49,5 @@ jobs:
         with:
           name: audit-log-${{ github.run_id }}
           path: integration/supermemory_neon/audit_output/
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: ignore
