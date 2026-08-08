@@ -38,17 +38,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git ls-remote --exit-code --heads origin estate-registry-state >/dev/null 2>&1; then
-            git fetch --no-tags origin \
-              refs/heads/estate-registry-state:refs/remotes/origin/estate-registry-state
-            git show refs/remotes/origin/estate-registry-state:repo_registry.json \
-              > repo_registry.json
-          fi
+          set +e
+          git ls-remote --exit-code --heads origin estate-registry-state >/dev/null
+          state_lookup_status=$?
+          set -e
+          case "$state_lookup_status" in
+            0)
+              git fetch --no-tags origin \
+                refs/heads/estate-registry-state:refs/remotes/origin/estate-registry-state
+              git show refs/remotes/origin/estate-registry-state:repo_registry.json \
+                > repo_registry.json
+              ;;
+            2)
+              echo "No prior estate-registry-state branch; creating initial baseline."
+              ;;
+            *)
+              echo "Estate registry state lookup failed with status ${state_lookup_status}." >&2
+              exit "$state_lookup_status"
+              ;;
+          esac
 
       - name: Refresh estate registry
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/scan_repos.py
+          APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${APEX_GITHUB_TOKEN}" ]]; then
+            echo "APEX_GITHUB_TOKEN is required for estate-wide repository enumeration." >&2
+            exit 1
+          fi
+          python scripts/scan_repos.py
 
       - name: Persist estate registry state
         shell: bash
