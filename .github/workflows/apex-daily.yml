@@ -3,7 +3,7 @@ name: APEX Daily Autonomous Loop
 on:
   schedule:
     - cron: '0 8 * * *'   # 08:00 UTC = 10:00 PM HST
-  workflow_dispatch:       # manual trigger anytime
+  workflow_dispatch:
     inputs:
       force_run:
         description: 'Force full audit regardless of cache'
@@ -14,6 +14,10 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+
+concurrency:
+  group: apex-daily-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
   apex-daily:
@@ -37,6 +41,7 @@ jobs:
           pip install -r requirements.txt --quiet
 
       - name: Run APEX Autonomous Audit
+        id: apex_audit
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -46,19 +51,80 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           RUN_DATE: ${{ github.run_id }}
+        shell: bash
         run: |
+          set +e
           python apex_runner.py --auto-approve --full-audit
+          audit_status=$?
+          set -e
+          echo "status=${audit_status}" >> "$GITHUB_OUTPUT"
+          echo "APEX audit exit status captured: ${audit_status}; persistence and notification will run before final status propagation."
+
+      - name: Upload audit receipt fallback
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-audit-receipt-${{ github.run_id }}
+          path: |
+            audit_log/run_${{ github.run_id }}.json
+            action_queue/queue_${{ github.run_id }}.json
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Commit audit results
+        if: always()
+        shell: bash
         run: |
+          set -euo pipefail
           git config user.name  "APEX Autonomous Agent"
           git config user.email "apex-bot@glaciereq.system"
-          git add audit_log/ findings/ action_queue/ connector_registry.json
-          git diff --staged --quiet || git commit -m "audit: daily run $(date -u +%Y-%m-%dT%H:%M:%SZ) [auto]"
-          git push
+          git add --ignore-errors audit_log/ findings/ action_queue/ connector_registry.json
+          if git diff --staged --quiet; then
+            echo "No audit receipt changes to persist."
+            exit 0
+          fi
+          git commit -m "audit: daily run $(date -u +%Y-%m-%dT%H:%M:%SZ) [auto]"
+
+          target_branch="${GITHUB_REF_NAME:-main}"
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${target_branch}"; then
+              echo "Audit receipts persisted to ${target_branch}."
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "Audit receipt push failed after ${attempt} attempts; artifact fallback remains durable." >&2
+              exit 1
+            fi
+            echo "Remote advanced; synchronizing before retry ${attempt}/3."
+            git fetch --no-tags origin "${target_branch}"
+            if ! git rebase "origin/${target_branch}"; then
+              git rebase --abort || true
+              echo "Audit receipt rebase failed; artifact fallback remains durable." >&2
+              exit 1
+            fi
+          done
 
       - name: Auto-create issues for P0/P1 findings
+        if: always()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
         run: |
           python apex_issue_writer.py --auto-approve
+
+      - name: Propagate audit result
+        if: always()
+        env:
+          AUDIT_STATUS: ${{ steps.apex_audit.outputs.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="${AUDIT_STATUS:-1}"
+          if ! [[ "$status" =~ ^[0-9]+$ ]]; then
+            echo "Invalid captured audit status: $status" >&2
+            exit 1
+          fi
+          if [[ "$status" -ne 0 ]]; then
+            echo "APEX audit reported nonzero status ${status} after receipts and issue creation were attempted." >&2
+            exit "$status"
+          fi
