@@ -35,8 +35,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Refresh private Repo Atlas (manual runtime proof)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Refresh private Repo Atlas
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
         shell: bash
         env:
           REPO_ATLAS_REFRESH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-github-oidc-estate-atlas-refresh
@@ -153,7 +153,7 @@ jobs:
               encoding="utf-8",
           )
           print(
-              "Repo Atlas manual refresh verified: "
+              "Repo Atlas refresh verified: "
               f"repositories={repository_count} "
               f"metadata_only={result.get('scan_mode') == 'metadata_only'} "
               f"github_writes={result.get('github_writes')} "
@@ -238,8 +238,8 @@ jobs:
           )
           PY
 
-      - name: Upload manual Repo Atlas refresh proof
-        if: github.event_name == 'workflow_dispatch'
+      - name: Upload Repo Atlas refresh proof
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
         uses: actions/upload-artifact@v4
         with:
           name: repo-atlas-refresh-proof-${{ github.run_id }}
