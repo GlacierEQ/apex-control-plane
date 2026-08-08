@@ -34,26 +34,59 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Detect estate-wide GitHub credential
+        id: estate_auth
+        shell: bash
+        env:
+          APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${APEX_GITHUB_TOKEN}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Estate registry skipped: APEX_GITHUB_TOKEN is not configured. Repo-scoped github.token will not be used for estate-wide enumeration."
+          fi
+
       - name: Restore prior estate registry
+        if: steps.estate_auth.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          if git ls-remote --exit-code --heads origin estate-registry-state >/dev/null 2>&1; then
+          set +e
+          git ls-remote --exit-code --heads origin estate-registry-state >/dev/null 2>&1
+          state_ref_status=$?
+          set -e
+
+          if [[ "$state_ref_status" -eq 0 ]]; then
             git fetch --no-tags origin \
               refs/heads/estate-registry-state:refs/remotes/origin/estate-registry-state
             git show refs/remotes/origin/estate-registry-state:repo_registry.json \
               > repo_registry.json
+          elif [[ "$state_ref_status" -ne 2 ]]; then
+            echo "::error::Unable to determine estate-registry-state branch status (exit ${state_ref_status})."
+            exit "$state_ref_status"
           fi
 
       - name: Refresh estate registry
+        id: estate_registry
+        if: steps.estate_auth.outputs.available == 'true'
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}
         run: python scripts/scan_repos.py
 
       - name: Persist estate registry state
+        if: steps.estate_registry.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
+          for file in repo_registry.json repo_registry_delta.json repo_scan.json; do
+            if [[ ! -s "$file" ]]; then
+              echo "::error::Missing or empty estate registry output: $file"
+              exit 1
+            fi
+          done
+
           state_dir="$(mktemp -d)"
           cleanup() {
             git worktree remove --force "$state_dir" >/dev/null 2>&1 || true
@@ -104,7 +137,7 @@ jobs:
         run: python integration/supermemory_neon/audit_loop.py
 
       - name: Upload estate registry receipt
-        if: always()
+        if: steps.estate_registry.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: estate-registry-${{ github.run_id }}
