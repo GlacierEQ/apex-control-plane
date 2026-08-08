@@ -10,14 +10,17 @@ on:
       - "AGENT_SYSTEM_PROMPT.md"
       - "STATE.md"
       - "config/casey_auto_boot_manifest.json"
+      - "config/notion_continuity_policy.json"
       - "config/prime_directive_policy.json"
       - "src/auto_boot.py"
+      - "src/notion_continuity_gate.py"
       - "src/prime_directive_boot.py"
       - "src/prime_directive_enforcer.py"
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
       - "tests/test_auto_boot.py"
+      - "tests/test_notion_continuity_gate.py"
       - "tests/test_prime_directive_boot.py"
       - "tests/test_prime_directive_enforcer.py"
       - "docs/CASEY_AUTO_BOOT.md"
@@ -29,14 +32,17 @@ on:
       - "AGENT_SYSTEM_PROMPT.md"
       - "STATE.md"
       - "config/casey_auto_boot_manifest.json"
+      - "config/notion_continuity_policy.json"
       - "config/prime_directive_policy.json"
       - "src/auto_boot.py"
+      - "src/notion_continuity_gate.py"
       - "src/prime_directive_boot.py"
       - "src/prime_directive_enforcer.py"
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
       - "tests/test_auto_boot.py"
+      - "tests/test_notion_continuity_gate.py"
       - "tests/test_prime_directive_boot.py"
       - "tests/test_prime_directive_enforcer.py"
       - "docs/CASEY_AUTO_BOOT.md"
@@ -69,6 +75,7 @@ jobs:
         run: |
           python -m py_compile \
             src/auto_boot.py \
+            src/notion_continuity_gate.py \
             src/prime_directive_boot.py \
             src/prime_directive_enforcer.py \
             src/control_plane.py \
@@ -77,6 +84,7 @@ jobs:
       - name: Validate manifests and emit base request
         run: |
           python -m json.tool config/casey_auto_boot_manifest.json >/dev/null
+          python -m json.tool config/notion_continuity_policy.json >/dev/null
           python -m json.tool config/prime_directive_policy.json >/dev/null
           python src/auto_boot.py --profile legal_case --task continue --emit-request > /tmp/casey-boot-request.json
           python -m json.tool /tmp/casey-boot-request.json >/dev/null
@@ -84,8 +92,9 @@ jobs:
 
       - name: Run startup-gate tests
         run: |
-          python -m pytest -q \
+          CASEY_AUTO_BOOT_TESTING=1 python -m pytest -q \
             tests/test_auto_boot.py \
+            tests/test_notion_continuity_gate.py \
             tests/test_prime_directive_boot.py \
             tests/test_prime_directive_enforcer.py
 
@@ -102,6 +111,7 @@ jobs:
             echo "expected exit 78, received $status" >&2
             exit 1
           fi
+          grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot.err
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot.err
           grep -q 'ground_truth_files_loaded' /tmp/boot.err
           grep -q 'tool_inventory' /tmp/boot.err
@@ -131,6 +141,7 @@ jobs:
         shell: bash
         run: |
           set +e
+          GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
           GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
           CASEY_BOOT_STATUS=complete \
           GLACIEREQ_BOOT_RECEIPT_VERIFIED=1 \
@@ -144,15 +155,16 @@ jobs:
             echo "forged status bypassed boot; received $status" >&2
             exit 1
           fi
-          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/forged.err
+          grep -q 'glaciereq_notion_continuity_preflight' /tmp/forged.err
           test ! -s /tmp/forged.out
 
       - name: Prove request mode continues only as degraded
         run: |
           CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
+          grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot-request.json
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot-request.json
           python -m json.tool /tmp/control-plane.json >/dev/null
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \
-          python -c 'import os; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"'
+          python -c 'import os; assert os.environ.get("GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS") == "degraded"; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"'
