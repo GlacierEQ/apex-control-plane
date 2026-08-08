@@ -5,15 +5,16 @@ Runs every day via GitHub Actions. No human approval required.
 Owner: GlacierEQ / Casey Barton
 """
 
-import os
 import json
-import subprocess
+import os
+import re
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from dataclasses import dataclass, asdict, field
 from typing import List, Optional
 
-GITHUB_TOKEN = os.environ.get("APEX_GITHUB_TOKEN", "")
-NOTION_TOKEN = os.environ.get("APEX_NOTION_TOKEN", "")
+from connectors.github_validator import validate as validate_github
+from connectors.notion_validator import validate as validate_notion
+
 RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
 
@@ -47,64 +48,96 @@ def log(msg: str):
 # ─────────────────────────────────────────────────────────────
 # LAYER 1: Connector Validation
 # ─────────────────────────────────────────────────────────────
-def validate_connectors() -> dict:
-    results = {}
-
-    checks = {
-        "github": bool(GITHUB_TOKEN),
-        "notion": bool(NOTION_TOKEN),
+def _connector_status(result: dict) -> dict:
+    state = str(result.get("state") or "unknown")
+    operational = state == "action_capable"
+    return {
+        "declared": True,
+        "authenticated": operational,
+        "reachable": operational,
+        "action_capable": operational,
+        "status": "GREEN" if operational else "RED",
+        "state": state,
+        "detail": result,
     }
 
-    for name, auth_ok in checks.items():
-        results[name] = {
-            "declared": True,
-            "authenticated": auth_ok,
-            "reachable": auth_ok,  # simplified; expand with actual HTTP check
-            "action_capable": auth_ok,
-            "status": "GREEN" if auth_ok else "RED",
-        }
-        log(f"Connector [{name}]: {'GREEN' if auth_ok else 'RED — NO TOKEN'}")
 
+def validate_connectors() -> dict:
+    results = {
+        "github": _connector_status(validate_github()),
+        "notion": _connector_status(validate_notion()),
+    }
+    for name, result in results.items():
+        log(f"Connector [{name}]: {result['status']} — {result['state']}")
     return results
 
 
 # ─────────────────────────────────────────────────────────────
 # LAYER 2: Secret Leakage Scan
 # ─────────────────────────────────────────────────────────────
-SECRET_PATTERNS = [
-    "sk-", "ghp_", "ghs_", "xai-", "ntn_", "AKIA", "bearer ",
-    "api_key", "apikey", "token", "password", "secret",
-    "-----BEGIN",
-]
+CREDENTIAL_PATTERNS = (
+    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b")),
+    ("OpenAI-style API key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
+    ("Notion token", re.compile(r"\bntn_[A-Za-z0-9]{20,}\b")),
+    ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("Stripe live key", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
+    (
+        "JWT credential",
+        re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b"),
+    ),
+    (
+        "private key",
+        re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+    ),
+    (
+        "password assignment",
+        re.compile(
+            r"\bpassword\s*=\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s#\"']{8,})",
+            re.IGNORECASE,
+        ),
+    ),
+)
 
-EXCLUDE_DIRS = {"__pycache__", ".git", "node_modules", "venv", ".venv"}
+EXCLUDE_DIRS = {
+    "__pycache__",
+    ".git",
+    "node_modules",
+    "venv",
+    ".venv",
+    "audit_logs",
+    "audit_log",
+    "action_queue",
+    "findings",
+}
+SCAN_EXTENSIONS = (".py", ".ts", ".js", ".go", ".env", ".yaml", ".yml", ".json", ".md", ".toml", ".sh")
 
 
 def scan_secrets(root: str = ".") -> List[Finding]:
     findings = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
-        for fname in filenames:
-            if not fname.endswith((".py", ".ts", ".js", ".env", ".yaml", ".yml", ".json", ".md")):
+        dirnames[:] = [directory for directory in dirnames if directory not in EXCLUDE_DIRS]
+        for filename in filenames:
+            if not filename.endswith(SCAN_EXTENSIONS):
                 continue
-            fpath = os.path.join(dirpath, fname)
+            file_path = os.path.join(dirpath, filename)
             try:
-                with open(fpath, "r", errors="ignore") as f:
-                    for i, line in enumerate(f, 1):
-                        low = line.lower()
-                        for pat in SECRET_PATTERNS:
-                            if pat in low and "os.environ" not in line and "example" not in low:
-                                findings.append(Finding(
-                                    severity="P0",
-                                    domain="security",
-                                    title=f"Potential secret in {fname}:{i}",
-                                    evidence=f"Pattern '{pat}' found: {line.strip()[:80]}",
-                                    action="Rotate credential, remove from source, inject via env",
-                                    auto_execute=False,
-                                ))
+                with open(file_path, errors="ignore", encoding="utf-8") as handle:
+                    for line_number, line in enumerate(handle, 1):
+                        for label, pattern in CREDENTIAL_PATTERNS:
+                            if pattern.search(line):
+                                findings.append(
+                                    Finding(
+                                        severity="P0",
+                                        domain="security",
+                                        title=f"Credential-shaped value in {file_path}:{line_number}",
+                                        evidence=f"{label} pattern matched; value redacted from audit output",
+                                        action="Rotate the credential if live, remove it from source, and inject it through the approved secret path",
+                                        auto_execute=False,
+                                    )
+                                )
                                 break
-            except Exception:
-                pass
+            except OSError:
+                continue
     log(f"Secret scan: {len(findings)} potential leaks found")
     return findings
 
@@ -114,22 +147,26 @@ def scan_secrets(root: str = ".") -> List[Finding]:
 # ─────────────────────────────────────────────────────────────
 def detect_drift() -> List[Finding]:
     findings = []
-    # Check GitHub Actions workflows for common issues
     workflows_dir = ".github/workflows"
     if os.path.isdir(workflows_dir):
-        for fname in os.listdir(workflows_dir):
-            fpath = os.path.join(workflows_dir, fname)
-            with open(fpath, "r", errors="ignore") as f:
-                content = f.read()
-            if "GITHUB_TOKEN" in content and "secrets." not in content:
-                findings.append(Finding(
-                    severity="P1",
-                    domain="cicd",
-                    title=f"Workflow {fname} may use default token insecurely",
-                    evidence="GITHUB_TOKEN referenced without secrets.GITHUB_TOKEN pattern",
-                    action="Audit and tighten permissions in workflow",
-                    auto_execute=False,
-                ))
+        for filename in os.listdir(workflows_dir):
+            file_path = os.path.join(workflows_dir, filename)
+            try:
+                with open(file_path, errors="ignore", encoding="utf-8") as handle:
+                    content = handle.read()
+            except OSError:
+                continue
+            if "GITHUB_TOKEN" in content and "secrets." not in content and "github.token" not in content:
+                findings.append(
+                    Finding(
+                        severity="P1",
+                        domain="cicd",
+                        title=f"Workflow {filename} may use default token insecurely",
+                        evidence="GITHUB_TOKEN referenced without an explicit GitHub token source",
+                        action="Audit and tighten permissions in workflow",
+                        auto_execute=False,
+                    )
+                )
     log(f"Drift detection: {len(findings)} issues")
     return findings
 
@@ -139,11 +176,13 @@ def detect_drift() -> List[Finding]:
 # ─────────────────────────────────────────────────────────────
 def build_action_queue(findings: List[Finding]) -> dict:
     order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
-    ranked = sorted(findings, key=lambda f: order.get(f.severity, 9))
+    ranked = sorted(findings, key=lambda finding: order.get(finding.severity, 9))
     return {
-        "immediate": [asdict(f) for f in ranked if f.severity == "P0"],
-        "strategic": [asdict(f) for f in ranked if f.severity in ("P1", "P2")],
-        "backlog": [asdict(f) for f in ranked if f.severity == "P3"],
+        "immediate": [asdict(finding) for finding in ranked if finding.severity == "P0"],
+        "strategic": [
+            asdict(finding) for finding in ranked if finding.severity in ("P1", "P2")
+        ],
+        "backlog": [asdict(finding) for finding in ranked if finding.severity == "P3"],
     }
 
 
@@ -157,8 +196,8 @@ def write_audit_log(run: AuditRun, queue: dict):
         "run": asdict(run),
         "action_queue": queue,
     }
-    with open(path, "w") as f:
-        json.dump(payload, f, indent=2, default=str)
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, default=str)
     log(f"Audit log written → {path}")
     return path
 
@@ -173,35 +212,29 @@ def main():
         started_at=datetime.now(timezone.utc).isoformat(),
     )
 
-    # Layer 1
     run.connectors_validated = validate_connectors()
 
-    # Layer 2
     secret_findings = scan_secrets(".")
     run.findings.extend(secret_findings)
 
-    # Layer 3
     drift_findings = detect_drift()
     run.findings.extend(drift_findings)
 
-    # Layer 4
     queue = build_action_queue(run.findings)
 
-    # Layer 5
     run.completed_at = datetime.now(timezone.utc).isoformat()
     run.status = "completed"
     log_path = write_audit_log(run, queue)
 
-    # Summary
     p0 = len(queue["immediate"])
     p1p2 = len(queue["strategic"])
     log(f"=== AUDIT COMPLETE: P0={p0} P1+P2={p1p2} | Log={log_path} ===")
 
     if p0 > 0:
         log("⚠️  P0 ISSUES REQUIRE IMMEDIATE MANUAL REMEDIATION")
-        for f in queue["immediate"]:
-            log(f"  → [{f['domain']}] {f['title']}")
-            log(f"    ACTION: {f['action']}")
+        for finding in queue["immediate"]:
+            log(f"  → [{finding['domain']}] {finding['title']}")
+            log(f"    ACTION: {finding['action']}")
 
     return run
 
