@@ -57,6 +57,8 @@ def test_classification_matches_tokens_not_substrings():
 def test_name_signature_collapses_backup_and_version_suffixes():
     assert name_signature("Z-BACKUP-apex-memory-v2") == "apexmemory"
     assert name_signature("apex_memory") == "apexmemory"
+    assert name_signature("apex-memory-v2-backup") == "apexmemory"
+    assert name_signature("apex-memory-backup-v2") == "apexmemory"
 
 
 def test_delta_tracks_stable_id_rename_and_state_change():
