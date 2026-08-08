@@ -144,21 +144,37 @@ def fetch_repos() -> list[dict[str, Any]]:
     raise RuntimeError("GitHub repository enumeration exceeded page limit")
 
 
+def _has_marker(name: str, marker: str) -> bool:
+    normalized_name = name.casefold().replace("_", "-")
+    normalized_marker = marker.casefold().replace("_", "-")
+    return (
+        re.search(
+            rf"(?:^|-){re.escape(normalized_marker)}(?:-|$)",
+            normalized_name,
+        )
+        is not None
+    )
+
+
+def _has_any_marker(name: str, markers: tuple[str, ...]) -> bool:
+    return any(_has_marker(name, marker) for marker in markers)
+
+
 def classify(repo: dict[str, Any]) -> str:
     name = str(repo.get("name") or "").casefold()
     if repo.get("archived"):
         return "archived"
     if name.startswith(("z-backup", "backup-", "archive-")):
         return "archived"
-    if any(marker in name for marker in EXPERIMENT_MARKERS):
+    if _has_any_marker(name, EXPERIMENT_MARKERS):
         return "experimental"
-    if any(marker in name for marker in CONTROL_MARKERS):
+    if _has_any_marker(name, CONTROL_MARKERS):
         return "canonical-control-plane"
-    if any(marker in name for marker in LEGAL_MARKERS):
+    if _has_any_marker(name, LEGAL_MARKERS):
         return "legal-process"
-    if any(marker in name for marker in MEMORY_MARKERS):
+    if _has_any_marker(name, MEMORY_MARKERS):
         return "memory-connector"
-    if any(marker in name for marker in RUNTIME_MARKERS):
+    if _has_any_marker(name, RUNTIME_MARKERS):
         return "production-runtime"
     return "unknown-ownership"
 
@@ -189,8 +205,16 @@ def lifecycle(repo: dict[str, Any], now: datetime) -> str:
 def name_signature(name: str) -> str:
     value = name.casefold()
     value = re.sub(r"^(z-?backup[-_]*|backup[-_]*|archive[-_]*)", "", value)
-    value = re.sub(r"[-_]?v\d+(?:[-_.]\d+)*$", "", value)
-    value = re.sub(r"[-_](copy|old|legacy|deprecated|archive|backup)$", "", value)
+    while True:
+        previous = value
+        value = re.sub(r"[-_]?v\d+(?:[-_.]\d+)*$", "", value)
+        value = re.sub(
+            r"[-_](copy|old|legacy|deprecated|archive|backup)$",
+            "",
+            value,
+        )
+        if value == previous:
+            break
     return re.sub(r"[^a-z0-9]+", "", value)
 
 
