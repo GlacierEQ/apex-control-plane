@@ -90,10 +90,11 @@ def validate_connectors() -> list[ConnectorStatus]:
 
     github = ConnectorStatus(name="GitHub", declared=True)
     github_token = os.environ.get("GITHUB_TOKEN", "")
+    github_repo = os.environ.get("GITHUB_REPO", "GlacierEQ/apex-control-plane")
     if github_token and requests:
         try:
             response = requests.get(
-                "https://api.github.com/user",
+                f"https://api.github.com/repos/{github_repo}",
                 headers={"Authorization": f"Bearer {github_token}"},
                 timeout=10,
             )
@@ -105,7 +106,7 @@ def validate_connectors() -> list[ConnectorStatus]:
                     github.authenticated = True
                     github.reachable = True
                     github.action_capable = True
-                    github.notes = f"login={payload.get('login')}"
+                    github.notes = f"repository={payload.get('full_name', github_repo)}"
             else:
                 github.notes = f"http_status={response.status_code}"
         except requests.RequestException as error:
@@ -178,7 +179,9 @@ CREDENTIAL_PATTERNS = (
         re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b"),
     ),
     ("OpenAI-style API key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
+    ("xAI API key", re.compile(r"\bxai-[A-Za-z0-9_-]{20,}\b")),
     ("Notion token", re.compile(r"\bntn_[A-Za-z0-9]{20,}\b")),
+    ("Legacy Notion token", re.compile(r"\bsecret_[A-Za-z0-9]{20,}\b")),
     ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("Stripe live key", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
     (
@@ -194,7 +197,8 @@ CREDENTIAL_PATTERNS = (
     (
         "password assignment",
         re.compile(
-            r"\bpassword\s*=\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s#\"']{8,})",
+            r"(?:^|[\s{,\"'])(?:[A-Za-z0-9_]*PASSWORD[A-Za-z0-9_]*|password|\"password\"|'password')"
+            r"\s*(?:=|:)\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s,#}\]]{8,})",
             re.IGNORECASE,
         ),
     ),
