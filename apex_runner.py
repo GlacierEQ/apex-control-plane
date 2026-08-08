@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 APEX Autonomous Daily Runner
 Zero-confirm. Self-approving. Runs without human intervention.
@@ -10,11 +9,10 @@ import json
 import os
 import random
 import re
-import sys
+import tempfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
 
 try:
     import requests
@@ -69,17 +67,24 @@ class ConnectorStatus:
 class AuditRun:
     run_id: str
     timestamp: str
-    findings: List[Finding] = field(default_factory=list)
-    connectors: List[ConnectorStatus] = field(default_factory=list)
-    actions_executed: List[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
+    connectors: list[ConnectorStatus] = field(default_factory=list)
+    actions_executed: list[str] = field(default_factory=list)
     p0_count: int = 0
     p1_count: int = 0
     auto_approved: bool = True
 
 
-# ─── Connector Validation ────────────────────────────────────────────────────
-def validate_connectors() -> List[ConnectorStatus]:
-    connectors = []
+def _response_json_object(response) -> dict | None:
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def validate_connectors() -> list[ConnectorStatus]:
+    connectors: list[ConnectorStatus] = []
 
     github = ConnectorStatus(name="GitHub", declared=True)
     github_token = os.environ.get("GITHUB_TOKEN", "")
@@ -91,10 +96,14 @@ def validate_connectors() -> List[ConnectorStatus]:
                 timeout=10,
             )
             if response.status_code == 200:
-                github.authenticated = True
-                github.reachable = True
-                github.action_capable = True
-                github.notes = f"login={response.json().get('login')}"
+                payload = _response_json_object(response)
+                if payload is None:
+                    github.notes = "invalid_json_response"
+                else:
+                    github.authenticated = True
+                    github.reachable = True
+                    github.action_capable = True
+                    github.notes = f"login={payload.get('login')}"
             else:
                 github.notes = f"http_status={response.status_code}"
         except requests.RequestException as error:
@@ -138,10 +147,13 @@ def validate_connectors() -> List[ConnectorStatus]:
         try:
             response = requests.get(
                 f"{supabase_url.rstrip('/')}/rest/v1/",
-                headers={"apikey": supabase_key},
+                headers={
+                    "apikey": supabase_key,
+                    "Authorization": f"Bearer {supabase_key}",
+                },
                 timeout=10,
             )
-            if response.status_code in (200, 404):
+            if response.status_code == 200:
                 supabase.authenticated = True
                 supabase.reachable = True
                 supabase.action_capable = True
@@ -158,16 +170,20 @@ def validate_connectors() -> List[ConnectorStatus]:
     return connectors
 
 
-# ─── Secret Scan ─────────────────────────────────────────────────────────────
 CREDENTIAL_PATTERNS = (
-    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b")),
+    (
+        "GitHub token",
+        re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b"),
+    ),
     ("OpenAI-style API key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
     ("Notion token", re.compile(r"\bntn_[A-Za-z0-9]{20,}\b")),
     ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("Stripe live key", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
     (
         "JWT credential",
-        re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b"),
+        re.compile(
+            r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b"
+        ),
     ),
     (
         "private key",
@@ -208,14 +224,14 @@ SECRET_SCAN_BINARY_SUFFIXES = {
 }
 
 
-def scan_for_secrets(root: str = ".") -> List[Finding]:
-    findings = []
+def scan_for_secrets(root: str = ".") -> list[Finding]:
+    findings: list[Finding] = []
     for file_path in Path(root).rglob("*"):
         if not file_path.is_file():
             continue
         if any(part in SECRET_SCAN_EXCLUDED_DIRS for part in file_path.parts):
             continue
-        if file_path.suffix.lower() in SECRET_SCAN_BINARY_SUFFIXES:
+        if file_path.suffix.casefold() in SECRET_SCAN_BINARY_SUFFIXES:
             continue
         try:
             text = file_path.read_text(errors="ignore", encoding="utf-8")
@@ -228,17 +244,22 @@ def scan_for_secrets(root: str = ".") -> List[Finding]:
                         severity="P0",
                         domain="security",
                         title=f"Credential-shaped value: {label}",
-                        evidence=f"{label} pattern matched in {file_path}; value redacted from audit output",
-                        action=f"Remove the credential from {file_path}, rotate it if live, and inject it through the approved secret path",
+                        evidence=(
+                            f"{label} pattern matched in {file_path}; value redacted "
+                            "from audit output"
+                        ),
+                        action=(
+                            f"Remove the credential from {file_path}, rotate it if live, "
+                            "and inject it through the approved secret path"
+                        ),
                         auto_execute=False,
                     )
                 )
     return findings
 
 
-# ─── Structural Analysis ─────────────────────────────────────────────────────
-def analyze_structure() -> List[Finding]:
-    findings = []
+def analyze_structure() -> list[Finding]:
+    findings: list[Finding] = []
 
     if not Path(".env.example").exists():
         findings.append(
@@ -291,10 +312,9 @@ def analyze_structure() -> List[Finding]:
     return findings
 
 
-# ─── Auto-Execute Remediations ───────────────────────────────────────────────
-def auto_execute(findings: List[Finding]) -> List[str]:
+def auto_execute(findings: list[Finding]) -> list[str]:
     """Execute auto_execute=True findings immediately. No prompts."""
-    executed = []
+    executed: list[str] = []
 
     for finding in findings:
         if not finding.auto_execute:
@@ -335,67 +355,88 @@ def auto_execute(findings: List[Finding]) -> List[str]:
     return executed
 
 
-# ─── Report & Persist ────────────────────────────────────────────────────────
-def persist_run(run: AuditRun):
-    Path("audit_log").mkdir(exist_ok=True)
-    Path("findings").mkdir(exist_ok=True)
-    Path("action_queue").mkdir(exist_ok=True)
+def _atomic_write_json(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            json.dump(payload, handle, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+            temp_path = Path(handle.name)
+        os.replace(temp_path, path)
+        temp_path = None
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
+
+def _safe_run_id(run_id: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", run_id).strip("._") or "unknown-run"
+
+
+def persist_run(run: AuditRun) -> tuple[Path, Path]:
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    log_path = Path(f"audit_log/run_{date_str}.json")
-    log_path.write_text(
-        json.dumps(
-            {
-                "run_id": run.run_id,
-                "timestamp": run.timestamp,
-                "auto_approved": run.auto_approved,
-                "p0_count": run.p0_count,
-                "p1_count": run.p1_count,
-                "connectors": [asdict(connector) for connector in run.connectors],
-                "findings": [asdict(finding) for finding in run.findings],
-                "actions_executed": run.actions_executed,
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
+    safe_run_id = _safe_run_id(run.run_id)
+    log_payload = {
+        "run_id": run.run_id,
+        "timestamp": run.timestamp,
+        "auto_approved": run.auto_approved,
+        "p0_count": run.p0_count,
+        "p1_count": run.p1_count,
+        "connectors": [asdict(connector) for connector in run.connectors],
+        "findings": [asdict(finding) for finding in run.findings],
+        "actions_executed": run.actions_executed,
+    }
+    queue_payload = [
+        {
+            "severity": finding.severity,
+            "title": finding.title,
+            "action": finding.action,
+            "auto_execute": finding.auto_execute,
+        }
+        for finding in run.findings
+        if not finding.resolved
+    ]
 
-    queue_path = Path(f"action_queue/queue_{date_str}.json")
-    queue_path.write_text(
-        json.dumps(
-            [
-                {
-                    "severity": finding.severity,
-                    "title": finding.title,
-                    "action": finding.action,
-                    "auto_execute": finding.auto_execute,
-                }
-                for finding in run.findings
-                if not finding.resolved
-            ],
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
+    log_path = Path(f"audit_log/run_{safe_run_id}.json")
+    queue_path = Path(f"action_queue/queue_{safe_run_id}.json")
+    _atomic_write_json(log_path, log_payload)
+    _atomic_write_json(queue_path, queue_payload)
+
+    # Compatibility aliases remain atomic; run-specific files preserve full history.
+    _atomic_write_json(Path(f"audit_log/run_{date_str}.json"), log_payload)
+    _atomic_write_json(Path(f"action_queue/queue_{date_str}.json"), queue_payload)
 
     console.print(f"[dim]📁 Persisted: {log_path}[/dim]")
+    return log_path, queue_path
 
 
-# ─── Main ────────────────────────────────────────────────────────────────────
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description="APEX Autonomous Daily Runner")
     parser.add_argument("--auto-approve", action="store_true", default=True)
     parser.add_argument("--full-audit", action="store_true", default=True)
     parser.parse_args()
 
-    run_id = f"apex-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+    run_id = os.environ.get("RUN_DATE", "").strip()
+    if not run_id:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        run_id = f"apex-{timestamp}-{random.randint(1000, 9999)}"
 
     console.print(
         Panel(
             f"[bold cyan]APEX AUTONOMOUS RUNNER v{APEX_VERSION}[/bold cyan]\n"
             f"Run ID: {run_id}\n"
             f"Time:   {RUN_TS}\n"
-            f"Mode:   [green]FULLY AUTONOMOUS — ZERO CONFIRMS[/green]",
+            "Mode:   [green]FULLY AUTONOMOUS — ZERO CONFIRMS[/green]",
             title="🔥 APEX DAILY LOOP",
             border_style="cyan",
         )
@@ -446,9 +487,12 @@ def main():
 
     console.print(
         Panel(
-            f"[bold]Findings:[/bold] P0={run.p0_count}  P1={run.p1_count}  Total={len(run.findings)}\n"
+            f"[bold]Findings:[/bold] P0={run.p0_count}  P1={run.p1_count}  "
+            f"Total={len(run.findings)}\n"
             f"[bold]Actions executed:[/bold] {len(run.actions_executed)}\n"
-            f"[bold]Connectors operational:[/bold] {sum(1 for connector in run.connectors if connector.score() == 4)}/{len(run.connectors)}\n"
+            "[bold]Connectors operational:[/bold] "
+            f"{sum(1 for connector in run.connectors if connector.score() == 4)}"
+            f"/{len(run.connectors)}\n"
             "[green]Auto-approved: YES — No human intervention required[/green]",
             title="✅ APEX RUN COMPLETE",
             border_style="green",
@@ -457,7 +501,8 @@ def main():
 
     if run.p0_count > 0:
         console.print(
-            "[red bold]⚠️  P0 findings require manual credential rotation — see action queue[/red bold]"
+            "[red bold]⚠️  P0 findings require manual credential rotation — "
+            "see action queue[/red bold]"
         )
         return 1
     return 0
