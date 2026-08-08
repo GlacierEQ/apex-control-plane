@@ -35,6 +35,30 @@ jobs:
       - name: Tests
         run: python -m pytest -q tests/test_scan_repos.py
 
+  audit-hardening:
+    name: Audit hardening quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install focused dependencies
+        run: python -m pip install --upgrade ruff pytest requests rich
+
+      - name: Ruff lint
+        run: >-
+          ruff check daily_audit.py apex_runner.py tests/test_audit_hardening.py
+          --output-format=github
+
+      - name: Ruff format check
+        run: ruff format --check daily_audit.py apex_runner.py tests/test_audit_hardening.py
+
+      - name: Tests
+        run: python -m pytest -q tests/test_audit_hardening.py
+
   repository-security:
     name: Repository security
     uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@main
