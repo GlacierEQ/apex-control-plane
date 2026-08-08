@@ -203,8 +203,12 @@ def lifecycle(repo: dict[str, Any], now: datetime) -> str:
 def name_signature(name: str) -> str:
     value = name.casefold()
     value = re.sub(r"^(z-?backup[-_]*|backup[-_]*|archive[-_]*)", "", value)
-    value = re.sub(r"[-_]?v\d+(?:[-_.]\d+)*$", "", value)
-    value = re.sub(r"[-_](copy|old|legacy|deprecated|archive|backup)$", "", value)
+    while True:
+        previous = value
+        value = re.sub(r"[-_]?v\d+(?:[-_.]\d+)*$", "", value)
+        value = re.sub(r"[-_](copy|old|legacy|deprecated|archive|backup)$", "", value)
+        if value == previous:
+            break
     return re.sub(r"[^a-z0-9]+", "", value)
 
 
