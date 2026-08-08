@@ -33,6 +33,132 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Refresh private Repo Atlas (manual runtime proof)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          REPO_ATLAS_REFRESH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-github-oidc-estate-atlas-refresh
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          audience = "apex-repo-atlas-estate-refresh"
+          request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
+          request_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+          if not request_url or not request_token:
+              raise SystemExit("GitHub OIDC environment is unavailable")
+
+          separator = "&" if "?" in request_url else "?"
+          oidc_request = urllib.request.Request(
+              f"{request_url}{separator}audience={urllib.parse.quote(audience)}",
+              headers={"Authorization": f"Bearer {request_token}"},
+          )
+          with urllib.request.urlopen(oidc_request, timeout=20) as response:
+              oidc = json.loads(response.read()).get("value", "")
+          if not oidc:
+              raise SystemExit("GitHub OIDC token response was empty")
+          print(f"::add-mask::{oidc}")
+
+          refresh_request = urllib.request.Request(
+              os.environ["REPO_ATLAS_REFRESH_URL"],
+              data=b"{}",
+              method="POST",
+              headers={
+                  "Authorization": f"Bearer {oidc}",
+                  "Accept": "application/json",
+                  "Content-Type": "application/json",
+              },
+          )
+          try:
+              with urllib.request.urlopen(refresh_request, timeout=120) as response:
+                  result = json.loads(response.read())
+          except urllib.error.HTTPError as error:
+              raise SystemExit(f"Repo Atlas refresh failed with HTTP {error.code}") from None
+
+          allowed = {
+              "ok",
+              "status",
+              "snapshot_id",
+              "previous_snapshot_id",
+              "repository_count",
+              "original_count",
+              "fork_count",
+              "private_count",
+              "public_count",
+              "archived_count",
+              "family_counts",
+              "lifecycle_counts",
+              "delta",
+              "inventory_root_sha256",
+              "canonical_candidate_count",
+              "verified_canonical_count",
+              "ignition_queue_count",
+              "scan_mode",
+              "github_writes",
+              "token_persisted",
+          }
+          unexpected = sorted(set(result) - allowed)
+          if unexpected:
+              raise SystemExit(f"Repo Atlas refresh returned unexpected fields: {unexpected}")
+          if result.get("ok") is not True or result.get("status") != "refreshed":
+              raise SystemExit("Repo Atlas refresh did not report a successful refresh")
+          if result.get("scan_mode") != "metadata_only":
+              raise SystemExit("Repo Atlas refresh violated metadata-only mode")
+          if result.get("github_writes") != 0:
+              raise SystemExit("Repo Atlas refresh reported a GitHub write")
+          if result.get("token_persisted") is not False:
+              raise SystemExit("Repo Atlas refresh reported credential persistence")
+
+          repository_count = result.get("repository_count")
+          private_count = result.get("private_count")
+          public_count = result.get("public_count")
+          if not isinstance(repository_count, int) or isinstance(repository_count, bool) or repository_count <= 0:
+              raise SystemExit("Repo Atlas refresh returned an invalid repository count")
+          for label, value in (("private_count", private_count), ("public_count", public_count)):
+              if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                  raise SystemExit(f"Repo Atlas refresh returned invalid {label}")
+          if private_count + public_count != repository_count:
+              raise SystemExit("Repo Atlas refresh aggregate counts are inconsistent")
+
+          snapshot_id = result.get("snapshot_id")
+          inventory_root = result.get("inventory_root_sha256")
+          if not isinstance(snapshot_id, str) or not snapshot_id:
+              raise SystemExit("Repo Atlas refresh returned an invalid snapshot id")
+          if not isinstance(inventory_root, str) or re.fullmatch(r"[0-9a-f]{64}", inventory_root) is None:
+              raise SystemExit("Repo Atlas refresh returned an invalid inventory root")
+          if not isinstance(result.get("family_counts"), dict) or not isinstance(result.get("lifecycle_counts"), dict):
+              raise SystemExit("Repo Atlas refresh aggregate classifications are invalid")
+          delta = result.get("delta")
+          if not isinstance(delta, dict) or set(delta) != {
+              "new",
+              "removed_or_transferred",
+              "renamed_or_transferred",
+              "state_changes",
+          }:
+              raise SystemExit("Repo Atlas refresh returned an invalid delta shape")
+          if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in delta.values()):
+              raise SystemExit("Repo Atlas refresh returned invalid delta counts")
+
+          Path("repo_atlas_refresh_result.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(
+              "Repo Atlas manual refresh verified: "
+              f"repositories={repository_count} "
+              f"metadata_only={result.get('scan_mode') == 'metadata_only'} "
+              f"github_writes={result.get('github_writes')} "
+              f"token_persisted={result.get('token_persisted')}"
+          )
+          PY
+
       - name: Fetch redacted Repo Atlas receipt
         shell: bash
         env:
@@ -127,6 +253,15 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python integration/supermemory_neon/audit_loop.py
+
+      - name: Upload manual Repo Atlas refresh proof
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-atlas-refresh-proof-${{ github.run_id }}
+          path: repo_atlas_refresh_result.json
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Upload redacted Repo Atlas receipt
         uses: actions/upload-artifact@v4
