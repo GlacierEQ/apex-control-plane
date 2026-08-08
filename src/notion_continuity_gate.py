@@ -1,12 +1,12 @@
 """Fail-closed Notion-first continuity preflight for the APEX control-plane boot."""
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
 import json
 import os
-from pathlib import Path
 import sys
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from auto_boot import EXIT_BOOT_BLOCKED, BootError
