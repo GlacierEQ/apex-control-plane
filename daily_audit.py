@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 APEX Daily Audit Loop — Zero-Confirmation Autonomous Execution
 Runs every day via GitHub Actions. No human approval required.
@@ -10,7 +9,7 @@ import os
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import List, Optional
+from pathlib import Path
 
 from connectors.github_validator import validate as validate_github
 from connectors.notion_validator import validate as validate_notion
@@ -20,7 +19,7 @@ RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
 @dataclass
 class Finding:
-    severity: str  # P0, P1, P2, P3
+    severity: str
     domain: str
     title: str
     evidence: str
@@ -34,20 +33,17 @@ class Finding:
 class AuditRun:
     run_id: str
     started_at: str
-    completed_at: Optional[str] = None
-    findings: List[Finding] = field(default_factory=list)
-    actions_executed: List[str] = field(default_factory=list)
+    completed_at: str | None = None
+    findings: list[Finding] = field(default_factory=list)
+    actions_executed: list[str] = field(default_factory=list)
     connectors_validated: dict = field(default_factory=dict)
     status: str = "running"
 
 
-def log(msg: str):
+def log(msg: str) -> None:
     print(f"[APEX {RUN_ID}] {msg}")
 
 
-# ─────────────────────────────────────────────────────────────
-# LAYER 1: Connector Validation
-# ─────────────────────────────────────────────────────────────
 def _connector_status(result: dict) -> dict:
     state = str(result.get("state") or "unknown")
     operational = state == "action_capable"
@@ -72,18 +68,20 @@ def validate_connectors() -> dict:
     return results
 
 
-# ─────────────────────────────────────────────────────────────
-# LAYER 2: Secret Leakage Scan
-# ─────────────────────────────────────────────────────────────
 CREDENTIAL_PATTERNS = (
-    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b")),
+    (
+        "GitHub token",
+        re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b"),
+    ),
     ("OpenAI-style API key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
     ("Notion token", re.compile(r"\bntn_[A-Za-z0-9]{20,}\b")),
     ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("Stripe live key", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
     (
         "JWT credential",
-        re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b"),
+        re.compile(
+            r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b"
+        ),
     ),
     (
         "private key",
@@ -109,15 +107,38 @@ EXCLUDE_DIRS = {
     "action_queue",
     "findings",
 }
-SCAN_EXTENSIONS = (".py", ".ts", ".js", ".go", ".env", ".yaml", ".yml", ".json", ".md", ".toml", ".sh")
+SCAN_SUFFIXES = {
+    ".py",
+    ".ts",
+    ".js",
+    ".go",
+    ".env",
+    ".yaml",
+    ".yml",
+    ".json",
+    ".md",
+    ".toml",
+    ".sh",
+    ".pem",
+    ".key",
+    ".ini",
+    ".conf",
+}
 
 
-def scan_secrets(root: str = ".") -> List[Finding]:
-    findings = []
+def _should_scan_secret_file(filename: str) -> bool:
+    normalized = filename.casefold()
+    if normalized == ".env" or normalized.startswith(".env."):
+        return True
+    return Path(normalized).suffix in SCAN_SUFFIXES
+
+
+def scan_secrets(root: str = ".") -> list[Finding]:
+    findings: list[Finding] = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [directory for directory in dirnames if directory not in EXCLUDE_DIRS]
         for filename in filenames:
-            if not filename.endswith(SCAN_EXTENSIONS):
+            if not _should_scan_secret_file(filename):
                 continue
             file_path = os.path.join(dirpath, filename)
             try:
@@ -129,9 +150,18 @@ def scan_secrets(root: str = ".") -> List[Finding]:
                                     Finding(
                                         severity="P0",
                                         domain="security",
-                                        title=f"Credential-shaped value in {file_path}:{line_number}",
-                                        evidence=f"{label} pattern matched; value redacted from audit output",
-                                        action="Rotate the credential if live, remove it from source, and inject it through the approved secret path",
+                                        title=(
+                                            f"Credential-shaped value in {file_path}:"
+                                            f"{line_number}"
+                                        ),
+                                        evidence=(
+                                            f"{label} pattern matched; value redacted "
+                                            "from audit output"
+                                        ),
+                                        action=(
+                                            "Rotate the credential if live, remove it from "
+                                            "source, and inject it through the approved secret path"
+                                        ),
                                         auto_execute=False,
                                     )
                                 )
@@ -142,12 +172,10 @@ def scan_secrets(root: str = ".") -> List[Finding]:
     return findings
 
 
-# ─────────────────────────────────────────────────────────────
-# LAYER 3: Drift Detection — look for stale / broken workflows
-# ─────────────────────────────────────────────────────────────
-def detect_drift() -> List[Finding]:
-    findings = []
+def detect_drift() -> list[Finding]:
+    findings: list[Finding] = []
     workflows_dir = ".github/workflows"
+    accepted_token_sources = ("secrets.", "github.token", "env.GITHUB_TOKEN")
     if os.path.isdir(workflows_dir):
         for filename in os.listdir(workflows_dir):
             file_path = os.path.join(workflows_dir, filename)
@@ -156,13 +184,17 @@ def detect_drift() -> List[Finding]:
                     content = handle.read()
             except OSError:
                 continue
-            if "GITHUB_TOKEN" in content and "secrets." not in content and "github.token" not in content:
+            if "GITHUB_TOKEN" in content and not any(
+                source in content for source in accepted_token_sources
+            ):
                 findings.append(
                     Finding(
                         severity="P1",
                         domain="cicd",
                         title=f"Workflow {filename} may use default token insecurely",
-                        evidence="GITHUB_TOKEN referenced without an explicit GitHub token source",
+                        evidence=(
+                            "GITHUB_TOKEN referenced without an explicit GitHub token source"
+                        ),
                         action="Audit and tighten permissions in workflow",
                         auto_execute=False,
                     )
@@ -171,10 +203,7 @@ def detect_drift() -> List[Finding]:
     return findings
 
 
-# ─────────────────────────────────────────────────────────────
-# LAYER 4: Action Queue — ranked by severity
-# ─────────────────────────────────────────────────────────────
-def build_action_queue(findings: List[Finding]) -> dict:
+def build_action_queue(findings: list[Finding]) -> dict:
     order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
     ranked = sorted(findings, key=lambda finding: order.get(finding.severity, 9))
     return {
@@ -186,10 +215,7 @@ def build_action_queue(findings: List[Finding]) -> dict:
     }
 
 
-# ─────────────────────────────────────────────────────────────
-# LAYER 5: Write Audit Log
-# ─────────────────────────────────────────────────────────────
-def write_audit_log(run: AuditRun, queue: dict):
+def write_audit_log(run: AuditRun, queue: dict) -> str:
     os.makedirs("audit_logs", exist_ok=True)
     path = f"audit_logs/run_{run.run_id}.json"
     payload = {
@@ -202,10 +228,7 @@ def write_audit_log(run: AuditRun, queue: dict):
     return path
 
 
-# ─────────────────────────────────────────────────────────────
-# MAIN — runs automatically, no confirmation
-# ─────────────────────────────────────────────────────────────
-def main():
+def main() -> AuditRun:
     log("=== APEX DAILY AUDIT START — AUTO MODE ===")
     run = AuditRun(
         run_id=RUN_ID,
@@ -213,15 +236,10 @@ def main():
     )
 
     run.connectors_validated = validate_connectors()
-
-    secret_findings = scan_secrets(".")
-    run.findings.extend(secret_findings)
-
-    drift_findings = detect_drift()
-    run.findings.extend(drift_findings)
+    run.findings.extend(scan_secrets("."))
+    run.findings.extend(detect_drift())
 
     queue = build_action_queue(run.findings)
-
     run.completed_at = datetime.now(timezone.utc).isoformat()
     run.status = "completed"
     log_path = write_audit_log(run, queue)
