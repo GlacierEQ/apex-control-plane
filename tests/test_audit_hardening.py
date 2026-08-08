@@ -101,6 +101,55 @@ def test_daily_secret_scan_covers_env_variants_uppercase_and_private_keys(tmp_pa
     assert "private key" in findings[0].evidence
 
 
+def test_secret_scanners_cover_password_configuration_forms(tmp_path):
+    source = tmp_path / "config"
+    source.mkdir()
+    password_value = "hunter123"
+    env_key = "DB_" + "PASSWORD"
+    yaml_key = "pass" + "word"
+    json_key = '"' + yaml_key + '"'
+
+    (source / ".env.local").write_text(
+        f"{env_key}={password_value}\n",
+        encoding="utf-8",
+    )
+    (source / "config.yaml").write_text(
+        f"{yaml_key}: {password_value}\n",
+        encoding="utf-8",
+    )
+    (source / "config.json").write_text(
+        f"{{{json_key}: \"{password_value}\"}}\n",
+        encoding="utf-8",
+    )
+
+    daily_findings = daily_audit.scan_secrets(str(tmp_path))
+    runner_findings = apex_runner.scan_for_secrets(str(tmp_path))
+
+    assert len(daily_findings) == 3
+    assert len(runner_findings) == 3
+    assert all("password assignment" in finding.evidence for finding in daily_findings)
+    assert all("password assignment" in finding.evidence for finding in runner_findings)
+
+
+def test_secret_scanners_restore_xai_and_legacy_notion_formats(tmp_path):
+    source = tmp_path / "config"
+    source.mkdir()
+    xai_key = "xai-" + ("X" * 24)
+    legacy_notion = "secret_" + ("N" * 24)
+    (source / ".env.local").write_text(
+        f"XAI_API_KEY={xai_key}\nNOTION_TOKEN={legacy_notion}\n",
+        encoding="utf-8",
+    )
+
+    daily_findings = daily_audit.scan_secrets(str(tmp_path))
+    runner_findings = apex_runner.scan_for_secrets(str(tmp_path))
+
+    assert len(daily_findings) == 2
+    assert len(runner_findings) == 2
+    assert all(xai_key not in finding.evidence for finding in daily_findings)
+    assert all(legacy_notion not in finding.evidence for finding in daily_findings)
+
+
 def test_daily_drift_accepts_env_github_token_source(tmp_path, monkeypatch):
     workflow_dir = tmp_path / ".github" / "workflows"
     workflow_dir.mkdir(parents=True)
@@ -111,6 +160,25 @@ def test_daily_drift_accepts_env_github_token_source(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
     assert daily_audit.detect_drift() == []
+
+
+def test_daily_drift_validates_each_token_assignment(tmp_path, monkeypatch):
+    workflow_dir = tmp_path / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "mixed.yml").write_text(
+        "env:\n"
+        "  GITHUB_TOKEN: ${{ github.token }}\n"
+        "jobs:\n"
+        "  unsafe:\n"
+        "    env:\n"
+        "      GITHUB_TOKEN: legacy-token-alias\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    findings = daily_audit.detect_drift()
+    assert len(findings) == 1
+    assert "unsafe token source" in findings[0].title
 
 
 def test_apex_runner_secret_scan_does_not_match_scanner_vocabulary(tmp_path):
@@ -139,6 +207,35 @@ def test_apex_runner_secret_scan_does_not_match_scanner_vocabulary(tmp_path):
     assert "value redacted" in findings[0].evidence
 
 
+def test_apex_runner_uses_repository_probe_for_actions_token(monkeypatch):
+    urls = []
+
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {"full_name": "GlacierEQ/test-repo"}
+
+    def get(url, *_args, **_kwargs):
+        urls.append(url)
+        return Response()
+
+    fake_requests = types.SimpleNamespace(RequestException=RuntimeError, get=get)
+    monkeypatch.setattr(apex_runner, "requests", fake_requests)
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setenv("GITHUB_REPO", "GlacierEQ/test-repo")
+    monkeypatch.delenv("NOTION_TOKEN", raising=False)
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+
+    github = apex_runner.validate_connectors()[0]
+
+    assert urls == ["https://api.github.com/repos/GlacierEQ/test-repo"]
+    assert github.authenticated is True
+    assert github.reachable is True
+    assert github.action_capable is True
+
+
 def test_apex_runner_degrades_on_malformed_github_json(monkeypatch):
     class Response:
         status_code = 200
@@ -152,6 +249,7 @@ def test_apex_runner_degrades_on_malformed_github_json(monkeypatch):
     )
     monkeypatch.setattr(apex_runner, "requests", fake_requests)
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setenv("GITHUB_REPO", "GlacierEQ/test-repo")
     monkeypatch.delenv("NOTION_TOKEN", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_KEY", raising=False)
@@ -212,17 +310,33 @@ def test_apex_runner_persists_run_unique_atomic_receipts(tmp_path, monkeypatch):
     assert not list(Path("action_queue").glob(".*.tmp"))
 
 
-def test_apex_daily_workflow_defers_failure_until_after_receipt_steps():
+def test_apex_daily_workflow_defers_failure_until_after_durable_receipts():
     workflow = Path(".github/workflows/apex-daily.yml").read_text(encoding="utf-8")
 
     run_pos = workflow.index("id: apex_audit")
+    upload_pos = workflow.index("- name: Upload audit receipt fallback")
     commit_pos = workflow.index("- name: Commit audit results")
     issue_pos = workflow.index("- name: Auto-create issues for P0/P1 findings")
     propagate_pos = workflow.index("- name: Propagate audit result")
 
-    assert run_pos < commit_pos < issue_pos < propagate_pos
-    assert workflow.count("if: always()") >= 3
+    assert run_pos < upload_pos < commit_pos < issue_pos < propagate_pos
+    assert workflow.count("if: always()") >= 4
     assert 'echo "status=${audit_status}" >> "$GITHUB_OUTPUT"' in workflow
     assert "group: apex-daily-${{ github.repository }}" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "audit_log/run_${{ github.run_id }}.json" in workflow
+    assert "for attempt in 1 2 3" in workflow
+    assert 'git fetch --no-tags origin "${target_branch}"' in workflow
+    assert 'git rebase "origin/${target_branch}"' in workflow
     issue_step = workflow[issue_pos:propagate_pos]
     assert "GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in issue_step
+
+
+def test_ci_checkouts_do_not_persist_tokens_and_shared_gate_is_pinned():
+    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert workflow.count("persist-credentials: false") >= 2
+    assert (
+        "GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@"
+        "418fb99ceaee8ba1623cef9c83c9360e20482fe3"
+    ) in workflow
