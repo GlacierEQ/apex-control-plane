@@ -47,6 +47,7 @@ def now_iso():
 
 
 # ── Connector Validators ──────────────────────────────────────────────────────
+
 def validate_github():
     if not GITHUB_TOKEN:
         return {"connector": "github", "state": "declared",
@@ -130,6 +131,7 @@ def scan_repos_for_issues():
 
 
 # ── Finding Engine ────────────────────────────────────────────────────────────
+
 def generate_findings(connector_results) -> List[Finding]:
     findings = []
     for c in connector_results:
@@ -163,6 +165,7 @@ def build_action_queue(findings: List[Finding]) -> dict:
 
 
 # ── Persistence ───────────────────────────────────────────────────────────────
+
 def load_control_plane():
     if os.path.exists(CONTROL_PLANE_FILE):
         with open(CONTROL_PLANE_FILE) as fp:
@@ -176,6 +179,7 @@ def save_control_plane(data):
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+
 def run_daily_audit():
     print(f"\n{'='*60}")
     print(f"APEX DAILY AUDIT — {now_iso()}")
