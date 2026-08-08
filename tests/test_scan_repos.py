@@ -1,130 +1,106 @@
 import json
-from datetime import datetime, timezone
 
 import pytest
 
 from scripts import scan_repos
 from scripts.scan_repos import (
-    build_registry,
-    classify,
-    diff_registry,
-    lifecycle,
-    load_previous,
-    name_signature,
-    to_entry,
+    EstateRefreshError,
+    build_public_artifacts,
+    validate_payload,
     write_json,
 )
 
 
-def repo(repo_id, name, **overrides):
-    data = {
-        "id": repo_id,
-        "name": name,
-        "full_name": f"GlacierEQ/{name}",
-        "owner": {"login": "GlacierEQ"},
-        "private": True,
-        "fork": False,
-        "archived": False,
-        "disabled": False,
-        "default_branch": "main",
-        "language": "Python",
-        "description": "test",
-        "pushed_at": "2026-08-07T00:00:00Z",
-        "updated_at": "2026-08-07T00:00:00Z",
-        "visibility": "private",
-        "html_url": f"https://github.com/GlacierEQ/{name}",
+def valid_payload(**overrides):
+    payload = {
+        "ok": True,
+        "status": "refreshed",
+        "snapshot_id": "11111111-1111-4111-8111-111111111111",
+        "previous_snapshot_id": "22222222-2222-4222-8222-222222222222",
+        "repository_count": 10,
+        "original_count": 6,
+        "fork_count": 4,
+        "private_count": 3,
+        "public_count": 7,
+        "archived_count": 1,
+        "family_counts": {"control_plane": 4, "other": 6},
+        "lifecycle_counts": {"active": 8, "reference": 2},
+        "delta": {
+            "new": 1,
+            "removed_or_transferred": 2,
+            "renamed_or_transferred": 3,
+            "state_changes": 4,
+        },
+        "inventory_root_sha256": "a" * 64,
+        "canonical_candidate_count": 3,
+        "verified_canonical_count": 2,
+        "ignition_queue_count": 10,
+        "scan_mode": "metadata_only",
+        "github_writes": 0,
+        "token_persisted": False,
     }
-    data.update(overrides)
-    return data
+    payload.update(overrides)
+    return payload
 
 
-def test_classification_priority_and_backup_detection():
-    assert classify(repo(1, "apex-control-plane")) == "canonical-control-plane"
-    assert classify(repo(2, "unified-memory-mcp")) == "memory-connector"
-    assert classify(repo(3, "apex-legal-ops")) == "legal-process"
-    assert classify(repo(4, "gateway-probe")) == "experimental"
-    assert classify(repo(5, "Z-BACKUP-apex-control-plane")) == "archived"
-    assert classify({}) == "unknown-ownership"
+def test_validate_payload_accepts_redacted_receipt():
+    receipt = validate_payload(valid_payload())
+    assert receipt["redacted"] is True
+    assert receipt["repository_count"] == 10
+    assert receipt["inventory_root_sha256"] == "a" * 64
 
 
-def test_name_signature_collapses_backup_and_version_suffixes():
-    assert name_signature("Z-BACKUP-apex-memory-v2") == "apexmemory"
-    assert name_signature("apex_memory") == "apexmemory"
+def test_validate_payload_rejects_repository_details():
+    payload = valid_payload()
+    payload["repositories"] = [{"full_name": "GlacierEQ/private-repo"}]
+    with pytest.raises(EstateRefreshError, match="not_redacted"):
+        validate_payload(payload)
 
 
-def test_delta_tracks_stable_id_rename_and_state_change():
-    previous = build_registry([repo(10, "old-name")])
-    current = build_registry([repo(10, "new-name", archived=True)])
-    delta = diff_registry(previous, current)
-    assert delta["renamed_or_transferred"] == [
-        {
-            "repository_id": 10,
-            "before": "GlacierEQ/old-name",
-            "after": "GlacierEQ/new-name",
-        }
-    ]
-    assert delta["state_changes"]
-    assert delta["state_changes"][0]["changes"]["archived"] == {
-        "before": False,
-        "after": True,
-    }
+def test_validate_payload_rejects_inconsistent_original_fork_counts():
+    with pytest.raises(EstateRefreshError, match="original_fork"):
+        validate_payload(valid_payload(original_count=5))
 
 
-def test_registry_reports_duplicate_candidates():
-    registry = build_registry(
-        [
-            repo(20, "apex-memory"),
-            repo(21, "Z-BACKUP-apex-memory"),
-        ]
-    )
-    assert registry["repository_count"] == 2
-    assert registry["duplicate_candidates"]["apexmemory"] == [
-        "GlacierEQ/apex-memory",
-        "GlacierEQ/Z-BACKUP-apex-memory",
-    ]
+def test_validate_payload_rejects_inconsistent_visibility_counts():
+    with pytest.raises(EstateRefreshError, match="visibility"):
+        validate_payload(valid_payload(private_count=4))
 
 
-def test_required_identity_validation_and_full_name_fallback():
-    now = datetime(2026, 8, 8, tzinfo=timezone.utc)
-    entry = to_entry(repo(30, "fallback", full_name=None), now)
-    assert entry["full_name"] == "GlacierEQ/fallback"
-    with pytest.raises(ValueError, match="valid id"):
-        to_entry(repo(None, "broken"), now)
-    with pytest.raises(ValueError, match="valid name"):
-        to_entry(repo(31, None), now)
+def test_validate_payload_rejects_bad_inventory_hash():
+    with pytest.raises(EstateRefreshError, match="inventory_root"):
+        validate_payload(valid_payload(inventory_root_sha256="abc"))
 
 
-def test_future_timestamp_has_nonnegative_age(monkeypatch):
-    monkeypatch.setenv("REPO_STALE_DAYS", "180")
-    now = datetime(2026, 8, 8, tzinfo=timezone.utc)
-    future = repo(40, "future", pushed_at="2026-08-09T00:00:00Z")
-    assert lifecycle(future, now) == "active"
-    assert to_entry(future, now)["age_days"] == 0
+def test_validate_payload_rejects_incomplete_delta_contract():
+    with pytest.raises(EstateRefreshError, match="invalid_delta"):
+        validate_payload(valid_payload(delta={"new": 1}))
 
 
-def test_invalid_stale_days_fails_cleanly(monkeypatch):
-    monkeypatch.setenv("REPO_STALE_DAYS", "not-an-int")
-    with pytest.raises(RuntimeError, match="must be an integer"):
-        scan_repos.stale_days()
+def test_validate_payload_rejects_family_count_mismatch():
+    with pytest.raises(EstateRefreshError, match="family_counts"):
+        validate_payload(valid_payload(family_counts={"other": 9}))
 
 
-def test_load_previous_rejects_corrupt_registry(tmp_path, monkeypatch):
-    registry_path = tmp_path / "repo_registry.json"
-    registry_path.write_text('{"schema_version": 1, "owner": "GlacierEQ"}')
-    monkeypatch.setattr(scan_repos, "REGISTRY_PATH", registry_path)
-    with pytest.raises(RuntimeError, match="Invalid registry state"):
-        load_previous()
-
-
-def test_load_previous_returns_none_only_when_absent(tmp_path, monkeypatch):
-    registry_path = tmp_path / "repo_registry.json"
-    monkeypatch.setattr(scan_repos, "REGISTRY_PATH", registry_path)
-    assert load_previous() is None
+def test_public_artifacts_contain_no_repository_list():
+    receipt = validate_payload(valid_payload())
+    registry, delta, scan = build_public_artifacts(receipt)
+    encoded = json.dumps([registry, delta, scan])
+    assert "repositories" not in encoded
+    assert "private-repo" not in encoded
+    assert delta["detail_location"] == "private Supabase Repo Atlas snapshot"
 
 
 def test_atomic_write_produces_complete_json(tmp_path):
-    path = tmp_path / "nested" / "registry.json"
-    payload = {"schema_version": 1, "items": list(range(100))}
+    path = tmp_path / "nested" / "receipt.json"
+    payload = {"schema_version": 2, "redacted": True, "snapshot_id": "safe"}
     write_json(path, payload)
     assert json.loads(path.read_text()) == payload
     assert not list(path.parent.glob(f".{path.name}.*.tmp"))
+
+
+def test_oidc_endpoint_rejects_non_actions_host(monkeypatch):
+    monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", "https://example.com/token")
+    monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "opaque-request-token")
+    with pytest.raises(EstateRefreshError, match="endpoint_rejected"):
+        scan_repos._oidc_token()
