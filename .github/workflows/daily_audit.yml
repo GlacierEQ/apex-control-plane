@@ -59,6 +59,7 @@ jobs:
           esac
 
       - name: Refresh estate registry
+        id: estate_registry
         env:
           APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}
         shell: bash
@@ -71,9 +72,17 @@ jobs:
           python scripts/scan_repos.py
 
       - name: Persist estate registry state
+        if: steps.estate_registry.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
+          for file in repo_registry.json repo_registry_delta.json repo_scan.json; do
+            if [[ ! -s "$file" ]]; then
+              echo "::error::Missing or empty estate registry output: $file"
+              exit 1
+            fi
+          done
+
           state_dir="$(mktemp -d)"
           cleanup() {
             git worktree remove --force "$state_dir" >/dev/null 2>&1 || true
@@ -124,7 +133,7 @@ jobs:
         run: python integration/supermemory_neon/audit_loop.py
 
       - name: Upload estate registry receipt
-        if: always()
+        if: steps.estate_registry.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: estate-registry-${{ github.run_id }}
