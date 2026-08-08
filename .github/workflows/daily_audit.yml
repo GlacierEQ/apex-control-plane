@@ -4,6 +4,8 @@ on:
   schedule:
     # 06:00 UTC daily = 20:00 HST on the previous calendar day (Hawaii does not observe DST)
     - cron: '0 6 * * *'
+    # One-shot broker runtime proof. The step below expires this schedule outside 2026-08-08 UTC.
+    - cron: '10 16 * * *'
   workflow_dispatch:
     inputs:
       reason:
@@ -33,11 +35,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Refresh private Repo Atlas (manual runtime proof)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Refresh private Repo Atlas (bounded runtime proof)
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '10 16 * * *'
         shell: bash
         env:
           REPO_ATLAS_REFRESH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-github-oidc-estate-atlas-refresh
+          CANARY_SCHEDULE: '10 16 * * *'
+          CANARY_DATE_UTC: '2026-08-08'
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -47,7 +52,15 @@ jobs:
           import urllib.error
           import urllib.parse
           import urllib.request
+          from datetime import datetime, timezone
           from pathlib import Path
+
+          event_schedule = os.environ.get("EVENT_SCHEDULE", "")
+          canary_schedule = os.environ.get("CANARY_SCHEDULE", "")
+          canary_date = os.environ.get("CANARY_DATE_UTC", "")
+          if event_schedule == canary_schedule and datetime.now(timezone.utc).date().isoformat() != canary_date:
+              print("Repo Atlas scheduled runtime canary is expired; refresh skipped.")
+              raise SystemExit(0)
 
           audience = "apex-repo-atlas-estate-refresh"
           request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
@@ -151,7 +164,7 @@ jobs:
               encoding="utf-8",
           )
           print(
-              "Repo Atlas manual refresh verified: "
+              "Repo Atlas runtime refresh verified: "
               f"repositories={repository_count} "
               f"metadata_only={result.get('scan_mode') == 'metadata_only'} "
               f"github_writes={result.get('github_writes')} "
@@ -254,14 +267,14 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python integration/supermemory_neon/audit_loop.py
 
-      - name: Upload manual Repo Atlas refresh proof
-        if: github.event_name == 'workflow_dispatch'
+      - name: Upload Repo Atlas refresh proof
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '10 16 * * *'
         uses: actions/upload-artifact@v4
         with:
           name: repo-atlas-refresh-proof-${{ github.run_id }}
           path: repo_atlas_refresh_result.json
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: ignore
 
       - name: Upload redacted Repo Atlas receipt
         uses: actions/upload-artifact@v4
