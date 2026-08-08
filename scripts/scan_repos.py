@@ -100,7 +100,7 @@ def fetch_repos() -> list[dict[str, Any]]:
         ) as error:
             raise RuntimeError(f"GitHub repository enumeration failed on page {page}") from error
         if not isinstance(batch, list):
-            raise RuntimeError(f"GitHub repository enumeration returned invalid page {page}")
+            raise TypeError(f"GitHub repository enumeration returned invalid page {page}")
         if not batch:
             return repos
         repos.extend(
@@ -244,7 +244,7 @@ def _validate_registry(data: Any, source: str) -> dict[str, Any]:
     seen_ids: set[int] = set()
     for index, entry in enumerate(data["repositories"]):
         if not isinstance(entry, dict):
-            raise RuntimeError(f"Invalid repository entry {index} in {source}")
+            raise TypeError(f"Invalid repository entry {index} in {source}")
         repo_id = entry.get("repository_id")
         full_name = entry.get("full_name")
         if (
@@ -416,7 +416,7 @@ def main() -> int:
         write_json(REGISTRY_PATH, registry)
         write_json(DELTA_PATH, delta)
         write_json(SCAN_PATH, scan)
-    except (RuntimeError, ValueError, OSError) as error:
+    except (RuntimeError, TypeError, ValueError, OSError) as error:
         return _failure(str(error))
 
     print(f"Owner: {OWNER}")
