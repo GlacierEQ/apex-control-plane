@@ -118,7 +118,7 @@ def test_secret_scanners_cover_password_configuration_forms(tmp_path):
         encoding="utf-8",
     )
     (source / "config.json").write_text(
-        f"{{{json_key}: \"{password_value}\"}}\n",
+        f'{{{json_key}: "{password_value}"}}\n',
         encoding="utf-8",
     )
 
