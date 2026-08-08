@@ -12,7 +12,8 @@ on:
         default: 'manual run'
 
 permissions:
-  contents: write
+  contents: read
+  id-token: write
 
 concurrency:
   group: estate-registry-${{ github.repository }}
@@ -26,90 +27,88 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # SECURITY HOLD: this repository is public. Full estate metadata must remain
-      # in the private Repo Atlas backend. Re-enable only after the OIDC broker is
-      # merged, migrated, deployed, and runtime-verified, using redacted receipts.
-      - name: Restore prior estate registry
-        if: ${{ false }}
+      - name: Fetch redacted Repo Atlas receipt
         shell: bash
-        run: |
-          set -euo pipefail
-          set +e
-          git ls-remote --exit-code --heads origin estate-registry-state >/dev/null
-          state_lookup_status=$?
-          set -e
-          case "$state_lookup_status" in
-            0)
-              git fetch --no-tags origin \
-                refs/heads/estate-registry-state:refs/remotes/origin/estate-registry-state
-              git show refs/remotes/origin/estate-registry-state:repo_registry.json \
-                > repo_registry.json
-              ;;
-            2)
-              echo "No prior estate-registry-state branch; creating initial baseline."
-              ;;
-            *)
-              echo "Estate registry state lookup failed with status ${state_lookup_status}." >&2
-              exit "$state_lookup_status"
-              ;;
-          esac
-
-      - name: Refresh estate registry
-        if: ${{ false }}
         env:
-          APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}
-        shell: bash
+          REPO_ATLAS_RECEIPT_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-repo-atlas-redacted-receipt
         run: |
           set -euo pipefail
-          if [[ -z "${APEX_GITHUB_TOKEN}" ]]; then
-            echo "APEX_GITHUB_TOKEN is required for estate-wide repository enumeration." >&2
-            exit 1
-          fi
-          python scripts/scan_repos.py
+          python - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
 
-      - name: Persist estate registry state
-        if: ${{ false }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          state_dir="$(mktemp -d)"
-          cleanup() {
-            git worktree remove --force "$state_dir" >/dev/null 2>&1 || true
-            rm -rf "$state_dir"
-          }
-          trap cleanup EXIT
+          audience = "apex-repo-atlas-redacted-receipt"
+          request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
+          request_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+          if not request_url or not request_token:
+              raise SystemExit("GitHub OIDC environment is unavailable")
 
-          if git show-ref --verify --quiet refs/remotes/origin/estate-registry-state; then
-            git worktree add --detach "$state_dir" refs/remotes/origin/estate-registry-state
-          else
-            git worktree add --detach "$state_dir" HEAD
-            (
-              cd "$state_dir"
-              git switch --orphan estate-registry-state
-              git rm -rf . >/dev/null 2>&1 || true
-            )
-          fi
-
-          cp repo_registry.json repo_registry_delta.json repo_scan.json "$state_dir"/
-          (
-            cd "$state_dir"
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add repo_registry.json repo_registry_delta.json repo_scan.json
-            if git diff --cached --quiet; then
-              exit 0
-            fi
-            git commit -m "state: refresh estate registry ${GITHUB_RUN_ID}"
-            git push origin HEAD:refs/heads/estate-registry-state
+          separator = "&" if "?" in request_url else "?"
+          oidc_request = urllib.request.Request(
+              f"{request_url}{separator}audience={urllib.parse.quote(audience)}",
+              headers={"Authorization": f"Bearer {request_token}"},
           )
+          with urllib.request.urlopen(oidc_request, timeout=20) as response:
+              oidc = json.loads(response.read()).get("value", "")
+          if not oidc:
+              raise SystemExit("GitHub OIDC token response was empty")
+          print(f"::add-mask::{oidc}")
+
+          receipt_request = urllib.request.Request(
+              os.environ["REPO_ATLAS_RECEIPT_URL"],
+              headers={
+                  "Authorization": f"Bearer {oidc}",
+                  "Accept": "application/json",
+              },
+          )
+          with urllib.request.urlopen(receipt_request, timeout=30) as response:
+              receipt = json.loads(response.read())
+          if receipt.get("ok") is not True:
+              raise SystemExit("Private Repo Atlas health gate did not pass")
+
+          allowed = {
+              "schema_version",
+              "receipt_type",
+              "ok",
+              "source",
+              "snapshot_fingerprint",
+              "snapshot_created_at",
+              "snapshot_fresh",
+              "repository_inventory_present",
+              "scan_mode",
+              "installation_scope",
+              "github_content_fetch",
+              "inventory_token_persisted",
+              "audit_chain_present",
+              "latest_audit_outcome",
+              "caller_run_id",
+              "caller_run_attempt",
+              "generated_at",
+          }
+          unexpected = sorted(set(receipt) - allowed)
+          if unexpected:
+              raise SystemExit(f"Repo Atlas receipt contains unexpected fields: {unexpected}")
+          Path("repo_atlas_receipt.json").write_text(
+              json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(
+              "Repo Atlas receipt verified: "
+              f"fresh={receipt.get('snapshot_fresh')} "
+              f"metadata_only={receipt.get('scan_mode') == 'metadata_only'} "
+              f"content_fetch={receipt.get('github_content_fetch')} "
+              f"token_persisted={receipt.get('inventory_token_persisted')}"
+          )
+          PY
 
       - name: Install dependencies
         run: pip install psycopg2-binary supermemory python-dotenv requests
@@ -129,15 +128,11 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python integration/supermemory_neon/audit_loop.py
 
-      - name: Upload estate registry receipt
-        if: ${{ false }}
+      - name: Upload redacted Repo Atlas receipt
         uses: actions/upload-artifact@v4
         with:
-          name: estate-registry-${{ github.run_id }}
-          path: |
-            repo_registry.json
-            repo_registry_delta.json
-            repo_scan.json
+          name: repo-atlas-receipt-${{ github.run_id }}
+          path: repo_atlas_receipt.json
           retention-days: 7
           if-no-files-found: error
 
