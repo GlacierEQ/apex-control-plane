@@ -1,0 +1,58 @@
+{
+  "run_id": "31303081411",
+  "timestamp": "2026-08-09T08:27:18.840499+00:00",
+  "auto_approved": true,
+  "p0_count": 1,
+  "p1_count": 0,
+  "connectors": [
+    {
+      "name": "GitHub",
+      "declared": true,
+      "authenticated": true,
+      "reachable": true,
+      "action_capable": true,
+      "notes": "repository=GlacierEQ/apex-control-plane"
+    },
+    {
+      "name": "Notion",
+      "declared": true,
+      "authenticated": false,
+      "reachable": false,
+      "action_capable": false,
+      "notes": "NOTION_TOKEN missing"
+    },
+    {
+      "name": "Supabase",
+      "declared": true,
+      "authenticated": false,
+      "reachable": false,
+      "action_capable": false,
+      "notes": "SUPABASE_URL or SUPABASE_KEY missing"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "P0",
+      "domain": "security",
+      "title": "Credential-shaped value: password assignment",
+      "evidence": "password assignment pattern matched in tests/test_audit_hardening.py; value redacted from audit output",
+      "action": "Remove the credential from tests/test_audit_hardening.py, rotate it if live, and inject it through the approved secret path",
+      "auto_execute": false,
+      "status": "open",
+      "resolved": false
+    },
+    {
+      "severity": "P2",
+      "domain": "operations",
+      "title": "No audit_log directory",
+      "evidence": "Audit runs have nowhere to persist",
+      "action": "Create audit_log/ with .gitkeep",
+      "auto_execute": true,
+      "status": "open",
+      "resolved": false
+    }
+  ],
+  "actions_executed": [
+    "Created audit_log/, findings/, action_queue/"
+  ]
+}
