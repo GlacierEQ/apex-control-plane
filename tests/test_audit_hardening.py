@@ -338,5 +338,5 @@ def test_ci_checkouts_do_not_persist_tokens_and_shared_gate_is_pinned():
     assert workflow.count("persist-credentials: false") >= 2
     assert (
         "GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@"
-        "418fb99ceaee8ba1623cef9c83c9360e20482fe3"
+        "6757957d290878b1c0831da95328dc29f65d77c9"
     ) in workflow
