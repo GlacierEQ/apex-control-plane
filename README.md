@@ -1,10 +1,10 @@
 # apex-control-plane
 
-**Portfolio runtime:** capacity-aware worker dispatch plus the bounded Unified CASEBRAIN control plane.
+**Portfolio runtime:** capacity-aware worker dispatch plus a bounded, fail-closed control plane for evidence-aware automation.
 
-## What changed
+## Current verified surface
 
-The original worker registry remains backward compatible. The runtime now adds:
+The repository contains local control-plane and audit mechanisms for:
 
 - immutable SHA-256 transport envelopes and idempotency keys;
 - explicit separation of facts, allegations, inferences, and recommendations;
@@ -12,31 +12,35 @@ The original worker registry remains backward compatible. The runtime now adds:
 - analytical threat signals with required alternative explanations;
 - recommendation generation with hard human-review and external-action denial;
 - connector retries, circuit breakers, dead-letter capture, and audit receipts;
+- repository census/registry checks;
+- strict continuity boot requests and provider-receipt validation;
 - AKOS adoption metadata and secret-reference-only configuration.
 
-## Casey continuity auto-boot
+These are repository-local mechanisms. This public surface does **not** establish live access to private case records, connected Mem/provider data, production external systems, or autonomous external action.
 
-`python src/control_plane.py` is now an explicit fail-closed wrapper. It runs
+## Continuity auto-boot
+
+`python src/control_plane.py` is an explicit fail-closed wrapper. It runs
 `src/auto_boot.py` **before** loading the preserved runtime in
 `src/control_plane_runtime.py`.
 
-The boot verifier checks:
+The boot verifier checks configured requirements such as:
 
-- the canonical Mem boot collection and manifest;
-- every required Mem note ID and its exact required version;
+- the canonical boot collection and manifest;
+- required note IDs and versions;
 - structured current-source receipts;
 - repository revision receipts for systems work;
-- case and separate-matter lanes;
-- deadline-check status for legal-case work;
+- lane/profile state;
+- deadline-check status when a profile requires it;
 - restricted-context authorization and state;
 - current task and next material action;
 - blocker type, blocker contents, and final boot status.
 
 Strict mode is the default. Without a complete provider-backed receipt, startup
-emits the deterministic boot request and exits with status `78` instead of
-pretending the worker has current context.
+emits a deterministic boot request and exits with status `78` instead of
+pretending current provider context was loaded.
 
-Generate an exact request for a connector bridge:
+Generate a connector request:
 
 ```bash
 python src/auto_boot.py --profile legal_case --task "continue" --emit-request
@@ -56,6 +60,8 @@ CASEY_BOOT_RECEIPT_PATH=/path/to/receipt.json \
 python src/control_plane.py
 ```
 
+The profile name above is an interface example. **No case-specific evidence or private legal record is part of this README's public capability claim.**
+
 For local request inspection without claiming a complete boot:
 
 ```bash
@@ -69,11 +75,16 @@ on `PYTHONPATH` or another entrypoint is explicitly forced with
 See [`docs/CASEY_AUTO_BOOT.md`](docs/CASEY_AUTO_BOOT.md) and
 [`config/casey_auto_boot_manifest.json`](config/casey_auto_boot_manifest.json).
 
-## Run tests
+## Native proof
+
+The repository CI exercises the registry and audit-hardening surfaces on the exact source head for pull requests and pushes:
 
 ```bash
-python -m pytest -q
+python -m pytest -q tests/test_scan_repos.py
+python -m pytest -q tests/test_audit_hardening.py
 ```
+
+CI also runs Ruff, format checks, mypy for the registry scanner, and the repository security workflow. A successful workflow is evidence only for the exact Git head it executed.
 
 ## Local smoke test
 
@@ -86,23 +97,19 @@ mode marks the boot as degraded; it does not prove connected sources were read.
 
 ## Governance
 
-- Canonical architecture: `GlacierEQ/AKOS`
+- Canonical architecture reference: `GlacierEQ/AKOS`
 - Adoption manifest: `AKOS_ADOPTION.yaml`
 - Runtime design: `docs/UNIFIED_CASEBRAIN.md`
 - Default external-action policy: **deny**
 
-The answer remains `42`; the evidence still needs a source.
+Architecture references do not by themselves prove runtime connectivity between repositories.
 
----
+## Fleet operations boundary
 
-## Fleet ops (transparent)
+This repo may include **`.integrity/`** SHA-256 baselines/watchdog data and a health sidecar. These are documented repository/fleet-maintenance mechanisms, not evidence that every named sibling repository or external service is connected at runtime.
 
-This repo may include **`.integrity/`** (SHA-256 baselines / watchdog) and/or a health sidecar.
-These are **documented multi-repo fleet operations**, not covert implants.
-
-See [SECURITY_AND_FLEET_OPS.md](SECURITY_AND_FLEET_OPS.md) and
-`~/GlacierEQ_Swarm/state/PORTFOLIO_SHADOW_AND_GAUNTLET.md`.
+See [SECURITY_AND_FLEET_OPS.md](SECURITY_AND_FLEET_OPS.md).
 
 ## Helix strand
 
-See [HELIX_STRAND.md](HELIX_STRAND.md) — piston/spiral role in the portfolio double helix.
+See [HELIX_STRAND.md](HELIX_STRAND.md) for the repository's portfolio role. Helix classification is a portfolio projection and does not override repository-native proof.
