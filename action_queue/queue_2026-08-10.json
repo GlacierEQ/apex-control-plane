@@ -1,0 +1,8 @@
+[
+  {
+    "severity": "P0",
+    "title": "Credential-shaped value: password assignment",
+    "action": "Remove the credential from tests/test_audit_hardening.py, rotate it if live, and inject it through the approved secret path",
+    "auto_execute": false
+  }
+]
