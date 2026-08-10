@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Execute exact-scope enrichment canary
         env:
-          REPO_ATLAS_ENRICH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-github-oidc-estate-atlas-enrich
+          REPO_ATLAS_ENRICH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-repo-atlas-enrichment-canary
         run: |
           python - <<'PY'
           import json
