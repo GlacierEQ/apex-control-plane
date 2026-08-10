@@ -1,0 +1,85 @@
+name: Repo Atlas Enrichment Canary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/repo-atlas-enrichment-canary.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Execute exact-scope enrichment canary
+        env:
+          REPO_ATLAS_ENRICH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-repo-atlas-enrichment-canary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.parse
+          import urllib.request
+
+          audience = "apex-repo-atlas-estate-enrich"
+          request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
+          request_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+          if not request_url or not request_token:
+              raise SystemExit("GitHub OIDC environment is unavailable")
+
+          separator = "&" if "?" in request_url else "?"
+          oidc_request = urllib.request.Request(
+              f"{request_url}{separator}audience={urllib.parse.quote(audience)}",
+              headers={"Authorization": f"Bearer {request_token}"},
+          )
+          with urllib.request.urlopen(oidc_request, timeout=20) as response:
+              oidc = json.loads(response.read()).get("value", "")
+          if not oidc:
+              raise SystemExit("GitHub OIDC token response was empty")
+          print(f"::add-mask::{oidc}")
+
+          request = urllib.request.Request(
+              os.environ["REPO_ATLAS_ENRICH_URL"],
+              data=b"{}",
+              method="POST",
+              headers={
+                  "Authorization": f"Bearer {oidc}",
+                  "Accept": "application/json",
+                  "Content-Type": "application/json",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=300) as response:
+              result = json.loads(response.read())
+
+          if result.get("ok") is not True or result.get("status") not in {
+              "enriched",
+              "already_enriched",
+          }:
+              raise SystemExit("Repo Atlas enrichment canary did not succeed")
+          if result.get("repository_count") != 1220:
+              raise SystemExit("Repo Atlas enrichment canary is not bound to the 1,220-row snapshot")
+          if result.get("enriched_count") != 1220:
+              raise SystemExit("Repo Atlas enrichment is incomplete")
+          if result.get("fork_lineage_count") != 582:
+              raise SystemExit("Repo Atlas fork lineage is incomplete")
+          if result.get("github_writes") != 0 or result.get("token_persisted") is not False:
+              raise SystemExit("Repo Atlas enrichment violated its read-only authority boundary")
+          root = result.get("enrichment_root_sha256")
+          if not isinstance(root, str) or re.fullmatch(r"[0-9a-f]{64}", root) is None:
+              raise SystemExit("Repo Atlas enrichment root is invalid")
+
+          print(json.dumps({
+              "snapshot_id": result.get("snapshot_id"),
+              "repository_count": result.get("repository_count"),
+              "default_head_count": result.get("default_head_count"),
+              "fork_lineage_count": result.get("fork_lineage_count"),
+              "enrichment_root_sha256": root,
+              "github_writes": result.get("github_writes"),
+              "token_persisted": result.get("token_persisted"),
+          }, sort_keys=True))
+          PY
