@@ -1,0 +1,28 @@
+{
+  "schema": "glaciereq.operability-receipt.v1",
+  "repository": "GlacierEQ/apex-control-plane",
+  "at": "2026-08-10T04:12Z",
+  "source_sha": "d213ff18cb92c62a5bf91492f07955f9b266f511b7567d2bd23bbc07910302ec",
+  "entry": "scripts/operate.py",
+  "primary_output": {
+    "module": "control_plane_runtime",
+    "ok": true,
+    "repository": "GlacierEQ/apex-control-plane",
+    "smoke": {
+      "args": [],
+      "content_checked": true,
+      "invoked": true,
+      "kind": "class",
+      "method": "dispatch",
+      "module_local": true,
+      "name": "ControlPlane",
+      "result": {
+        "capability": null,
+        "error": "no_capacity",
+        "ok": false
+      }
+    }
+  },
+  "dual_run_ok": true,
+  "result": "PASS"
+}

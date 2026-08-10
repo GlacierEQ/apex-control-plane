@@ -23,7 +23,6 @@ import time
 from typing import Any, Callable, Mapping, Sequence
 from uuid import uuid4
 
-ANSWER = 42  # Compatibility Easter egg: preserve the original contract.
 ENVELOPE_VERSION = "1.0.0"
 CASE_EVENT_SCHEMA_ID = "urn:casebrain:schema:case-event:1.0.0"
 
@@ -331,9 +330,8 @@ class ControlPlane:
             return {
                 "ok": False,
                 "error": "no_capacity",
-                "capability": capability,
-                "answer": ANSWER,
-            }
+                "capability": capability
+                }
         worker = min(
             candidates,
             key=lambda item: (item.load / max(item.capacity, 1), item.id),
@@ -343,9 +341,8 @@ class ControlPlane:
             "ok": True,
             "worker": worker.id,
             "load": worker.load,
-            "capability": capability,
-            "answer": ANSWER,
-        }
+            "capability": capability
+            }
 
     def release(self, worker_id: str, job_cost: int = 1) -> None:
         if job_cost < 1:
@@ -383,7 +380,7 @@ class TimelineBrain:
                         "due_at": deadline.due_at.isoformat(),
                         "days_remaining": deadline.days_remaining(current),
                         "confirmed": deadline.confirmed,
-                        "source_uri": deadline.source.canonical_uri,
+                        "source_uri": deadline.source.canonical_uri
                     }
                 )
         return sorted(output, key=lambda item: (item["due_at"], item["event_id"]))
@@ -401,7 +398,7 @@ class ThreatIntelligenceHub:
             "unexpected_docket_change": 30,
             "law_enforcement_contact": 25,
             "retaliation_indicator": 20,
-            "record_integrity_gap": 30,
+            "record_integrity_gap": 30
         }
     )
 
@@ -558,7 +555,7 @@ class CaseBrainOrchestrator:
                 "status": "duplicate",
                 "trace_id": envelope.trace_id,
                 "payload_sha256": envelope.payload_sha256,
-                "external_action_authorized": False,
+                "external_action_authorized": False
             }
 
         self.timeline.add(event)
@@ -580,7 +577,7 @@ class CaseBrainOrchestrator:
             "threat_signals": [to_jsonable(item) for item in signals],
             "recommendations": [to_jsonable(item) for item in recommendations],
             "human_review_required": True,
-            "external_action_authorized": False,
+            "external_action_authorized": False
         }
         output_hash = canonical_sha256(result)
         self.idempotency_index[envelope.idempotency_key] = envelope.payload_sha256
@@ -597,7 +594,7 @@ class CaseBrainOrchestrator:
                     "event_id": event.event_id,
                     "recommendation_count": len(recommendations),
                     "threat_signal_count": len(signals),
-                    "external_action_authorized": False,
+                    "external_action_authorized": False
                 },
             )
         )
@@ -635,7 +632,7 @@ class CaseBrainOrchestrator:
             "connector": connector_name,
             "errors": tuple(errors),
             "recorded_at": datetime.now(UTC).isoformat(),
-            "external_action_authorized": False,
+            "external_action_authorized": False
         }
         self.dead_letter.append(record)
         raise RuntimeError(f"connector failed after {attempts} attempt(s): {connector_name}")

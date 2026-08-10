@@ -1,0 +1,31 @@
+{
+  "schema": "glaciereq.proof-receipt.v1",
+  "repository": "GlacierEQ/apex-control-plane",
+  "source_sha": "d213ff18cb92c62a5bf91492f07955f9b266f511b7567d2bd23bbc07910302ec",
+  "proof_id": "elite-apex-control-plane-1786335149",
+  "environment": {
+    "python": "/Users/kcbflux/job-app/excellence/.venv-elite/bin/python",
+    "PYTHONPATH": "/Users/kcbflux/job-app/repos/apex-control-plane:/Users/kcbflux/job-app/repos/apex-control-plane/src",
+    "entry": "unittest"
+  },
+  "tests": [
+    "/Users/kcbflux/job-app/excellence/.venv-elite/bin/python -m unittest discover -s tests -v (x2)"
+  ],
+  "adversarial_tests": [
+    "tests/test_adversarial.py"
+  ],
+  "runtime": {
+    "operate": "scripts/operate.py (x2)",
+    "dual_run_ok": true,
+    "proof_dual_run_ok": true
+  },
+  "result": "PASS",
+  "limitations": [
+    "not production deployed",
+    "reference implementation only"
+  ],
+  "timestamp": "2026-08-10T04:12Z",
+  "artifact_hashes": {
+    "operability_receipt": "b74b7cb480357b860e679c3390af365f6fa805e1dd96d8d285986388d18f1f1b"
+  }
+}

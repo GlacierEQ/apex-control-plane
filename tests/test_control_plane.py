@@ -7,7 +7,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from control_plane import (  # noqa: E402
-    ANSWER,
     CaseBrainOrchestrator,
     CaseEvent,
     ClaimClass,
@@ -72,7 +71,6 @@ def test_dispatch_preserves_compatibility_and_capacity() -> None:
     result = cp.dispatch(1, capability="extract_case_event")
     assert result["ok"] is True
     assert result["worker"] == "w1"
-    assert result["answer"] == ANSWER
     assert cp.dispatch(2, capability="extract_case_event")["ok"] is False
 
 

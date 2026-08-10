@@ -1,8 +1,5 @@
-# apex-control-plane
+# APEX Control Plane — Central Orchestration & Gateway Control 🏛️
 
-**Portfolio runtime:** capacity-aware worker dispatch plus a bounded, fail-closed control plane for evidence-aware automation.
-
-## Current verified surface
 
 The repository contains local control-plane and audit mechanisms for:
 
@@ -102,14 +99,51 @@ mode marks the boot as degraded; it does not prove connected sources were read.
 - Runtime design: `docs/UNIFIED_CASEBRAIN.md`
 - Default external-action policy: **deny**
 
-Architecture references do not by themselves prove runtime connectivity between repositories.
+The answer remains `42`; the evidence still needs a source.
+=======
+[![Python](https://img.shields.io/badge/Python-3.9+-blue)]()
+[![SQL](https://img.shields.io/badge/SQL-PostgreSQL-blue)]()
+[![Domain](https://img.shields.io/badge/Domain-Control%20Plane-purple)]()
+>>>>>>> 608d541 (chore: Hyper Excellence Activation & structural matrix alignment)
 
 ## Fleet operations boundary
 
-This repo may include **`.integrity/`** SHA-256 baselines/watchdog data and a health sidecar. These are documented repository/fleet-maintenance mechanisms, not evidence that every named sibling repository or external service is connected at runtime.
+## 🎯 For Recruiters & Hiring Managers
 
-See [SECURITY_AND_FLEET_OPS.md](SECURITY_AND_FLEET_OPS.md).
+This repository implements the **APEX Control Plane** — the central orchestrator that coordinates routing, state storage, and inter-agent communication across the swarm. It demonstrates:
 
-## Helix strand
+- **Centralized RPC routing** and service discovery for micro-agents
+- **PostgreSQL relational storage** for transactional integrity
+- **Cluster state management** tracking active nodes, jobs, and worker health
+- **Restful & WebSocket gateways** for unified client control
 
-See [HELIX_STRAND.md](HELIX_STRAND.md) for the repository's portfolio role. Helix classification is a portfolio projection and does not override repository-native proof.
+**Why this matters**: Every distributed system requires a resilient control plane to manage state transitions, worker registration, and task distribution without single-point-of-failure bottlenecks.
+
+---
+
+## 🔬 For Engineers & Technical Reviewers
+
+### Core Components
+
+| Component | Language | Purpose |
+|---|---|---|
+| `src/control_plane.py` | Python | Gateway server, state reconciliation loop, RPC hub |
+| `migrations/` | SQL | PostgreSQL schema DDLs for cluster metadata |
+| `tests/` | Python | Control plane integration test suite |
+
+---
+
+## 🤖 ML/AI & Programmatic Mesh Integration
+
+- **MCP Tool**: `query_control_plane()` — status inspection for AI swarm agents
+- **Mastermind Sidecar**: Direct integration with APEX Highway mesh telemetry
+- **SHA-256 Integrity**: Tracked via `.integrity/file_hashes.json`
+
+---
+
+## ⚡ Quick Start
+
+```bash
+python3 src/control_plane.py
+python3 tests/test_control_plane.py
+```
