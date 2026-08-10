@@ -1,4 +1,4 @@
-name: Repo Atlas Enrichment Canary
+name: Repo Atlas Refresh + Enrichment Canary
 
 on:
   push:
@@ -8,85 +8,189 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+  actions: write
 
 jobs:
-  enrich:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Execute exact-scope enrichment canary
+      - name: Dispatch canonical daily audit and verify fresh Atlas proofs
         env:
-          REPO_ATLAS_ENRICH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-repo-atlas-enrichment-canary
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_HEAD_SHA: ${{ github.sha }}
         run: |
           python - <<'PY'
+          from __future__ import annotations
+
+          import io
           import json
           import os
           import re
+          import time
           import urllib.error
           import urllib.parse
           import urllib.request
+          import zipfile
+          from datetime import UTC, datetime, timedelta
+          from pathlib import Path
 
-          audience = "apex-repo-atlas-estate-enrich"
-          request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
-          request_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
-          if not request_url or not request_token:
-              raise SystemExit("GitHub OIDC environment is unavailable")
+          repo = os.environ["GITHUB_REPOSITORY"]
+          expected_head = os.environ["EXPECTED_HEAD_SHA"]
+          token = os.environ["GH_TOKEN"]
+          api = f"https://api.github.com/repos/{repo}"
+          started = datetime.now(UTC)
 
-          separator = "&" if "?" in request_url else "?"
-          oidc_request = urllib.request.Request(
-              f"{request_url}{separator}audience={urllib.parse.quote(audience)}",
-              headers={"Authorization": f"Bearer {request_token}"},
-          )
-          with urllib.request.urlopen(oidc_request, timeout=20) as response:
-              oidc = json.loads(response.read()).get("value", "")
-          if not oidc:
-              raise SystemExit("GitHub OIDC token response was empty")
-          print(f"::add-mask::{oidc}")
+          def request_json(url: str, *, method: str = "GET", body: object | None = None):
+              data = None if body is None else json.dumps(body).encode()
+              request = urllib.request.Request(
+                  url,
+                  data=data,
+                  method=method,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "Content-Type": "application/json",
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = response.read()
+              return None if not payload else json.loads(payload)
 
-          request = urllib.request.Request(
-              os.environ["REPO_ATLAS_ENRICH_URL"],
-              data=b"{}",
+          request_json(
+              f"{api}/actions/workflows/daily_audit.yml/dispatches",
               method="POST",
-              headers={
-                  "Authorization": f"Bearer {oidc}",
-                  "Accept": "application/json",
-                  "Content-Type": "application/json",
+              body={
+                  "ref": "main",
+                  "inputs": {"reason": "one-shot authoritative Atlas refresh + enrichment canary"},
               },
           )
-          try:
-              with urllib.request.urlopen(request, timeout=300) as response:
-                  result = json.loads(response.read())
-          except urllib.error.HTTPError as error:
-              payload = error.read().decode("utf-8", errors="replace")[:500]
-              raise SystemExit(
-                  f"Repo Atlas enrichment broker rejected the canary: HTTP {error.code} {payload}"
-              ) from None
 
-          if result.get("ok") is not True or result.get("status") not in {
+          run = None
+          lower_bound = started - timedelta(seconds=10)
+          for _ in range(60):
+              payload = request_json(
+                  f"{api}/actions/workflows/daily_audit.yml/runs?"
+                  + urllib.parse.urlencode(
+                      {"event": "workflow_dispatch", "branch": "main", "per_page": 20}
+                  )
+              )
+              for candidate in payload.get("workflow_runs", []):
+                  created_at = datetime.fromisoformat(candidate["created_at"].replace("Z", "+00:00"))
+                  if candidate.get("head_sha") == expected_head and created_at >= lower_bound:
+                      run = candidate
+                      break
+              if run is not None:
+                  break
+              time.sleep(5)
+          if run is None:
+              raise SystemExit("Canonical daily-audit workflow_dispatch run was not observed")
+
+          run_id = int(run["id"])
+          for _ in range(120):
+              run = request_json(f"{api}/actions/runs/{run_id}")
+              if run.get("status") == "completed":
+                  break
+              time.sleep(5)
+          else:
+              raise SystemExit(f"Canonical daily-audit run {run_id} did not complete")
+
+          if run.get("conclusion") != "success":
+              raise SystemExit(
+                  f"Canonical daily-audit run {run_id} failed closed: {run.get('conclusion')}"
+              )
+
+          artifacts_payload = request_json(f"{api}/actions/runs/{run_id}/artifacts?per_page=100")
+          artifacts = artifacts_payload.get("artifacts", [])
+
+          def artifact_json(prefix: str, filename: str):
+              matches = [artifact for artifact in artifacts if artifact.get("name", "").startswith(prefix)]
+              if len(matches) != 1:
+                  raise SystemExit(f"Expected exactly one {prefix} artifact, found {len(matches)}")
+              download = urllib.request.Request(
+                  matches[0]["archive_download_url"],
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(download, timeout=60) as response:
+                  archive = response.read()
+              with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
+                  return json.loads(bundle.read(filename))
+
+          refresh = artifact_json("repo-atlas-refresh-proof-", "repo_atlas_refresh_result.json")
+          enrichment = artifact_json(
+              "repo-atlas-enrichment-proof-", "repo_atlas_enrichment_result.json"
+          )
+
+          if refresh.get("ok") is not True or refresh.get("status") != "refreshed":
+              raise SystemExit("Refresh artifact is not a successful canonical refresh")
+          if refresh.get("scan_mode") != "metadata_only":
+              raise SystemExit("Refresh artifact violated metadata-only inventory mode")
+          if refresh.get("github_writes") != 0 or refresh.get("token_persisted") is not False:
+              raise SystemExit("Refresh artifact violated its authority boundary")
+
+          repository_count = refresh.get("repository_count")
+          fork_count = refresh.get("fork_count")
+          if not isinstance(repository_count, int) or repository_count <= 0:
+              raise SystemExit("Refresh artifact returned an invalid repository count")
+          if not isinstance(fork_count, int) or fork_count < 0:
+              raise SystemExit("Refresh artifact returned an invalid fork count")
+
+          if enrichment.get("ok") is not True or enrichment.get("status") not in {
               "enriched",
               "already_enriched",
           }:
-              raise SystemExit("Repo Atlas enrichment canary did not succeed")
-          if result.get("repository_count") != 1220:
-              raise SystemExit("Repo Atlas enrichment canary is not bound to the 1,220-row snapshot")
-          if result.get("enriched_count") != 1220:
-              raise SystemExit("Repo Atlas enrichment is incomplete")
-          if result.get("fork_lineage_count") != 582:
-              raise SystemExit("Repo Atlas fork lineage is incomplete")
-          if result.get("github_writes") != 0 or result.get("token_persisted") is not False:
-              raise SystemExit("Repo Atlas enrichment violated its read-only authority boundary")
-          root = result.get("enrichment_root_sha256")
+              raise SystemExit("Enrichment artifact is not successful")
+          if enrichment.get("snapshot_id") != refresh.get("snapshot_id"):
+              raise SystemExit("Enrichment is not bound to the freshly refreshed snapshot")
+          if enrichment.get("repository_count") != repository_count:
+              raise SystemExit("Enrichment repository count differs from canonical refresh")
+          if enrichment.get("enriched_count") != repository_count:
+              raise SystemExit("Enrichment is incomplete")
+          if enrichment.get("fork_lineage_count") != fork_count:
+              raise SystemExit("Fork lineage is incomplete")
+          if enrichment.get("github_writes") != 0 or enrichment.get("token_persisted") is not False:
+              raise SystemExit("Enrichment violated its authority boundary")
+          root = enrichment.get("enrichment_root_sha256")
           if not isinstance(root, str) or re.fullmatch(r"[0-9a-f]{64}", root) is None:
-              raise SystemExit("Repo Atlas enrichment root is invalid")
+              raise SystemExit("Enrichment integrity root is invalid")
 
-          print(json.dumps({
-              "snapshot_id": result.get("snapshot_id"),
-              "repository_count": result.get("repository_count"),
-              "default_head_count": result.get("default_head_count"),
-              "fork_lineage_count": result.get("fork_lineage_count"),
-              "enrichment_root_sha256": root,
-              "github_writes": result.get("github_writes"),
-              "token_persisted": result.get("token_persisted"),
-          }, sort_keys=True))
+          result = {
+              "schema": "glaciereq.repo-atlas.dispatch-canary.v1",
+              "daily_audit_run_id": run_id,
+              "head_sha": expected_head,
+              "refresh": refresh,
+              "enrichment": enrichment,
+          }
+          Path("repo_atlas_dispatch_canary_result.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(
+              json.dumps(
+                  {
+                      "daily_audit_run_id": run_id,
+                      "snapshot_id": refresh.get("snapshot_id"),
+                      "repository_count": repository_count,
+                      "fork_count": fork_count,
+                      "default_head_count": enrichment.get("default_head_count"),
+                      "enrichment_root_sha256": root,
+                      "github_writes": 0,
+                      "token_persisted": False,
+                  },
+                  sort_keys=True,
+              )
+          )
           PY
+
+      - name: Upload one-shot Atlas canary receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repo-atlas-dispatch-canary-${{ github.run_id }}
+          path: repo_atlas_dispatch_canary_result.json
+          retention-days: 30
+          if-no-files-found: error
