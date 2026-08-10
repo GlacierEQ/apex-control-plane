@@ -1,0 +1,65 @@
+{
+  "run": {
+    "run_id": "20260810_182059",
+    "started_at": "2026-08-10T18:20:59.476248+00:00",
+    "completed_at": "2026-08-10T18:20:59.526129+00:00",
+    "findings": [
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Credential-shaped value in ./tests/test_audit_hardening.py:107",
+        "evidence": "password assignment pattern matched; value redacted from audit output",
+        "action": "Rotate the credential if live, remove it from source, and inject it through the approved secret path",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-08-10T18:20:59.497860+00:00"
+      }
+    ],
+    "actions_executed": [],
+    "connectors_validated": {
+      "github": {
+        "declared": true,
+        "authenticated": false,
+        "reachable": false,
+        "action_capable": false,
+        "status": "RED",
+        "state": "declared",
+        "detail": {
+          "connector": "github",
+          "state": "declared",
+          "error": "token missing"
+        }
+      },
+      "notion": {
+        "declared": true,
+        "authenticated": false,
+        "reachable": false,
+        "action_capable": false,
+        "status": "RED",
+        "state": "declared",
+        "detail": {
+          "connector": "notion",
+          "state": "declared",
+          "error": "token missing"
+        }
+      }
+    },
+    "status": "completed"
+  },
+  "action_queue": {
+    "immediate": [
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Credential-shaped value in ./tests/test_audit_hardening.py:107",
+        "evidence": "password assignment pattern matched; value redacted from audit output",
+        "action": "Rotate the credential if live, remove it from source, and inject it through the approved secret path",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-08-10T18:20:59.497860+00:00"
+      }
+    ],
+    "strategic": [],
+    "backlog": []
+  }
+}
