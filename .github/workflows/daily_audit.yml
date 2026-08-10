@@ -161,6 +161,12 @@ jobs:
           )
           PY
 
+      - name: Enrich Repo Atlas heads and fork lineage
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        env:
+          REPO_ATLAS_ENRICH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-github-oidc-estate-atlas-enrich
+        run: python scripts/repo_atlas_enrich.py
+
       - name: Fetch redacted Repo Atlas receipt
         shell: bash
         env:
@@ -244,6 +250,15 @@ jobs:
         with:
           name: repo-atlas-refresh-proof-${{ github.run_id }}
           path: repo_atlas_refresh_result.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Repo Atlas enrichment proof
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-atlas-enrichment-proof-${{ github.run_id }}
+          path: repo_atlas_enrichment_result.json
           retention-days: 7
           if-no-files-found: error
 
