@@ -23,6 +23,7 @@ jobs:
           import json
           import os
           import re
+          import urllib.error
           import urllib.parse
           import urllib.request
 
@@ -53,8 +54,14 @@ jobs:
                   "Content-Type": "application/json",
               },
           )
-          with urllib.request.urlopen(request, timeout=300) as response:
-              result = json.loads(response.read())
+          try:
+              with urllib.request.urlopen(request, timeout=300) as response:
+                  result = json.loads(response.read())
+          except urllib.error.HTTPError as error:
+              payload = error.read().decode("utf-8", errors="replace")[:500]
+              raise SystemExit(
+                  f"Repo Atlas enrichment broker rejected the canary: HTTP {error.code} {payload}"
+              ) from None
 
           if result.get("ok") is not True or result.get("status") not in {
               "enriched",
