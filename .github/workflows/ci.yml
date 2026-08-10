@@ -89,7 +89,7 @@ jobs:
 
   repository-security:
     name: Repository security
-    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@418fb99ceaee8ba1623cef9c83c9360e20482fe3
+    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@6757957d290878b1c0831da95328dc29f65d77c9
     with:
       repo_name: ${{ github.event.repository.name }}
       language: python
