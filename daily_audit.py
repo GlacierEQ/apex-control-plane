@@ -95,7 +95,7 @@ CREDENTIAL_PATTERNS = (
         "password assignment",
         re.compile(
             r"(?:^|[\s{,\"'])(?:[A-Za-z0-9_]*PASSWORD[A-Za-z0-9_]*|password|\"password\"|'password')"
-            r"\s*(?:=|:)\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s,#}\]]{8,})",
+            r"\s*(?:=|:)\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s,#}\]\"']{8,})",
             re.IGNORECASE,
         ),
     ),
@@ -267,7 +267,3 @@ def main() -> AuditRun:
             log(f"    ACTION: {finding['action']}")
 
     return run
-
-
-if __name__ == "__main__":
-    main()
