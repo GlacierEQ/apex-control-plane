@@ -36,7 +36,7 @@ class Finding:
     title: str
     evidence: str
     action: str
-    auto_execute: bool = True
+    auto_execute: bool = False
     status: str = "open"
     resolved: bool = False
 
@@ -198,7 +198,7 @@ CREDENTIAL_PATTERNS = (
         "password assignment",
         re.compile(
             r"(?:^|[\s{,\"'])(?:[A-Za-z0-9_]*PASSWORD[A-Za-z0-9_]*|password|\"password\"|'password')"
-            r"\s*(?:=|:)\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s,#}\]]{8,})",
+            r"\s*(?:=|:)\s*(?:[\"'][^\"'\n]{8,}[\"']|[^\s,#}\]\"']{8,})",
             re.IGNORECASE,
         ),
     ),
@@ -353,9 +353,7 @@ def auto_execute(findings: list[Finding]) -> list[str]:
             Path("audit_log").mkdir(exist_ok=True)
             Path("audit_log/.gitkeep").touch()
             Path("findings").mkdir(exist_ok=True)
-            Path("findings/.gitkeep").touch()
             Path("action_queue").mkdir(exist_ok=True)
-            Path("action_queue/.gitkeep").touch()
             executed.append("Created audit_log/, findings/, action_queue/")
 
     return executed
