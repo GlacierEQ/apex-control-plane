@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package glaciereq.jack.v1;
+
+enum ExecutionStatus {
+  EXECUTION_STATUS_UNSPECIFIED = 0;
+  RECOVERING = 1;
+  EXECUTING = 2;
+  BLOCKED = 3;
+  COMPLETE = 4;
+}
+
+message GateVector {
+  bool authority_valid = 1;
+  bool safety_boundary_clear = 2;
+  bool continuity_loaded = 3;
+  bool resources_invoked = 4;
+  bool existing_work_checked = 5;
+  bool canonical_owner_resolved = 6;
+  bool objective_preserved = 7;
+  bool required_sources_opened = 8;
+  bool contradictions_preserved = 9;
+  bool highest_value_delta_selected = 10;
+  bool material_action_executed = 11;
+  bool verification_passed = 12;
+  bool defects_repaired_or_exactly_blocked = 13;
+  bool persistence_written = 14;
+  bool readback_verified = 15;
+  bool next_state_resumable = 16;
+}
+
+message SourceReceipt {
+  string system = 1;
+  string object_id = 2;
+  string version = 3;
+  string hash = 4;
+  bool opened = 5;
+}
+
+message ActionReceipt {
+  string action = 1;
+  string target = 2;
+  string provider_receipt = 3;
+  bool executed = 4;
+  bool verified = 5;
+}
+
+message VerificationReceipt {
+  string check = 1;
+  string receipt_ref = 2;
+  bool passed = 3;
+}
+
+message JackExecutionReceipt {
+  string contract_id = 1;
+  string contract_version = 2;
+  string task = 3;
+  string objective = 4;
+  string canonical_owner = 5;
+  repeated SourceReceipt sources_opened = 6;
+  repeated ActionReceipt actions_executed = 7;
+  GateVector gates = 8;
+  ExecutionStatus status = 9;
+  repeated string exact_blockers = 10;
+  string next_material_action = 11;
+  repeated string persistence_receipts = 12;
+  repeated string readback_receipts = 13;
+  repeated VerificationReceipt verification = 14;
+  repeated string resolved_blockers = 15;
+}
