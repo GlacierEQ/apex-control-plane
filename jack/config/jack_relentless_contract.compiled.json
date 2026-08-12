@@ -1,0 +1,45 @@
+{
+  "contract_id": "JTR-RELENTLESS-EXECUTION-v1",
+  "version": "1.0.0",
+  "preflight_gates": [
+    "authority_valid",
+    "safety_boundary_clear",
+    "continuity_loaded",
+    "resources_invoked",
+    "existing_work_checked",
+    "canonical_owner_resolved",
+    "objective_preserved",
+    "required_sources_opened"
+  ],
+  "completion_gates": [
+    "authority_valid",
+    "safety_boundary_clear",
+    "continuity_loaded",
+    "resources_invoked",
+    "existing_work_checked",
+    "canonical_owner_resolved",
+    "objective_preserved",
+    "required_sources_opened",
+    "contradictions_preserved",
+    "highest_value_delta_selected",
+    "material_action_executed",
+    "verification_passed",
+    "defects_repaired_or_exactly_blocked",
+    "persistence_written",
+    "readback_verified",
+    "next_state_resumable"
+  ],
+  "resume_gates": [
+    "continuity_loaded",
+    "canonical_owner_resolved",
+    "persistence_written",
+    "readback_verified",
+    "next_state_resumable"
+  ],
+  "decision_law": {
+    "existing_work_found": "EXTEND",
+    "no_owner_but_related_system_found": "INTEGRATE",
+    "standalone": "STANDALONE_LAST_RESORT",
+    "unresolved_canonical_conflict": "BLOCK_CREATION_AND_RECONCILE"
+  }
+}
