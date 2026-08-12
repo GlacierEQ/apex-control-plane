@@ -101,12 +101,29 @@ def from_mapping(data: Mapping[str, object]) -> GateState:
     return GateState(**values)
 
 
+def _receipt_list(receipt: Mapping[str, object], name: str) -> list[object]:
+    value = receipt.get(name)
+    if not isinstance(value, list):
+        raise ValueError(f"{name} must be a list")
+    return value
+
+
+def _nonempty_string(receipt: Mapping[str, object], name: str) -> str:
+    value = receipt.get(name)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")
+    return value.strip()
+
+
 def validate_receipt(receipt: Mapping[str, object]) -> None:
     """Reject structurally incomplete or logically false execution receipts."""
     if receipt.get("contract_id") != CONTRACT_ID:
         raise ValueError("wrong or missing contract_id")
     if receipt.get("contract_version") != CONTRACT_VERSION:
         raise ValueError("wrong or missing contract_version")
+
+    for name in ("task", "objective", "canonical_owner", "next_material_action"):
+        _nonempty_string(receipt, name)
 
     raw_gates = receipt.get("gates")
     if not isinstance(raw_gates, Mapping):
@@ -125,11 +142,43 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
     except ValueError as exc:
         raise ValueError("invalid receipt status") from exc
 
-    blockers = receipt.get("exact_blockers", [])
-    if not isinstance(blockers, list):
-        raise ValueError("exact_blockers must be a list")
-
+    blockers = _receipt_list(receipt, "exact_blockers")
     normalized_blockers = [str(v).strip() for v in blockers if str(v).strip()]
+    resolved_blockers = receipt.get("resolved_blockers", [])
+    if not isinstance(resolved_blockers, list):
+        raise ValueError("resolved_blockers must be a list when present")
+
+    sources = _receipt_list(receipt, "sources_opened")
+    actions = _receipt_list(receipt, "actions_executed")
+    verification = _receipt_list(receipt, "verification")
+    persistence = _receipt_list(receipt, "persistence_receipts")
+    readback = _receipt_list(receipt, "readback_receipts")
+
+    if (gates.resources_invoked or gates.required_sources_opened) and not any(
+        isinstance(row, Mapping) and row.get("opened") is True for row in sources
+    ):
+        raise ValueError("resource/source gates require at least one opened source receipt")
+
+    if gates.material_action_executed and not any(
+        isinstance(row, Mapping) and row.get("executed") is True for row in actions
+    ):
+        raise ValueError("material_action_executed requires an executed action receipt")
+
+    if gates.verification_passed and not any(
+        isinstance(row, Mapping)
+        and row.get("passed") is True
+        and isinstance(row.get("receipt_ref"), str)
+        and bool(row.get("receipt_ref", "").strip())
+        for row in verification
+    ):
+        raise ValueError("verification_passed requires a passed verification receipt")
+
+    if gates.persistence_written and not any(isinstance(v, str) and v.strip() for v in persistence):
+        raise ValueError("persistence_written requires persistence_receipts")
+
+    if gates.readback_verified and not any(isinstance(v, str) and v.strip() for v in readback):
+        raise ValueError("readback_verified requires readback_receipts")
+
     expected = evaluate(gates, exact_blockers=normalized_blockers)
     if status is not expected:
         raise ValueError(f"receipt status {status.value} contradicts gate state; expected {expected.value}")

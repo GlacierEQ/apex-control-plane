@@ -66,4 +66,5 @@ message JackExecutionReceipt {
   repeated string persistence_receipts = 12;
   repeated string readback_receipts = 13;
   repeated VerificationReceipt verification = 14;
+  repeated string resolved_blockers = 15;
 }

@@ -54,5 +54,6 @@
     "unknown_gates_rejected": true,
     "current_exact_blocker_precedes_complete": true
   },
-  "onnx_condition_input": "current_blocker_clear"
+  "onnx_condition_input": "current_blocker_present",
+  "onnx_types": "boolean"
 }
