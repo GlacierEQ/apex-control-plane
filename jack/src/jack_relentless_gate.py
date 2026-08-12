@@ -77,10 +77,13 @@ def missing(g: GateState, names: list[str] = COMPLETION) -> list[str]:
 
 
 def evaluate(g: GateState, *, exact_blockers: list[str] | None = None) -> Status:
+    blockers = [str(value).strip() for value in (exact_blockers or []) if str(value).strip()]
+    if blockers:
+        return Status.BLOCKED
     if completion_ready(g):
         return Status.COMPLETE
     if not execution_ready(g):
-        return Status.BLOCKED if exact_blockers else Status.RECOVERING
+        return Status.RECOVERING
     return Status.EXECUTING
 
 
@@ -89,7 +92,13 @@ def from_mapping(data: Mapping[str, object]) -> GateState:
     unknown = set(data) - allowed
     if unknown:
         raise ValueError(f"unknown Jack gate(s): {sorted(unknown)}")
-    return GateState(**{name: bool(data.get(name, False)) for name in allowed})
+    values: dict[str, bool] = {}
+    for name in allowed:
+        value = data.get(name, False)
+        if type(value) is not bool:
+            raise ValueError(f"Jack gate {name!r} must be a bool")
+        values[name] = value
+    return GateState(**values)
 
 
 def validate_receipt(receipt: Mapping[str, object]) -> None:
@@ -110,7 +119,7 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
             f"receipt.gates must contain exactly 16 gates; missing={missing_names}, unknown={unknown_names}"
         )
 
-    gates = GateState(**{name: bool(raw_gates[name]) for name in allowed})
+    gates = from_mapping(raw_gates)
     try:
         status = Status(str(receipt.get("status", "")))
     except ValueError as exc:
@@ -120,14 +129,15 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
     if not isinstance(blockers, list):
         raise ValueError("exact_blockers must be a list")
 
-    expected = evaluate(gates, exact_blockers=[str(v) for v in blockers if str(v).strip()])
+    normalized_blockers = [str(v).strip() for v in blockers if str(v).strip()]
+    expected = evaluate(gates, exact_blockers=normalized_blockers)
     if status is not expected:
         raise ValueError(f"receipt status {status.value} contradicts gate state; expected {expected.value}")
     if status is Status.COMPLETE and not completion_ready(gates):
         raise ValueError("COMPLETE requires every completion gate")
     if status is Status.EXECUTING and not execution_ready(gates):
         raise ValueError("EXECUTING requires every preflight gate")
-    if status is Status.BLOCKED and not blockers:
+    if status is Status.BLOCKED and not normalized_blockers:
         raise ValueError("BLOCKED requires at least one exact blocker")
 
 

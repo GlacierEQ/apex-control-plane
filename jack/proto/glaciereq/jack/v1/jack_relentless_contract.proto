@@ -45,6 +45,12 @@ message ActionReceipt {
   bool verified = 5;
 }
 
+message VerificationReceipt {
+  string check = 1;
+  string receipt_ref = 2;
+  bool passed = 3;
+}
+
 message JackExecutionReceipt {
   string contract_id = 1;
   string contract_version = 2;
@@ -57,6 +63,7 @@ message JackExecutionReceipt {
   ExecutionStatus status = 9;
   repeated string exact_blockers = 10;
   string next_material_action = 11;
-  string persistence_receipt = 12;
-  string readback_receipt = 13;
+  repeated string persistence_receipts = 12;
+  repeated string readback_receipts = 13;
+  repeated VerificationReceipt verification = 14;
 }

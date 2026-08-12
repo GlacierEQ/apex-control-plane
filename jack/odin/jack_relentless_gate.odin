@@ -58,13 +58,13 @@ resume_ready :: proc(g: Gate_State) -> bool {
 }
 
 evaluate :: proc(g: Gate_State, exact_blocker_present: bool) -> Execution_Status {
+    if exact_blocker_present {
+        return .BLOCKED
+    }
     if completion_ready(g) {
         return .COMPLETE
     }
     if !execution_ready(g) {
-        if exact_blocker_present {
-            return .BLOCKED
-        }
         return .RECOVERING
     }
     return .EXECUTING

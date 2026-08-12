@@ -51,6 +51,8 @@
   "receipt_validation": {
     "fixed_gate_vector": true,
     "complete_requires_all_completion_gates": true,
-    "unknown_gates_rejected": true
-  }
+    "unknown_gates_rejected": true,
+    "current_exact_blocker_precedes_complete": true
+  },
+  "onnx_condition_input": "current_blocker_clear"
 }

@@ -2,7 +2,7 @@
 from pathlib import Path
 import base64, hashlib
 
-EXPECTED = "380b07116262de02b9951028e495daf3cbffea7354b1006c133d5c0444c96dec"
+EXPECTED = "a30920efe9e9cf930d90ce120511ef9b30547dbaaf624bc3fe1628aade1e1618"
 here = Path(__file__).resolve().parents[1]
 src = here / "models" / "jack_relentless_gate.onnx.b64"
 dst = here / "models" / "jack_relentless_gate.onnx"

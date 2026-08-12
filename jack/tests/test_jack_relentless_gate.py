@@ -72,3 +72,32 @@ def test_receipt_rejects_missing_gate():
 
 def test_receipt_accepts_consistent_complete():
     validate_receipt(_receipt(_all_true(), "COMPLETE"))
+
+
+def test_current_blocker_precedes_complete():
+    g = GateState(**_all_true())
+    assert evaluate(g, exact_blockers=["current provider hold"]) == Status.BLOCKED
+
+
+def test_non_boolean_gate_is_rejected():
+    from jack.src.jack_relentless_gate import from_mapping
+
+    values = _all_true()
+    values["readback_verified"] = "false"
+    try:
+        from_mapping(values)
+    except ValueError as exc:
+        assert "must be a bool" in str(exc)
+    else:
+        raise AssertionError("string gate value was accepted")
+
+
+def test_receipt_rejects_string_boolean():
+    values = _all_true()
+    values["readback_verified"] = "false"
+    try:
+        validate_receipt(_receipt(values, "COMPLETE"))
+    except ValueError as exc:
+        assert "must be a bool" in str(exc)
+    else:
+        raise AssertionError("receipt with string boolean was accepted")

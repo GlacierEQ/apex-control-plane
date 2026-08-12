@@ -53,6 +53,7 @@ invariants:
   no_burden_return_when_connected_action_is_available: true
   no_idle_terminal_state: true
   safe_legal_nonviolent_execution_only: true
+  current_exact_blocker_precedes_completion: true
 execution_loop:
 - LOAD_CANON
 - RECOVER_LAST_VERIFIED_CHECKPOINT
@@ -133,7 +134,7 @@ receipt_requirements:
   - verification
   - persistence_receipts
   - readback_receipts
-  - gate_state
+  - gates
   - status
   - exact_blockers
   - next_material_action
