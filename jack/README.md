@@ -22,6 +22,8 @@ This package is an executable/machine-readable extension of the existing Glacier
 A zero on any required gate prevents the corresponding readiness output from becoming `1.0`.
 There is no weighted score and no partial-credit path to `COMPLETE`.
 
+Status is fail-closed: `RECOVERING` until preflight is ready, `EXECUTING` only after all preflight gates pass, `BLOCKED` only with an exact blocker, and `COMPLETE` only after all 16 gates pass. Receipts use a fixed 16-field gate vector and are rejected when their status contradicts their gates.
+
 ONNX SHA-256: `380b07116262de02b9951028e495daf3cbffea7354b1006c133d5c0444c96dec`
 
 ## Operational interpretation

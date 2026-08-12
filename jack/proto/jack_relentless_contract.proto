@@ -4,36 +4,29 @@ package glaciereq.jack.v1;
 
 enum ExecutionStatus {
   EXECUTION_STATUS_UNSPECIFIED = 0;
-  EXECUTING = 1;
-  BLOCKED = 2;
-  COMPLETE = 3;
+  RECOVERING = 1;
+  EXECUTING = 2;
+  BLOCKED = 3;
+  COMPLETE = 4;
 }
 
-enum GateName {
-  GATE_UNSPECIFIED = 0;
-  AUTHORITY_VALID = 1;
-  SAFETY_BOUNDARY_CLEAR = 2;
-  CONTINUITY_LOADED = 3;
-  RESOURCES_INVOKED = 4;
-  EXISTING_WORK_CHECKED = 5;
-  CANONICAL_OWNER_RESOLVED = 6;
-  OBJECTIVE_PRESERVED = 7;
-  REQUIRED_SOURCES_OPENED = 8;
-  CONTRADICTIONS_PRESERVED = 9;
-  HIGHEST_VALUE_DELTA_SELECTED = 10;
-  MATERIAL_ACTION_EXECUTED = 11;
-  VERIFICATION_PASSED = 12;
-  DEFECTS_REPAIRED_OR_EXACTLY_BLOCKED = 13;
-  PERSISTENCE_WRITTEN = 14;
-  READBACK_VERIFIED = 15;
-  NEXT_STATE_RESUMABLE = 16;
-}
-
-message GateState {
-  GateName gate = 1;
-  bool satisfied = 2;
-  string receipt_ref = 3;
-  string blocker = 4;
+message GateVector {
+  bool authority_valid = 1;
+  bool safety_boundary_clear = 2;
+  bool continuity_loaded = 3;
+  bool resources_invoked = 4;
+  bool existing_work_checked = 5;
+  bool canonical_owner_resolved = 6;
+  bool objective_preserved = 7;
+  bool required_sources_opened = 8;
+  bool contradictions_preserved = 9;
+  bool highest_value_delta_selected = 10;
+  bool material_action_executed = 11;
+  bool verification_passed = 12;
+  bool defects_repaired_or_exactly_blocked = 13;
+  bool persistence_written = 14;
+  bool readback_verified = 15;
+  bool next_state_resumable = 16;
 }
 
 message SourceReceipt {
@@ -60,7 +53,7 @@ message JackExecutionReceipt {
   string canonical_owner = 5;
   repeated SourceReceipt sources_opened = 6;
   repeated ActionReceipt actions_executed = 7;
-  repeated GateState gate_state = 8;
+  GateVector gates = 8;
   ExecutionStatus status = 9;
   repeated string exact_blockers = 10;
   string next_material_action = 11;

@@ -1,6 +1,7 @@
 package jack_relentless
 
 Execution_Status :: enum {
+    RECOVERING,
     EXECUTING,
     BLOCKED,
     COMPLETE,
@@ -60,8 +61,11 @@ evaluate :: proc(g: Gate_State, exact_blocker_present: bool) -> Execution_Status
     if completion_ready(g) {
         return .COMPLETE
     }
-    if !execution_ready(g) && exact_blocker_present {
-        return .BLOCKED
+    if !execution_ready(g) {
+        if exact_blocker_present {
+            return .BLOCKED
+        }
+        return .RECOVERING
     }
     return .EXECUTING
 }

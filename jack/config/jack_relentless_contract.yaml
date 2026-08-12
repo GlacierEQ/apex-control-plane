@@ -106,9 +106,11 @@ gates:
   - readback_verified
   - next_state_resumable
 status_machine:
-  EXECUTING: At least execution_ready is true; objective remains unfinished; continue material action.
-  BLOCKED: A genuine external/authority/safety/source blocker is exactly identified with receipt; persist state
-    and next workaround.
+  RECOVERING: Preflight is incomplete and no genuine external blocker is established; invoke continuity/resource recovery
+    until execution_ready becomes true.
+  EXECUTING: Every execution_ready gate is true; objective remains unfinished; continue material action.
+  BLOCKED: A genuine external/authority/safety/source blocker is exactly identified with receipt; persist state and next
+    workaround.
   COMPLETE: Every completion_ready gate is true and readback verifies the result.
   FORBIDDEN:
   - PLAN_ONLY
@@ -137,3 +139,5 @@ receipt_requirements:
   - next_material_action
   completion_claim_requires_all_completion_gates: true
   blocked_claim_requires_exact_blocker: true
+  gate_vector_must_be_fixed_and_complete: true
+  complete_status_requires_all_gates_true: true

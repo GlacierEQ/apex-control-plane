@@ -36,10 +36,21 @@
     "readback_verified",
     "next_state_resumable"
   ],
+  "statuses": [
+    "RECOVERING",
+    "EXECUTING",
+    "BLOCKED",
+    "COMPLETE"
+  ],
   "decision_law": {
     "existing_work_found": "EXTEND",
     "no_owner_but_related_system_found": "INTEGRATE",
     "standalone": "STANDALONE_LAST_RESORT",
     "unresolved_canonical_conflict": "BLOCK_CREATION_AND_RECONCILE"
+  },
+  "receipt_validation": {
+    "fixed_gate_vector": true,
+    "complete_requires_all_completion_gates": true,
+    "unknown_gates_rejected": true
   }
 }
