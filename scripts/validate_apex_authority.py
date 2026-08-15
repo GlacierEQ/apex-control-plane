@@ -23,10 +23,13 @@ ACTIVE_TEXT = [
     "jack/src/jack_relentless_gate.py",
     "jack/odin/jack_relentless_gate.odin",
     "glaciereq/jack/v1/jack_relentless_contract.proto",
+    "machine/target-contract.json",
+    "machine/excellence-state.json",
+    "machine/excellence-scores.json",
 ]
 
-# These are positive control commands from the contaminated path, not mere
-# mentions of concepts that APEX explicitly prohibits.
+# Positive contaminated control commands/keys. Explicit descriptions of why a
+# behavior is forbidden are allowed; reintroducing these exact active forms is not.
 FORBIDDEN_ACTIVE_SEMANTICS = [
     "execute the smallest compatible extension",
     "resolve one controlling canonical owner",
@@ -39,6 +42,11 @@ FORBIDDEN_ACTIVE_SEMANTICS = [
     "canonical_owner",
     "canonical_notion_pages",
     "canonical_mem_manifest",
+    "vertical_slice_alive",
+    "canonical_position_resolved",
+    "canonical_confidence",
+    "promoted_leaf",
+    "next:canonical_position_only_if_estate_role_resolved",
 ]
 
 REQUIRED_PROMPT = [
@@ -166,6 +174,51 @@ def validate() -> list[str]:
         errors.append("jack compiled contract: operator authority gate missing")
     if "maximum_coherent_advance_selected" not in jack.get("completion_gates", []):
         errors.append("jack compiled contract: maximum coherent advance gate missing")
+
+    target = _json("machine/target-contract.json")
+    if target.get("mode") != "APEX":
+        errors.append("machine/target-contract.json: mode must be APEX")
+    if target.get("human_project_direction_authority") != "Casey Barton":
+        errors.append("machine/target-contract.json: Casey authority missing")
+    if target.get("execution_law") != "MAXIMUM_COHERENT_ADVANCE":
+        errors.append("machine/target-contract.json: execution law drift")
+    dimensions = target.get("state_dimensions") or {}
+    required_dimensions = {
+        "SOURCE_STATE",
+        "TARGET_CAPABILITY",
+        "IMPLEMENTED_CAPABILITY",
+        "VERIFIED_CAPABILITY",
+        "AUTHORIZED_CAPABILITY",
+        "DEPLOYED_CAPABILITY",
+        "OBSERVED_RESULT",
+        "PROJECTION",
+    }
+    if not required_dimensions.issubset(dimensions):
+        errors.append("machine/target-contract.json: state dimensions incomplete")
+    if (dimensions.get("PROJECTION") or {}).get("status") != "NON_AUTHORITY":
+        errors.append("machine/target-contract.json: projection authority drift")
+
+    excellence = _json("machine/excellence-state.json")
+    if excellence.get("mode") != "APEX":
+        errors.append("machine/excellence-state.json: mode must be APEX")
+    if excellence.get("human_project_direction_authority") != "Casey Barton":
+        errors.append("machine/excellence-state.json: Casey authority missing")
+    if excellence.get("execution_law") != "MAXIMUM_COHERENT_ADVANCE":
+        errors.append("machine/excellence-state.json: execution law drift")
+    gates = excellence.get("gates") or {}
+    if "MAXIMUM_COHERENT_ADVANCE_ALIVE" not in gates:
+        errors.append("machine/excellence-state.json: maximum coherent advance gate missing")
+    if "OPERATOR_AUTHORITY_BOUND" not in gates:
+        errors.append("machine/excellence-state.json: operator authority gate missing")
+
+    scores = _json("machine/excellence-scores.json")
+    if scores.get("mode") != "APEX":
+        errors.append("machine/excellence-scores.json: mode must be APEX")
+    if scores.get("execution_law") != "MAXIMUM_COHERENT_ADVANCE":
+        errors.append("machine/excellence-scores.json: execution law drift")
+    axes = scores.get("axes") or {}
+    if "operator_intent_alignment" not in axes or "scope_strength" not in axes:
+        errors.append("machine/excellence-scores.json: APEX strength axes missing")
 
     for path in ACTIVE_TEXT:
         lower = _read(path).lower()
