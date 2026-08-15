@@ -16,19 +16,20 @@ ACTIVE_TEXT = [
     "src/notion_continuity_gate.py",
 ]
 
+# These are positive control commands from the contaminated path, not mere
+# mentions of concepts that APEX explicitly prohibits.
 FORBIDDEN_ACTIVE_SEMANTICS = [
-    "canonical owner",
+    "execute the smallest compatible extension",
+    "resolve one controlling canonical owner",
+    "one controlling canonical owner",
+    "resume and extend the canonical owner before creating",
+    "unresolved canonical conflicts block creation",
+    "unresolved canonical conflicts block progress",
+    "resolve_one_canonical_owner_before_continuing",
+    "canonical_conflicts_block_progress",
     "canonical_owner",
-    "canonical notion",
     "canonical_notion_pages",
     "canonical_mem_manifest",
-    "smallest compatible extension",
-    "smallest vertical slice",
-    "smallest possible version",
-    "mvp as product ceiling",
-    "minimal diff as scope objective",
-    "unresolved canonical conflicts block",
-    "one controlling canonical",
 ]
 
 REQUIRED_PROMPT = [
@@ -36,6 +37,9 @@ REQUIRED_PROMPT = [
     "MAXIMUM_COHERENT_ADVANCE",
     "operator_pressure_up -> evidence_depth_up + execution_depth_up + integration_depth_up",
     "Smallness itself is never the objective.",
+    "MVP as product ceiling",
+    "smallest vertical slice",
+    "minimal diff as scope objective",
 ]
 
 REQUIRED_STATE = [
