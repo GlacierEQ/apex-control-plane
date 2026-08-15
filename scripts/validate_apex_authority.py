@@ -14,6 +14,9 @@ ACTIVE_TEXT = [
     "src/control_plane.py",
     "src/auto_boot.py",
     "src/notion_continuity_gate.py",
+    "src/prime_directive_boot.py",
+    "src/prime_directive_enforcer.py",
+    "src/sitecustomize.py",
 ]
 
 # These are positive control commands from the contaminated path, not mere
