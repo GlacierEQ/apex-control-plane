@@ -20,10 +20,6 @@
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
       "sha256": "d11dd6890ff856ae133f73204aa97e7f896fd45d8ab32fc4fb6deaf7c8337f05"
-    },
-    {
-      "path": "OPERATOR_EXECUTION_LAW.md",
-      "sha256": "498d54ee6b8e5071ca374f484006095fc0377e5cb541c80284cc9415006c6ea4"
     }
   ],
   "hard_correction_role": "system",
