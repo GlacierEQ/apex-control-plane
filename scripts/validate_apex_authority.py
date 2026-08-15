@@ -17,6 +17,12 @@ ACTIVE_TEXT = [
     "src/prime_directive_boot.py",
     "src/prime_directive_enforcer.py",
     "src/sitecustomize.py",
+    "jack/README.md",
+    "jack/config/jack_relentless_contract.yaml",
+    "jack/config/jack_relentless_contract.compiled.json",
+    "jack/src/jack_relentless_gate.py",
+    "jack/odin/jack_relentless_gate.odin",
+    "glaciereq/jack/v1/jack_relentless_contract.proto",
 ]
 
 # These are positive control commands from the contaminated path, not mere
@@ -148,6 +154,18 @@ def validate() -> list[str]:
         "AGENT_SYSTEM_PROMPT.md",
     }:
         errors.append("config/prime_directive_policy.json: APEX control-file pin set drift")
+
+    jack = _json("jack/config/jack_relentless_contract.compiled.json")
+    if jack.get("mode") != "APEX":
+        errors.append("jack compiled contract: mode must be APEX")
+    if jack.get("human_project_direction_authority") != "Casey Barton":
+        errors.append("jack compiled contract: Casey authority missing")
+    if jack.get("execution_law") != "MAXIMUM_COHERENT_ADVANCE":
+        errors.append("jack compiled contract: execution law drift")
+    if "operator_authority_loaded" not in jack.get("preflight_gates", []):
+        errors.append("jack compiled contract: operator authority gate missing")
+    if "maximum_coherent_advance_selected" not in jack.get("completion_gates", []):
+        errors.append("jack compiled contract: maximum coherent advance gate missing")
 
     for path in ACTIVE_TEXT:
         lower = _read(path).lower()
