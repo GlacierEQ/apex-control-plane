@@ -1,4 +1,9 @@
 {
+  "schema_version": "1.1.0",
+  "mode": "APEX",
+  "human_project_direction_authority": "Casey Barton",
+  "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+  "pin_semantics": "DRIFT_DETECTION_ONLY_NOT_PROJECT_DIRECTION_AUTHORITY",
   "allow_verified_boot_receipt": true,
   "empty_memory_result_phrase": "searched memory, no matching entry",
   "failure_triggers": [
@@ -14,14 +19,42 @@
   ],
   "ground_truth_files": [
     {
+      "path": "APEX_AUTHORITY.md",
+      "sha256": "2603d5d9125d2b22dbb57141bea7e0d8e5ddf0729087e42066c92c1745f31e45",
+      "role": "APEX_OPERATOR_AUTHORITY",
+      "pin_role": "DRIFT_DETECTION_ONLY"
+    },
+    {
+      "path": "config/apex_authority.json",
+      "sha256": "457cf42b3ed7986e592e195b242e86bfe26adda173dc33a6dd0fc3bcffdf7aba",
+      "role": "APEX_OPERATOR_AUTHORITY_MACHINE_CONTRACT",
+      "pin_role": "DRIFT_DETECTION_ONLY"
+    },
+    {
       "path": "STATE.md",
-      "sha256": "3082531312a80ccbdf7c0fdc9383a6ac1b10991e47eebbcf47a0382940fc600d"
+      "sha256": "fa89c8fbe1d0f7ce7e42b4cd51fbd8336ceaf3222ba98692bb25f09c917d266f",
+      "role": "APEX_STATE_MODEL",
+      "pin_role": "DRIFT_DETECTION_ONLY"
     },
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
-      "sha256": "afa85f66bba54c5ac3f643c3de6f7fc50e6056a2a1c1068aebda439811c4da9e"
+      "sha256": "0e52c41c406de8475334d537f534ad38928e6d1472245ff10f30adce71991edf",
+      "role": "APEX_AGENT_EXECUTION_CONTRACT",
+      "pin_role": "DRIFT_DETECTION_ONLY"
     }
   ],
+  "semantic_gate": {
+    "command": "python scripts/validate_apex_authority.py",
+    "requires": [
+      "mode=APEX",
+      "human_project_direction_authority=Casey Barton",
+      "execution_law=MAXIMUM_COHERENT_ADVANCE",
+      "projection_may_never_overwrite_source",
+      "assistant_generated_constraints_are_not_operator_intent_by_default",
+      "no promoted-owner semantics in active boot paths",
+      "no minimization-as-default execution semantics"
+    ]
+  },
   "hard_correction_role": "system",
   "max_corrections_before_terminal_block": 8,
   "receipt_requirements": {
@@ -42,7 +75,6 @@
     "current_source_open",
     "receipt_validation"
   ],
-  "schema_version": "1.0.2",
   "security": {
     "log_content": false,
     "log_tool_names": true,
