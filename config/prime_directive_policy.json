@@ -15,15 +15,39 @@
   "ground_truth_files": [
     {
       "path": "STATE.md",
-      "sha256": "3082531312a80ccbdf7c0fdc9383a6ac1b10991e47eebbcf47a0382940fc600d"
+      "sha256": "5280c3f0237fb279c776b6a844f7f0523bad3949d866ee9f5c2f7aebe4cfda8f"
     },
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
-      "sha256": "afa85f66bba54c5ac3f643c3de6f7fc50e6056a2a1c1068aebda439811c4da9e"
+      "sha256": "d11dd6890ff856ae133f73204aa97e7f896fd45d8ab32fc4fb6deaf7c8337f05"
+    },
+    {
+      "path": "OPERATOR_EXECUTION_LAW.md",
+      "sha256": "498d54ee6b8e5071ca374f484006095fc0377e5cb541c80284cc9415006c6ea4"
     }
   ],
   "hard_correction_role": "system",
   "max_corrections_before_terminal_block": 8,
+  "operator_execution_contract": {
+    "ai_is_project_authority": false,
+    "ai_may_invent_project_direction": false,
+    "ai_may_take_unrequested_liberties": false,
+    "explicit_operator_command_may_authorize_plan": true,
+    "failure_mode": "fail_closed_execution_death",
+    "operator_controls_project_direction": true,
+    "required_order": [
+      "context",
+      "plan_with_operator",
+      "work_hard",
+      "excellent_quality",
+      "verify_no_liberties",
+      "report_last"
+    ],
+    "two_jobs": [
+      "listen_to_operator",
+      "execute_excellence"
+    ]
+  },
   "receipt_requirements": {
     "blockers_must_be_empty": true,
     "boot_status": "complete",
