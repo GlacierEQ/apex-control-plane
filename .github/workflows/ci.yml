@@ -37,23 +37,38 @@ jobs:
       - name: Install test tools
         run: python -m pip install --upgrade pytest
 
+      - name: Compile APEX control runtime
+        run: |
+          python -m py_compile \
+            scripts/validate_apex_authority.py \
+            src/auto_boot.py \
+            src/notion_continuity_gate.py \
+            src/prime_directive_boot.py \
+            src/prime_directive_enforcer.py \
+            src/control_plane.py \
+            src/sitecustomize.py \
+            jack/src/jack_relentless_gate.py
+
       - name: APEX control-byte fingerprints
         run: |
           sha256sum \
             APEX_AUTHORITY.md \
             config/apex_authority.json \
             STATE.md \
-            AGENT_SYSTEM_PROMPT.md
+            AGENT_SYSTEM_PROMPT.md \
+            jack/config/jack_relentless_contract.yaml \
+            jack/config/jack_relentless_contract.compiled.json
 
       - name: APEX authority hard gate
         run: python scripts/validate_apex_authority.py
 
-      - name: APEX continuity and next-agent regressions
+      - name: APEX continuity, Jack, and next-agent regressions
         run: >-
           python -m pytest -q
           tests/test_apex_authority.py
           tests/test_auto_boot.py
           tests/test_notion_continuity_gate.py
+          jack/tests/test_jack_relentless_gate.py
 
   estate-registry:
     name: Estate registry quality
