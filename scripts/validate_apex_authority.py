@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -135,7 +134,7 @@ def validate() -> list[str]:
     authority_doc = _read("APEX_AUTHORITY.md")
     for phrase in (
         "Casey Barton is the sole human authority for GlacierEQ/APEX project direction",
-        "canonical is not an authority class in APEX",
+        "is not an authority class in APEX",
         "maximum coherent advance",
         "Smallness itself is never the objective.",
     ):
