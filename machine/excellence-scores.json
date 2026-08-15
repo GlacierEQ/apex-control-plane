@@ -1,20 +1,37 @@
 {
-  "schema": "glaciereq.repo-excellence-scores.v1",
+  "schema": "glaciereq.apex-excellence-scores.v2",
   "repository": "GlacierEQ/apex-control-plane",
-  "never_collapse": true,
+  "mode": "APEX",
+  "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+  "never_collapse_state_dimensions": true,
   "axes": {
     "target_architecture": {
-      "grade": "B"
+      "grade": "A",
+      "basis": "Operator-first APEX target and maximum-coherent-advance contract are explicit."
     },
-    "current_proof": {
-      "grade": "A"
+    "implemented_recovery": {
+      "grade": "A",
+      "basis": "Boot, continuity, Prime Directive, Jack, machine-state, and regression gates materially changed."
     },
-    "company_fit": {
-      "score": 0.0
+    "current_exact_head_proof": {
+      "grade": "PENDING",
+      "basis": "Latest source revision requires new workflow receipts after machine-state and Jack changes."
     },
-    "canonical_confidence": {
-      "score": 0.0,
-      "role": "PROMOTED_LEAF"
+    "operator_intent_alignment": {
+      "grade": "PASS",
+      "authority": "Casey Barton"
+    },
+    "source_projection_isolation": {
+      "grade": "PASS",
+      "rule": "Projection may never overwrite source or redefine operator intent."
+    },
+    "scope_strength": {
+      "grade": "A",
+      "rule": "MAXIMUM_COHERENT_ADVANCE"
+    },
+    "estate_recovery_coverage": {
+      "grade": "PARTIAL",
+      "basis": "Primary APEX control-plane recovery is active; broader APEX-family and estate recovery remains open."
     }
   }
 }
