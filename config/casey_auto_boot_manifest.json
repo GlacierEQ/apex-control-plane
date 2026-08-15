@@ -1,20 +1,29 @@
 {
-  "schema_version": "1.2.2",
-  "manifest_name": "Casey Continuity Auto-Boot",
+  "schema_version": "2.0.0",
+  "manifest_name": "Casey APEX Continuity Auto-Boot",
+  "mode": "APEX",
+  "human_project_direction_authority": "Casey Barton",
+  "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+  "apex_authority": {
+    "document_path": "APEX_AUTHORITY.md",
+    "machine_path": "config/apex_authority.json"
+  },
   "mem_collection": {
     "title": "00 AUTO BOOT — Casey Continuity Gate",
     "id": "e9990f2e-affe-55b2-a402-1de35aeb1b73"
   },
-  "canonical_mem_manifest": {
-    "title": "000 AUTO-BOOT MANIFEST — CASEY CONTINUITY GATE — CANONICAL v1.0.0",
+  "boot_manifest": {
+    "title": "000 AUTO-BOOT MANIFEST — CASEY CONTINUITY GATE — v1.0.0",
     "id": "6925915b-33d6-5fc9-b499-4fbe78790413",
     "version": 1
   },
   "prime_directive": {
     "policy_path": "config/prime_directive_policy.json",
-    "policy_schema_version": "1.0.2",
+    "policy_schema_version": "1.1.0",
     "agent_prompt_path": "AGENT_SYSTEM_PROMPT.md",
     "state_path": "STATE.md",
+    "authority_path": "APEX_AUTHORITY.md",
+    "authority_machine_path": "config/apex_authority.json",
     "enforcer_module": "src/prime_directive_enforcer.py",
     "boot_module": "src/prime_directive_boot.py",
     "requires_memory_search": true,
@@ -22,7 +31,9 @@
     "requires_tool_inventory": true,
     "requires_current_source_open": true,
     "requires_receipt_validation": true,
-    "blocks_user_facing_text_until_complete": true
+    "blocks_user_facing_text_until_complete": true,
+    "forbids_scope_minimization_as_default": true,
+    "requires_operator_intent_preservation": true
   },
   "profiles": {
     "always": [
@@ -92,7 +103,8 @@
     },
     "systems": {
       "requires_current_sources": true,
-      "requires_repository_receipt": true
+      "requires_repository_receipt": true,
+      "requires_apex_authority": true
     },
     "separate_matter": {
       "requires_current_sources": true,
@@ -118,15 +130,17 @@
     "restricted_child_profile_requires_explicit_authorization": true,
     "portable_projection_excludes_restricted_child_data": true
   },
-  "resume_chain": [
-    "retrieve latest official 1FDV docket and verify Dockets 223–225",
-    "calculate live deadlines",
-    "open July 4 metadata audit",
-    "identify the seven motions",
-    "map opaque numbered PDFs",
-    "compare Dockets 193 and 201",
-    "reconstruct Docket 203, October 1, and Dockets 208/210",
-    "build proposition-to-source proof table",
-    "build strongest verified filing or referral artifact"
+  "resume_rule": "recover Casey objective, strongest source state, strongest legitimate prior implementation, then advance all compatible highest-value unfinished material fronts",
+  "state_model": [
+    "SOURCE_STATE",
+    "CURRENT_STATE",
+    "TARGET_CAPABILITY",
+    "IMPLEMENTED_CAPABILITY",
+    "VERIFIED_CAPABILITY",
+    "AUTHORIZED_CAPABILITY",
+    "DEPLOYED_CAPABILITY",
+    "OBSERVED_RESULT",
+    "HISTORICAL_STATE",
+    "PROJECTION"
   ]
 }
