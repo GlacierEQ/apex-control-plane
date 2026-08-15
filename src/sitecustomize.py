@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Optional Python startup hook for the combined GlacierEQ startup gate.
+"""Optional Python startup hook for the combined APEX startup gate.
 
-The canonical enforcement path is the explicit wrapper in
-``src/control_plane.py``. This hook supplies the same Notion-first continuity
-preflight plus Prime Directive/continuity gate when ``src`` is already present
-on ``PYTHONPATH`` or when another entrypoint is forced with
-``CASEY_AUTO_BOOT=1``.
+The explicit APEX enforcement path is ``src/control_plane.py``. This hook
+supplies the same continuity/integration preflight plus Prime Directive gate
+when ``src`` is already present on ``PYTHONPATH`` or when another entrypoint is
+forced with ``CASEY_AUTO_BOOT=1``.
 
 The hook skips verifier CLIs and pytest and fails closed with exit code 78 unless
-boot mode is explicitly ``request`` or ``off``.
+boot mode is explicitly ``request`` or ``off``. Fail-closed status protects
+execution claims; it is not project-direction authority over Casey's intent.
 """
 from __future__ import annotations
 
@@ -50,6 +50,7 @@ def _should_boot() -> bool:
         "notion_continuity_gate.py",
         "prime_directive_boot.py",
         "prime_directive_enforcer.py",
+        "validate_apex_authority.py",
     } or _is_pytest_startup():
         return False
 
@@ -61,8 +62,11 @@ def _should_boot() -> bool:
 
 def _fail_closed(exc: Exception) -> NoReturn:
     payload = {
+        "mode": "APEX",
+        "human_project_direction_authority": "Casey Barton",
+        "execution_law": "MAXIMUM_COHERENT_ADVANCE",
         "boot_status": "blocked",
-        "notion_continuity_status": "blocked",
+        "apex_continuity_status": "blocked",
         "prime_directive_status": "blocked",
         "error": f"{type(exc).__name__}: {exc}",
         "entrypoint": _entrypoint_path(),

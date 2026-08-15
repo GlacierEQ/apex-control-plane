@@ -1,4 +1,4 @@
-name: Casey Continuity Auto-Boot
+name: Casey APEX Continuity Auto-Boot
 
 on:
   push:
@@ -7,11 +7,14 @@ on:
       - casey-mem-auto-boot-2026-08-03
       - prime-directive-enforcer-v2
     paths:
+      - "APEX_AUTHORITY.md"
       - "AGENT_SYSTEM_PROMPT.md"
       - "STATE.md"
+      - "config/apex_authority.json"
       - "config/casey_auto_boot_manifest.json"
       - "config/notion_continuity_policy.json"
       - "config/prime_directive_policy.json"
+      - "scripts/validate_apex_authority.py"
       - "src/auto_boot.py"
       - "src/notion_continuity_gate.py"
       - "src/prime_directive_boot.py"
@@ -19,6 +22,7 @@ on:
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
+      - "tests/test_apex_authority.py"
       - "tests/test_auto_boot.py"
       - "tests/test_notion_continuity_gate.py"
       - "tests/test_prime_directive_boot.py"
@@ -29,11 +33,14 @@ on:
       - ".github/workflows/casey-auto-boot.yml"
   pull_request:
     paths:
+      - "APEX_AUTHORITY.md"
       - "AGENT_SYSTEM_PROMPT.md"
       - "STATE.md"
+      - "config/apex_authority.json"
       - "config/casey_auto_boot_manifest.json"
       - "config/notion_continuity_policy.json"
       - "config/prime_directive_policy.json"
+      - "scripts/validate_apex_authority.py"
       - "src/auto_boot.py"
       - "src/notion_continuity_gate.py"
       - "src/prime_directive_boot.py"
@@ -41,6 +48,7 @@ on:
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
+      - "tests/test_apex_authority.py"
       - "tests/test_auto_boot.py"
       - "tests/test_notion_continuity_gate.py"
       - "tests/test_prime_directive_boot.py"
@@ -57,14 +65,29 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout exact APEX source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact source identity
+        shell: bash
+        run: |
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$(git rev-parse HEAD)" = "$expected"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
+            git merge-base --is-ancestor "${{ github.event.pull_request.base.sha }}" HEAD
+          fi
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -74,6 +97,7 @@ jobs:
       - name: Compile startup modules
         run: |
           python -m py_compile \
+            scripts/validate_apex_authority.py \
             src/auto_boot.py \
             src/notion_continuity_gate.py \
             src/prime_directive_boot.py \
@@ -81,24 +105,29 @@ jobs:
             src/control_plane.py \
             src/sitecustomize.py
 
-      - name: Validate manifests and emit base request
+      - name: Validate APEX machine contracts
         run: |
+          python -m json.tool config/apex_authority.json >/dev/null
           python -m json.tool config/casey_auto_boot_manifest.json >/dev/null
           python -m json.tool config/notion_continuity_policy.json >/dev/null
           python -m json.tool config/prime_directive_policy.json >/dev/null
+          python scripts/validate_apex_authority.py
           python src/auto_boot.py --profile legal_case --task continue --emit-request > /tmp/casey-boot-request.json
           python -m json.tool /tmp/casey-boot-request.json >/dev/null
+          grep -q '"mode": "APEX"' /tmp/casey-boot-request.json
+          grep -q '"execution_law": "MAXIMUM_COHERENT_ADVANCE"' /tmp/casey-boot-request.json
           grep -q '"required_notes"' /tmp/casey-boot-request.json
 
-      - name: Run startup-gate tests
+      - name: Run APEX startup-gate tests
         run: |
           CASEY_AUTO_BOOT_TESTING=1 python -m pytest -q \
+            tests/test_apex_authority.py \
             tests/test_auto_boot.py \
             tests/test_notion_continuity_gate.py \
             tests/test_prime_directive_boot.py \
             tests/test_prime_directive_enforcer.py
 
-      - name: Prove strict mode fails closed without receipt
+      - name: Prove strict mode fails closed without receipt after emitting full request
         shell: bash
         run: |
           set +e
@@ -111,10 +140,11 @@ jobs:
             echo "expected exit 78, received $status" >&2
             exit 1
           fi
-          grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot.err
+          grep -q 'glaciereq_apex_continuity_preflight' /tmp/boot.err
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot.err
           grep -q 'ground_truth_files_loaded' /tmp/boot.err
           grep -q 'tool_inventory' /tmp/boot.err
+          grep -q 'MAXIMUM_COHERENT_ADVANCE' /tmp/boot.err
           test ! -s /tmp/boot.out
 
       - name: Prove malformed receipt fails closed without traceback
@@ -155,14 +185,15 @@ jobs:
             echo "forged status bypassed boot; received $status" >&2
             exit 1
           fi
-          grep -q 'glaciereq_notion_continuity_preflight' /tmp/forged.err
+          grep -q 'glaciereq_apex_continuity_preflight' /tmp/forged.err
           test ! -s /tmp/forged.out
 
       - name: Prove request mode continues only as degraded
         run: |
           CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
-          grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot-request.json
+          grep -q 'glaciereq_apex_continuity_preflight' /tmp/boot-request.json
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot-request.json
+          grep -q 'MAXIMUM_COHERENT_ADVANCE' /tmp/boot-request.json
           python -m json.tool /tmp/control-plane.json >/dev/null
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \

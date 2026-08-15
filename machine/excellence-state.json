@@ -1,70 +1,77 @@
 {
-  "schema": "glaciereq.repo-excellence-state.v1",
+  "schema": "glaciereq.apex-excellence-state.v2",
   "repository": "GlacierEQ/apex-control-plane",
-  "principal_state": "DISCOVERED",
+  "mode": "APEX",
+  "human_project_direction_authority": "Casey Barton",
+  "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+  "principal_state": "ACTIVE_RECOVERY",
   "gates": {
     "IDENTITY_RESOLVED": {
-      "status": "PENDING"
+      "status": "PASS",
+      "evidence": "GlacierEQ/apex-control-plane"
     },
-    "PROBLEM_VERIFIED": {
-      "status": "PENDING"
+    "OPERATOR_OBJECTIVE_RECOVERED": {
+      "status": "PASS",
+      "evidence": "APEX_AUTHORITY.md and explicit Casey project-direction instruction"
     },
-    "TARGET_CONTRACT_FROZEN": {
-      "status": "PENDING"
+    "TARGET_CONTRACT_DEFINED": {
+      "status": "PASS",
+      "evidence": "machine/target-contract.json"
     },
-    "DONOR_PLAN_RESOLVED": {
-      "status": "PENDING"
+    "SOURCE_STATE_RECOVERED": {
+      "status": "PASS",
+      "evidence": "APEX recovery branch from main source state"
     },
-    "VERTICAL_SLICE_ALIVE": {
-      "status": "PENDING"
+    "STRONGEST_PRIOR_STATE_CHECKED": {
+      "status": "PARTIAL",
+      "evidence": "Primary APEX boot/control lineage inspected; broader APEX family census remains open."
+    },
+    "MAXIMUM_COHERENT_ADVANCE_ALIVE": {
+      "status": "PASS",
+      "evidence": "APEX boot, continuity, Prime Directive, Jack, machine state, and hard-gate fronts are advancing together."
     },
     "CENTRAL_MECHANISM_PRESENT": {
-      "status": "PENDING"
+      "status": "PASS",
+      "evidence": "Operator-first APEX boot plus executable authority and continuity gates"
     },
-    "DETERMINISTIC_PROOF_GREEN": {
-      "status": "PENDING"
+    "CURRENT_HEAD_PROOF_GREEN": {
+      "status": "PENDING",
+      "evidence": "Last verified recovery head 35fe1e4ac49e7a506c2de744777f9639dc9c1c4c; later changes await exact-head proof."
     },
     "ADVERSARIAL_SURVIVAL": {
-      "status": "PENDING"
+      "status": "PARTIAL",
+      "evidence": "Next-agent, forged-state, malformed-receipt, stored-owner, and minimization regressions added; latest head proof pending."
     },
     "OPERABLE_AND_OBSERVABLE": {
-      "status": "PENDING"
+      "status": "PARTIAL",
+      "evidence": "Boot/runtime workflows and receipts are observable; broader deployment state remains separate."
     },
     "PROOF_RECEIPT_BOUND": {
-      "status": "PENDING"
+      "status": "PARTIAL",
+      "evidence": "Exact-head workflow receipts exist for prior recovery head; current head pending."
     },
-    "AUTHORITY_BOUND": {
-      "status": "PENDING"
+    "OPERATOR_AUTHORITY_BOUND": {
+      "status": "PASS",
+      "evidence": "config/apex_authority.json"
     },
-    "CANONICAL_POSITION_RESOLVED": {
-      "status": "PENDING"
+    "SOURCE_PROJECTION_BOUNDARY_RESOLVED": {
+      "status": "PASS",
+      "evidence": "Projection is explicitly non-authoritative and may not overwrite source state."
     },
     "EVOLUTION_CURSOR_DEFINED": {
       "status": "PASS",
-      "at": "2026-08-10T06:12Z",
-      "evidence": "honest non-PROMOTED; cursor defined"
+      "evidence": "Continue compatible APEX recovery fronts, then widen across the APEX estate."
     }
   },
-  "history": [],
   "contract_ref": "machine/target-contract.json",
   "scores_ref": "machine/excellence-scores.json",
-  "evolution_cursor": "next:canonical_position_only_if_estate_role_resolved",
-  "wave": {
-    "id": "ELITE-ESTATE-SCHEMA-MIGRATE-2026-08-10",
-    "proof_ok": false,
-    "operable_ok": false,
-    "migrated_at": "2026-08-10T05:56Z",
-    "from_schema": "glaciereq.repo-excellence.record.v1",
-    "history_repaired_at": "2026-08-10T06:12Z"
-  },
-  "state": "DISCOVERED",
-  "gap_receipt_ref": "machine/gap-receipt.json",
-  "demotion": {
-    "at": "2026-08-10T05:56Z",
-    "from_claim": "PROMOTED",
-    "to": "DISCOVERED",
-    "reason": "schema migrate: PROMOTED XOR gap-receipt",
-    "blocker": "TESTS_FAIL",
-    "rule": "PROMOTED XOR gap-receipt"
-  }
+  "evolution_cursor": "continue:current-head-proof+active-runtime-migration+apex-estate-census",
+  "history": [
+    {
+      "event": "LEGACY_EXCELLENCE_STATE_REPLACED",
+      "reason": "Removed vertical-slice and promoted-position state semantics that could steer agents toward minimization or stored-authority promotion.",
+      "preserved_as_git_history": true
+    }
+  ],
+  "state": "ACTIVE_RECOVERY"
 }

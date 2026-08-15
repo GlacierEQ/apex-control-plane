@@ -29,8 +29,11 @@ def _valid_receipt(manifest: dict, profiles: tuple[str, ...]) -> dict:
         restricted_authorized="restricted_child" in profiles,
     )
     return {
-        "boot_manifest_id": manifest["canonical_mem_manifest"]["id"],
-        "boot_manifest_version": manifest["canonical_mem_manifest"]["version"],
+        "mode": "APEX",
+        "human_project_direction_authority": "Casey Barton",
+        "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+        "boot_manifest_id": manifest["boot_manifest"]["id"],
+        "boot_manifest_version": manifest["boot_manifest"]["version"],
         "mem_collection_id": manifest["mem_collection"]["id"],
         "boot_profile": list(profiles),
         "notes_loaded": [
@@ -48,7 +51,7 @@ def _valid_receipt(manifest: dict, profiles: tuple[str, ...]) -> dict:
             {
                 "repository": "GlacierEQ/apex-control-plane",
                 "revision": "0" * 40,
-                "checked_at": "2026-08-04T00:00:00Z",
+                "checked_at": "2026-08-15T00:00:00Z",
             }
         ],
         "case_lane": "1FDV-23-0001009",
@@ -59,8 +62,8 @@ def _valid_receipt(manifest: dict, profiles: tuple[str, ...]) -> dict:
             "reason": None,
         },
         "restricted_context": "restricted_child" in profiles,
-        "current_task": "test the auto-boot contract",
-        "next_material_action": "run control-plane tests",
+        "current_task": "test the APEX auto-boot contract",
+        "next_material_action": "run APEX control-plane tests",
         "boot_status": "complete",
         "blockers": [],
     }
@@ -70,7 +73,10 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["legal_case"])
     assert profiles == ("always", "legal_case")
-    assert manifest["schema_version"] == "1.2.2"
+    assert manifest["schema_version"] == "2.0.0"
+    assert manifest["mode"] == "APEX"
+    assert manifest["human_project_direction_authority"] == "Casey Barton"
+    assert manifest["execution_law"] == "MAXIMUM_COHERENT_ADVANCE"
     assert manifest["mem_collection"]["id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
     assert (
         manifest.get("prime_directive", {}).get("policy_path")
@@ -78,11 +84,14 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     )
 
 
-def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
+def test_boot_request_contains_apex_authority_exact_manifest_notes_and_versions() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["systems"])
     request = build_boot_request(manifest, profiles, task="continue")
 
+    assert request["mode"] == "APEX"
+    assert request["human_project_direction_authority"] == "Casey Barton"
+    assert request["execution_law"] == "MAXIMUM_COHERENT_ADVANCE"
     assert request["boot_manifest_id"] == "6925915b-33d6-5fc9-b499-4fbe78790413"
     assert request["mem_collection_id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
     assert "618140c7-bb34-404b-926c-8daffd28f162" in request["required_note_ids"]
@@ -95,6 +104,8 @@ def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
     assert required["cf749759-468a-5903-807a-078b20fca0e3"] == 1
     assert required["47502b91-2af6-5cce-b2ed-bd244d9a82d8"] == 2
     assert request["requirements"]["fetch_each_note_by_exact_id_and_version"] is True
+    assert request["requirements"]["maximum_coherent_advance"] is True
+    assert request["requirements"]["projection_may_not_overwrite_source"] is True
 
 
 def test_complete_legal_receipt_passes() -> None:
@@ -106,6 +117,20 @@ def test_complete_legal_receipt_passes() -> None:
     assert result.ok is True
     assert result.status == "complete"
     assert result.errors == ()
+
+
+def test_non_apex_receipt_blocks_boot() -> None:
+    manifest = load_manifest()
+    profiles = normalize_profiles(manifest, ["systems"])
+    receipt = _valid_receipt(manifest, profiles)
+    receipt["mode"] = "LEGACY"
+    receipt["execution_law"] = "SMALLEST_POSSIBLE_VERSION"
+
+    result = validate_receipt(manifest, receipt, profiles)
+
+    assert result.ok is False
+    assert "receipt mode must be APEX" in result.errors
+    assert "receipt execution_law mismatch" in result.errors
 
 
 def test_missing_note_blocks_boot() -> None:
@@ -241,7 +266,10 @@ def test_combined_legal_and_restricted_profiles_authorize_and_deduplicate() -> N
     assert len(notes) == len(set(notes))
 
 
-def test_manifest_is_valid_json() -> None:
+def test_manifest_is_valid_json_and_has_no_promoted_authority_field() -> None:
     manifest_path = ROOT / "config" / "casey_auto_boot_manifest.json"
     parsed = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert parsed["schema_version"] == "1.2.2"
+    assert parsed["schema_version"] == "2.0.0"
+    assert parsed["mode"] == "APEX"
+    assert "canonical_mem_manifest" not in parsed
+    assert parsed["boot_manifest"]["id"] == "6925915b-33d6-5fc9-b499-4fbe78790413"

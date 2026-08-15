@@ -10,6 +10,66 @@ permissions:
   contents: read
 
 jobs:
+  apex-control-contract:
+    name: APEX operator authority and continuity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact source identity
+        shell: bash
+        run: |
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$(git rev-parse HEAD)" = "$expected"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
+            git merge-base --is-ancestor "${{ github.event.pull_request.base.sha }}" HEAD
+          fi
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install test tools
+        run: python -m pip install --upgrade pytest
+
+      - name: Compile APEX control runtime
+        run: |
+          python -m py_compile \
+            scripts/validate_apex_authority.py \
+            src/auto_boot.py \
+            src/notion_continuity_gate.py \
+            src/prime_directive_boot.py \
+            src/prime_directive_enforcer.py \
+            src/control_plane.py \
+            src/sitecustomize.py \
+            jack/src/jack_relentless_gate.py
+
+      - name: APEX control-byte fingerprints
+        run: |
+          sha256sum \
+            APEX_AUTHORITY.md \
+            config/apex_authority.json \
+            STATE.md \
+            AGENT_SYSTEM_PROMPT.md \
+            jack/config/jack_relentless_contract.yaml \
+            jack/config/jack_relentless_contract.compiled.json
+
+      - name: APEX authority hard gate
+        run: python scripts/validate_apex_authority.py
+
+      - name: APEX continuity, Jack, and next-agent regressions
+        run: >-
+          python -m pytest -q
+          tests/test_apex_authority.py
+          tests/test_auto_boot.py
+          tests/test_notion_continuity_gate.py
+          jack/tests/test_jack_relentless_gate.py
+
   estate-registry:
     name: Estate registry quality
     runs-on: ubuntu-latest

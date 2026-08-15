@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""Deterministic Casey continuity auto-boot gate.
+"""Deterministic Casey APEX continuity auto-boot gate.
 
-This module never pretends that a Mem search result is a loaded note or that a
-connector is live merely because it is configured. It emits an exact boot
-request and validates a provider-backed receipt before a case or systems
-runtime proceeds.
-
-No network client or credential is embedded here. A connected agent or bridge
-must retrieve the notes and sources, then provide a receipt through
-``CASEY_BOOT_RECEIPT_JSON`` or ``CASEY_BOOT_RECEIPT_PATH``.
+The gate verifies retrieval/state receipts without promoting repositories, memory
+notes, governance, or projections above Casey's project-direction authority.
+It preserves materially different state dimensions and requires APEX mode for
+systems work.
 """
 from __future__ import annotations
 
@@ -23,6 +19,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST_PATH = REPO_ROOT / "config" / "casey_auto_boot_manifest.json"
+DEFAULT_APEX_AUTHORITY_PATH = REPO_ROOT / "config" / "apex_authority.json"
 EXIT_BOOT_BLOCKED = 78
 
 
@@ -52,13 +49,32 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _validate_apex_authority(path: Path = DEFAULT_APEX_AUTHORITY_PATH) -> dict[str, Any]:
+    authority = _read_json(path)
+    if authority.get("mode") != "APEX":
+        raise BootError("APEX authority contract must declare mode=APEX")
+    if authority.get("execution_law") != "MAXIMUM_COHERENT_ADVANCE":
+        raise BootError("APEX authority contract execution law mismatch")
+    human = authority.get("human_project_direction_authority")
+    if not isinstance(human, Mapping) or human.get("role") != "SOLE_HUMAN_PROJECT_DIRECTION_AUTHORITY":
+        raise BootError("APEX authority contract human authority mismatch")
+    if str(human.get("name", "")).strip() != "Casey Barton":
+        raise BootError("APEX authority contract must identify Casey Barton")
+    if not bool((authority.get("authority_rules") or {}).get("projection_may_never_overwrite_source")):
+        raise BootError("APEX authority contract must preserve source over projection")
+    return authority
+
+
 def load_manifest(path: Path | None = None) -> dict[str, Any]:
     manifest_path = path or DEFAULT_MANIFEST_PATH
     manifest = _read_json(manifest_path)
     required_keys = {
         "schema_version",
+        "mode",
+        "human_project_direction_authority",
+        "execution_law",
         "mem_collection",
-        "canonical_mem_manifest",
+        "boot_manifest",
         "profiles",
         "required_note_versions",
         "default_profiles",
@@ -66,10 +82,17 @@ def load_manifest(path: Path | None = None) -> dict[str, Any]:
     missing = sorted(required_keys.difference(manifest))
     if missing:
         raise BootError(f"manifest missing keys: {', '.join(missing)}")
+    if manifest.get("mode") != "APEX":
+        raise BootError("boot manifest must declare mode=APEX")
+    if manifest.get("execution_law") != "MAXIMUM_COHERENT_ADVANCE":
+        raise BootError("boot manifest execution law mismatch")
+    if str(manifest.get("human_project_direction_authority", "")).strip() != "Casey Barton":
+        raise BootError("boot manifest human authority mismatch")
     if not isinstance(manifest["profiles"], dict):
         raise BootError("manifest.profiles must be an object")
     if not isinstance(manifest["required_note_versions"], dict):
         raise BootError("manifest.required_note_versions must be an object")
+    _validate_apex_authority()
     return manifest
 
 
@@ -154,10 +177,13 @@ def build_boot_request(
         restricted_authorized=restricted_authorized,
     )
     return {
-        "request_type": "casey_continuity_auto_boot",
+        "request_type": "casey_apex_continuity_auto_boot",
         "requested_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        "boot_manifest_id": manifest["canonical_mem_manifest"]["id"],
-        "boot_manifest_version": manifest["canonical_mem_manifest"]["version"],
+        "mode": "APEX",
+        "human_project_direction_authority": "Casey Barton",
+        "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+        "boot_manifest_id": manifest["boot_manifest"]["id"],
+        "boot_manifest_version": manifest["boot_manifest"]["version"],
         "mem_collection_id": manifest["mem_collection"]["id"],
         "profiles": list(profiles),
         "required_note_ids": list(versions),
@@ -166,15 +192,23 @@ def build_boot_request(
             for note_id, version in versions.items()
         ],
         "task": task,
+        "state_model": list(manifest.get("state_model", ())),
         "requirements": {
             "fetch_each_note_by_exact_id_and_version": True,
             "search_result_is_not_loaded_note": True,
             "open_current_task_sources": True,
+            "recover_operator_intent": True,
+            "preserve_prior_gains": True,
+            "maximum_coherent_advance": True,
+            "projection_may_not_overwrite_source": True,
             "emit_provider_receipt": True,
             "preserve_case_boundaries": True,
             "no_external_action_without_authority": True,
         },
         "receipt_contract": {
+            "mode": "APEX",
+            "human_project_direction_authority": "Casey Barton",
+            "execution_law": "MAXIMUM_COHERENT_ADVANCE",
             "boot_manifest_id": "string",
             "boot_manifest_version": "integer",
             "mem_collection_id": "string",
@@ -330,7 +364,7 @@ def validate_receipt(
     loaded_versions, note_errors = _loaded_note_versions(receipt)
     errors: list[str] = list(note_errors)
 
-    expected_manifest = manifest["canonical_mem_manifest"]
+    expected_manifest = manifest["boot_manifest"]
     if receipt.get("boot_manifest_id") != expected_manifest["id"]:
         errors.append("boot_manifest_id mismatch")
     try:
@@ -341,6 +375,13 @@ def validate_receipt(
         errors.append("boot_manifest_version mismatch")
     if receipt.get("mem_collection_id") != manifest["mem_collection"]["id"]:
         errors.append("mem_collection_id mismatch")
+
+    if receipt.get("mode") != "APEX":
+        errors.append("receipt mode must be APEX")
+    if receipt.get("human_project_direction_authority") != "Casey Barton":
+        errors.append("receipt human_project_direction_authority mismatch")
+    if receipt.get("execution_law") != "MAXIMUM_COHERENT_ADVANCE":
+        errors.append("receipt execution_law mismatch")
 
     for note_id, expected_version in required_versions.items():
         actual_version = loaded_versions.get(note_id)
@@ -377,6 +418,8 @@ def validate_receipt(
             errors.append(f"profile {profile} requires repository receipt")
         if rule.get("requires_live_deadline_check_when_relevant"):
             errors.extend(_validate_deadline_check(manifest, receipt))
+        if rule.get("requires_apex_authority") and receipt.get("human_project_direction_authority") != "Casey Barton":
+            errors.append(f"profile {profile} requires APEX operator authority receipt")
 
     restricted_context = receipt.get("restricted_context")
     if not isinstance(restricted_context, bool):
@@ -409,7 +452,7 @@ def validate_receipt(
 
 
 def automatic_boot() -> BootValidation | None:
-    """Run the environment-driven gate used by the canonical entrypoint.
+    """Run the environment-driven APEX continuity gate.
 
     Modes:
     - ``strict`` (default): exit 78 when no valid receipt is available.

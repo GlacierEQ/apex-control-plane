@@ -1,13 +1,16 @@
 {
-  "schema_version": "1.0.0",
-  "name": "Notion-First Continuity + Integration Preflight",
+  "schema_version": "2.0.0",
+  "name": "APEX Continuity + Integration Preflight",
+  "mode": "APEX",
+  "human_project_direction_authority": "Casey Barton",
+  "execution_law": "MAXIMUM_COHERENT_ADVANCE",
   "stage_order": [
     "notion_boot_analysis",
     "existing_work_discovery",
     "integration_map"
   ],
   "block_user_facing_text_until_complete": true,
-  "canonical_notion_pages": [
+  "apex_boot_pages": [
     {
       "id": "6b2f21f8-a845-4aa6-9c53-3824900ea43b",
       "role": "continuity_state",
@@ -25,7 +28,7 @@
     },
     {
       "id": "44556054-f66e-4bf2-9d05-5a6e650ea082",
-      "role": "notion_governance",
+      "role": "notion_connector",
       "title": "Notion (Workspace) Connector"
     },
     {
@@ -37,7 +40,7 @@
   "receipt_requirements": {
     "notion_status": "complete",
     "minimum_pages_loaded": 5,
-    "canonical_conflicts_must_be_empty": true,
+    "source_conflicts_must_be_recorded": true,
     "existing_work_statuses": [
       "found",
       "none_found"
@@ -66,13 +69,15 @@
     ]
   },
   "laws": [
-    "NOTION BEFORE SPEECH",
-    "BEFORE STARTING, DETERMINE WHETHER IT IS ALREADY STARTED",
-    "RESUME AND EXTEND THE CANONICAL OWNER BEFORE CREATING",
-    "BEFORE MAKING, DISCOVER WHO NEEDS, OWNS, CONSUMES, DEPENDS ON, OR OVERLAPS WITH IT",
-    "ADD AND LINK BEFORE FRAGMENTING",
-    "UNRESOLVED CANONICAL CONFLICTS BLOCK CREATION",
-    "NEW ROOTS ARE A LAST RESORT"
+    "CASEY AUTHORITY PRECEDES STORED PROJECTIONS",
+    "RETRIEVE BEFORE SPEECH WHEN CONTINUITY IS IMPLICATED",
+    "BEFORE STARTING DETERMINE WHETHER THE WORK ALREADY EXISTS",
+    "RECOVER CURRENT SOURCE STATE AND STRONGEST LEGITIMATE PRIOR IMPLEMENTATION",
+    "PRESERVE CONFLICTS INSTEAD OF LAUNDERING THEM INTO ONE PROMOTED TRUTH",
+    "DISCOVER OWNERS CONSUMERS DEPENDENCIES OVERLAPS AND COMPLEMENTARY SYSTEMS",
+    "COMPOSE POWER WITHOUT DESTROYING MODULAR VALUE",
+    "MAXIMUM COHERENT ADVANCE",
+    "NEW ROOTS REQUIRE AN ENGINEERING REASON NOT AN ARTIFICIAL SMALLNESS RULE"
   ],
   "security": {
     "never_embed_secrets": true,

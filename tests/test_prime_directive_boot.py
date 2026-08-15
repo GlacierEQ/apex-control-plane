@@ -181,7 +181,7 @@ def test_unknown_inventory_tool_alias_blocks() -> None:
     assert "tool_inventory.tool is not an allowed tool alias" in errors
 
 
-def test_combined_boot_request_declares_prime_directive_contract() -> None:
+def test_combined_boot_request_declares_apex_prime_directive_contract() -> None:
     manifest = load_manifest()
     policy = load_policy()
     profiles = normalize_profiles(manifest, ["systems"])
@@ -195,7 +195,10 @@ def test_combined_boot_request_declares_prime_directive_contract() -> None:
     )
 
     assert request["request_type"] == "glaciereq_prime_directive_auto_boot"
-    assert request["prime_directive_policy"]["schema_version"] == "1.0.2"
+    assert request["mode"] == "APEX"
+    assert request["human_project_direction_authority"] == "Casey Barton"
+    assert request["execution_law"] == "MAXIMUM_COHERENT_ADVANCE"
+    assert request["prime_directive_policy"]["schema_version"] == "1.1.0"
     assert request["requirements"]["run_memory_search_before_text"] is True
     assert request["requirements"]["read_and_hash_verify_ground_truth_files"] is True
     assert request["requirements"]["enumerate_loaded_tools"] is True
@@ -217,11 +220,26 @@ def test_policy_requires_all_five_startup_stages() -> None:
     ]
 
 
-def test_policy_hashes_match_repository_ground_truth_files() -> None:
+def test_policy_pins_are_drift_detection_not_project_authority() -> None:
+    policy = load_policy()
+    assert policy["mode"] == "APEX"
+    assert policy["human_project_direction_authority"] == "Casey Barton"
+    assert policy["execution_law"] == "MAXIMUM_COHERENT_ADVANCE"
+    assert policy["pin_semantics"] == "DRIFT_DETECTION_ONLY_NOT_PROJECT_DIRECTION_AUTHORITY"
+    assert policy["semantic_gate"]["command"] == "python scripts/validate_apex_authority.py"
+
+
+def test_policy_hashes_match_apex_control_files() -> None:
     import hashlib
 
     policy = load_policy()
     expected = {row["path"]: row["sha256"] for row in policy["ground_truth_files"]}
+    assert set(expected) == {
+        "APEX_AUTHORITY.md",
+        "config/apex_authority.json",
+        "STATE.md",
+        "AGENT_SYSTEM_PROMPT.md",
+    }
 
     for path, digest in expected.items():
         actual = hashlib.sha256((ROOT / path).read_bytes()).hexdigest()

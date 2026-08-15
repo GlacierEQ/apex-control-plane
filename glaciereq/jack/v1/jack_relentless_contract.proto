@@ -15,12 +15,12 @@ message GateVector {
   bool safety_boundary_clear = 2;
   bool continuity_loaded = 3;
   bool resources_invoked = 4;
-  bool existing_work_checked = 5;
-  bool canonical_owner_resolved = 6;
+  bool strongest_source_and_prior_state_checked = 5;
+  bool operator_authority_loaded = 6;
   bool objective_preserved = 7;
   bool required_sources_opened = 8;
   bool contradictions_preserved = 9;
-  bool highest_value_delta_selected = 10;
+  bool maximum_coherent_advance_selected = 10;
   bool material_action_executed = 11;
   bool verification_passed = 12;
   bool defects_repaired_or_exactly_blocked = 13;
@@ -35,6 +35,7 @@ message SourceReceipt {
   string version = 3;
   string hash = 4;
   bool opened = 5;
+  string state_role = 6;
 }
 
 message ActionReceipt {
@@ -51,12 +52,18 @@ message VerificationReceipt {
   bool passed = 3;
 }
 
+message MaximumCoherentAdvance {
+  string capability_tranche = 1;
+  repeated string compatible_fronts = 2;
+  bool scope_reduced_for_convenience = 3;
+}
+
 message JackExecutionReceipt {
   string contract_id = 1;
   string contract_version = 2;
   string task = 3;
   string objective = 4;
-  string canonical_owner = 5;
+  string apex_source_state_ref = 5;
   repeated SourceReceipt sources_opened = 6;
   repeated ActionReceipt actions_executed = 7;
   GateVector gates = 8;
@@ -67,4 +74,8 @@ message JackExecutionReceipt {
   repeated string readback_receipts = 13;
   repeated VerificationReceipt verification = 14;
   repeated string resolved_blockers = 15;
+  string mode = 16;
+  string human_project_direction_authority = 17;
+  string execution_law = 18;
+  MaximumCoherentAdvance maximum_coherent_advance = 19;
 }
