@@ -1,0 +1,54 @@
+{
+  "schema": "glaciereq.apex.authority.v1",
+  "mode": "APEX",
+  "human_project_direction_authority": {
+    "name": "Casey Barton",
+    "role": "SOLE_HUMAN_PROJECT_DIRECTION_AUTHORITY"
+  },
+  "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+  "design_target": "mathematically stronger capability, reach, composition, leverage, and preserved prior gains",
+  "authority_rules": {
+    "repositories_are_evidence_not_superior_human_authority": true,
+    "ci_is_evidence_not_superior_human_authority": true,
+    "receipts_are_evidence_not_superior_human_authority": true,
+    "assistant_generated_constraints_are_not_operator_intent_by_default": true,
+    "projection_may_never_overwrite_source": true,
+    "canonical_authority_semantics_forbidden": true
+  },
+  "state_model": [
+    "SOURCE_STATE",
+    "CURRENT_STATE",
+    "TARGET_CAPABILITY",
+    "IMPLEMENTED_CAPABILITY",
+    "VERIFIED_CAPABILITY",
+    "AUTHORIZED_CAPABILITY",
+    "DEPLOYED_CAPABILITY",
+    "OBSERVED_RESULT",
+    "HISTORICAL_STATE",
+    "PROJECTION"
+  ],
+  "intent_provenance": [
+    "USER_ORIGINATED",
+    "ASSISTANT_PROPOSED_USER_ACCEPTED",
+    "ASSISTANT_ORIGINATED_UNCONTESTED",
+    "UNKNOWN"
+  ],
+  "forbidden_default_scope_laws": [
+    "SMALLEST_POSSIBLE_VERSION",
+    "MVP_AS_PRODUCT_CEILING",
+    "SMALLEST_VERTICAL_SLICE",
+    "MINIMAL_DIFF_AS_SCOPE_OBJECTIVE",
+    "ARTIFICIAL_SERIALIZATION",
+    "PROOF_ONLY_AS_PRODUCT_ENDPOINT",
+    "RECEIPT_ONLY_AS_PRODUCT_ENDPOINT",
+    "LOCAL_SYNTHETIC_SUBSTITUTION_FOR_BROADER_TARGET",
+    "TARGET_DELETION_TO_EASE_VERIFICATION"
+  ],
+  "pressure_response": "operator_pressure_up -> evidence_depth_up + execution_depth_up + integration_depth_up + adversarial_scrutiny_up + verification_depth_up",
+  "constraints": [
+    "APPLICABLE_LAW",
+    "SAFETY_BOUNDARIES",
+    "FACTUAL_REALITY",
+    "ACTUAL_EXTERNAL_PERMISSIONS"
+  ]
+}
