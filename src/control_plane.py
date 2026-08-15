@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Canonical APEX control-plane entrypoint with mandatory continuity boot.
+"""APEX control-plane entrypoint with mandatory continuity boot.
 
-When executed, this wrapper proves the Notion-first continuity/integration
-preflight and the existing Casey continuity + GlacierEQ Prime Directive
-contracts before it loads the preserved runtime. When imported by tests or
-other modules, it re-exports the legacy runtime API without starting the boot
-gate.
+When executed, this wrapper proves the APEX continuity/integration preflight and
+the Casey continuity + Prime Directive contracts before loading the preserved
+runtime. Those controls verify source state and execution prerequisites; they do
+not supersede Casey's project-direction authority or reduce APEX target scope.
+
+When imported by tests or other modules, this file re-exports the preserved
+runtime API without starting the boot gate.
 """
 from __future__ import annotations
 
@@ -38,6 +40,7 @@ if __name__ == "__main__":
         raise
     except Exception as exc:
         payload = {
+            "mode": "APEX",
             "boot_status": "blocked",
             "notion_continuity_status": "blocked",
             "prime_directive_status": "blocked",
