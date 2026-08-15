@@ -1,13 +1,17 @@
 {
-  "contract_id": "JTR-RELENTLESS-EXECUTION-v1",
-  "version": "1.0.0",
+  "contract_id": "JTR-RELENTLESS-EXECUTION-v2",
+  "version": "2.0.0",
+  "mode": "APEX",
+  "human_project_direction_authority": "Casey Barton",
+  "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+  "apex_execution_root": "GlacierEQ/apex-control-plane",
   "preflight_gates": [
     "authority_valid",
     "safety_boundary_clear",
     "continuity_loaded",
     "resources_invoked",
-    "existing_work_checked",
-    "canonical_owner_resolved",
+    "strongest_source_and_prior_state_checked",
+    "operator_authority_loaded",
     "objective_preserved",
     "required_sources_opened"
   ],
@@ -16,12 +20,12 @@
     "safety_boundary_clear",
     "continuity_loaded",
     "resources_invoked",
-    "existing_work_checked",
-    "canonical_owner_resolved",
+    "strongest_source_and_prior_state_checked",
+    "operator_authority_loaded",
     "objective_preserved",
     "required_sources_opened",
     "contradictions_preserved",
-    "highest_value_delta_selected",
+    "maximum_coherent_advance_selected",
     "material_action_executed",
     "verification_passed",
     "defects_repaired_or_exactly_blocked",
@@ -31,7 +35,7 @@
   ],
   "resume_gates": [
     "continuity_loaded",
-    "canonical_owner_resolved",
+    "operator_authority_loaded",
     "persistence_written",
     "readback_verified",
     "next_state_resumable"
@@ -43,16 +47,20 @@
     "COMPLETE"
   ],
   "decision_law": {
-    "existing_work_found": "EXTEND",
-    "no_owner_but_related_system_found": "INTEGRATE",
-    "standalone": "STANDALONE_LAST_RESORT",
-    "unresolved_canonical_conflict": "BLOCK_CREATION_AND_RECONCILE"
+    "existing_work_found": "RECOVER_AND_STRENGTHEN",
+    "related_system_found": "COMPOSE_AND_INTEGRATE",
+    "independent_boundary_required": "CREATE_NEW_ROOT_WITH_PRESERVATION",
+    "source_state_conflict": "PRESERVE_CONFLICT_AND_RECONCILE_AGAINST_OPERATOR_OBJECTIVE",
+    "scope_selection": "MAXIMUM_COHERENT_ADVANCE",
+    "parallelism": "PARALLELIZE_COMPATIBLE_FRONTS"
   },
   "receipt_validation": {
     "fixed_gate_vector": true,
     "complete_requires_all_completion_gates": true,
     "unknown_gates_rejected": true,
-    "current_exact_blocker_precedes_complete": true
+    "current_exact_blocker_precedes_complete": true,
+    "projection_may_never_overwrite_source": true,
+    "operator_authority_required": true
   },
   "onnx_condition_input": "current_blocker_present",
   "onnx_types": "boolean"
