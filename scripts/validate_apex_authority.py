@@ -121,6 +121,31 @@ def validate() -> list[str]:
         if law not in laws:
             errors.append(f"config/notion_continuity_policy.json: missing law {law}")
 
+    directive = _json("config/prime_directive_policy.json")
+    if directive.get("mode") != "APEX":
+        errors.append("config/prime_directive_policy.json: mode must be APEX")
+    if directive.get("human_project_direction_authority") != "Casey Barton":
+        errors.append("config/prime_directive_policy.json: Casey authority missing")
+    if directive.get("execution_law") != "MAXIMUM_COHERENT_ADVANCE":
+        errors.append("config/prime_directive_policy.json: execution law drift")
+    if directive.get("pin_semantics") != "DRIFT_DETECTION_ONLY_NOT_PROJECT_DIRECTION_AUTHORITY":
+        errors.append("config/prime_directive_policy.json: integrity pins promoted beyond drift detection")
+    semantic_gate = directive.get("semantic_gate") or {}
+    if semantic_gate.get("command") != "python scripts/validate_apex_authority.py":
+        errors.append("config/prime_directive_policy.json: semantic APEX gate missing")
+    pin_paths = {
+        row.get("path")
+        for row in directive.get("ground_truth_files", [])
+        if isinstance(row, dict)
+    }
+    if pin_paths != {
+        "APEX_AUTHORITY.md",
+        "config/apex_authority.json",
+        "STATE.md",
+        "AGENT_SYSTEM_PROMPT.md",
+    }:
+        errors.append("config/prime_directive_policy.json: APEX control-file pin set drift")
+
     for path in ACTIVE_TEXT:
         lower = _read(path).lower()
         for phrase in FORBIDDEN_ACTIVE_SEMANTICS:
