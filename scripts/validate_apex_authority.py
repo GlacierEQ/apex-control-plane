@@ -33,7 +33,8 @@ FORBIDDEN_ACTIVE_SEMANTICS = [
 ]
 
 REQUIRED_PROMPT = [
-    "Human project-direction authority: Casey Barton",
+    "Human project-direction authority:",
+    "Casey Barton",
     "MAXIMUM_COHERENT_ADVANCE",
     "operator_pressure_up -> evidence_depth_up + execution_depth_up + integration_depth_up",
     "Smallness itself is never the objective.",
@@ -43,7 +44,8 @@ REQUIRED_PROMPT = [
 ]
 
 REQUIRED_STATE = [
-    "Human project-direction authority: Casey Barton",
+    "Human project-direction authority:",
+    "Casey Barton",
     "MAXIMUM_COHERENT_ADVANCE",
     "TARGET_CAPABILITY",
     "IMPLEMENTED_CAPABILITY",
