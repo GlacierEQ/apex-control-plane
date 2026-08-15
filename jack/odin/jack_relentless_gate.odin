@@ -12,12 +12,12 @@ Gate_State :: struct {
     safety_boundary_clear: bool,
     continuity_loaded: bool,
     resources_invoked: bool,
-    existing_work_checked: bool,
-    canonical_owner_resolved: bool,
+    strongest_source_and_prior_state_checked: bool,
+    operator_authority_loaded: bool,
     objective_preserved: bool,
     required_sources_opened: bool,
     contradictions_preserved: bool,
-    highest_value_delta_selected: bool,
+    maximum_coherent_advance_selected: bool,
     material_action_executed: bool,
     verification_passed: bool,
     defects_repaired_or_exactly_blocked: bool,
@@ -31,8 +31,8 @@ execution_ready :: proc(g: Gate_State) -> bool {
            g.safety_boundary_clear &&
            g.continuity_loaded &&
            g.resources_invoked &&
-           g.existing_work_checked &&
-           g.canonical_owner_resolved &&
+           g.strongest_source_and_prior_state_checked &&
+           g.operator_authority_loaded &&
            g.objective_preserved &&
            g.required_sources_opened
 }
@@ -40,7 +40,7 @@ execution_ready :: proc(g: Gate_State) -> bool {
 completion_ready :: proc(g: Gate_State) -> bool {
     return execution_ready(g) &&
            g.contradictions_preserved &&
-           g.highest_value_delta_selected &&
+           g.maximum_coherent_advance_selected &&
            g.material_action_executed &&
            g.verification_passed &&
            g.defects_repaired_or_exactly_blocked &&
@@ -51,7 +51,7 @@ completion_ready :: proc(g: Gate_State) -> bool {
 
 resume_ready :: proc(g: Gate_State) -> bool {
     return g.continuity_loaded &&
-           g.canonical_owner_resolved &&
+           g.operator_authority_loaded &&
            g.persistence_written &&
            g.readback_verified &&
            g.next_state_resumable
