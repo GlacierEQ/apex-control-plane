@@ -1,22 +1,83 @@
 {
-  "schema": "glaciereq.repo-target-contract.v1",
-  "identity": {
-    "repository_id": "GlacierEQ/apex-control-plane",
-    "family": "elite-estate"
+  "schema": "glaciereq.apex-target-contract.v2",
+  "mode": "APEX",
+  "repository": "GlacierEQ/apex-control-plane",
+  "human_project_direction_authority": "Casey Barton",
+  "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+  "objective": "Mathematically expand APEX capability, reach, composition, leverage, and preserved prior gains without reducing the product to the easiest proof surface.",
+  "design_invariants": [
+    "CASEY_PROJECT_DIRECTION_AUTHORITY",
+    "PROJECTION_NEVER_OVERWRITES_SOURCE",
+    "PRESERVE_OPERATOR_INTENT_PROVENANCE",
+    "PRESERVE_LEGITIMATE_PRIOR_GAINS",
+    "PARALLELIZE_COMPATIBLE_FRONTS",
+    "EXPAND_PROOF_TO_MATCH_CAPABILITY",
+    "NO_SCOPE_MINIMIZATION_AS_DEFAULT",
+    "NO_ARTIFICIAL_SERIALIZATION",
+    "NO_TARGET_DELETION_TO_EASE_VERIFICATION"
+  ],
+  "state_dimensions": {
+    "SOURCE_STATE": {
+      "status": "ACTIVE_RECOVERY",
+      "repository": "GlacierEQ/apex-control-plane",
+      "branch": "apex/operator-authority-recovery-20260815"
+    },
+    "TARGET_CAPABILITY": {
+      "status": "ACTIVE",
+      "capabilities": [
+        "operator-first APEX control",
+        "maximum-coherent multi-front execution",
+        "source-state and intent provenance preservation",
+        "continuity and dynamic tool orchestration",
+        "adversarial execution and false-completion resistance",
+        "modular cross-system composition",
+        "capability-proportionate verification"
+      ]
+    },
+    "IMPLEMENTED_CAPABILITY": {
+      "status": "ACTIVE_RECOVERY",
+      "evidence": [
+        "APEX_AUTHORITY.md",
+        "config/apex_authority.json",
+        "AGENT_SYSTEM_PROMPT.md",
+        "src/auto_boot.py",
+        "src/notion_continuity_gate.py",
+        "scripts/validate_apex_authority.py",
+        "jack/config/jack_relentless_contract.yaml",
+        "jack/src/jack_relentless_gate.py"
+      ]
+    },
+    "VERIFIED_CAPABILITY": {
+      "status": "PENDING_CURRENT_HEAD",
+      "last_verified_recovery_head": "35fe1e4ac49e7a506c2de744777f9639dc9c1c4c",
+      "note": "Later Jack and hard-gate changes require new exact-head workflow proof."
+    },
+    "AUTHORIZED_CAPABILITY": {
+      "status": "PROJECT_DIRECTION_AUTHORIZED",
+      "authority": "Casey Barton",
+      "external_action_boundaries_remain_separate": true
+    },
+    "DEPLOYED_CAPABILITY": {
+      "status": "NOT_ESTABLISHED_BY_THIS_CONTRACT"
+    },
+    "OBSERVED_RESULT": {
+      "status": "PARTIAL",
+      "evidence": "Exact-head APEX startup and CI passed at the last verified recovery head; current later changes await proof."
+    },
+    "PROJECTION": {
+      "status": "NON_AUTHORITY",
+      "rule": "A projection may describe evidence but may never redefine operator intent or overwrite source state."
+    }
   },
-  "current": {
-    "state": "PROMOTED",
-    "implemented": true,
-    "tested": true,
-    "deployed": false
+  "integration_policy": {
+    "existing_work": "RECOVER_STRENGTHEN_AND_COMPOSE",
+    "related_system": "INTEGRATE_WHEN_VALUE_BEARING",
+    "new_root": "ALLOW_WHEN_AN_INDEPENDENT_ENGINEERING_BOUNDARY_ADDS_VALUE",
+    "conflict": "PRESERVE_AND_RECONCILE_AGAINST_OPERATOR_OBJECTIVE"
   },
   "nonclaims": [
-    "no employer affiliation",
-    "no production deployment without receipt"
-  ],
-  "donor_plan": {
-    "mode": "none",
-    "donors": []
-  },
-  "frozen_at": "2026-08-10T04:12Z"
+    "No employer affiliation is implied.",
+    "No production deployment is claimed without a deployment receipt.",
+    "Current exact-head verification is not claimed until the latest source revision passes its required workflows."
+  ]
 }
