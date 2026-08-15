@@ -15,8 +15,11 @@ from prime_directive_boot import validate_combined_receipt
 from prime_directive_enforcer import GateViolation, StartupGateEnforcer, load_policy
 
 
-STATE_CONTENT = (ROOT / "STATE.md").read_text(encoding="utf-8")
-PROMPT_CONTENT = (ROOT / "AGENT_SYSTEM_PROMPT.md").read_text(encoding="utf-8")
+POLICY = load_policy()
+CONTROL_CONTENTS = {
+    row["path"]: (ROOT / row["path"]).read_text(encoding="utf-8")
+    for row in POLICY["ground_truth_files"]
+}
 
 
 def _tool_call(name: str, arguments: object, call_id: str) -> dict:
@@ -39,8 +42,11 @@ def _valid_combined_validation(*, empty_memory: bool = False):
     profiles = normalize_profiles(manifest, ["systems"])
     versions = required_note_versions(manifest, profiles)
     receipt = {
-        "boot_manifest_id": manifest["canonical_mem_manifest"]["id"],
-        "boot_manifest_version": manifest["canonical_mem_manifest"]["version"],
+        "mode": "APEX",
+        "human_project_direction_authority": "Casey Barton",
+        "execution_law": "MAXIMUM_COHERENT_ADVANCE",
+        "boot_manifest_id": manifest["boot_manifest"]["id"],
+        "boot_manifest_version": manifest["boot_manifest"]["version"],
         "mem_collection_id": manifest["mem_collection"]["id"],
         "boot_profile": list(profiles),
         "notes_loaded": [
@@ -54,7 +60,7 @@ def _valid_combined_validation(*, empty_memory: bool = False):
             {
                 "repository": "GlacierEQ/apex-control-plane",
                 "revision": "abc123",
-                "checked_at": "2026-08-04T08:00:00Z",
+                "checked_at": "2026-08-15T20:00:00Z",
             }
         ],
         "case_lane": None,
@@ -65,8 +71,8 @@ def _valid_combined_validation(*, empty_memory: bool = False):
             "reason": "systems profile",
         },
         "restricted_context": False,
-        "current_task": "verify the Prime Directive middleware",
-        "next_material_action": "run startup tests",
+        "current_task": "verify the APEX Prime Directive middleware",
+        "next_material_action": "run APEX startup tests",
         "boot_status": "complete",
         "blockers": [],
         "memory_search": {
@@ -118,10 +124,8 @@ def _record_first_three_stages(enforcer: StartupGateEnforcer) -> None:
         success=True,
     )
 
-    for call_id, path, content in (
-        ("state-1", "STATE.md", STATE_CONTENT),
-        ("prompt-1", "AGENT_SYSTEM_PROMPT.md", PROMPT_CONTENT),
-    ):
+    for index, (path, content) in enumerate(CONTROL_CONTENTS.items(), start=1):
+        call_id = f"control-{index}"
         enforcer.intercept_llm_response(
             _tool_call("GitHub.fetch_file", {"path": path}, call_id)
         )
@@ -228,29 +232,31 @@ def test_empty_memory_search_result_still_counts_as_searched() -> None:
     assert snapshot.gate_passed is False
 
 
-def test_ground_truth_requires_exact_pinned_hash() -> None:
+def test_control_file_requires_exact_apex_pinned_bytes() -> None:
     enforcer = StartupGateEnforcer()
+    path = "STATE.md"
+    content = CONTROL_CONTENTS[path]
     enforcer.intercept_llm_response(
-        _tool_call("GitHub.fetch_file", {"path": "STATE.md"}, "state-1")
+        _tool_call("GitHub.fetch_file", {"path": path}, "state-1")
     )
     mismatch = enforcer.record_tool_result(
         "GitHub.fetch_file",
-        {"path": "STATE.md", "content": STATE_CONTENT + "\nmodified"},
+        {"path": path, "content": content + "\nmodified"},
         call_id="state-1",
         success=True,
     )
-    assert "STATE.md" not in mismatch.ground_truth_files_loaded
+    assert path not in mismatch.ground_truth_files_loaded
 
     enforcer.intercept_llm_response(
-        _tool_call("GitHub.fetch_file", {"path": "STATE.md"}, "state-2")
+        _tool_call("GitHub.fetch_file", {"path": path}, "state-2")
     )
     verified = enforcer.record_tool_result(
         "GitHub.fetch_file",
-        {"path": "STATE.md", "content": STATE_CONTENT},
+        {"path": path, "content": content},
         call_id="state-2",
         success=True,
     )
-    assert "STATE.md" in verified.ground_truth_files_loaded
+    assert path in verified.ground_truth_files_loaded
 
 
 def test_inventory_requires_nonempty_structured_result() -> None:
