@@ -1,12 +1,15 @@
-"""Fail-closed Jack the Ripper relentless-execution contract evaluator."""
+"""Fail-closed Jack relentless-execution evaluator for APEX."""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Mapping
 
-CONTRACT_ID = "JTR-RELENTLESS-EXECUTION-v1"
-CONTRACT_VERSION = "1.0.0"
+CONTRACT_ID = "JTR-RELENTLESS-EXECUTION-v2"
+CONTRACT_VERSION = "2.0.0"
+MODE = "APEX"
+HUMAN_PROJECT_DIRECTION_AUTHORITY = "Casey Barton"
+EXECUTION_LAW = "MAXIMUM_COHERENT_ADVANCE"
 
 
 class Status(str, Enum):
@@ -22,12 +25,12 @@ class GateState:
     safety_boundary_clear: bool = False
     continuity_loaded: bool = False
     resources_invoked: bool = False
-    existing_work_checked: bool = False
-    canonical_owner_resolved: bool = False
+    strongest_source_and_prior_state_checked: bool = False
+    operator_authority_loaded: bool = False
     objective_preserved: bool = False
     required_sources_opened: bool = False
     contradictions_preserved: bool = False
-    highest_value_delta_selected: bool = False
+    maximum_coherent_advance_selected: bool = False
     material_action_executed: bool = False
     verification_passed: bool = False
     defects_repaired_or_exactly_blocked: bool = False
@@ -41,15 +44,15 @@ PRE_FLIGHT = [
     "safety_boundary_clear",
     "continuity_loaded",
     "resources_invoked",
-    "existing_work_checked",
-    "canonical_owner_resolved",
+    "strongest_source_and_prior_state_checked",
+    "operator_authority_loaded",
     "objective_preserved",
     "required_sources_opened",
 ]
 COMPLETION = list(GateState.__dataclass_fields__)
 RESUME = [
     "continuity_loaded",
-    "canonical_owner_resolved",
+    "operator_authority_loaded",
     "persistence_written",
     "readback_verified",
     "next_state_resumable",
@@ -116,13 +119,19 @@ def _nonempty_string(receipt: Mapping[str, object], name: str) -> str:
 
 
 def validate_receipt(receipt: Mapping[str, object]) -> None:
-    """Reject structurally incomplete or logically false execution receipts."""
+    """Reject structurally incomplete or logically false APEX execution receipts."""
     if receipt.get("contract_id") != CONTRACT_ID:
         raise ValueError("wrong or missing contract_id")
     if receipt.get("contract_version") != CONTRACT_VERSION:
         raise ValueError("wrong or missing contract_version")
+    if receipt.get("mode") != MODE:
+        raise ValueError("receipt mode must be APEX")
+    if receipt.get("human_project_direction_authority") != HUMAN_PROJECT_DIRECTION_AUTHORITY:
+        raise ValueError("receipt human project-direction authority mismatch")
+    if receipt.get("execution_law") != EXECUTION_LAW:
+        raise ValueError("receipt execution law mismatch")
 
-    for name in ("task", "objective", "canonical_owner", "next_material_action"):
+    for name in ("task", "objective", "apex_source_state_ref", "next_material_action"):
         _nonempty_string(receipt, name)
 
     raw_gates = receipt.get("gates")
@@ -133,7 +142,8 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
         missing_names = sorted(allowed - set(raw_gates))
         unknown_names = sorted(set(raw_gates) - allowed)
         raise ValueError(
-            f"receipt.gates must contain exactly 16 gates; missing={missing_names}, unknown={unknown_names}"
+            f"receipt.gates must contain exactly {len(allowed)} gates; "
+            f"missing={missing_names}, unknown={unknown_names}"
         )
 
     gates = from_mapping(raw_gates)
@@ -154,10 +164,37 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
     persistence = _receipt_list(receipt, "persistence_receipts")
     readback = _receipt_list(receipt, "readback_receipts")
 
+    if gates.operator_authority_loaded:
+        if receipt.get("human_project_direction_authority") != HUMAN_PROJECT_DIRECTION_AUTHORITY:
+            raise ValueError("operator_authority_loaded requires Casey authority receipt")
+
+    if gates.strongest_source_and_prior_state_checked and not any(
+        isinstance(row, Mapping)
+        and row.get("opened") is True
+        and str(row.get("state_role", "")).strip()
+        in {"SOURCE_STATE", "CURRENT_STATE", "HISTORICAL_STATE"}
+        for row in sources
+    ):
+        raise ValueError(
+            "strongest_source_and_prior_state_checked requires an opened source-state receipt"
+        )
+
     if (gates.resources_invoked or gates.required_sources_opened) and not any(
         isinstance(row, Mapping) and row.get("opened") is True for row in sources
     ):
         raise ValueError("resource/source gates require at least one opened source receipt")
+
+    if gates.maximum_coherent_advance_selected:
+        advance = receipt.get("maximum_coherent_advance")
+        if not isinstance(advance, Mapping):
+            raise ValueError("maximum_coherent_advance_selected requires maximum_coherent_advance object")
+        if not str(advance.get("capability_tranche", "")).strip():
+            raise ValueError("maximum_coherent_advance.capability_tranche is required")
+        fronts = advance.get("compatible_fronts")
+        if not isinstance(fronts, list) or not any(str(v).strip() for v in fronts):
+            raise ValueError("maximum_coherent_advance.compatible_fronts must be a non-empty list")
+        if advance.get("scope_reduced_for_convenience") is not False:
+            raise ValueError("maximum coherent advance may not reduce scope for convenience")
 
     if gates.material_action_executed and not any(
         isinstance(row, Mapping) and row.get("executed") is True for row in actions
