@@ -300,6 +300,10 @@ def _index_by_id(registry: dict[str, Any]) -> dict[int, dict[str, Any]]:
             raise TypeError(
                 "Invalid registry state: repository_id must be a positive integer"
             )
+        if repo_id in indexed:
+            raise TypeError(
+                f"Invalid registry state: duplicate repository_id {repo_id}"
+            )
         indexed[repo_id] = row
     return indexed
 
