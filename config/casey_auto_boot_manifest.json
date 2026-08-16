@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.2.2",
   "manifest_name": "Casey Continuity Auto-Boot",
   "mem_collection": {
     "title": "00 AUTO BOOT — Casey Continuity Gate",
