@@ -288,19 +288,23 @@ def build_registry(repos: list[dict[str, Any]]) -> dict[str, Any]:
 def _index_by_id(registry: dict[str, Any]) -> dict[int, dict[str, Any]]:
     repositories = registry.get("repositories")
     if not isinstance(repositories, list):
-        raise RuntimeError("Invalid registry state: repositories must be a list")
+        raise TypeError("Invalid registry state: repositories must be a list")
     indexed: dict[int, dict[str, Any]] = {}
     for row in repositories:
         if not isinstance(row, dict):
-            raise RuntimeError("Invalid registry state: repository entry must be an object")
+            raise TypeError("Invalid registry state: repository entry must be an object")
         repo_id = row.get("repository_id")
         if isinstance(repo_id, bool) or not isinstance(repo_id, int) or repo_id <= 0:
-            raise RuntimeError("Invalid registry state: repository_id must be a positive integer")
+            raise TypeError(
+                "Invalid registry state: repository_id must be a positive integer"
+            )
         indexed[repo_id] = row
     return indexed
 
 
-def diff_registry(previous: dict[str, Any] | None, current: dict[str, Any]) -> dict[str, Any]:
+def diff_registry(
+    previous: dict[str, Any] | None, current: dict[str, Any]
+) -> dict[str, Any]:
     if previous is None:
         return {
             "schema_version": 2,
@@ -320,7 +324,14 @@ def diff_registry(previous: dict[str, Any] | None, current: dict[str, Any]) -> d
     for repo_id in sorted(before_ids & after_ids):
         old = before[repo_id]
         new = after[repo_id]
-        fields = ("full_name", "class", "lifecycle", "archived", "disabled", "default_branch")
+        fields = (
+            "full_name",
+            "class",
+            "lifecycle",
+            "archived",
+            "disabled",
+            "default_branch",
+        )
         delta = {
             field: {"before": old.get(field), "after": new.get(field)}
             for field in fields
@@ -356,30 +367,30 @@ def load_previous() -> dict[str, Any] | None:
     except (OSError, json.JSONDecodeError) as error:
         raise RuntimeError(f"Invalid registry state at {REGISTRY_PATH}") from error
     if not isinstance(data, dict) or not isinstance(data.get("repositories"), list):
-        raise RuntimeError(f"Invalid registry state at {REGISTRY_PATH}")
+        raise TypeError(f"Invalid registry state at {REGISTRY_PATH}")
     return data
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    handle = tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        dir=path.parent,
-        prefix=f".{path.name}.",
-        suffix=".tmp",
-        delete=False,
-    )
-    tmp_path = Path(handle.name)
+    tmp_path: Path | None = None
     try:
-        with handle:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            tmp_path = Path(handle.name)
             json.dump(payload, handle, indent=2, sort_keys=True)
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(tmp_path, path)
     finally:
-        if tmp_path.exists():
+        if tmp_path is not None and tmp_path.exists():
             tmp_path.unlink(missing_ok=True)
 
 
@@ -392,7 +403,7 @@ def main() -> int:
         write_json(SCAN_PATH, {"schema_version": 2, "repositories": repos})
         write_json(REGISTRY_PATH, current)
         write_json(DELTA_PATH, delta)
-    except Exception as error:
+    except (RuntimeError, ValueError, TypeError, OSError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1
     return 0
