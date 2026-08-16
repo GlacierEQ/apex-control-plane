@@ -1,4 +1,9 @@
-"""Fail-closed Jack the Ripper relentless-execution contract evaluator."""
+"""Fail-closed Jack relentless-execution evaluator bound to APEX Genesis.
+
+The historical ``canonical_owner`` receipt field is retained only as an
+existing-work topology locator. Project-direction authority is always explicit
+Operator intent.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
@@ -6,7 +11,33 @@ from enum import Enum
 from typing import Mapping
 
 CONTRACT_ID = "JTR-RELENTLESS-EXECUTION-v1"
-CONTRACT_VERSION = "1.0.0"
+CONTRACT_VERSION = "1.1.0"
+REQUIRED_AUTHORITY = "OPERATOR_INTENT"
+APEX_STATES = {
+    "OBSERVED",
+    "INFERRED",
+    "HYPOTHESIZED",
+    "PROPOSED",
+    "ATTEMPTED",
+    "EXECUTED",
+    "VERIFIED",
+    "COMMITTED",
+    "DEPLOYED",
+    "OBSERVED_IN_OPERATION",
+}
+_EXECUTED_OR_STRONGER = {
+    "EXECUTED",
+    "VERIFIED",
+    "COMMITTED",
+    "DEPLOYED",
+    "OBSERVED_IN_OPERATION",
+}
+_VERIFIED_OR_STRONGER = {
+    "VERIFIED",
+    "COMMITTED",
+    "DEPLOYED",
+    "OBSERVED_IN_OPERATION",
+}
 
 
 class Status(str, Enum):
@@ -115,12 +146,34 @@ def _nonempty_string(receipt: Mapping[str, object], name: str) -> str:
     return value.strip()
 
 
+def _validate_action_state(row: Mapping[str, object], index: int) -> None:
+    state = str(row.get("state", "")).strip().upper()
+    if state not in APEX_STATES:
+        raise ValueError(f"actions_executed[{index}].state must be an APEX execution state")
+    executed = row.get("executed") is True
+    verified = row.get("verified") is True
+    if executed and state not in _EXECUTED_OR_STRONGER:
+        raise ValueError(
+            f"actions_executed[{index}] claims executed=true but state={state} is weaker than EXECUTED"
+        )
+    if verified and state not in _VERIFIED_OR_STRONGER:
+        raise ValueError(
+            f"actions_executed[{index}] claims verified=true but state={state} is weaker than VERIFIED"
+        )
+    if executed and not str(row.get("provider_receipt", "")).strip():
+        raise ValueError(f"actions_executed[{index}] executed action requires provider_receipt")
+
+
 def validate_receipt(receipt: Mapping[str, object]) -> None:
     """Reject structurally incomplete or logically false execution receipts."""
     if receipt.get("contract_id") != CONTRACT_ID:
         raise ValueError("wrong or missing contract_id")
     if receipt.get("contract_version") != CONTRACT_VERSION:
         raise ValueError("wrong or missing contract_version")
+
+    authority = _nonempty_string(receipt, "authority").upper()
+    if authority != REQUIRED_AUTHORITY:
+        raise ValueError(f"authority must be {REQUIRED_AUTHORITY}")
 
     for name in ("task", "objective", "canonical_owner", "next_material_action"):
         _nonempty_string(receipt, name)
@@ -154,15 +207,23 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
     persistence = _receipt_list(receipt, "persistence_receipts")
     readback = _receipt_list(receipt, "readback_receipts")
 
+    for index, row in enumerate(actions):
+        if not isinstance(row, Mapping):
+            raise ValueError(f"actions_executed[{index}] must be an object")
+        _validate_action_state(row, index)
+
     if (gates.resources_invoked or gates.required_sources_opened) and not any(
         isinstance(row, Mapping) and row.get("opened") is True for row in sources
     ):
         raise ValueError("resource/source gates require at least one opened source receipt")
 
     if gates.material_action_executed and not any(
-        isinstance(row, Mapping) and row.get("executed") is True for row in actions
+        isinstance(row, Mapping)
+        and row.get("executed") is True
+        and str(row.get("state", "")).strip().upper() in _EXECUTED_OR_STRONGER
+        for row in actions
     ):
-        raise ValueError("material_action_executed requires an executed action receipt")
+        raise ValueError("material_action_executed requires an EXECUTED-or-stronger action receipt")
 
     if gates.verification_passed and not any(
         isinstance(row, Mapping)
