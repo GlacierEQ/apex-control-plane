@@ -87,6 +87,18 @@ def test_delta_tracks_stable_id_rename_and_state_change():
     }
 
 
+def test_delta_rejects_duplicate_repository_ids() -> None:
+    current = build_registry([repo(10, "alpha")])
+    previous = {
+        "repositories": [
+            {"repository_id": 10, "full_name": "GlacierEQ/alpha"},
+            {"repository_id": 10, "full_name": "GlacierEQ/duplicate"},
+        ]
+    }
+    with pytest.raises(TypeError, match="duplicate repository_id 10"):
+        diff_registry(previous, current)
+
+
 def test_registry_reports_duplicate_candidates():
     registry = build_registry(
         [
