@@ -23,7 +23,9 @@ def _receipt(gates: dict[str, bool], status: str, blockers=None):
         "task": "continue existing APEX work",
         "objective": "execute maximum coherent verified delta",
         "canonical_owner": "GlacierEQ/apex-control-plane",
-        "sources_opened": [{"system": "Notion", "object_id": "continuity", "opened": True}],
+        "sources_opened": [
+            {"system": "Notion", "object_id": "continuity", "opened": True}
+        ],
         "actions_executed": [
             {
                 "action": "write",
@@ -34,7 +36,9 @@ def _receipt(gates: dict[str, bool], status: str, blockers=None):
                 "state": "VERIFIED",
             }
         ],
-        "verification": [{"check": "test", "receipt_ref": "pytest:green", "passed": True}],
+        "verification": [
+            {"check": "test", "receipt_ref": "pytest:green", "passed": True}
+        ],
         "persistence_receipts": ["git:commit"],
         "readback_receipts": ["git:readback"],
         "gates": gates,
@@ -144,9 +148,32 @@ def test_executed_action_requires_execution_state_and_receipt():
     try:
         validate_receipt(receipt)
     except ValueError as exc:
-        assert "requires provider_receipt" in str(exc)
+        assert "requires string provider_receipt" in str(exc)
     else:
         raise AssertionError("executed action without receipt was accepted")
+
+
+def test_executed_action_rejects_non_string_provider_receipts():
+    for invalid in (False, 1, {}, [], ["git:commit"]):
+        receipt = _receipt(_all_true(), "COMPLETE")
+        receipt["actions_executed"][0]["provider_receipt"] = invalid
+        try:
+            validate_receipt(receipt)
+        except ValueError as exc:
+            assert "requires string provider_receipt" in str(exc)
+        else:
+            raise AssertionError(f"malformed provider receipt was accepted: {invalid!r}")
+
+
+def test_verified_action_requires_executed_true():
+    receipt = _receipt(_all_true(), "COMPLETE")
+    receipt["actions_executed"][0]["executed"] = False
+    try:
+        validate_receipt(receipt)
+    except ValueError as exc:
+        assert "verified action requires executed=true" in str(exc)
+    else:
+        raise AssertionError("verified action without execution was accepted")
 
 
 def test_verified_action_requires_verified_or_stronger_state():
