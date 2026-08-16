@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+# Existing secret protection remains first.
+bash scripts/rotate_check.sh
+
+# Syntax failure or fidelity regression blocks the commit.
+python -m py_compile \
+  src/operator_fidelity_lock.py \
+  src/operator_fidelity_preflight.py \
+  src/control_plane.py \
+  src/sitecustomize.py
+
+CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+  tests/test_operator_fidelity_lock.py \
+  tests/test_operator_fidelity_preflight.py
+
+printf '%s\n' 'APEX operator fidelity: PASS'
