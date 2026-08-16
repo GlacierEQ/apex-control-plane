@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """APEX control-plane entrypoint with mandatory enforced startup.
 
-When executed, this wrapper proves continuity, Prime Directive, literal Operator
-fidelity, and APEX Genesis contracts before loading the preserved runtime. When
-imported by tests or other modules, it re-exports the preserved runtime API
-without starting the boot gate.
+When executed, this wrapper proves continuity, Prime Directive, the non-bypassable
+Operator-fidelity lock, literal Operator fidelity, and APEX Genesis contracts
+before loading the preserved runtime. When imported by tests or other modules,
+it re-exports the preserved runtime API without starting the boot gate.
 """
 from __future__ import annotations
 
@@ -24,6 +24,10 @@ if __name__ == "__main__":
         automatic_notion_continuity_preflight,
         get_in_process_notion_validation,
     )
+    from operator_fidelity_lock import (
+        automatic_operator_fidelity_lock,
+        get_in_process_operator_fidelity_lock,
+    )
     from operator_fidelity_preflight import (
         automatic_operator_fidelity_preflight,
         get_in_process_operator_fidelity_validation,
@@ -34,13 +38,14 @@ if __name__ == "__main__":
     )
 
     # Caller-controlled environment variables are status projections, not proof.
-    # Skip only when this Python process already produced the matching sealed
-    # validation object.
+    # Only in-process sealed validation objects can satisfy startup stages.
     try:
         if get_in_process_notion_validation() is None:
             automatic_notion_continuity_preflight()
         if get_in_process_boot_validation() is None:
             automatic_prime_directive_boot()
+        if get_in_process_operator_fidelity_lock() is None:
+            automatic_operator_fidelity_lock()
         if get_in_process_operator_fidelity_validation() is None:
             automatic_operator_fidelity_preflight()
         if get_in_process_apex_validation() is None:
@@ -52,9 +57,11 @@ if __name__ == "__main__":
             "boot_status": "blocked",
             "notion_continuity_status": "blocked",
             "prime_directive_status": "blocked",
+            "operator_fidelity_lock_status": "blocked",
             "operator_fidelity_status": "blocked",
             "apex_startup_status": "blocked",
             "error": f"{type(exc).__name__}: {exc}",
+            "runtime_authorized": False,
             "external_action_authorized": False,
         }
         print(json.dumps(payload, ensure_ascii=False, sort_keys=True), file=sys.stderr)
