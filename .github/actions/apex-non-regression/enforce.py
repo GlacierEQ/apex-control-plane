@@ -96,7 +96,9 @@ def parse_file_patches(diff: str) -> dict[str, dict[str, list[str]]]:
 
 
 def tree_conflicts(head: str) -> list[dict[str, str]]:
-    """Scan the complete resulting tree, not only this diff, for live conflict markers."""
+    """Scan the complete resulting tree for exact Git conflict-marker lines."""
+    # Git conflict markers are exactly seven equals on the separator line.  The
+    # old scanner matched decorative ===== headers and created a false gate.
     proc = subprocess.run(
         [
             "git",
@@ -104,7 +106,7 @@ def tree_conflicts(head: str) -> list[dict[str, str]]:
             "-n",
             "-I",
             "-E",
-            r"^(<<<<<<< |=======|>>>>>>> )",
+            r"^(<<<<<<< .+|=======$|>>>>>>> .+)$",
             head,
             "--",
             ".",
@@ -181,7 +183,6 @@ def main() -> int:
             if finding["code"] == "MERGE_CONFLICT_MARKER"
         ]
 
-    # Keep one result per exact finding while retaining line-level conflict evidence.
     failures = list({json.dumps(item, sort_keys=True): item for item in failures}.values())
     warnings = list({json.dumps(item, sort_keys=True): item for item in warnings}.values())
 
@@ -192,6 +193,7 @@ def main() -> int:
         "diff_sha256": digest,
         "operator_reduction_authorization_bound": authorized,
         "full_tree_conflict_scan": True,
+        "exact_conflict_marker_matching": True,
         "failures": failures,
         "warnings": warnings,
         "status": "FAIL" if failures else "PASS",
