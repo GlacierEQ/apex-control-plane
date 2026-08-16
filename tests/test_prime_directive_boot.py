@@ -219,6 +219,17 @@ def test_policy_requires_all_five_startup_stages() -> None:
     assert policy["apex_binding"]["unearned_state_promotion_prohibited"] is True
 
 
+def test_all_authority_bearing_startup_files_are_pinned() -> None:
+    policy = load_policy()
+    paths = {row["path"] for row in policy["ground_truth_files"]}
+    assert paths == {
+        "STATE.md",
+        "AGENT_SYSTEM_PROMPT.md",
+        "APEX_ENFORCED_STARTUP.md",
+        "OPERATOR_EXECUTION_LAW.md",
+    }
+
+
 def test_policy_hashes_match_repository_ground_truth_files() -> None:
     import hashlib
 
