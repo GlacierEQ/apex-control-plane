@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "name": "APEX Enforced Startup",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
@@ -9,12 +9,18 @@
   "fail_closed": true,
   "required_startup_fields": [
     "context_reconstructed",
+    "prior_state_retrieved",
     "continuation_resolved",
+    "target_identity_resolved",
     "operator_intent_resolved",
     "target_state",
+    "prior_valid_gains_identified",
     "prior_valid_gains_preserved",
+    "relevant_source_inspected",
     "contradiction_status",
     "state_model_bound",
+    "mutation_intent",
+    "action_scope",
     "selected_path",
     "verification_plan"
   ],
@@ -22,6 +28,11 @@
     "none",
     "resolved",
     "open_blocker"
+  ],
+  "action_scopes": [
+    "none",
+    "internal",
+    "external"
   ],
   "execution_states": [
     "OBSERVED",
@@ -52,12 +63,21 @@
     "preserves_prior_valid_gain": true
   },
   "mutation_interlock": {
-    "context_before_mutation": true,
-    "continuation_before_restart": true,
-    "operator_intent_controls_direction": true,
+    "required_true_fields": [
+      "context_reconstructed",
+      "prior_state_retrieved",
+      "continuation_resolved",
+      "target_identity_resolved",
+      "operator_intent_resolved",
+      "prior_valid_gains_identified",
+      "prior_valid_gains_preserved",
+      "relevant_source_inspected",
+      "state_model_bound"
+    ],
     "capability_reduction_requires_operator_direction": true,
     "action_claim_requires_receipt": true,
-    "material_claim_requires_provenance": true
+    "material_claim_requires_provenance": true,
+    "external_action_requires_named_human_approval": true
   },
   "completion_gate": {
     "proof_bound": true,
