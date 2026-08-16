@@ -11,6 +11,7 @@ permissions:
 jobs:
   hash:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
       - name: Emit authoritative startup SHA-256
