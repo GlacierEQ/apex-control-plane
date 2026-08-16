@@ -1,6 +1,12 @@
 {
   "contract_id": "JTR-RELENTLESS-EXECUTION-v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "project_direction_authority": "OPERATOR_INTENT",
+  "startup_contract": "APEX_ENFORCED_STARTUP.md",
+  "compatibility": {
+    "canonical_owner_field_semantics": "existing_owner_topology_only",
+    "canonical_owner_does_not_confer_project_authority": true
+  },
   "preflight_gates": [
     "authority_valid",
     "safety_boundary_clear",
@@ -36,6 +42,18 @@
     "readback_verified",
     "next_state_resumable"
   ],
+  "state_model": [
+    "OBSERVED",
+    "INFERRED",
+    "HYPOTHESIZED",
+    "PROPOSED",
+    "ATTEMPTED",
+    "EXECUTED",
+    "VERIFIED",
+    "COMMITTED",
+    "DEPLOYED",
+    "OBSERVED_IN_OPERATION"
+  ],
   "statuses": [
     "RECOVERING",
     "EXECUTING",
@@ -43,16 +61,18 @@
     "COMPLETE"
   ],
   "decision_law": {
-    "existing_work_found": "EXTEND",
+    "existing_work_found": "EXTEND_OR_OPERATOR_OVERRIDE",
     "no_owner_but_related_system_found": "INTEGRATE",
-    "standalone": "STANDALONE_LAST_RESORT",
-    "unresolved_canonical_conflict": "BLOCK_CREATION_AND_RECONCILE"
+    "standalone": "OPERATOR_DIRECTION_OR_EVIDENCE_BACKED_LAST_RESORT",
+    "unresolved_topology_conflict": "BLOCK_MUTATION_AND_RECONCILE",
+    "capability_reduction": "OPERATOR_DIRECTION_REQUIRED"
   },
   "receipt_validation": {
     "fixed_gate_vector": true,
     "complete_requires_all_completion_gates": true,
     "unknown_gates_rejected": true,
-    "current_exact_blocker_precedes_complete": true
+    "current_exact_blocker_precedes_complete": true,
+    "canonical_owner_is_topology_only": true
   },
   "onnx_condition_input": "current_blocker_present",
   "onnx_types": "boolean"
