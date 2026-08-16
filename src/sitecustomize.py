@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Optional Python startup hook for the combined APEX startup gate.
+"""Python startup hook for combined APEX enforcement.
 
-The primary enforcement path is the explicit wrapper in ``src/control_plane.py``.
-This hook supplies the same continuity, Prime Directive, Operator fidelity, and
-APEX Genesis enforcement when ``src`` is already on ``PYTHONPATH`` or another
-entrypoint is forced with ``CASEY_AUTO_BOOT=1``.
+The primary enforcement path is ``src/control_plane.py``. This hook supplies the
+same continuity, Prime Directive, non-bypassable Operator-fidelity lock,
+Operator-fidelity preflight, and APEX Genesis enforcement when ``src`` is on
+``PYTHONPATH`` or another entrypoint is forced with ``CASEY_AUTO_BOOT=1``.
 
-The hook skips verifier CLIs and pytest and fails closed with exit code 78 unless
-boot mode is explicitly ``request`` or ``off``.
+Verifier CLIs and pytest are excluded so tests can exercise the enforcement code.
+A real runtime cannot disable Operator fidelity with CASEY_AUTO_BOOT_DISABLE or
+CASEY_AUTO_BOOT_MODE=off; the hard lock rejects those bypass attempts.
 """
 from __future__ import annotations
 
@@ -40,13 +41,11 @@ def _is_pytest_startup() -> bool:
 
 
 def _should_boot() -> bool:
-    if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-        return False
-
     entrypoint = _entrypoint_name()
     if entrypoint in {
         "auto_boot.py",
         "apex_enforced_startup.py",
+        "operator_fidelity_lock.py",
         "operator_fidelity_preflight.py",
         "notion_continuity_gate.py",
         "prime_directive_boot.py",
@@ -65,10 +64,12 @@ def _fail_closed(exc: Exception) -> NoReturn:
         "boot_status": "blocked",
         "notion_continuity_status": "blocked",
         "prime_directive_status": "blocked",
+        "operator_fidelity_lock_status": "blocked",
         "operator_fidelity_status": "blocked",
         "apex_startup_status": "blocked",
         "error": f"{type(exc).__name__}: {exc}",
         "entrypoint": _entrypoint_path(),
+        "runtime_authorized": False,
         "external_action_authorized": False,
     }
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True), file=sys.stderr)
@@ -80,11 +81,13 @@ if _should_boot():
     try:
         from apex_enforced_startup import automatic_apex_enforced_startup
         from notion_continuity_gate import automatic_notion_continuity_preflight
+        from operator_fidelity_lock import automatic_operator_fidelity_lock
         from operator_fidelity_preflight import automatic_operator_fidelity_preflight
         from prime_directive_boot import automatic_prime_directive_boot
 
         automatic_notion_continuity_preflight()
         automatic_prime_directive_boot()
+        automatic_operator_fidelity_lock()
         automatic_operator_fidelity_preflight()
         automatic_apex_enforced_startup()
     except SystemExit:
