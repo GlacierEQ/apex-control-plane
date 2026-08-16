@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.3.1",
   "manifest_name": "Casey Continuity Auto-Boot + APEX Genesis",
   "project_direction_authority": "operator_intent",
   "state_evolution": "current_state_plus_verified_gain",
@@ -35,12 +35,11 @@
   },
   "prime_directive": {
     "policy_path": "config/prime_directive_policy.json",
-    "policy_schema_version": "1.0.2",
+    "policy_schema_version": "1.1.0",
     "agent_prompt_path": "AGENT_SYSTEM_PROMPT.md",
     "state_path": "STATE.md",
     "operator_law_path": "OPERATOR_EXECUTION_LAW.md",
     "apex_protocol_path": "APEX_ENFORCED_STARTUP.md",
-    "state_path": "STATE.md",
     "enforcer_module": "src/prime_directive_enforcer.py",
     "boot_module": "src/prime_directive_boot.py",
     "requires_memory_search": true,
