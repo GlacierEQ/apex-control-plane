@@ -1,6 +1,12 @@
 {
-  "schema_version": "1.2.2",
-  "manifest_name": "Casey Continuity Auto-Boot",
+  "schema_version": "1.3.0",
+  "manifest_name": "Casey Continuity Auto-Boot + APEX Genesis",
+  "project_direction_authority": "operator_intent",
+  "state_evolution": "current_state_plus_verified_gain",
+  "compatibility": {
+    "canonical_labels_are_descriptive_only": true,
+    "canonical_labels_do_not_confer_project_authority": true
+  },
   "mem_collection": {
     "title": "00 AUTO BOOT — Casey Continuity Gate",
     "id": "e9990f2e-affe-55b2-a402-1de35aeb1b73"
@@ -8,12 +14,32 @@
   "canonical_mem_manifest": {
     "title": "000 AUTO-BOOT MANIFEST — CASEY CONTINUITY GATE — CANONICAL v1.0.0",
     "id": "6925915b-33d6-5fc9-b499-4fbe78790413",
-    "version": 1
+    "version": 1,
+    "semantics": "historical_compatibility_locator_not_project_authority"
+  },
+  "apex_genesis": {
+    "protocol_path": "APEX_ENFORCED_STARTUP.md",
+    "policy_path": "config/apex_enforced_startup_policy.json",
+    "enforcer_module": "src/apex_enforced_startup.py",
+    "required": true,
+    "fail_closed": true,
+    "requires_context_before_mutation": true,
+    "requires_continuation_before_restart": true,
+    "requires_operator_intent_binding": true,
+    "requires_prior_valid_gain_preservation": true,
+    "requires_contradiction_resolution": true,
+    "requires_state_model": true,
+    "requires_maximum_coherent_path": true,
+    "requires_verification_plan": true,
+    "requires_receipts_for_material_state_promotion": true
   },
   "prime_directive": {
     "policy_path": "config/prime_directive_policy.json",
     "policy_schema_version": "1.0.2",
     "agent_prompt_path": "AGENT_SYSTEM_PROMPT.md",
+    "state_path": "STATE.md",
+    "operator_law_path": "OPERATOR_EXECUTION_LAW.md",
+    "apex_protocol_path": "APEX_ENFORCED_STARTUP.md",
     "state_path": "STATE.md",
     "enforcer_module": "src/prime_directive_enforcer.py",
     "boot_module": "src/prime_directive_boot.py",
