@@ -292,7 +292,9 @@ def _index_by_id(registry: dict[str, Any]) -> dict[int, dict[str, Any]]:
     indexed: dict[int, dict[str, Any]] = {}
     for row in repositories:
         if not isinstance(row, dict):
-            raise TypeError("Invalid registry state: repository entry must be an object")
+            raise TypeError(
+                "Invalid registry state: repository entry must be an object"
+            )
         repo_id = row.get("repository_id")
         if isinstance(repo_id, bool) or not isinstance(repo_id, int) or repo_id <= 0:
             raise TypeError(
