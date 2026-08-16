@@ -15,15 +15,40 @@
   "ground_truth_files": [
     {
       "path": "STATE.md",
-      "sha256": "5280c3f0237fb279c776b6a844f7f0523bad3949d866ee9f5c2f7aebe4cfda8f"
+      "sha256": "ddf8ea3670f4d34c32bc7c687d1086a15a0d9cb9cb0a60b42f9030cec3298b7a"
     },
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
-      "sha256": "d11dd6890ff856ae133f73204aa97e7f896fd45d8ab32fc4fb6deaf7c8337f05"
+      "sha256": "c7e1d747d8de952714ea19737cd4fd24263de00814d21b43e65fc765ebba44bb"
     }
   ],
   "hard_correction_role": "system",
   "max_corrections_before_terminal_block": 8,
+  "apex_binding": {
+    "protocol_path": "APEX_ENFORCED_STARTUP.md",
+    "project_direction_authority": "operator_intent",
+    "objective": "maximum_coherent_advance",
+    "state_evolution": "current_state_plus_verified_gain",
+    "context_before_mutation": true,
+    "continuation_before_restart": true,
+    "prior_valid_gains_preserved": true,
+    "artificial_minimization_prohibited": true,
+    "destructive_reduction_prohibited": true,
+    "unearned_state_promotion_prohibited": true,
+    "canonical_labels_are_descriptive_only": true
+  },
+  "execution_state_model": [
+    "OBSERVED",
+    "INFERRED",
+    "HYPOTHESIZED",
+    "PROPOSED",
+    "ATTEMPTED",
+    "EXECUTED",
+    "VERIFIED",
+    "COMMITTED",
+    "DEPLOYED",
+    "OBSERVED_IN_OPERATION"
+  ],
   "operator_execution_contract": {
     "ai_is_project_authority": false,
     "ai_may_invent_project_direction": false,
@@ -32,11 +57,16 @@
     "failure_mode": "fail_closed_execution_death",
     "operator_controls_project_direction": true,
     "required_order": [
-      "context",
-      "plan_with_operator",
-      "work_hard",
-      "excellent_quality",
-      "verify_no_liberties",
+      "context_reconstruction",
+      "continuation_resolution",
+      "operator_intent_binding",
+      "target_state_derivation",
+      "maximum_coherent_path_selection",
+      "hard_execution",
+      "test_and_adversarial_test",
+      "repair",
+      "verification",
+      "preserve_verified_gain",
       "report_last"
     ],
     "two_jobs": [
@@ -62,7 +92,7 @@
     "current_source_open",
     "receipt_validation"
   ],
-  "schema_version": "1.0.2",
+  "schema_version": "1.1.0",
   "security": {
     "log_content": false,
     "log_tool_names": true,
