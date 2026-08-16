@@ -13,14 +13,19 @@ def _receipt() -> dict:
             "authority": "operator_intent",
             "objective": "maximum_coherent_advance",
             "context_reconstructed": True,
+            "prior_state_retrieved": True,
             "continuation_resolved": True,
+            "target_identity_resolved": True,
             "operator_intent_resolved": True,
             "operator_plan_authorized": True,
             "target_state": "integrated APEX startup",
+            "prior_valid_gains_identified": True,
             "prior_valid_gains_preserved": True,
+            "relevant_source_inspected": True,
             "contradiction_status": "resolved",
             "state_model_bound": True,
             "mutation_intent": "authorized",
+            "action_scope": "internal",
             "selected_path": {
                 "id": "continue-and-extend",
                 "operator_alignment": True,
@@ -35,7 +40,7 @@ def _receipt() -> dict:
                 {
                     "claim": "current control-plane source was inspected",
                     "state": "OBSERVED",
-                    "provenance": "github.fetch_file",
+                    "provenance": "github:fetch-file-receipt",
                 }
             ],
         }
@@ -45,6 +50,26 @@ def _receipt() -> dict:
 def test_valid_apex_startup_receipt_passes() -> None:
     policy = load_apex_policy()
     assert validate_apex_startup_receipt(policy, _receipt()) == ()
+
+
+def test_mutation_interlock_fields_are_mandatory() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    for field in (
+        "prior_state_retrieved",
+        "target_identity_resolved",
+        "prior_valid_gains_identified",
+        "relevant_source_inspected",
+    ):
+        receipt["apex_startup"][field] = False
+    errors = validate_apex_startup_receipt(policy, receipt)
+    for field in (
+        "prior_state_retrieved",
+        "target_identity_resolved",
+        "prior_valid_gains_identified",
+        "relevant_source_inspected",
+    ):
+        assert f"apex_startup.{field} must be true" in errors
 
 
 def test_open_contradiction_blocks_startup() -> None:
@@ -63,14 +88,86 @@ def test_artificial_minimization_blocks_selected_path() -> None:
     assert any("artificial_minimization" in error for error in errors)
 
 
-def test_advanced_material_claim_requires_provenance() -> None:
+def test_material_claim_requires_string_provenance() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
     receipt["apex_startup"]["material_claims"] = [
-        {"claim": "deployment happened", "state": "DEPLOYED"}
+        {"claim": "source exists", "state": "OBSERVED", "provenance": {}}
     ]
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert any("provenance is required for DEPLOYED" in error for error in errors)
+    assert any("provenance is required for material claims" in error for error in errors)
+
+
+def test_advanced_material_claim_requires_transition_receipt() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["material_claims"] = [
+        {
+            "claim": "execution verified",
+            "source_state": "EXECUTED",
+            "state": "VERIFIED",
+            "provenance": "github:workflow-run",
+            "transition_evidence": {},
+        }
+    ]
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert any("requires receipt reference: verification_receipt" in error for error in errors)
+
+    receipt["apex_startup"]["material_claims"] = [
+        {
+            "claim": "deployment completed",
+            "source_state": "COMMITTED",
+            "state": "DEPLOYED",
+            "provenance": "provider:deployment",
+            "transition_evidence": {},
+        }
+    ]
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert any("requires receipt reference: deployment_receipt" in error for error in errors)
+
+
+def test_advanced_material_claim_accepts_exact_transition_receipt() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["material_claims"] = [
+        {
+            "claim": "execution verified",
+            "source_state": "EXECUTED",
+            "state": "VERIFIED",
+            "provenance": "github:workflow-run",
+            "transition_evidence": {"verification_receipt": "github-check:12345"},
+        }
+    ]
+    assert validate_apex_startup_receipt(policy, receipt) == ()
+
+
+def test_external_action_requires_named_human_approval() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["action_scope"] = "external"
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert "external action requires apex_startup.named_human_approval" in errors
+
+    receipt["apex_startup"]["named_human_approval"] = {
+        "approver": "Casey Barton",
+        "authorized": True,
+        "approval_ref": "operator-command:turn-user-message",
+    }
+    assert validate_apex_startup_receipt(policy, receipt) == ()
+
+
+def test_generic_or_malformed_external_approval_is_rejected() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["action_scope"] = "external"
+    receipt["apex_startup"]["named_human_approval"] = {
+        "approver": "operator",
+        "authorized": True,
+        "approval_ref": "false",
+    }
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert "named_human_approval.approver must identify a named human" in errors
+    assert "named_human_approval.approval_ref must be a receipt reference" in errors
 
 
 def test_state_transition_requires_exact_evidence() -> None:
@@ -82,7 +179,7 @@ def test_state_transition_requires_exact_evidence() -> None:
         evidence={},
     )
     assert errors == (
-        "state transition ATTEMPTED->EXECUTED requires evidence: execution_receipt",
+        "state transition ATTEMPTED->EXECUTED requires receipt reference: execution_receipt",
     )
     assert validate_state_transition(
         policy,
@@ -90,6 +187,20 @@ def test_state_transition_requires_exact_evidence() -> None:
         "EXECUTED",
         evidence={"execution_receipt": "sha256:abc"},
     ) == ()
+
+
+def test_truthy_non_receipt_evidence_is_rejected() -> None:
+    policy = load_apex_policy()
+    for invalid in ("false", ["receipt"], {"receipt": "x"}, 1, True):
+        errors = validate_state_transition(
+            policy,
+            "ATTEMPTED",
+            "EXECUTED",
+            evidence={"execution_receipt": invalid},
+        )
+        assert errors == (
+            "state transition ATTEMPTED->EXECUTED requires receipt reference: execution_receipt",
+        )
 
 
 def test_unlisted_state_jump_fails_closed() -> None:
