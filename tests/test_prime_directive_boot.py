@@ -195,7 +195,7 @@ def test_combined_boot_request_declares_prime_directive_contract() -> None:
     )
 
     assert request["request_type"] == "glaciereq_prime_directive_auto_boot"
-    assert request["prime_directive_policy"]["schema_version"] == "1.1.0"
+    assert request["prime_directive_policy"]["schema_version"] == "1.2.0"
     assert request["requirements"]["run_memory_search_before_text"] is True
     assert request["requirements"]["read_and_hash_verify_ground_truth_files"] is True
     assert request["requirements"]["enumerate_loaded_tools"] is True
@@ -217,6 +217,10 @@ def test_policy_requires_all_five_startup_stages() -> None:
     ]
     assert policy["apex_binding"]["project_direction_authority"] == "operator_intent"
     assert policy["apex_binding"]["unearned_state_promotion_prohibited"] is True
+    assert policy["apex_binding"]["operator_fidelity_required"] is True
+    assert policy["apex_binding"]["instruction_displacement_is_execution_failure"] is True
+    assert policy["apex_binding"]["uncertainty_routes_to_investigation"] is True
+    assert policy["apex_binding"]["governance_is_subordinate_to_function"] is True
 
 
 def test_all_authority_bearing_startup_files_are_pinned() -> None:
