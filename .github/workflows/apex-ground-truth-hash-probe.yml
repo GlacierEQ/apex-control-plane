@@ -1,0 +1,19 @@
+name: APEX Ground Truth Hash Probe
+
+on:
+  push:
+    branches:
+      - apex/enforced-startup-integration-20260815
+
+permissions:
+  contents: read
+
+jobs:
+  hash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Emit authoritative startup SHA-256
+        run: |
+          sha256sum APEX_ENFORCED_STARTUP.md
+          sha256sum OPERATOR_EXECUTION_LAW.md
