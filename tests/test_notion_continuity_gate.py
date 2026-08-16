@@ -98,7 +98,9 @@ def _valid_receipt(*, existing: bool = True) -> dict:
             ),
             "dependencies": [],
             "related_nodes": [],
-            "link_plan": ["extend the existing startup gate and preserve prior valid capability"],
+            "link_plan": [
+                "extend the existing startup gate and preserve prior valid capability"
+            ],
             "decision": "integrate" if existing else "standalone_last_resort",
             "create_new_root": not existing,
             "abandon_existing": False,
@@ -118,8 +120,14 @@ def test_policy_is_valid_and_requires_five_continuity_pages() -> None:
         "integration_map",
     ]
     assert len(policy["canonical_notion_pages"]) == 5
-    assert policy["authority_semantics"]["project_direction_authority"] == "operator_intent"
-    assert policy["authority_semantics"]["canonical_fields_do_not_override_operator_intent"] is True
+    assert (
+        policy["authority_semantics"]["project_direction_authority"]
+        == "operator_intent"
+    )
+    assert (
+        policy["authority_semantics"]["canonical_fields_do_not_override_operator_intent"]
+        is True
+    )
 
 
 def test_valid_existing_work_receipt_passes() -> None:
@@ -141,10 +149,24 @@ def test_missing_continuity_page_blocks() -> None:
     assert any("must load at least 5 continuity pages" in error for error in errors)
 
 
+def test_required_page_id_and_role_must_match_same_record() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt()
+    pages = receipt["notion_boot_analysis"]["pages_loaded"]
+    pages[0]["role"], pages[1]["role"] = pages[1]["role"], pages[0]["role"]
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert any("continuity Notion page role mismatch" in error for error in errors)
+
+
 def test_identity_expectations_capabilities_and_state_are_mandatory() -> None:
     policy = load_notion_policy()
     receipt = _valid_receipt()
-    fields = ("identity_loaded", "expectations_loaded", "capabilities_loaded", "current_state_loaded")
+    fields = (
+        "identity_loaded",
+        "expectations_loaded",
+        "capabilities_loaded",
+        "current_state_loaded",
+    )
     for field in fields:
         receipt["notion_boot_analysis"][field] = False
     errors = validate_notion_continuity_receipt(policy, receipt)
@@ -170,6 +192,17 @@ def test_found_work_requires_existing_owner_metadata() -> None:
     errors = validate_notion_continuity_receipt(policy, receipt)
     assert "found existing work requires existing owner metadata" in errors
     assert "found existing work requires decision=extend or operator_override" in errors
+
+
+def test_discovery_owner_rejects_non_mapping_values() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt(existing=False)
+    receipt["existing_work_discovery"]["canonical_owner"] = "GitHub/repo"
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert (
+        "existing_work_discovery.canonical_owner must be an object or null" in errors
+    )
+    assert "none_found existing work requires canonical_owner=null" in errors
 
 
 def test_existing_work_discovery_must_search_notion_and_another_system() -> None:
@@ -198,13 +231,39 @@ def test_existing_work_new_root_requires_explicit_operator_override() -> None:
     receipt["integration_map"]["decision"] = "operator_override"
     receipt["integration_map"]["create_new_root"] = True
     errors = validate_notion_continuity_receipt(policy, receipt)
-    assert "integration_map.create_new_root requires explicit Operator override when work exists" in errors
+    assert (
+        "integration_map.create_new_root requires explicit Operator override when work exists"
+        in errors
+    )
 
     receipt["integration_map"]["operator_override"] = {
         "authorized": True,
         "reason": "Operator explicitly directed a separate root while preserving existing capability.",
     }
     assert validate_notion_continuity_receipt(policy, receipt) == ()
+
+
+def test_operator_override_requires_nonblank_string_reason() -> None:
+    policy = load_notion_policy()
+    for invalid in (None, {}, [], "   "):
+        receipt = _valid_receipt()
+        receipt["existing_work_discovery"]["decision"] = "operator_override"
+        receipt["integration_map"]["decision"] = "operator_override"
+        receipt["integration_map"]["create_new_root"] = True
+        receipt["integration_map"]["operator_override"] = {
+            "authorized": True,
+            "reason": invalid,
+        }
+        errors = validate_notion_continuity_receipt(policy, receipt)
+        assert any("requires explicit Operator override" in error for error in errors)
+
+
+def test_integration_owner_rejects_non_mapping_values() -> None:
+    policy = load_notion_policy()
+    receipt = _valid_receipt(existing=False)
+    receipt["integration_map"]["owner"] = "GitHub/repo"
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    assert "integration_map.owner must be an object or null" in errors
 
 
 def test_existing_work_cannot_be_abandoned() -> None:
@@ -228,8 +287,14 @@ def test_request_declares_apex_continuity_laws() -> None:
     request = build_notion_preflight_request(policy, task="continue current build")
     assert request["request_type"] == "glaciereq_notion_continuity_preflight"
     assert request["requirements"]["notion_before_user_facing_text"] is True
-    assert request["requirements"]["determine_whether_work_already_exists_before_starting"] is True
-    assert request["requirements"]["discover_owner_consumers_dependencies_and_overlap_before_making"] is True
+    assert (
+        request["requirements"]["determine_whether_work_already_exists_before_starting"]
+        is True
+    )
+    assert (
+        request["requirements"]["discover_owner_consumers_dependencies_and_overlap_before_making"]
+        is True
+    )
     assert request["requirements"]["continue_and_link_before_restarting"] is True
     assert request["requirements"]["operator_override_may_authorize_new_root"] is True
 
