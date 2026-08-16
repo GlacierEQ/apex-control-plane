@@ -137,7 +137,7 @@ def _record_first_three_stages(enforcer: StartupGateEnforcer) -> None:
     )
     enforcer.record_tool_result(
         "api_tool.list_resources",
-        {"tools": [{"name": "GitHub.fetch_file"}]},
+        {"resources": [{"name": "GitHub.fetch_file"}]},
         call_id="tools-1",
         success=True,
     )
