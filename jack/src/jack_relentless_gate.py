@@ -149,7 +149,9 @@ def _nonempty_string(receipt: Mapping[str, object], name: str) -> str:
 def _validate_action_state(row: Mapping[str, object], index: int) -> None:
     state = str(row.get("state", "")).strip().upper()
     if state not in APEX_STATES:
-        raise ValueError(f"actions_executed[{index}].state must be an APEX execution state")
+        raise ValueError(
+            f"actions_executed[{index}].state must be an APEX execution state"
+        )
     executed = row.get("executed") is True
     verified = row.get("verified") is True
     if executed and state not in _EXECUTED_OR_STRONGER:
@@ -160,8 +162,17 @@ def _validate_action_state(row: Mapping[str, object], index: int) -> None:
         raise ValueError(
             f"actions_executed[{index}] claims verified=true but state={state} is weaker than VERIFIED"
         )
-    if executed and not str(row.get("provider_receipt", "")).strip():
-        raise ValueError(f"actions_executed[{index}] executed action requires provider_receipt")
+    if verified and not executed:
+        raise ValueError(
+            f"actions_executed[{index}] verified action requires executed=true"
+        )
+    provider_receipt = row.get("provider_receipt")
+    if (executed or verified) and (
+        not isinstance(provider_receipt, str) or not provider_receipt.strip()
+    ):
+        raise ValueError(
+            f"actions_executed[{index}] executed or verified action requires string provider_receipt"
+        )
 
 
 def validate_receipt(receipt: Mapping[str, object]) -> None:
@@ -223,7 +234,9 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
         and str(row.get("state", "")).strip().upper() in _EXECUTED_OR_STRONGER
         for row in actions
     ):
-        raise ValueError("material_action_executed requires an EXECUTED-or-stronger action receipt")
+        raise ValueError(
+            "material_action_executed requires an EXECUTED-or-stronger action receipt"
+        )
 
     if gates.verification_passed and not any(
         isinstance(row, Mapping)
@@ -234,15 +247,21 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
     ):
         raise ValueError("verification_passed requires a passed verification receipt")
 
-    if gates.persistence_written and not any(isinstance(v, str) and v.strip() for v in persistence):
+    if gates.persistence_written and not any(
+        isinstance(v, str) and v.strip() for v in persistence
+    ):
         raise ValueError("persistence_written requires persistence_receipts")
 
-    if gates.readback_verified and not any(isinstance(v, str) and v.strip() for v in readback):
+    if gates.readback_verified and not any(
+        isinstance(v, str) and v.strip() for v in readback
+    ):
         raise ValueError("readback_verified requires readback_receipts")
 
     expected = evaluate(gates, exact_blockers=normalized_blockers)
     if status is not expected:
-        raise ValueError(f"receipt status {status.value} contradicts gate state; expected {expected.value}")
+        raise ValueError(
+            f"receipt status {status.value} contradicts gate state; expected {expected.value}"
+        )
     if status is Status.COMPLETE and not completion_ready(gates):
         raise ValueError("COMPLETE requires every completion gate")
     if status is Status.EXECUTING and not execution_ready(gates):
@@ -254,4 +273,6 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
 def assert_completion(g: GateState) -> None:
     gaps = missing(g)
     if gaps:
-        raise RuntimeError("Jack completion claim blocked; missing gates: " + ", ".join(gaps))
+        raise RuntimeError(
+            "Jack completion claim blocked; missing gates: " + ", ".join(gaps)
+        )
