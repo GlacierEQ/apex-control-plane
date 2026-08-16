@@ -1,4 +1,9 @@
-"""Fail-closed Notion-first continuity preflight for the APEX control-plane boot."""
+"""Fail-closed Notion-first continuity preflight for the APEX control-plane boot.
+
+Compatibility fields that contain the word ``canonical`` remain supported for
+existing receipts, but they are topology/source labels only. They never confer
+project-direction authority over explicit Operator intent.
+"""
 from __future__ import annotations
 
 import json
@@ -80,6 +85,14 @@ def _tool(stage: str, value: Any, aliases: Sequence[str], loaded: set[str], erro
         errors.append(f"{stage}.tool must appear in tool_inventory.loaded_tools")
 
 
+def _operator_override_authorized(discovery: Mapping[str, Any], integration: Mapping[str, Any]) -> bool:
+    candidates = (discovery.get("operator_override"), integration.get("operator_override"))
+    for row in candidates:
+        if isinstance(row, Mapping) and row.get("authorized") is True and str(row.get("reason", "")).strip():
+            return True
+    return False
+
+
 def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mapping[str, Any]) -> tuple[str, ...]:
     errors: list[str] = []
     loaded = _inventory(receipt, errors)
@@ -130,22 +143,23 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
                 roles.add(role)
             minimum = int(req.get("minimum_pages_loaded", 1))
             if len(ids - {""}) < minimum:
-                errors.append(f"notion_boot_analysis must load at least {minimum} canonical pages")
+                errors.append(f"notion_boot_analysis must load at least {minimum} continuity pages")
         for row in policy.get("canonical_notion_pages", ()):
             if not isinstance(row, Mapping):
                 continue
             page_id = str(row.get("id", "")).strip().lower()
             role = _norm(row.get("role"))
             if page_id and page_id not in ids:
-                errors.append(f"missing canonical Notion page: {page_id}")
+                errors.append(f"missing continuity Notion page: {page_id}")
             if role and role not in roles:
-                errors.append(f"missing canonical Notion role: {role}")
+                errors.append(f"missing continuity Notion role: {role}")
 
     discovery = receipt.get("existing_work_discovery")
     found_status = ""
-    canonical_owner: Mapping[str, Any] | None = None
+    existing_owner: Mapping[str, Any] | None = None
     if not isinstance(discovery, Mapping):
         errors.append("existing_work_discovery must be an object")
+        discovery = {}
     else:
         _tool("existing_work_discovery", discovery.get("tool"), aliases.get("work_search", ()), loaded, errors)
         if not str(discovery.get("query", "")).strip():
@@ -173,19 +187,20 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
         if not isinstance(discovery.get("candidates"), list):
             errors.append("existing_work_discovery.candidates must be an array")
         owner = discovery.get("canonical_owner")
-        canonical_owner = owner if isinstance(owner, Mapping) else None
+        existing_owner = owner if isinstance(owner, Mapping) else None
         decision = _norm(discovery.get("decision"))
+        allowed_found_decisions = {_norm(value) for value in req.get("found_work_decisions", ("extend",))}
         if found_status == "found":
             if not candidates:
                 errors.append("found existing work requires at least one candidate")
-            if canonical_owner is None:
-                errors.append("found existing work requires canonical_owner")
-            if decision != "extend":
-                errors.append("found existing work requires decision=extend")
+            if existing_owner is None:
+                errors.append("found existing work requires existing owner metadata")
+            if decision not in allowed_found_decisions:
+                errors.append("found existing work requires decision=extend or operator_override")
         elif found_status == "none_found":
             if candidates:
                 errors.append("none_found existing work requires zero candidates")
-            if canonical_owner is not None:
+            if existing_owner is not None:
                 errors.append("none_found existing work requires canonical_owner=null")
             if decision != "create_if_needed":
                 errors.append("none_found existing work requires decision=create_if_needed")
@@ -193,6 +208,7 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
     integration = receipt.get("integration_map")
     if not isinstance(integration, Mapping):
         errors.append("integration_map must be an object")
+        integration = {}
     else:
         if _norm(integration.get("status")) != _norm(req.get("integration_status", "complete")):
             errors.append("integration_map.status must be complete")
@@ -210,6 +226,7 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
             errors.append("integration_map.link_plan must contain at least one link")
         if integration.get("abandon_existing") is not False:
             errors.append("integration_map.abandon_existing must be false")
+
         relationships: list[Any] = []
         for key in ("consumers", "dependencies", "related_nodes"):
             value = integration.get(key)
@@ -217,20 +234,28 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
                 errors.append(f"integration_map.{key} must be an array")
             else:
                 relationships.extend(value)
+
         owner = integration.get("owner")
         decision = _norm(integration.get("decision"))
+        override = _operator_override_authorized(discovery, integration)
         if found_status == "found":
             if not isinstance(owner, Mapping):
                 errors.append("integration_map.owner is required when work exists")
-            elif canonical_owner is not None:
-                a = (_norm(canonical_owner.get("system")), str(canonical_owner.get("id", "")).strip())
+            elif existing_owner is not None:
+                a = (_norm(existing_owner.get("system")), str(existing_owner.get("id", "")).strip())
                 b = (_norm(owner.get("system")), str(owner.get("id", "")).strip())
                 if a != b:
-                    errors.append("integration_map.owner must match existing_work_discovery.canonical_owner")
-            if integration.get("create_new_root") is not False:
-                errors.append("integration_map.create_new_root must be false when work exists")
-            if decision != "integrate":
-                errors.append("integration_map.decision must be integrate when work exists")
+                    errors.append("integration_map.owner must match discovered existing owner metadata")
+
+            wants_new_root = integration.get("create_new_root") is True
+            if wants_new_root:
+                if not override:
+                    errors.append("integration_map.create_new_root requires explicit Operator override when work exists")
+                if decision != "operator_override":
+                    errors.append("new root with existing work requires decision=operator_override")
+            else:
+                if decision != "integrate":
+                    errors.append("integration_map.decision must be integrate when continuing existing work")
         elif found_status == "none_found":
             if relationships or isinstance(owner, Mapping):
                 if decision != "integrate":
@@ -255,14 +280,16 @@ def build_notion_preflight_request(policy: Mapping[str, Any], *, task: str) -> d
         "task": task,
         "stage_order": list(policy.get("stage_order", ())),
         "canonical_notion_pages": list(policy.get("canonical_notion_pages", ())),
+        "authority_semantics": dict(policy.get("authority_semantics", {})),
         "requirements": {
             "notion_before_user_facing_text": True,
             "recover_identity_expectations_capabilities_and_current_state": True,
             "determine_whether_work_already_exists_before_starting": True,
-            "resolve_one_canonical_owner_before_continuing": True,
+            "resolve_existing_owner_as_topology_not_project_authority": True,
             "discover_owner_consumers_dependencies_and_overlap_before_making": True,
-            "extend_and_link_before_creating_new_root": True,
-            "canonical_conflicts_block_progress": True,
+            "continue_and_link_before_restarting": True,
+            "operator_override_may_authorize_new_root": True,
+            "topology_conflicts_require_resolution": True,
         },
     }
 
