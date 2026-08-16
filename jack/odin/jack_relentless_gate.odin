@@ -1,5 +1,9 @@
 package jack_relentless
 
+// APEX project direction is controlled by OPERATOR_INTENT.
+// The historical canonical_owner_resolved gate name is retained only for
+// compatibility and means existing-work topology has been resolved.
+
 Execution_Status :: enum {
     RECOVERING,
     EXECUTING,
@@ -7,13 +11,26 @@ Execution_Status :: enum {
     COMPLETE,
 }
 
+Apex_Execution_State :: enum {
+    OBSERVED,
+    INFERRED,
+    HYPOTHESIZED,
+    PROPOSED,
+    ATTEMPTED,
+    EXECUTED,
+    VERIFIED,
+    COMMITTED,
+    DEPLOYED,
+    OBSERVED_IN_OPERATION,
+}
+
 Gate_State :: struct {
-    authority_valid: bool,
+    authority_valid: bool, // OPERATOR_INTENT bound for project direction
     safety_boundary_clear: bool,
     continuity_loaded: bool,
     resources_invoked: bool,
     existing_work_checked: bool,
-    canonical_owner_resolved: bool,
+    canonical_owner_resolved: bool, // topology only, not project authority
     objective_preserved: bool,
     required_sources_opened: bool,
     contradictions_preserved: bool,
