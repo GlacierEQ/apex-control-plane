@@ -1,14 +1,13 @@
 #!/bin/bash
-# install_hooks.sh — Install pre-commit hook to block secret commits
-# Run once: bash scripts/install_hooks.sh
+set -euo pipefail
 
-HOOK_PATH=".git/hooks/pre-commit"
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
 
-cat > "$HOOK_PATH" << 'HOOK'
-#!/bin/bash
-bash scripts/rotate_check.sh
-HOOK
+# Use a tracked hook directory so the enforcement is versioned with the repo
+# instead of disappearing inside one workstation's .git directory.
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
 
-chmod +x "$HOOK_PATH"
-echo "Pre-commit hook installed at $HOOK_PATH"
-echo "Secrets will now be blocked before every commit."
+echo "APEX tracked hooks installed: core.hooksPath=.githooks"
+echo "Pre-commit now blocks secret leakage and operator-fidelity regression."
