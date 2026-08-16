@@ -20,6 +20,14 @@
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
       "sha256": "c7e1d747d8de952714ea19737cd4fd24263de00814d21b43e65fc765ebba44bb"
+    },
+    {
+      "path": "APEX_ENFORCED_STARTUP.md",
+      "sha256": "6186a343a5165350651a44e6f71e88bd433aabf86fe540357b0289c623972b93"
+    },
+    {
+      "path": "OPERATOR_EXECUTION_LAW.md",
+      "sha256": "d4f3ff5730884ee7844c3824ead86b8b08600527b8b2e8a55a903dc8387edee0"
     }
   ],
   "hard_correction_role": "system",
