@@ -1,0 +1,25 @@
+name: APEX Estate Non-Regression
+description: Reject high-confidence capability contraction and unresolved merge corruption without turning proof into the product ceiling.
+
+inputs:
+  base:
+    description: Base commit SHA/ref
+    required: true
+  head:
+    description: Head commit SHA/ref
+    required: true
+  authorization:
+    description: Exact-diff Operator reduction authorization path
+    required: false
+    default: .apex/operator-reduction-authorization.json
+
+runs:
+  using: composite
+  steps:
+    - name: APEX capability non-regression
+      shell: bash
+      run: |
+        python "${GITHUB_ACTION_PATH}/enforce.py" \
+          --base "${{ inputs.base }}" \
+          --head "${{ inputs.head }}" \
+          --authorization "${{ inputs.authorization }}"
