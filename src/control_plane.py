@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """APEX control-plane entrypoint with mandatory enforced startup.
 
-When executed, this wrapper proves the existing continuity and Prime Directive
-contracts, then binds them to the APEX Genesis startup contract before loading
-the preserved runtime. When imported by tests or other modules, it re-exports
-the preserved runtime API without starting the boot gate.
+When executed, this wrapper proves continuity, Prime Directive, literal Operator
+fidelity, and APEX Genesis contracts before loading the preserved runtime. When
+imported by tests or other modules, it re-exports the preserved runtime API
+without starting the boot gate.
 """
 from __future__ import annotations
 
@@ -24,6 +24,10 @@ if __name__ == "__main__":
         automatic_notion_continuity_preflight,
         get_in_process_notion_validation,
     )
+    from operator_fidelity_preflight import (
+        automatic_operator_fidelity_preflight,
+        get_in_process_operator_fidelity_validation,
+    )
     from prime_directive_boot import (
         automatic_prime_directive_boot,
         get_in_process_boot_validation,
@@ -37,6 +41,8 @@ if __name__ == "__main__":
             automatic_notion_continuity_preflight()
         if get_in_process_boot_validation() is None:
             automatic_prime_directive_boot()
+        if get_in_process_operator_fidelity_validation() is None:
+            automatic_operator_fidelity_preflight()
         if get_in_process_apex_validation() is None:
             automatic_apex_enforced_startup()
     except SystemExit:
@@ -46,6 +52,7 @@ if __name__ == "__main__":
             "boot_status": "blocked",
             "notion_continuity_status": "blocked",
             "prime_directive_status": "blocked",
+            "operator_fidelity_status": "blocked",
             "apex_startup_status": "blocked",
             "error": f"{type(exc).__name__}: {exc}",
             "external_action_authorized": False,
