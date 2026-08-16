@@ -56,7 +56,10 @@ def test_classification_matches_tokens_not_substrings():
 
 def test_registry_declares_classification_is_not_project_authority():
     registry = build_registry([repo(10, "apex-control-plane")])
-    assert registry["classification_semantics"] == "descriptive_topology_only_not_project_authority"
+    assert (
+        registry["classification_semantics"]
+        == "descriptive_topology_only_not_project_authority"
+    )
 
 
 def test_name_signature_collapses_backup_and_version_suffixes():
@@ -126,7 +129,7 @@ def test_load_previous_rejects_corrupt_registry(tmp_path, monkeypatch):
     registry_path = tmp_path / "repo_registry.json"
     registry_path.write_text('{"schema_version": 1, "owner": "GlacierEQ"}')
     monkeypatch.setattr(scan_repos, "REGISTRY_PATH", registry_path)
-    with pytest.raises(RuntimeError, match="Invalid registry state"):
+    with pytest.raises(TypeError, match="Invalid registry state"):
         load_previous()
 
 
