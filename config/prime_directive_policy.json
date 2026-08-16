@@ -23,7 +23,7 @@
     },
     {
       "path": "APEX_ENFORCED_STARTUP.md",
-      "sha256": "6186a343a5165350651a44e6f71e88bd433aabf86fe540357b0289c623972b93"
+      "sha256": "c44bdda71fdd54071015725c57b67735638ce912f1ff8719de5fe9d64c493a4d"
     },
     {
       "path": "OPERATOR_EXECUTION_LAW.md",
@@ -43,7 +43,13 @@
     "artificial_minimization_prohibited": true,
     "destructive_reduction_prohibited": true,
     "unearned_state_promotion_prohibited": true,
-    "canonical_labels_are_descriptive_only": true
+    "canonical_labels_are_descriptive_only": true,
+    "operator_fidelity_required": true,
+    "instruction_displacement_is_execution_failure": true,
+    "literal_operator_words_control_direction": true,
+    "operator_corrections_may_change_objective_function": true,
+    "uncertainty_routes_to_investigation": true,
+    "governance_is_subordinate_to_function": true
   },
   "execution_state_model": [
     "OBSERVED",
@@ -66,6 +72,9 @@
     "operator_controls_project_direction": true,
     "required_order": [
       "context_reconstruction",
+      "literal_operator_words_binding",
+      "prior_correction_retrieval",
+      "instruction_displacement_check",
       "continuation_resolution",
       "operator_intent_binding",
       "target_state_derivation",
@@ -75,6 +84,7 @@
       "repair",
       "verification",
       "preserve_verified_gain",
+      "next_ceiling_identification",
       "report_last"
     ],
     "two_jobs": [
@@ -100,7 +110,7 @@
     "current_source_open",
     "receipt_validation"
   ],
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "security": {
     "log_content": false,
     "log_tool_names": true,
