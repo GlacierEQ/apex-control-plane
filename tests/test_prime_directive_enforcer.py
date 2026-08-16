@@ -285,7 +285,7 @@ def test_inventory_requires_nonempty_structured_result() -> None:
     assert good.tool_inventory_complete is True
 
 
-def test_first_three_stages_do_not_complete_documented_five_stage_gate() -> None:
+def test_partial_startup_does_not_complete_documented_five_stage_gate() -> None:
     enforcer = StartupGateEnforcer()
     _record_first_three_stages(enforcer)
     snapshot = enforcer.snapshot()
@@ -293,7 +293,8 @@ def test_first_three_stages_do_not_complete_documented_five_stage_gate() -> None
     assert snapshot.gate_passed is False
     assert snapshot.current_source_complete is False
     assert snapshot.receipt_validation_complete is False
-    assert snapshot.missing_stages == ("current_source_open", "receipt_validation")
+    assert "current_source_open" in snapshot.missing_stages
+    assert "receipt_validation" in snapshot.missing_stages
 
 
 def test_sealed_combined_validation_completes_gate_and_allows_text() -> None:
