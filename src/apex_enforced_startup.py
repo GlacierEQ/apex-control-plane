@@ -7,12 +7,12 @@ execution-state transitions.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
 import json
 import os
-from pathlib import Path
 import sys
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from auto_boot import EXIT_BOOT_BLOCKED, BootError
@@ -65,11 +65,17 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         "execution_states",
         "transition_requirements",
         "path_requirements",
+        "mutation_interlock",
         "completion_gate",
     }
     missing = sorted(required - value.keys())
     if missing:
         raise BootError("APEX startup policy missing: " + ", ".join(missing))
+    interlock = value.get("mutation_interlock")
+    if not isinstance(interlock, dict) or not isinstance(
+        interlock.get("required_true_fields"), list
+    ):
+        raise BootError("APEX mutation_interlock.required_true_fields must be an array")
     return value
 
 
@@ -78,7 +84,58 @@ def _norm(value: Any) -> str:
 
 
 def _nonempty_text(value: Any) -> bool:
-    return bool(str(value or "").strip())
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _receipt_ref(value: Any) -> bool:
+    if not _nonempty_text(value):
+        return False
+    prefix, separator, locator = value.strip().partition(":")
+    return bool(separator and prefix.strip() and locator.strip())
+
+
+def validate_state_transition(
+    policy: Mapping[str, Any],
+    from_state: str,
+    to_state: str,
+    *,
+    evidence: Mapping[str, Any] | None = None,
+) -> tuple[str, ...]:
+    """Validate a material execution-state transition against APEX proof rules."""
+    source = str(from_state).strip().upper()
+    target = str(to_state).strip().upper()
+    states = {str(value).strip().upper() for value in policy.get("execution_states", ())}
+    if source not in states or target not in states:
+        return ("state transition uses an unknown execution state",)
+
+    key = f"{source}->{target}"
+    requirement = str(policy.get("transition_requirements", {}).get(key, "")).strip()
+    if not requirement:
+        return (f"state transition {key} is not explicitly authorized",)
+
+    proof = evidence if isinstance(evidence, Mapping) else {}
+    if not _receipt_ref(proof.get(requirement)):
+        return (f"state transition {key} requires receipt reference: {requirement}",)
+    return ()
+
+
+def _validate_external_approval(row: Mapping[str, Any], errors: list[str]) -> None:
+    approval = row.get("named_human_approval")
+    if not isinstance(approval, Mapping):
+        errors.append("external action requires apex_startup.named_human_approval")
+        return
+    approver = approval.get("approver")
+    if not _nonempty_text(approver) or _norm(approver) in {
+        "human",
+        "operator",
+        "unknown",
+        "user",
+    }:
+        errors.append("named_human_approval.approver must identify a named human")
+    if approval.get("authorized") is not True:
+        errors.append("named_human_approval.authorized must be true")
+    if not _receipt_ref(approval.get("approval_ref")):
+        errors.append("named_human_approval.approval_ref must be a receipt reference")
 
 
 def validate_apex_startup_receipt(
@@ -101,13 +158,13 @@ def validate_apex_startup_receipt(
         if field_name not in row:
             errors.append(f"apex_startup.{field_name} is required")
 
-    for boolean_name in (
-        "context_reconstructed",
-        "continuation_resolved",
-        "operator_intent_resolved",
-        "prior_valid_gains_preserved",
-        "state_model_bound",
-    ):
+    interlock = policy.get("mutation_interlock", {})
+    required_true_fields = (
+        interlock.get("required_true_fields", ())
+        if isinstance(interlock, Mapping)
+        else ()
+    )
+    for boolean_name in required_true_fields:
         if row.get(boolean_name) is not True:
             errors.append(f"apex_startup.{boolean_name} must be true")
 
@@ -143,65 +200,71 @@ def validate_apex_startup_receipt(
     mutation = _norm(row.get("mutation_intent", "none"))
     if mutation not in {"none", "authorized", "blocked"}:
         errors.append("apex_startup.mutation_intent must be none, authorized, or blocked")
-    if mutation == "authorized" and row.get("operator_plan_authorized") is not True:
+
+    action_scope = _norm(row.get("action_scope"))
+    allowed_scopes = {_norm(value) for value in policy.get("action_scopes", ())}
+    if action_scope not in allowed_scopes:
         errors.append(
-            "authorized mutation requires apex_startup.operator_plan_authorized=true"
+            "apex_startup.action_scope must be one of: "
+            + ", ".join(sorted(allowed_scopes))
         )
+    if mutation == "none" and action_scope != "none":
+        errors.append("mutation_intent=none requires action_scope=none")
+    if mutation == "authorized":
+        if row.get("operator_plan_authorized") is not True:
+            errors.append(
+                "authorized mutation requires apex_startup.operator_plan_authorized=true"
+            )
+        if action_scope not in {"internal", "external"}:
+            errors.append("authorized mutation requires internal or external action_scope")
+        if action_scope == "external" and isinstance(interlock, Mapping):
+            if interlock.get("external_action_requires_named_human_approval") is True:
+                _validate_external_approval(row, errors)
 
     claims = row.get("material_claims", [])
     if not isinstance(claims, list):
         errors.append("apex_startup.material_claims must be an array when supplied")
     else:
         states = {str(value).strip().upper() for value in policy.get("execution_states", ())}
+        promoted_states = {
+            "ATTEMPTED",
+            "EXECUTED",
+            "VERIFIED",
+            "COMMITTED",
+            "DEPLOYED",
+            "OBSERVED_IN_OPERATION",
+        }
         for index, claim in enumerate(claims):
+            prefix = f"apex_startup.material_claims[{index}]"
             if not isinstance(claim, Mapping):
-                errors.append(f"apex_startup.material_claims[{index}] must be an object")
+                errors.append(f"{prefix} must be an object")
                 continue
             if not _nonempty_text(claim.get("claim")):
-                errors.append(f"apex_startup.material_claims[{index}].claim is required")
+                errors.append(f"{prefix}.claim is required")
             state = str(claim.get("state", "")).strip().upper()
             if state not in states:
-                errors.append(
-                    f"apex_startup.material_claims[{index}].state is not a valid execution state"
+                errors.append(f"{prefix}.state is not a valid execution state")
+                continue
+            if not _nonempty_text(claim.get("provenance")):
+                errors.append(f"{prefix}.provenance is required for material claims")
+            if state in promoted_states:
+                source_state = str(claim.get("source_state", "")).strip().upper()
+                evidence = claim.get("transition_evidence")
+                if source_state not in states:
+                    errors.append(f"{prefix}.source_state is required for {state}")
+                    continue
+                if not isinstance(evidence, Mapping):
+                    errors.append(f"{prefix}.transition_evidence is required for {state}")
+                    continue
+                transition_errors = validate_state_transition(
+                    policy,
+                    source_state,
+                    state,
+                    evidence=evidence,
                 )
-            if state in {
-                "OBSERVED",
-                "EXECUTED",
-                "VERIFIED",
-                "COMMITTED",
-                "DEPLOYED",
-                "OBSERVED_IN_OPERATION",
-            } and not _nonempty_text(claim.get("provenance")):
-                errors.append(
-                    f"apex_startup.material_claims[{index}].provenance is required for {state}"
-                )
+                errors.extend(f"{prefix}: {error}" for error in transition_errors)
 
     return tuple(errors)
-
-
-def validate_state_transition(
-    policy: Mapping[str, Any],
-    from_state: str,
-    to_state: str,
-    *,
-    evidence: Mapping[str, Any] | None = None,
-) -> tuple[str, ...]:
-    """Validate a material execution-state transition against APEX proof rules."""
-    source = str(from_state).strip().upper()
-    target = str(to_state).strip().upper()
-    states = {str(value).strip().upper() for value in policy.get("execution_states", ())}
-    if source not in states or target not in states:
-        return ("state transition uses an unknown execution state",)
-
-    key = f"{source}->{target}"
-    requirement = str(policy.get("transition_requirements", {}).get(key, "")).strip()
-    if not requirement:
-        return (f"state transition {key} is not explicitly authorized",)
-
-    proof = dict(evidence or {})
-    if not proof.get(requirement):
-        return (f"state transition {key} requires evidence: {requirement}",)
-    return ()
 
 
 def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[str, Any]:
@@ -222,6 +285,7 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
             "eliminate_artificial_minimization": True,
             "receipt_bind_material_action_claims": True,
             "verify_before_state_promotion": True,
+            "external_actions_require_named_human_approval": True,
             "integrate_only_verified_gain": True,
         },
         "receipt_contract": {
@@ -229,14 +293,24 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
                 "authority": "operator_intent",
                 "objective": "maximum_coherent_advance",
                 "context_reconstructed": True,
+                "prior_state_retrieved": True,
                 "continuation_resolved": True,
+                "target_identity_resolved": True,
                 "operator_intent_resolved": True,
                 "operator_plan_authorized": "boolean when mutation is authorized",
                 "target_state": "non-empty string",
+                "prior_valid_gains_identified": True,
                 "prior_valid_gains_preserved": True,
+                "relevant_source_inspected": True,
                 "contradiction_status": "none|resolved|open_blocker",
                 "state_model_bound": True,
                 "mutation_intent": "none|authorized|blocked",
+                "action_scope": "none|internal|external",
+                "named_human_approval": {
+                    "approver": "named human; required for external actions",
+                    "authorized": True,
+                    "approval_ref": "provider-or-conversation:receipt-reference",
+                },
                 "selected_path": {
                     "id": "non-empty string",
                     **dict(policy.get("path_requirements", {})),
@@ -246,7 +320,11 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
                     {
                         "claim": "material claim",
                         "state": "one APEX execution state",
-                        "provenance": "required for evidence-bearing states",
+                        "source_state": "immediately preceding state when promoted",
+                        "provenance": "required source reference",
+                        "transition_evidence": {
+                            "required_transition_key": "provider:receipt-reference"
+                        },
                     }
                 ],
             }
@@ -272,7 +350,11 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
 
     if receipt is None:
         print(
-            json.dumps(build_apex_startup_request(policy, task=task), ensure_ascii=False, sort_keys=True),
+            json.dumps(
+                build_apex_startup_request(policy, task=task),
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
             file=sys.stderr,
         )
         sys.stderr.flush()
