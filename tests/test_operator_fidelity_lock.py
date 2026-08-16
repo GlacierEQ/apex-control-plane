@@ -1,0 +1,108 @@
+from __future__ import annotations
+
+import os
+
+from operator_fidelity_lock import validate_operator_fidelity_lock
+from operator_fidelity_preflight import digest_operator_words
+
+
+def _receipt() -> dict:
+    words = [
+        "Context first hard work second answer last",
+        "DO NOT LOOK DOWN - you look UP",
+        "Powerful code elite excellence",
+        "Function before governance; governance serves function",
+    ]
+    return {
+        "operator_fidelity": {
+            "failure_class": "INSTRUCTION_DISPLACEMENT",
+            "authority": "operator_intent",
+            "objective": "maximum_coherent_advance",
+            "direction": "look_up",
+            "literal_operator_words_preserved": True,
+            "explicit_prohibitions_bound": True,
+            "relevant_corrections_loaded": True,
+            "instruction_displacement_checked": True,
+            "objective_function_matches_operator": True,
+            "uncertainty_routed_to_investigation": True,
+            "governance_subordinate_to_function": True,
+            "prior_valid_gains_preserved": True,
+            "operator_words_digest": digest_operator_words(*words),
+            "literal_constraints": words,
+            "correction_present": True,
+            "objective_function_reassessed": True,
+            "corrections_applied": ["restore upward functional objective"],
+            "correction_effect": "maximum coherent advance controls path selection",
+            "operator_directed_reduction": False,
+            "selected_path": {
+                "literal_instruction_fidelity": True,
+                "instruction_displacement": False,
+                "minimum_scope_default": False,
+                "governance_first": False,
+                "permission_loop": False,
+                "capability_reduction": False,
+                "preserves_prior_valid_gain": True,
+                "functional_advance": "hard runtime fidelity lock",
+                "strongest_coherent_path": "runtime is rejected before loading on fidelity failure",
+            },
+            "next_ceiling": "propagate enforcement across every execution entrypoint",
+        }
+    }
+
+
+def test_valid_lock_receipt_passes() -> None:
+    assert validate_operator_fidelity_lock(_receipt()) == ()
+
+
+def test_digest_is_cryptographically_bound_to_literal_constraints() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["literal_constraints"][1] = "look sideways"
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("not bound to literal_constraints" in error for error in errors)
+
+
+def test_durable_context_anchor_is_required() -> None:
+    receipt = _receipt()
+    words = [
+        "hard work second answer last",
+        "DO NOT LOOK DOWN - you look UP",
+        "Powerful code elite excellence",
+        "Function before governance",
+    ]
+    receipt["operator_fidelity"]["literal_constraints"] = words
+    receipt["operator_fidelity"]["operator_words_digest"] = digest_operator_words(*words)
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("context first" in error for error in errors)
+
+
+def test_durable_upward_anchor_is_required() -> None:
+    receipt = _receipt()
+    words = [
+        "Context first hard work second answer last",
+        "stay bounded",
+        "Powerful code elite excellence",
+        "Function before governance",
+    ]
+    receipt["operator_fidelity"]["literal_constraints"] = words
+    receipt["operator_fidelity"]["operator_words_digest"] = digest_operator_words(*words)
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("look up" in error or "do not look down" in error for error in errors)
+
+
+def test_minimum_scope_and_governance_first_are_rejected() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["minimum_scope_default"] = True
+    receipt["operator_fidelity"]["selected_path"]["governance_first"] = True
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("minimum_scope_default" in error for error in errors)
+    assert any("governance_first" in error for error in errors)
+
+
+def test_capability_reduction_requires_operator_direction() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["capability_reduction"] = True
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("non-operator-directed capability reduction" in error for error in errors)
+
+    receipt["operator_fidelity"]["operator_directed_reduction"] = True
+    assert validate_operator_fidelity_lock(receipt) == ()
