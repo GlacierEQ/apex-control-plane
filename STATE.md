@@ -1,7 +1,8 @@
-# GLACIEREQ RUNTIME STATE
+# GLACIEREQ APEX RUNTIME STATE
 
-**Purpose:** Repository state record for the GlacierEQ APEX control-plane startup path.
-**Read rule:** Re-read this file, `AGENT_SYSTEM_PROMPT.md`, and `OPERATOR_EXECUTION_LAW.md` at every compatible worker startup.
+**Purpose:** Runtime state record for the GlacierEQ APEX control-plane startup path.  
+**Primary startup contract:** `APEX_ENFORCED_STARTUP.md`  
+**Read rule:** Re-read this file, `AGENT_SYSTEM_PROMPT.md`, `OPERATOR_EXECUTION_LAW.md`, and `APEX_ENFORCED_STARTUP.md` at every compatible worker startup.
 
 ## Runtime target
 
@@ -9,125 +10,135 @@
 - Branch: `main`
 - Entrypoint: `python src/control_plane.py`
 - Preserved runtime: `src/control_plane_runtime.py`
+- APEX startup policy: `config/apex_enforced_startup_policy.json`
+- APEX startup enforcer: `src/apex_enforced_startup.py`
 - Continuity manifest: `config/casey_auto_boot_manifest.json`
 - Prime Directive policy: `config/prime_directive_policy.json`
 - Operator execution law: `OPERATOR_EXECUTION_LAW.md`
 - Agent prompt: `AGENT_SYSTEM_PROMPT.md`
-- Auto-boot collection: `00 AUTO BOOT — Casey Continuity Gate`
-- Mem collection ID: `e9990f2e-affe-55b2-a402-1de35aeb1b73`
-- Mem manifest ID: `6925915b-33d6-5fc9-b499-4fbe78790413`
 
 Resolve the current revision through a repository receipt during startup. A branch name, configured connector, search hit, filename, registry label, or prior assistant statement is not proof of current runtime state.
 
-## Operator execution law
-
-The Operator controls project goals, scope, direction, priorities, architecture intent, and authorization to change project state.
-
-The AI is not project authority.
-
-The AI has two project jobs:
-
-1. listen to the Operator;
-2. execute excellence.
-
-Required order:
+## Governing state
 
 ```text
-1. CONTEXT
-2. PLAN WITH OPERATOR
-3. WORK HARD
-4. EXCELLENT QUALITY
-5. NO OPINION / NO LIBERTIES / NO AI AUTHORITY
-6. REPORT LAST
+AUTHORITY        = OPERATOR_INTENT
+OBJECTIVE        = MAXIMUM_COHERENT_ADVANCE
+DIRECTION        = EXPAND_CAPABILITY
+PRESERVATION     = PRIOR_VALID_GAINS
+STATE_EVOLUTION  = CURRENT_STATE ⊕ VERIFIED_GAIN
 ```
 
-An explicit Operator command that already specifies target, desired result, and material constraints counts as plan authorization.
+Historical or `canonical` labels are evidence/topology classifications only. They do not control current project direction.
 
 ## Mandatory startup sequence
 
-1. Search persistent memory and available project context for the task topic, recent decisions, unfinished work, corrections, and likely prior implementations.
-2. Resolve the requested referents, existing state, continuity path, and relevant history.
-3. Resolve current Operator intent and the Operator-authorized plan.
-4. Read this file, `AGENT_SYSTEM_PROMPT.md`, and `OPERATOR_EXECUTION_LAW.md`.
-5. Enumerate the tools and connectors actually loaded for the current worker.
-6. Open the current sources required by the task.
-7. Produce a boot receipt.
-8. Only after the receipt validates, execute substantive work and communicate results.
+1. Freeze material mutation.
+2. Search persistent memory and available project context for the task topic, recent decisions, unfinished work, corrections, failures, and prior implementations.
+3. Resolve requested referents, existing state, lineage, dependencies, and the last valid continuation point.
+4. Resolve current Operator intent and target state.
+5. Read this file, `AGENT_SYSTEM_PROMPT.md`, `OPERATOR_EXECUTION_LAW.md`, and `APEX_ENFORCED_STARTUP.md`.
+6. Enumerate the tools and connectors actually loaded.
+7. Open current sources required by the task.
+8. Validate continuity and Prime Directive receipts.
+9. Validate the APEX Genesis startup receipt.
+10. Only after the required gates pass, execute material mutation.
 
-An empty memory search is a valid searched result and must be reported as `searched memory, no matching entry`. A failed call is not a completed startup step.
+A failed call is not a completed startup step.
 
 ## Current enforcement model
 
 The entrypoint is fail-closed:
 
-- no verified receipt → block before runtime load;
-- missing or stale required notes → block;
-- unread ground-truth operating files → block;
-- no context retrieval for a context-dependent task → block;
-- no tool inventory → block;
-- missing current-source or repository receipts → block when the selected profile requires them;
-- unresolved target or matter lane → block;
-- unresolved Operator intent for a material decision → block mutation;
-- unauthorized project mutation → execution death;
-- complete provider-backed receipt → allow runtime load.
+- unresolved context -> block material mutation;
+- unresolved continuation -> block restart/replacement mutation;
+- unresolved Operator intent -> block material mutation;
+- missing or stale required continuity -> block;
+- unread pinned operating files -> block;
+- no required tool inventory -> block;
+- missing current-source or repository receipts -> block when required;
+- unresolved contradiction blocker -> block;
+- artificial minimization selected -> block;
+- destructive reduction selected -> block;
+- unsupported action path -> block;
+- unearned execution-state promotion -> block;
+- complete provider-backed startup proof -> allow runtime load.
 
-Execution death means the unauthorized autonomous path terminates without substitute mutation and returns to the earliest unmet required stage.
+Failure does not authorize mission shrinkage. Repair or reroute.
+
+## Execution states
+
+```text
+OBSERVED
+INFERRED
+HYPOTHESIZED
+PROPOSED
+ATTEMPTED
+EXECUTED
+VERIFIED
+COMMITTED
+DEPLOYED
+OBSERVED_IN_OPERATION
+```
+
+Only claim the strongest state proven by evidence.
 
 ## Mutation interlock
 
-Before project mutation:
-
 ```text
-context_resolved = true
+context_reconstructed = true
 prior_state_retrieved = true
-continuity_resolved = true
+continuation_resolved = true
 target_identity_resolved = true
 operator_intent_resolved = true
 operator_plan_authorized = true
+prior_valid_gains_identified = true
 relevant_source_inspected = true
+selected_path.artificial_minimization = false
+selected_path.destructive_reduction = false
+verification_plan_bound = true
 ```
 
-If a required value is false, the next action is retrieval, inspection, or Operator-plan resolution.
-
-Tool access is not project authority.
+Tool access is capability, not project authority.
 
 ## Truth boundaries
 
-- Operator authority controls project direction, not factual reality.
-- Evidence controls what factual proposition is supportable.
+- Operator intent controls project direction, not factual reality.
+- Evidence controls factual support.
 - Connector configuration is not connector success.
 - Search results are not opened sources.
 - A filename is not evidence.
 - A generated summary is not ground truth.
-- An assistant-generated registry, governance label, or historical `canonical` designation does not outrank a later explicit Operator instruction.
+- A repository, registry, governance layer, historical `canonical` designation, or assistant doctrine does not outrank later explicit Operator direction.
 - A local process-health check does not establish downstream service health.
-- The ChatGPT interface does not automatically execute this repository at conversation creation.
-- A worker must report the exact unavailable source or failed invocation instead of issuing a generic capability denial.
+- A worker reports the exact unavailable source or failed invocation instead of issuing a generic capability denial.
 
-## Case boundaries
+## Continuation behavior
 
-- `1FDV-23-0001009` and `1FDA-23-0000515` are separate legal matters.
-- The `1FDA` prefix is intentional and is not a typo for the divorce/custody `1FDV` case.
-- Restricted child or medical records require an authorized private case context.
-- Do not move restricted records into portable memory, public output, or unrelated systems.
-- Legal propositions must preserve the distinction among verified facts, corroborated facts, declarations, allegations, inferences, opinions, legal conclusions, and unresolved gaps.
-- No filing, sending, deletion, disclosure, accusation, publication, deployment, or other external mutation occurs merely because a tool can perform it. The Operator must have authorized the action.
+When the Operator says `continue`, recover the latest relevant state and resume work. Do not restart merely because the execution context is new.
 
-## Default resume behavior
+Preserve intentionally distinct systems. Preserve prior valid gains. Extend, integrate, or repair them unless the Operator directs a different architecture or evidence shows continuation cannot satisfy the target.
 
-When the Operator says `continue`, treat that as a continuity command. Recover the latest relevant state first, then resume the Operator-directed work rather than producing another continuity summary.
+## Verification behavior
 
-Current legal resume information is historical execution context, not superior authority over later Operator direction:
+After execution:
 
-1. retrieve the latest official `1FDV-23-0001009` docket and verify Dockets 223–225;
-2. calculate live deadlines;
-3. open the July 4 metadata audit;
-4. identify the seven motions;
-5. map opaque numbered PDFs;
-6. compare Dockets 193 and 201;
-7. reconstruct Docket 203, the October 1 event, and Dockets 208/210;
-8. build the proposition-to-source proof table;
-9. build the strongest verified filing or referral artifact consistent with the Operator's current plan.
+1. test;
+2. adversarially inspect contradictions, regression, dependency breakage, provenance breakage, unsupported claims, state promotion, capability loss, and Operator-intent drift;
+3. repair;
+4. re-test;
+5. verify;
+6. integrate only verified gain.
+
+```text
+NEXT_STATE = CURRENT_STATE ⊕ VERIFIED_GAIN
+```
+
+## Completion
+
+`COMPLETE` is valid only when the target is reached, material claims are supported, required receipts exist, verification passes, prior valid gains remain preserved, no unearned state promotion occurred, no material regression remains, and the result aligns with Operator intent.
+
+A genuine blocker must be exact, evidenced, and resumable.
 
 ## Security
 
@@ -137,8 +148,8 @@ Never commit or place in a boot receipt:
 - unredacted credentials;
 - sealed or privileged payloads;
 - original restricted child or medical records;
-- unsupported claims that a connector, deployment, filing, or source is live.
+- unsupported claims that a connector, deployment, filing, source, or runtime is live.
 
 This file records runtime state. It is not original evidence and does not replace current source retrieval.
 
-**CONTEXT → OPERATOR PLAN → HARD EXECUTION → EXCELLENT QUALITY → NO LIBERTIES → REPORT.**
+**CONTEXT → CONTINUATION → OPERATOR INTENT → MAXIMUM COHERENT EXECUTION → VERIFY → PRESERVE ⊕ VERIFIED_GAIN.**
