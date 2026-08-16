@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Canonical APEX control-plane entrypoint with mandatory continuity boot.
+"""APEX control-plane entrypoint with mandatory enforced startup.
 
-When executed, this wrapper proves the Notion-first continuity/integration
-preflight and the existing Casey continuity + GlacierEQ Prime Directive
-contracts before it loads the preserved runtime. When imported by tests or
-other modules, it re-exports the legacy runtime API without starting the boot
-gate.
+When executed, this wrapper proves the existing continuity and Prime Directive
+contracts, then binds them to the APEX Genesis startup contract before loading
+the preserved runtime. When imported by tests or other modules, it re-exports
+the preserved runtime API without starting the boot gate.
 """
 from __future__ import annotations
 
@@ -17,6 +16,10 @@ import sys
 
 if __name__ == "__main__":
     from auto_boot import EXIT_BOOT_BLOCKED
+    from apex_enforced_startup import (
+        automatic_apex_enforced_startup,
+        get_in_process_apex_validation,
+    )
     from notion_continuity_gate import (
         automatic_notion_continuity_preflight,
         get_in_process_notion_validation,
@@ -34,6 +37,8 @@ if __name__ == "__main__":
             automatic_notion_continuity_preflight()
         if get_in_process_boot_validation() is None:
             automatic_prime_directive_boot()
+        if get_in_process_apex_validation() is None:
+            automatic_apex_enforced_startup()
     except SystemExit:
         raise
     except Exception as exc:
@@ -41,6 +46,7 @@ if __name__ == "__main__":
             "boot_status": "blocked",
             "notion_continuity_status": "blocked",
             "prime_directive_status": "blocked",
+            "apex_startup_status": "blocked",
             "error": f"{type(exc).__name__}: {exc}",
             "external_action_authorized": False,
         }
