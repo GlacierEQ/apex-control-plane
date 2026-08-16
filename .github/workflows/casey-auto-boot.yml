@@ -92,6 +92,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Emit authority document hashes
+        run: |
+          sha256sum APEX_ENFORCED_STARTUP.md
+          sha256sum OPERATOR_EXECUTION_LAW.md
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
