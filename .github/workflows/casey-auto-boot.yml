@@ -1,4 +1,4 @@
-name: Casey Continuity Auto-Boot
+name: APEX Enforced Startup
 
 on:
   push:
@@ -6,12 +6,18 @@ on:
       - main
       - casey-mem-auto-boot-2026-08-03
       - prime-directive-enforcer-v2
+      - apex/enforced-startup-integration-20260815
     paths:
+      - "APEX_ENFORCED_STARTUP.md"
       - "AGENT_SYSTEM_PROMPT.md"
       - "STATE.md"
+      - "OPERATOR_EXECUTION_LAW.md"
+      - "AKOS_ADOPTION.yaml"
+      - "config/apex_enforced_startup_policy.json"
       - "config/casey_auto_boot_manifest.json"
       - "config/notion_continuity_policy.json"
       - "config/prime_directive_policy.json"
+      - "src/apex_enforced_startup.py"
       - "src/auto_boot.py"
       - "src/notion_continuity_gate.py"
       - "src/prime_directive_boot.py"
@@ -19,6 +25,7 @@ on:
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
+      - "tests/test_apex_enforced_startup.py"
       - "tests/test_auto_boot.py"
       - "tests/test_notion_continuity_gate.py"
       - "tests/test_prime_directive_boot.py"
@@ -29,11 +36,16 @@ on:
       - ".github/workflows/casey-auto-boot.yml"
   pull_request:
     paths:
+      - "APEX_ENFORCED_STARTUP.md"
       - "AGENT_SYSTEM_PROMPT.md"
       - "STATE.md"
+      - "OPERATOR_EXECUTION_LAW.md"
+      - "AKOS_ADOPTION.yaml"
+      - "config/apex_enforced_startup_policy.json"
       - "config/casey_auto_boot_manifest.json"
       - "config/notion_continuity_policy.json"
       - "config/prime_directive_policy.json"
+      - "src/apex_enforced_startup.py"
       - "src/auto_boot.py"
       - "src/notion_continuity_gate.py"
       - "src/prime_directive_boot.py"
@@ -41,6 +53,7 @@ on:
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
+      - "tests/test_apex_enforced_startup.py"
       - "tests/test_auto_boot.py"
       - "tests/test_notion_continuity_gate.py"
       - "tests/test_prime_directive_boot.py"
@@ -74,6 +87,7 @@ jobs:
       - name: Compile startup modules
         run: |
           python -m py_compile \
+            src/apex_enforced_startup.py \
             src/auto_boot.py \
             src/notion_continuity_gate.py \
             src/prime_directive_boot.py \
@@ -81,8 +95,9 @@ jobs:
             src/control_plane.py \
             src/sitecustomize.py
 
-      - name: Validate manifests and emit base request
+      - name: Validate startup policies and emit base request
         run: |
+          python -m json.tool config/apex_enforced_startup_policy.json >/dev/null
           python -m json.tool config/casey_auto_boot_manifest.json >/dev/null
           python -m json.tool config/notion_continuity_policy.json >/dev/null
           python -m json.tool config/prime_directive_policy.json >/dev/null
@@ -92,7 +107,8 @@ jobs:
 
       - name: Run startup-gate tests
         run: |
-          CASEY_AUTO_BOOT_TESTING=1 python -m pytest -q \
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src python -m pytest -q \
+            tests/test_apex_enforced_startup.py \
             tests/test_auto_boot.py \
             tests/test_notion_continuity_gate.py \
             tests/test_prime_directive_boot.py \
@@ -143,6 +159,7 @@ jobs:
           set +e
           GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
           GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
+          GLACIEREQ_APEX_STARTUP_STATUS=complete \
           CASEY_BOOT_STATUS=complete \
           GLACIEREQ_BOOT_RECEIPT_VERIFIED=1 \
           CASEY_AUTO_BOOT_MODE=strict \
@@ -158,13 +175,14 @@ jobs:
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/forged.err
           test ! -s /tmp/forged.out
 
-      - name: Prove request mode continues only as degraded
+      - name: Prove request mode exposes all gates and remains degraded
         run: |
           CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot-request.json
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot-request.json
+          grep -q 'apex_genesis_enforced_startup' /tmp/boot-request.json
           python -m json.tool /tmp/control-plane.json >/dev/null
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \
-          python -c 'import os; assert os.environ.get("GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS") == "degraded"; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"'
+          python -c 'import os; assert os.environ.get("GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS") == "degraded"; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_APEX_STARTUP_STATUS") == "degraded"'
