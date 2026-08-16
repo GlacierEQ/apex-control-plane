@@ -1,18 +1,27 @@
-# GlacierEQ Prime Directive Enforcer
+# GlacierEQ Prime Directive Enforcer under APEX Genesis
 
-This layer closes the gap between a startup policy and an LLM that attempts to
-speak before performing it.
+This middleware prevents a compatible model execution loop from substituting prose for required startup retrieval and proof. It is one enforcement layer inside the broader [`APEX_ENFORCED_STARTUP.md`](../APEX_ENFORCED_STARTUP.md) contract.
+
+## Authority and scope
+
+```text
+PROJECT_DIRECTION_AUTHORITY = OPERATOR_INTENT
+OBJECTIVE                   = MAXIMUM_COHERENT_ADVANCE
+STATE_EVOLUTION             = CURRENT_STATE ⊕ VERIFIED_GAIN
+```
+
+The Prime Directive middleware does not create independent project authority. Its job is mechanical: prove required retrieval and source stages before user-facing text, while APEX Genesis additionally binds continuation, Operator intent, target state, path quality, contradiction state, and evidence-backed execution promotion.
 
 ## Enforcement chain
 
 ```text
 model output
    │
-   ├─ contains tool calls ──► strip all pre-gate prose, execute calls
-   │                              │
-   │                              └─ record successful results
+   ├─ contains retrieval tool calls ──► strip unsupported pre-gate prose
+   │                                      │
+   │                                      └─ record successful results
    │
-   └─ contains text only ──► reject with hard-correction system message
+   └─ contains text only ─────────────► reject with hard correction
 
 successful memory search
         +
@@ -27,36 +36,42 @@ current task sources opened
 combined provider receipt validated
         │
         ▼
-sealed in-process startup proof
+sealed Prime Directive proof
         │
         ▼
-user-facing text permitted
+APEX Genesis receipt validation
+        │
+        ▼
+continuation + Operator intent + target + path + verification bound
+        │
+        ▼
+runtime execution permitted
 ```
 
-The canonical APEX entrypoint runs the combined gate before loading
-`src/control_plane_runtime.py`:
+The APEX entrypoint runs the continuity preflight, Prime Directive proof, and APEX Genesis gate before loading `src/control_plane_runtime.py`:
 
 ```bash
 python src/control_plane.py
 ```
 
-Strict mode is the default. Missing or malformed proof exits with code `78`.
+Strict mode is the default. Missing or malformed required proof exits with code `78`.
 
 ## Files
 
-- `STATE.md` — current repository and execution ground truth.
-- `AGENT_SYSTEM_PROMPT.md` — Legal Cortex operating prompt.
-- `config/prime_directive_policy.json` — pinned file hashes, tool aliases,
-  failure phrases, and five-stage receipt rules.
-- `src/prime_directive_boot.py` — validates the continuity and Prime Directive
-  receipt and issues a sealed in-process validation object.
-- `src/prime_directive_enforcer.py` — provider-tolerant LLM response middleware.
-- `src/control_plane.py` — boot-first runtime wrapper.
+- `APEX_ENFORCED_STARTUP.md` — primary startup/execution contract.
+- `STATE.md` — APEX runtime-state contract and current repository startup surface.
+- `AGENT_SYSTEM_PROMPT.md` — APEX Operator execution prompt.
+- `OPERATOR_EXECUTION_LAW.md` — project-direction and execution law.
+- `config/apex_enforced_startup_policy.json` — executable Genesis startup policy.
+- `config/prime_directive_policy.json` — pinned file hashes, tool aliases, failure phrases, and five-stage retrieval/proof rules.
+- `src/apex_enforced_startup.py` — Genesis receipt and execution-state transition enforcement.
+- `src/prime_directive_boot.py` — continuity + Prime Directive receipt validation.
+- `src/prime_directive_enforcer.py` — provider-tolerant pre-text middleware.
+- `src/control_plane.py` — fail-closed startup wrapper.
 
 ## Middleware integration
 
-The execution loop must validate the combined receipt and attach that sealed
-validation before the middleware permits text:
+The execution loop validates the combined Prime Directive receipt and attaches the sealed validation before this middleware permits text. The APEX entrypoint then separately validates the Genesis startup receipt before runtime load.
 
 ```python
 from auto_boot import load_manifest, normalize_profiles
@@ -105,14 +120,11 @@ while True:
     deliver_to_user(checked)
 ```
 
-A tool call alone does not advance a stage. The execution loop must record a
-successful result. A hand-built dictionary that claims `ok=true` cannot complete
-the gate; only a sealed validation object issued by
-`validate_combined_receipt()` is accepted.
+A tool invocation alone does not advance a stage. The execution loop records a successful result. A hand-built object claiming `ok=true` cannot complete the gate; only a sealed validation object issued by the validator is accepted.
 
 ## Combined boot receipt
 
-The provider-backed receipt includes the original continuity fields plus:
+The provider-backed receipt includes continuity fields plus evidence for memory search, pinned operating-file reads, tool inventory, and current-source access. The active repository bytes, policy-pinned SHA-256 values, and receipt values must agree.
 
 ```json
 {
@@ -143,76 +155,52 @@ The provider-backed receipt includes the original continuity fields plus:
       "api_tool.list_resources"
     ],
     "gaps": []
-  },
-  "sources_opened": [
-    {
-      "system": "github",
-      "object_id": "current-task-source",
-      "version": "immutable-revision"
-    }
-  ]
+  }
 }
 ```
 
-Tool identities are normalized and checked against the policy aliases. Each
-stage tool must also appear in `tool_inventory.loaded_tools`.
+## APEX Genesis extension
 
-The validator reads and hashes the active repository bytes of `STATE.md` and
-`AGENT_SYSTEM_PROMPT.md`, then requires the active hash, pinned policy hash, and
-receipt hash to match.
-
-## Empty memory result
-
-An empty memory result is valid when the search actually executed:
+The same startup run also requires an `apex_startup` receipt proving, among other fields:
 
 ```json
 {
-  "status": "empty",
-  "hit_count": 0
+  "authority": "operator_intent",
+  "objective": "maximum_coherent_advance",
+  "context_reconstructed": true,
+  "continuation_resolved": true,
+  "operator_intent_resolved": true,
+  "prior_valid_gains_preserved": true,
+  "contradiction_status": "none",
+  "state_model_bound": true,
+  "selected_path": {
+    "operator_alignment": true,
+    "artificial_minimization": false,
+    "destructive_reduction": false,
+    "unsupported_action": false,
+    "redundant_restart": false,
+    "preserves_prior_valid_gain": true
+  },
+  "verification_plan": ["test", "adversarial test", "readback"]
 }
 ```
 
-After a successful gate with an empty memory result, the middleware prepends the
-policy-controlled phrase to the first user-facing response exactly once:
+An open contradiction blocker, artificial minimization, destructive reduction, or unauthorized state promotion fails closed.
 
-```text
-searched memory, no matching entry
-```
+## Empty memory result
+
+An empty search is valid only when the search actually ran and reports zero hits. `UNKNOWN != FALSE`; an empty result is not permission to invent nonexistence.
 
 ## Hard-correction behavior
 
-Before the gate passes, any text-only response is replaced with a system
-correction listing only the missing stages. Failure phrases such as
-`I don't have access`, `I cannot remember`, and `As an AI` are logged as gate
-violations, but the middleware blocks all pre-gate prose rather than only those
-phrases.
+Before the Prime Directive stage passes, unsupported text-only output is replaced with a correction that identifies missing stages. Pre-gate messages containing required retrieval tool calls are allowed while accompanying unsupported prose is removed.
 
-Pre-gate messages containing tool calls are allowed, while text in supported
-provider fields—including nested `content`, `refusal`, `reasoning`, `output`,
-and `output_text`—is removed.
-
-After repeated bypass attempts, the middleware enters a terminal state. Later
-responses, tool calls, and tool results remain blocked.
+After repeated bypass attempts, the middleware enters a terminal blocked state instead of laundering failure into completion.
 
 ## Audit and security
 
-The enforcer records only:
-
-- event type;
-- timestamp;
-- normalized tool name;
-- stage completion or failure.
-
-It does not log model content, prompts, tool arguments, source payloads,
-credentials, or restricted case records. Pending tool-call correlation state is
-bounded to prevent unreturned calls from accumulating indefinitely.
+The enforcer records metadata such as event type, timestamp, normalized tool name, and stage status. It does not log model content, prompts, tool arguments, credentials, or restricted source payloads.
 
 ## Boundary
 
-This code enforces the contract in execution loops that import it and in the
-APEX Python entrypoint.
-
-It does not cause the ChatGPT application itself to execute repository code at
-the beginning of every conversation. Chat workers still need an available
-connected-memory and source-retrieval path. The middleware prevents a compatible
-worker from speaking before it uses and proves that path.
+This code enforces the contract in execution loops that actually import or execute it. It does not make unrelated software obey a repository file through the mystical power of markdown. A compatible worker must execute the gates and produce the receipts.

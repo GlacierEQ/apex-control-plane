@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.1.0",
+  "name": "APEX Enforced Startup",
+  "authority": "operator_intent",
+  "objective": "maximum_coherent_advance",
+  "direction": "expand_capability",
+  "state_evolution": "preserve_plus_verified_gain",
+  "protocol_path": "APEX_ENFORCED_STARTUP.md",
+  "fail_closed": true,
+  "required_startup_fields": [
+    "context_reconstructed",
+    "prior_state_retrieved",
+    "continuation_resolved",
+    "target_identity_resolved",
+    "operator_intent_resolved",
+    "target_state",
+    "prior_valid_gains_identified",
+    "prior_valid_gains_preserved",
+    "relevant_source_inspected",
+    "contradiction_status",
+    "state_model_bound",
+    "mutation_intent",
+    "action_scope",
+    "selected_path",
+    "verification_plan"
+  ],
+  "contradiction_statuses": [
+    "none",
+    "resolved",
+    "open_blocker"
+  ],
+  "action_scopes": [
+    "none",
+    "internal",
+    "external"
+  ],
+  "execution_states": [
+    "OBSERVED",
+    "INFERRED",
+    "HYPOTHESIZED",
+    "PROPOSED",
+    "ATTEMPTED",
+    "EXECUTED",
+    "VERIFIED",
+    "COMMITTED",
+    "DEPLOYED",
+    "OBSERVED_IN_OPERATION"
+  ],
+  "transition_requirements": {
+    "PROPOSED->ATTEMPTED": "operator_authorization_or_bound_plan",
+    "ATTEMPTED->EXECUTED": "execution_receipt",
+    "EXECUTED->VERIFIED": "verification_receipt",
+    "VERIFIED->COMMITTED": "commit_receipt",
+    "COMMITTED->DEPLOYED": "deployment_receipt",
+    "DEPLOYED->OBSERVED_IN_OPERATION": "runtime_observation_receipt"
+  },
+  "path_requirements": {
+    "operator_alignment": true,
+    "artificial_minimization": false,
+    "destructive_reduction": false,
+    "unsupported_action": false,
+    "redundant_restart": false,
+    "preserves_prior_valid_gain": true
+  },
+  "mutation_interlock": {
+    "required_true_fields": [
+      "context_reconstructed",
+      "prior_state_retrieved",
+      "continuation_resolved",
+      "target_identity_resolved",
+      "operator_intent_resolved",
+      "prior_valid_gains_identified",
+      "prior_valid_gains_preserved",
+      "relevant_source_inspected",
+      "state_model_bound"
+    ],
+    "capability_reduction_requires_operator_direction": true,
+    "action_claim_requires_receipt": true,
+    "material_claim_requires_provenance": true,
+    "external_action_requires_named_human_approval": true
+  },
+  "completion_gate": {
+    "proof_bound": true,
+    "allow_statuses": [
+      "complete",
+      "blocked",
+      "continue"
+    ],
+    "complete_requires": [
+      "target_reached",
+      "material_claims_supported",
+      "required_receipts_present",
+      "verification_passed",
+      "prior_valid_gains_preserved",
+      "no_unearned_state_promotion",
+      "no_material_regression",
+      "operator_intent_aligned"
+    ]
+  },
+  "compatibility": {
+    "canonical_labels_are_descriptive_only": true,
+    "canonical_labels_do_not_confer_project_authority": true,
+    "historical_governance_is_evidence_not_operator_override": true
+  }
+}

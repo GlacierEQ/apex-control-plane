@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Optional Python startup hook for the combined GlacierEQ startup gate.
+"""Optional Python startup hook for the combined APEX startup gate.
 
-The canonical enforcement path is the explicit wrapper in
-``src/control_plane.py``. This hook supplies the same Notion-first continuity
-preflight plus Prime Directive/continuity gate when ``src`` is already present
-on ``PYTHONPATH`` or when another entrypoint is forced with
-``CASEY_AUTO_BOOT=1``.
+The primary enforcement path is the explicit wrapper in ``src/control_plane.py``.
+This hook supplies the same Notion-first continuity preflight, Prime Directive
+proof, and APEX Genesis enforcement when ``src`` is already on ``PYTHONPATH`` or
+another entrypoint is forced with ``CASEY_AUTO_BOOT=1``.
 
 The hook skips verifier CLIs and pytest and fails closed with exit code 78 unless
 boot mode is explicitly ``request`` or ``off``.
@@ -47,6 +46,7 @@ def _should_boot() -> bool:
     entrypoint = _entrypoint_name()
     if entrypoint in {
         "auto_boot.py",
+        "apex_enforced_startup.py",
         "notion_continuity_gate.py",
         "prime_directive_boot.py",
         "prime_directive_enforcer.py",
@@ -64,6 +64,7 @@ def _fail_closed(exc: Exception) -> NoReturn:
         "boot_status": "blocked",
         "notion_continuity_status": "blocked",
         "prime_directive_status": "blocked",
+        "apex_startup_status": "blocked",
         "error": f"{type(exc).__name__}: {exc}",
         "entrypoint": _entrypoint_path(),
         "external_action_authorized": False,
@@ -75,11 +76,13 @@ def _fail_closed(exc: Exception) -> NoReturn:
 
 if _should_boot():
     try:
+        from apex_enforced_startup import automatic_apex_enforced_startup
         from notion_continuity_gate import automatic_notion_continuity_preflight
         from prime_directive_boot import automatic_prime_directive_boot
 
         automatic_notion_continuity_preflight()
         automatic_prime_directive_boot()
+        automatic_apex_enforced_startup()
     except SystemExit:
         raise
     except Exception as exc:  # startup boundary must never fail open

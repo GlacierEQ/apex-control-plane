@@ -5,6 +5,9 @@ Enumerates repositories visible to the authenticated GitHub identity, filters to
 the configured owner, writes a durable identity registry, and emits a delta
 against the prior registry.
 
+Repository classes are descriptive topology labels only. They do not confer
+project-direction authority; APEX binds that authority to OPERATOR_INTENT.
+
 Outputs:
   repo_scan.json
   repo_registry.json
@@ -32,7 +35,7 @@ SCAN_PATH = Path(os.environ.get("REPO_SCAN_PATH", "repo_scan.json"))
 DELTA_PATH = Path(os.environ.get("REPO_DELTA_PATH", "repo_registry_delta.json"))
 
 CLASS_ORDER = (
-    "canonical-control-plane",
+    "apex-control-plane",
     "production-runtime",
     "memory-connector",
     "legal-process",
@@ -159,6 +162,7 @@ def _has_marker(name: str, markers: tuple[str, ...]) -> bool:
 
 
 def classify(repo: dict[str, Any]) -> str:
+    """Return a descriptive estate class, never an authority designation."""
     name = str(repo.get("name") or "").casefold()
     if repo.get("archived"):
         return "archived"
@@ -167,7 +171,7 @@ def classify(repo: dict[str, Any]) -> str:
     if _has_marker(name, EXPERIMENT_MARKERS):
         return "experimental"
     if _has_marker(name, CONTROL_MARKERS):
-        return "canonical-control-plane"
+        return "apex-control-plane"
     if _has_marker(name, LEGAL_MARKERS):
         return "legal-process"
     if _has_marker(name, MEMORY_MARKERS):
@@ -258,174 +262,124 @@ def build_registry(repos: list[dict[str, Any]]) -> dict[str, Any]:
     now = datetime.now(timezone.utc)
     entries = sorted(
         (to_entry(repo, now) for repo in repos),
-        key=lambda entry: entry["full_name"].casefold(),
+        key=lambda row: (CLASS_ORDER.index(row["class"]), row["full_name"].casefold()),
     )
-    duplicate_map: dict[str, list[str]] = defaultdict(list)
-    for entry in entries:
-        duplicate_map[entry["name_signature"]].append(entry["full_name"])
-    duplicate_candidates = {
-        signature: members
-        for signature, members in sorted(duplicate_map.items())
-        if signature and len(members) > 1
+    classes = Counter(row["class"] for row in entries)
+    signatures: dict[str, list[str]] = defaultdict(list)
+    for row in entries:
+        signatures[row["name_signature"]].append(row["full_name"])
+    duplicates = {
+        signature: sorted(names, key=str.casefold)
+        for signature, names in sorted(signatures.items())
+        if signature and len(names) > 1
     }
-    class_counts = Counter(entry["class"] for entry in entries)
-    lifecycle_counts = Counter(entry["lifecycle"] for entry in entries)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "owner": OWNER,
         "generated_at": now.isoformat(),
-        "source": "GitHub /user/repos authenticated enumeration",
         "repository_count": len(entries),
-        "class_counts": {key: class_counts.get(key, 0) for key in CLASS_ORDER},
-        "lifecycle_counts": dict(sorted(lifecycle_counts.items())),
-        "duplicate_candidates": duplicate_candidates,
+        "classification_semantics": "descriptive_topology_only_not_project_authority",
+        "class_counts": dict(classes),
+        "duplicate_candidates": duplicates,
         "repositories": entries,
     }
 
 
-def _validate_registry(data: Any, source: str) -> dict[str, Any]:
-    if (
-        not isinstance(data, dict)
-        or data.get("schema_version") != 1
-        or data.get("owner") != OWNER
-        or not isinstance(data.get("repositories"), list)
-    ):
-        raise RuntimeError(f"Invalid registry state in {source}")
-    seen_ids: set[int] = set()
-    for index, entry in enumerate(data["repositories"]):
-        if not isinstance(entry, dict):
-            raise TypeError(f"Invalid repository entry {index} in {source}")
-        repo_id = entry.get("repository_id")
-        full_name = entry.get("full_name")
-        if (
-            isinstance(repo_id, bool)
-            or not isinstance(repo_id, int)
-            or repo_id <= 0
-            or repo_id in seen_ids
-            or not isinstance(full_name, str)
-            or not full_name
-        ):
-            raise RuntimeError(
-                f"Invalid repository identity at index {index} in {source}"
+def _index_by_id(registry: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    repositories = registry.get("repositories")
+    if not isinstance(repositories, list):
+        raise TypeError("Invalid registry state: repositories must be a list")
+    indexed: dict[int, dict[str, Any]] = {}
+    for row in repositories:
+        if not isinstance(row, dict):
+            raise TypeError(
+                "Invalid registry state: repository entry must be an object"
             )
-        seen_ids.add(repo_id)
-    return data
+        repo_id = row.get("repository_id")
+        if isinstance(repo_id, bool) or not isinstance(repo_id, int) or repo_id <= 0:
+            raise TypeError(
+                "Invalid registry state: repository_id must be a positive integer"
+            )
+        if repo_id in indexed:
+            raise TypeError(
+                f"Invalid registry state: duplicate repository_id {repo_id}"
+            )
+        indexed[repo_id] = row
+    return indexed
+
+
+def diff_registry(
+    previous: dict[str, Any] | None, current: dict[str, Any]
+) -> dict[str, Any]:
+    if previous is None:
+        return {
+            "schema_version": 2,
+            "generated_at": current["generated_at"],
+            "baseline": True,
+            "added": [row["full_name"] for row in current["repositories"]],
+            "removed": [],
+            "renamed_or_transferred": [],
+            "state_changes": [],
+        }
+
+    before = _index_by_id(previous)
+    after = _index_by_id(current)
+    before_ids = set(before)
+    after_ids = set(after)
+    changes = []
+    for repo_id in sorted(before_ids & after_ids):
+        old = before[repo_id]
+        new = after[repo_id]
+        fields = (
+            "full_name",
+            "class",
+            "lifecycle",
+            "archived",
+            "disabled",
+            "default_branch",
+        )
+        delta = {
+            field: {"before": old.get(field), "after": new.get(field)}
+            for field in fields
+            if old.get(field) != new.get(field)
+        }
+        if delta:
+            changes.append({"repository_id": repo_id, "changes": delta})
+
+    return {
+        "schema_version": 2,
+        "generated_at": current["generated_at"],
+        "baseline": False,
+        "added": [after[i]["full_name"] for i in sorted(after_ids - before_ids)],
+        "removed": [before[i]["full_name"] for i in sorted(before_ids - after_ids)],
+        "renamed_or_transferred": [
+            {
+                "repository_id": i,
+                "before": before[i]["full_name"],
+                "after": after[i]["full_name"],
+            }
+            for i in sorted(before_ids & after_ids)
+            if before[i]["full_name"] != after[i]["full_name"]
+        ],
+        "state_changes": changes,
+    }
 
 
 def load_previous() -> dict[str, Any] | None:
     if not REGISTRY_PATH.exists():
         return None
     try:
-        data = json.loads(REGISTRY_PATH.read_text())
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise RuntimeError(f"Cannot load {REGISTRY_PATH}") from error
-    return _validate_registry(data, str(REGISTRY_PATH))
-
-
-def diff_registry(
-    previous: dict[str, Any] | None,
-    current: dict[str, Any],
-) -> dict[str, Any]:
-    current = _validate_registry(current, "current registry")
-    if previous is not None:
-        previous = _validate_registry(previous, "previous registry")
-    now = current["generated_at"]
-    if previous is None:
-        return {
-            "schema_version": 1,
-            "generated_at": now,
-            "baseline": True,
-            "new": [repo["full_name"] for repo in current["repositories"]],
-            "removed_or_transferred": [],
-            "renamed_or_transferred": [],
-            "state_changes": [],
-        }
-
-    old_by_id = {repo["repository_id"]: repo for repo in previous["repositories"]}
-    new_by_id = {repo["repository_id"]: repo for repo in current["repositories"]}
-
-    new_ids = sorted(set(new_by_id) - set(old_by_id))
-    removed_ids = sorted(set(old_by_id) - set(new_by_id))
-    renamed = []
-    state_changes = []
-
-    for repo_id in sorted(set(old_by_id) & set(new_by_id)):
-        old = old_by_id[repo_id]
-        new = new_by_id[repo_id]
-        if old.get("full_name") != new.get("full_name"):
-            renamed.append(
-                {
-                    "repository_id": repo_id,
-                    "before": old.get("full_name"),
-                    "after": new.get("full_name"),
-                }
-            )
-        fields = (
-            "archived",
-            "disabled",
-            "default_branch",
-            "class",
-            "lifecycle",
-            "visibility",
-            "fork",
-        )
-        changes = {
-            field: {"before": old.get(field), "after": new.get(field)}
-            for field in fields
-            if old.get(field) != new.get(field)
-        }
-        if changes:
-            state_changes.append(
-                {
-                    "repository_id": repo_id,
-                    "full_name": new.get("full_name"),
-                    "changes": changes,
-                }
-            )
-
-    return {
-        "schema_version": 1,
-        "generated_at": now,
-        "baseline": False,
-        "new": [new_by_id[repo_id]["full_name"] for repo_id in new_ids],
-        "removed_or_transferred": [
-            old_by_id[repo_id]["full_name"] for repo_id in removed_ids
-        ],
-        "renamed_or_transferred": renamed,
-        "state_changes": state_changes,
-    }
-
-
-def legacy_scan(registry: dict[str, Any]) -> dict[str, Any]:
-    registry = _validate_registry(registry, "legacy scan input")
-    buckets = {
-        "total": registry["repository_count"],
-        "stale": [],
-        "backup": [],
-        "no_description": [],
-        "active": [],
-    }
-    for entry in registry["repositories"]:
-        compact = {
-            "name": entry.get("name"),
-            "age_days": entry.get("age_days"),
-            "language": entry.get("language"),
-            "private": entry.get("private"),
-        }
-        if entry.get("class") == "archived":
-            buckets["backup"].append(compact)
-        elif entry.get("lifecycle") == "stale-candidate":
-            buckets["stale"].append(compact)
-        elif not entry.get("description"):
-            buckets["no_description"].append(compact)
-        else:
-            buckets["active"].append(compact)
-    return buckets
+        data = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"Invalid registry state at {REGISTRY_PATH}") from error
+    if not isinstance(data, dict) or not isinstance(data.get("repositories"), list):
+        raise TypeError(f"Invalid registry state at {REGISTRY_PATH}")
+    return data
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path: Path | None = None
+    tmp_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
             mode="w",
@@ -435,55 +389,29 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
             suffix=".tmp",
             delete=False,
         ) as handle:
-            json.dump(payload, handle, indent=2, sort_keys=False)
+            tmp_path = Path(handle.name)
+            json.dump(payload, handle, indent=2, sort_keys=True)
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
-            temp_path = Path(handle.name)
-        os.replace(temp_path, path)
-        temp_path = None
+        os.replace(tmp_path, path)
     finally:
-        if temp_path is not None:
-            temp_path.unlink(missing_ok=True)
-
-
-def _failure(message: str) -> int:
-    print(
-        json.dumps({"ok": False, "error": message}, separators=(",", ":")),
-        file=sys.stderr,
-    )
-    return 1
+        if tmp_path is not None and tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
 
 
 def main() -> int:
-    if not TOKEN:
-        return _failure("APEX_GITHUB_TOKEN or GITHUB_TOKEN not set")
     try:
-        stale_days()
-        previous = load_previous()
         repos = fetch_repos()
-        registry = build_registry(repos)
-        delta = diff_registry(previous, registry)
-        scan = legacy_scan(registry)
-        write_json(REGISTRY_PATH, registry)
+        previous = load_previous()
+        current = build_registry(repos)
+        delta = diff_registry(previous, current)
+        write_json(SCAN_PATH, {"schema_version": 2, "repositories": repos})
+        write_json(REGISTRY_PATH, current)
         write_json(DELTA_PATH, delta)
-        write_json(SCAN_PATH, scan)
-    except (RuntimeError, TypeError, ValueError, OSError) as error:
-        return _failure(str(error))
-
-    print(f"Owner: {OWNER}")
-    print(f"Repositories: {registry['repository_count']}")
-    print(
-        "Classes: "
-        + ", ".join(f"{key}={value}" for key, value in registry["class_counts"].items())
-    )
-    print(
-        "Delta: "
-        f"new={len(delta['new'])}, "
-        f"removed_or_transferred={len(delta['removed_or_transferred'])}, "
-        f"renamed_or_transferred={len(delta['renamed_or_transferred'])}, "
-        f"state_changes={len(delta['state_changes'])}"
-    )
+    except (RuntimeError, ValueError, TypeError, OSError) as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 1
     return 0
 
 

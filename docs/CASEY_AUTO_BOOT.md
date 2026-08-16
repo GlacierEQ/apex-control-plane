@@ -1,176 +1,148 @@
-# Casey Continuity Auto-Boot
+# Casey Continuity Auto-Boot + APEX Genesis
 
-The APEX control plane has a deterministic, fail-closed startup gate for
-ephemeral workers that cannot safely assume they remember prior chats, project
-state, repository decisions, deadlines, tools, source state, or where current
-work belongs.
+The APEX control plane uses a deterministic, fail-closed startup path for workers that cannot safely assume they remember prior chats, project state, repository decisions, tools, sources, deadlines, failures, or where current work belongs.
 
-The gate now combines three contracts:
+The startup path is governed by [`APEX_ENFORCED_STARTUP.md`](../APEX_ENFORCED_STARTUP.md).
 
-1. **Notion-first continuity/integration proof** — the worker must search and
-   fetch the canonical Notion continuity authorities, recover identity,
-   expectations, capabilities, and current state, determine whether the task is
-   already started, resolve one canonical owner, and map owner/consumer/
-   dependency/overlap relationships before creating or executing new work.
-2. **Continuity proof** — exact Mem notes and versions, current sources,
-   repository receipts, lanes, deadlines, task context, and blocker state.
-3. **Prime Directive proof** — an executed memory search, hash-verified
-   `STATE.md` and `AGENT_SYSTEM_PROMPT.md`, and a structured inventory of tools
-   actually loaded in the current worker.
+## Enforcement stack
 
-The new preflight extends the existing auto-boot architecture. It does not
-replace the Mem continuity gate or Prime Directive middleware.
+`python src/control_plane.py` proves four compatible contracts before loading `src/control_plane_runtime.py`:
 
-## Canonical startup
+1. **Notion-first continuity / integration proof** — recover identity, expectations, capabilities, current state, existing work, owners, consumers, dependencies, and overlaps.
+2. **Continuity proof** — exact memory notes/versions where configured, current sources, repository receipts, lanes, deadlines, task context, and blocker state.
+3. **Prime Directive proof** — executed memory search, hash-verified operating files, structured tool inventory, current-source proof, and provider-backed receipt validation.
+4. **APEX Genesis proof** — Operator intent, continuation, target state, preserved prior gains, contradiction status, execution-state model, strongest coherent path, and verification plan.
 
-```bash
-python src/control_plane.py
-```
-
-`src/control_plane.py` calls `automatic_notion_continuity_preflight()` first,
-then `automatic_prime_directive_boot()`, and only then loads
-`src/control_plane_runtime.py`.
-
-Strict mode is the default. A missing, stale, malformed, conflicting, or blocked
-receipt causes exit status `78` before runtime load.
+These contracts compose. None grants a repository, page, registry, or historical governance label project-direction authority over current Operator intent.
 
 ## Mandatory startup order
 
 ```text
-Notion continuity search/fetch
-  -> recover identity + expectations + capabilities + current state
-  -> search whether the requested work already exists
-  -> resolve one canonical owner
-  -> discover consumers + dependencies + overlaps
-  -> produce integration/link plan
-  -> existing Mem continuity + source proof
-  -> Prime Directive + tool + ground-truth proof
-  -> runtime
+CONTEXT RETRIEVAL
+  -> EXISTING-STATE / CONTINUATION DISCOVERY
+  -> OPERATOR INTENT BINDING
+  -> TARGET STATE
+  -> EVIDENCE-BOUND STATE MODEL
+  -> STRONGEST COHERENT PATH
+  -> EXECUTION
+  -> TEST
+  -> ADVERSARIAL TEST
+  -> REPAIR
+  -> VERIFY
+  -> CURRENT_STATE ⊕ VERIFIED_GAIN
 ```
 
-The governing laws are in `config/notion_continuity_policy.json`:
+Material mutation is blocked until the required startup proof is complete.
 
-- **NOTION BEFORE SPEECH.**
-- **Before STARTING, determine whether it is already STARTED.**
-- **Resume and extend the canonical owner before creating.**
-- **Before MAKING, discover who needs, owns, consumes, depends on, or overlaps
-  with it.**
-- **Add and link before fragmenting.**
-- **Unresolved canonical conflicts block creation.**
-- **New roots are a last resort.**
+## Continuity labels and historical `canonical` fields
 
-## Canonical Notion wake set
+Some receipt and policy fields retain names such as `canonical_owner`, `canonical_conflicts`, and `canonical_notion_pages` for schema compatibility. Under APEX these are topology/source labels only.
 
-The Notion preflight requires the existing canonical pages by exact ID and role;
-it does not create another continuity hub:
+They do **not**:
 
-- SuperNova Continuity Ledger — cross-session current state;
-- NOVA-001 — identity, expectations, and capability architecture;
-- SKILL 5 — Memory & Continuity Engineering — continuity method;
-- Notion Workspace Connector — Notion governance and routing doctrine;
-- H20 Holographic Continuity Index — rolling chat/project continuity index.
+- override explicit current Operator direction;
+- authorize destructive consolidation;
+- convert historical governance into present project authority;
+- justify capability reduction;
+- prevent an Operator-authorized new root when prior valid capability is preserved.
 
-The policy stores identifiers, roles, and proof metadata only. It does not put
-private page payloads into source control or boot receipts.
+When existing work is found, continuation and integration are the default because restart without reason destroys lineage. An explicit Operator override may authorize a new root while preserving the existing system.
 
-## Pre-start and integration receipt
+## APEX execution states
 
-A compatible worker proves the Notion-first stages in the same boot receipt.
-The important shape is:
+```text
+OBSERVED
+INFERRED
+HYPOTHESIZED
+PROPOSED
+ATTEMPTED
+EXECUTED
+VERIFIED
+COMMITTED
+DEPLOYED
+OBSERVED_IN_OPERATION
+```
+
+A worker may claim only the strongest state established by evidence.
+
+Key promotion requirements:
+
+- `ATTEMPTED -> EXECUTED`: execution receipt;
+- `EXECUTED -> VERIFIED`: verification receipt;
+- `VERIFIED -> COMMITTED`: commit receipt;
+- `COMMITTED -> DEPLOYED`: deployment receipt;
+- `DEPLOYED -> OBSERVED_IN_OPERATION`: runtime observation receipt.
+
+## APEX receipt extension
+
+A compatible provider receipt now includes an `apex_startup` object:
 
 ```json
 {
-  "notion_boot_analysis": {
-    "search_tool": "Notion.search",
-    "fetch_tool": "Notion.fetch",
-    "status": "complete",
-    "query": "current task plus continuity and active-build terms",
-    "pages_loaded": [
-      {
-        "id": "<canonical-notion-page-id>",
-        "role": "<canonical-role>",
-        "source": "Notion.fetch:<canonical-notion-page-id>"
-      }
-    ],
-    "identity_loaded": true,
-    "expectations_loaded": true,
-    "capabilities_loaded": true,
-    "current_state_loaded": true,
-    "canonical_conflicts": []
-  },
-  "existing_work_discovery": {
-    "tool": "GitHub.search",
-    "status": "found",
-    "query": "current requested capability and likely canonical owner",
-    "systems_searched": ["Notion", "GitHub"],
-    "candidates": [
-      {
-        "system": "GitHub",
-        "id": "owner/repository",
-        "relationship": "canonical_owner"
-      }
-    ],
-    "canonical_owner": {
-      "system": "GitHub",
-      "id": "owner/repository",
-      "kind": "repository"
+  "apex_startup": {
+    "authority": "operator_intent",
+    "objective": "maximum_coherent_advance",
+    "context_reconstructed": true,
+    "continuation_resolved": true,
+    "operator_intent_resolved": true,
+    "operator_plan_authorized": true,
+    "target_state": "non-empty target",
+    "prior_valid_gains_preserved": true,
+    "contradiction_status": "none",
+    "state_model_bound": true,
+    "mutation_intent": "authorized",
+    "selected_path": {
+      "id": "continue-and-extend",
+      "operator_alignment": true,
+      "artificial_minimization": false,
+      "destructive_reduction": false,
+      "unsupported_action": false,
+      "redundant_restart": false,
+      "preserves_prior_valid_gain": true
     },
-    "canonical_conflicts": [],
-    "decision": "extend"
-  },
-  "integration_map": {
-    "status": "complete",
-    "need_search_performed": true,
-    "searched_relationships": ["owner", "consumer", "dependency", "overlap"],
-    "owner": {
-      "system": "GitHub",
-      "id": "owner/repository",
-      "kind": "repository"
-    },
-    "consumers": [],
-    "dependencies": [],
-    "related_nodes": [],
-    "link_plan": ["extend the canonical owner through its existing interface"],
-    "decision": "integrate",
-    "create_new_root": false,
-    "abandon_existing": false
+    "verification_plan": [
+      "run tests",
+      "adversarially inspect state promotion and regression"
+    ],
+    "material_claims": []
   }
 }
 ```
 
-If existing work is found, `decision=extend` and `create_new_root=false` are
-mandatory. If no direct owner is found but a consumer, dependency, or related
-node exists, the work must still integrate there. Standalone creation is valid
-only after the search proves no owner or relationship and records a specific
-justification.
+`contradiction_status=open_blocker` fails closed before runtime mutation.
 
-## Modes
+## Notion continuity receipt
 
-### Strict
+The continuity preflight still requires the configured Notion wake set and proof that the worker searched for existing work across multiple systems. Compatibility field names remain unchanged where changing them would needlessly break provider bridges.
+
+For existing work, `decision=extend` is valid. An Operator-authorized separate root may use `decision=operator_override` with a structured override record containing `authorized=true` and a non-empty reason.
+
+## Strict mode
 
 ```bash
 CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py
 ```
 
-### Request
+Missing, stale, malformed, conflicting, or incomplete proof exits with status `78` before runtime load.
+
+## Request mode
 
 ```bash
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
 ```
 
-Request mode emits the Notion continuity preflight plus the existing combined
-boot request and continues only as degraded:
+Request mode emits or exposes required startup contracts and may continue only as degraded. It is useful for connector-bridge development and local inspection. It is not proof of continuity, current-source retrieval, or runtime readiness.
+
+Expected status projections include:
 
 ```text
-GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=degraded
-CASEY_BOOT_STATUS=degraded
-GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=degraded
+GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=degraded|complete|blocked
+GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=degraded|complete|blocked
+GLACIEREQ_APEX_STARTUP_STATUS=degraded|complete|blocked
+CASEY_BOOT_STATUS=degraded|complete|blocked
 ```
 
-It is for connector-bridge development and local inspection. It is not proof of
-current awareness or continuity.
-
-### Off
+## Off mode
 
 ```bash
 CASEY_AUTO_BOOT_MODE=off python src/control_plane.py
@@ -182,8 +154,7 @@ or:
 CASEY_AUTO_BOOT_DISABLE=1 python src/control_plane.py
 ```
 
-A disabled run cannot claim continuity, Notion preflight completion, or Prime
-Directive completion.
+A disabled run cannot claim continuity, Prime Directive completion, APEX startup completion, or connected-source awareness.
 
 ## Profiles
 
@@ -195,115 +166,32 @@ CASEY_RESTRICTED_CONTEXT_AUTHORIZED=1 \
 python src/control_plane.py
 ```
 
-Available profiles:
+Configured profiles remain in `config/casey_auto_boot_manifest.json`.
 
-- `always`
-- `legal_case`
-- `restricted_child`
-- `systems`
-- `separate_matter`
+## Ground-truth operating files
 
-The existing Mem continuity manifest remains
-`config/casey_auto_boot_manifest.json`. The Notion-first extension is
-`config/notion_continuity_policy.json`. Neither replaces the other.
+Prime Directive startup continues to hash-verify its pinned operating files. A mismatched active file does not satisfy the stage.
 
-## Ground truth
+APEX adds its own policy and protocol:
 
-Every Prime Directive startup reads and verifies:
-
-- `STATE.md`
-- `AGENT_SYSTEM_PROMPT.md`
-
-Their exact SHA-256 values are pinned in
-`config/prime_directive_policy.json`. A mismatched file does not complete the
-startup stage.
-
-## Combined receipt
-
-Supply one receipt as a file path:
-
-```bash
-CASEY_BOOT_RECEIPT_PATH=/secure/runtime/boot-receipt.json \
-CASEY_BOOT_PROFILE=legal_case \
-python src/control_plane.py
-```
-
-or as inline JSON:
-
-```bash
-CASEY_BOOT_RECEIPT_JSON="$(< /secure/runtime/boot-receipt.json)" \
-CASEY_BOOT_PROFILE=legal_case \
-python src/control_plane.py
-```
-
-The existing continuity portion proves exact note versions, current sources,
-repository revisions where required, current task/next action, lane/deadline
-state where applicable, restricted-context state, and an empty blocker list.
-
-The Prime Directive portion proves the executed memory search, loaded tool
-inventory, and hash-bound ground-truth reads. An empty memory result is valid
-only when the search actually ran and reports `status=empty` with `hit_count=0`.
-
-## Base request and receipt validation
-
-The original continuity request remains available:
-
-```bash
-python src/auto_boot.py \
-  --profile legal_case \
-  --task "continue the highest-value unfinished material action" \
-  --emit-request
-```
-
-The canonical control-plane entrypoint adds the Notion continuity/integration
-preflight in front of the existing combined Prime Directive validator. See
-`docs/PRIME_DIRECTIVE_ENFORCER.md` for the pre-text middleware.
+- `APEX_ENFORCED_STARTUP.md`
+- `config/apex_enforced_startup_policy.json`
+- `src/apex_enforced_startup.py`
 
 ## Response middleware
 
-`src/prime_directive_enforcer.py` blocks model text before startup completion.
-The canonical entrypoint now runs the Notion preflight before reaching that
-existing Prime Directive gate.
-
-- Tool calls are allowed through.
-- Any accompanying pre-gate prose is removed by compatible middleware.
-- A stage advances only after a successful tool result.
-- Text-only pre-gate output is replaced by a hard-correction system message.
-- Repeated bypass attempts produce a terminal startup block rather than an
-  infinite loop.
+`src/prime_directive_enforcer.py` continues to block unsupported model text before its startup gate completes. APEX adds a runtime-start boundary that rejects unsupported state, minimization, destructive reduction, and unresolved contradiction blockers.
 
 ## Optional site hook
 
-For another Python entrypoint with `src` already on `PYTHONPATH`:
-
-```bash
-PYTHONPATH=src \
-CASEY_AUTO_BOOT=1 \
-CASEY_AUTO_BOOT_MODE=request \
-python another_entrypoint.py
-```
-
-`src/sitecustomize.py` now invokes the same Notion-first preflight before the
-existing Prime Directive boot. The explicit `src/control_plane.py` wrapper
-remains the canonical enforcement path.
+When `src` is already on `PYTHONPATH`, `src/sitecustomize.py` can enforce the same sequence for another entrypoint when `CASEY_AUTO_BOOT=1`.
 
 ## Security
 
-No credentials, restricted source payloads, sealed records, or original child
-or medical records belong in the repository, policy, or boot receipt.
+No credentials, restricted source payloads, sealed records, or original child/medical records belong in repository policies or boot receipts.
 
-The restricted-child profile requires explicit authorization and remains
-excluded from portable projections. The Notion preflight records page IDs,
-roles, search proof, ownership relationships, and link plans—not private page
-content.
+Tool availability is capability, not authorization. Filing, sending, deleting, publishing, deploying, or other external mutation remains bound to Operator authorization and the relevant execution receipt.
 
 ## Boundary
 
-This implementation proves the startup contract in execution loops that import
-it and in the APEX Python entrypoint.
-
-It does not cause the ChatGPT application itself to execute repository code at
-the start of every UI conversation. A compatible chat worker must still invoke
-the connected Notion, memory, and source tools. The executable gate exists so
-workers that integrate this control plane fail closed rather than pretending
-that a cold start has continuity.
+This repository enforces startup for execution paths that actually import or execute these gates. It does not magically cause unrelated software to run repository code merely because a markdown file is persuasive. Machines remain tragically literal.

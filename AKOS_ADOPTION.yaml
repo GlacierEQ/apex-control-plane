@@ -1,21 +1,32 @@
 canonical_id: SYS-APEX-CONTROL-PLANE-001
+canonical_id_semantics: compatibility_identifier_only
 family_id: FAM-CASEBRAIN
 name: apex-control-plane
-version: 1.0.0
+version: 1.1.0
 status: sandbox_candidate
 owner: GlacierEQ
 repository: GlacierEQ/apex-control-plane
+project_direction_authority: operator_intent
+startup_contract: APEX_ENFORCED_STARTUP.md
 primary_layer: Runtime Control Plane
 purpose: >
-  Bounded CASEBRAIN runtime for validated event envelopes, capacity-aware worker
+  APEX runtime control plane for validated event envelopes, capacity-aware worker
   dispatch, timeline calculation, threat-signal triage, deterministic
-  recommendations, immutable receipts, retries, circuit breakers, and dead-letter
-  handling. It does not own case facts, evidence, or filing authority.
+  recommendations, immutable receipts, retries, circuit breakers, dead-letter
+  handling, and enforced startup. It does not own project direction, case facts,
+  evidence, or filing authority. Historical or canonical labels are topology and
+  compatibility metadata only.
 principles:
+  - context_before_mutation
+  - continuation_before_restart
+  - operator_intent_controls_direction
+  - preserve_then_extend
   - identity_first
   - provenance_required
-  - one_truth_many_views
   - claim_classes_never_collapse
+  - execution_state_promotion_requires_receipt
+  - maximum_coherent_advance
+  - canonical_labels_do_not_confer_project_authority
   - external_actions_require_named_human_approval
   - connector_presence_is_not_runtime_proof
 quality_gates:
@@ -28,9 +39,13 @@ quality_gates:
   documentation: gate_checked
 dependencies:
   - repository: GlacierEQ/AKOS
+    relationship: architecture_reference_and_dependency
+    authority_semantics: evidence_and_interface_not_project_direction
     path: contracts/AKOS-FEDERATION-CONTRACT-001.md
     revision: review-required
   - repository: GlacierEQ/AKOS
+    relationship: methodology_reference
+    authority_semantics: evidence_and_method_not_project_direction
     path: methodologies/pro_code/AKOS-PROCODE-001.md
     revision: review-required
 security:
@@ -41,3 +56,4 @@ verification:
   runtime_state: dry_run_pending
   verified_live: false
   required_receipt: one audited read-only source-to-recall slice
+  startup_proof: apex_genesis_plus_continuity_plus_prime_directive
