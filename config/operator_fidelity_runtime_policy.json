@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "name": "APEX Operator Fidelity Runtime Enforcement",
+  "failure_class": "INSTRUCTION_DISPLACEMENT",
+  "authority": "operator_intent",
+  "objective": "maximum_coherent_advance",
+  "direction": "look_up",
+  "fail_closed": true,
+  "required_true_fields": [
+    "literal_operator_words_preserved",
+    "explicit_prohibitions_bound",
+    "relevant_corrections_loaded",
+    "instruction_displacement_checked",
+    "objective_function_matches_operator",
+    "uncertainty_routed_to_investigation",
+    "governance_subordinate_to_function",
+    "prior_valid_gains_preserved"
+  ],
+  "required_nonempty_fields": [
+    "operator_words_digest"
+  ],
+  "selected_path_requirements": {
+    "literal_instruction_fidelity": true,
+    "instruction_displacement": false,
+    "minimum_scope_default": false,
+    "governance_first": false,
+    "permission_loop": false,
+    "preserves_prior_valid_gain": true
+  },
+  "correction_requirements": {
+    "reassess_objective_function": true,
+    "effect_field": "correction_effect"
+  },
+  "regression_signatures": [
+    "reduce scope first",
+    "smallest useful next step",
+    "minimum viable plan",
+    "governance instead of function",
+    "preserve instead of act",
+    "ask challenged institution to create its own legitimacy predicate"
+  ]
+}
