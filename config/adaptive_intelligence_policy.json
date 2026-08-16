@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "status": "active-foundation",
+  "purpose": "Use machine-learning signals and outcome feedback to improve context retrieval, capability routing, and execution quality without granting the model project authority.",
+  "candidate_kinds": [
+    "context",
+    "memory",
+    "source",
+    "tool",
+    "connector",
+    "model",
+    "route",
+    "plan_component",
+    "implementation_candidate",
+    "verification_candidate"
+  ],
+  "features": {
+    "semantic_relevance": "Embedding, reranker, or semantic-search relevance.",
+    "task_relevance": "Direct fit to the current operator-authorized task.",
+    "provenance_strength": "Strength and traceability of the source chain.",
+    "recency": "Freshness when freshness materially affects correctness.",
+    "continuity_value": "How strongly the candidate preserves or restores prior valid state.",
+    "operator_alignment": "Fit to explicit operator intent and constraints.",
+    "verification_strength": "Degree of executable, testable, or source-backed verification.",
+    "novel_capability": "Useful capability gain that composes with the existing system.",
+    "estimated_utility": "Expected contribution to the requested outcome.",
+    "contradiction_risk": "Risk that the candidate conflicts with stronger evidence or state.",
+    "correction_risk": "Risk inferred from prior operator corrections or rejected behavior.",
+    "unsupported_claim_risk": "Risk of promoting inference, marketing text, or assistant output as fact.",
+    "regression_risk": "Risk of losing prior gains, interfaces, behavior, or lineage.",
+    "latency_cost": "Relative latency cost when equivalent routes exist.",
+    "token_cost": "Relative context/token cost when equivalent routes exist."
+  },
+  "feedback_rewards": {
+    "verified_success": 1.0,
+    "strong_partial_success": 0.5,
+    "neutral_or_unresolved": 0.0,
+    "failed_execution": -0.6,
+    "regression": -0.9,
+    "operator_correction": -1.0,
+    "fabricated_or_overstated_state": -1.0
+  },
+  "learning_rules": [
+    "Never learn a project objective that conflicts with explicit operator direction.",
+    "Treat operator corrections, regressions, failed tool routes, and false completion claims as negative training signals.",
+    "Treat runtime verification, reproducible tests, source-grounded retrieval, and preserved continuity as positive training signals.",
+    "Keep ranking explanations inspectable through feature contributions.",
+    "Persist model state and feedback separately from source evidence; learned weights are decision aids, not facts.",
+    "External embedding, reranking, classification, and evaluator models may enrich features but may not bypass mutation interlocks.",
+    "Do not collapse paired or intentionally distinct systems merely because a learned similarity model scores them as related."
+  ],
+  "preferred_enhancement_stack": [
+    "semantic retrieval and embeddings",
+    "cross-encoder or LLM reranking",
+    "entity and relationship extraction",
+    "contradiction detection",
+    "task and intent classification",
+    "tool and model routing",
+    "confidence calibration",
+    "adversarial evaluation",
+    "outcome feedback learning",
+    "failure clustering and regression prediction",
+    "provenance-aware synthesis",
+    "context compression with lineage preservation"
+  ],
+  "authority_boundary": "Adaptive scores optimize execution under operator intent. They do not define operator intent, authorize mutation, or transform unsupported content into fact."
+}
