@@ -1,0 +1,151 @@
+name: Operator Fidelity Hard Lock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md"
+      - "config/operator_fidelity_runtime_policy.json"
+      - "src/operator_fidelity_lock.py"
+      - "src/operator_fidelity_preflight.py"
+      - "src/control_plane.py"
+      - "src/sitecustomize.py"
+      - "tests/test_operator_fidelity_lock.py"
+      - "tests/test_operator_fidelity_preflight.py"
+      - ".github/workflows/operator-fidelity-lock.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md"
+      - "config/operator_fidelity_runtime_policy.json"
+      - "src/operator_fidelity_lock.py"
+      - "src/operator_fidelity_preflight.py"
+      - "src/control_plane.py"
+      - "src/sitecustomize.py"
+      - "tests/test_operator_fidelity_lock.py"
+      - "tests/test_operator_fidelity_preflight.py"
+      - ".github/workflows/operator-fidelity-lock.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hard-lock:
+    name: operator-fidelity-hard-lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pytest
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Compile hard-lock boundary
+        run: |
+          python -m py_compile \
+            src/operator_fidelity_lock.py \
+            src/operator_fidelity_preflight.py \
+            src/control_plane.py \
+            src/sitecustomize.py
+
+      - name: Run fidelity regression suite
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_operator_fidelity_lock.py \
+            tests/test_operator_fidelity_preflight.py
+
+      - name: Prove disable flag cannot bypass fidelity
+        shell: bash
+        run: |
+          set +e
+          CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            >/tmp/disable.out 2>/tmp/disable.err
+          status=$?
+          set -e
+          test "$status" -eq 78
+          grep -q 'cannot disable operator fidelity' /tmp/disable.err
+          test ! -s /tmp/disable.out
+
+      - name: Prove off mode cannot bypass fidelity
+        shell: bash
+        run: |
+          set +e
+          CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            >/tmp/off.out 2>/tmp/off.err
+          status=$?
+          set -e
+          test "$status" -eq 78
+          grep -q 'cannot disable operator fidelity' /tmp/off.err
+          test ! -s /tmp/off.out
+
+      - name: Prove forged complete statuses cannot authorize runtime
+        shell: bash
+        run: |
+          set +e
+          GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS=complete \
+          GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
+          GLACIEREQ_APEX_STARTUP_STATUS=complete \
+          GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
+          GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
+          CASEY_BOOT_STATUS=complete \
+          CASEY_AUTO_BOOT_MODE=strict \
+          python src/control_plane.py >/tmp/forged.out 2>/tmp/forged.err
+          status=$?
+          set -e
+          test "$status" -eq 78
+          test ! -s /tmp/forged.out
+
+      - name: Prove stale digest cannot survive literal-word mutation
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src python - <<'PY'
+          from operator_fidelity_lock import validate_operator_fidelity_lock
+          from operator_fidelity_preflight import digest_operator_words
+
+          words = [
+              "Context first hard work second answer last",
+              "DO NOT LOOK DOWN - you look UP",
+              "Powerful code elite excellence",
+              "Function before governance",
+          ]
+          row = {
+              "failure_class": "INSTRUCTION_DISPLACEMENT",
+              "authority": "operator_intent",
+              "objective": "maximum_coherent_advance",
+              "direction": "look_up",
+              "literal_operator_words_preserved": True,
+              "explicit_prohibitions_bound": True,
+              "relevant_corrections_loaded": True,
+              "instruction_displacement_checked": True,
+              "objective_function_matches_operator": True,
+              "uncertainty_routed_to_investigation": True,
+              "governance_subordinate_to_function": True,
+              "prior_valid_gains_preserved": True,
+              "operator_words_digest": digest_operator_words(*words),
+              "literal_constraints": list(words),
+              "correction_present": True,
+              "objective_function_reassessed": True,
+              "corrections_applied": ["objective repaired"],
+              "correction_effect": "upward functional execution",
+              "operator_directed_reduction": False,
+              "selected_path": {
+                  "literal_instruction_fidelity": True,
+                  "instruction_displacement": False,
+                  "minimum_scope_default": False,
+                  "governance_first": False,
+                  "permission_loop": False,
+                  "capability_reduction": False,
+                  "preserves_prior_valid_gain": True,
+                  "functional_advance": "hard lock",
+                  "strongest_coherent_path": "runtime rejection",
+              },
+              "next_ceiling": "estate propagation",
+          }
+          row["literal_constraints"][1] = "reduce scope first"
+          errors = validate_operator_fidelity_lock({"operator_fidelity": row})
+          assert any("not bound to literal_constraints" in e for e in errors), errors
+          PY
