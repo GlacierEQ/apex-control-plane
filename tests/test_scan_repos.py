@@ -39,7 +39,7 @@ def repo(repo_id, name, **overrides):
 
 
 def test_classification_priority_and_backup_detection():
-    assert classify(repo(1, "apex-control-plane")) == "canonical-control-plane"
+    assert classify(repo(1, "apex-control-plane")) == "apex-control-plane"
     assert classify(repo(2, "unified-memory-mcp")) == "memory-connector"
     assert classify(repo(3, "apex-legal-ops")) == "legal-process"
     assert classify(repo(4, "gateway-probe")) == "experimental"
@@ -51,7 +51,12 @@ def test_classification_matches_tokens_not_substrings():
     assert classify(repo(6, "capital-project")) == "unknown-ownership"
     assert classify(repo(7, "contest-results")) == "unknown-ownership"
     assert classify(repo(8, "api-gateway")) == "production-runtime"
-    assert classify(repo(9, "apex_control_plane_runtime")) == "canonical-control-plane"
+    assert classify(repo(9, "apex_control_plane_runtime")) == "apex-control-plane"
+
+
+def test_registry_declares_classification_is_not_project_authority():
+    registry = build_registry([repo(10, "apex-control-plane")])
+    assert registry["classification_semantics"] == "descriptive_topology_only_not_project_authority"
 
 
 def test_name_signature_collapses_backup_and_version_suffixes():
