@@ -34,12 +34,19 @@ jobs:
         run: python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
 
       - name: Compile fidelity boundary
-        run: python -m py_compile src/operator_fidelity_preflight.py src/control_plane.py src/sitecustomize.py
+        run: |
+          python -m py_compile \
+            src/operator_fidelity_lock.py \
+            src/operator_fidelity_preflight.py \
+            src/control_plane.py \
+            src/sitecustomize.py
 
       - name: Run instruction-displacement regression tests
         run: |
           python -m pip install --upgrade pytest
-          PYTHONPATH=src:. python -m pytest -q tests/test_operator_fidelity_preflight.py
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_operator_fidelity_lock.py \
+            tests/test_operator_fidelity_preflight.py
 
       - name: Prove runtime fails closed without fidelity receipt
         shell: bash
@@ -55,6 +62,26 @@ jobs:
             exit 1
           fi
           test ! -s /tmp/fidelity.out
+
+      - name: Prove environment disable cannot bypass fidelity
+        shell: bash
+        run: |
+          set +e
+          CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            >/tmp/disable.out 2>/tmp/disable.err
+          disable_status=$?
+          CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            >/tmp/off.out 2>/tmp/off.err
+          off_status=$?
+          set -e
+          test "$disable_status" -eq 78
+          test "$off_status" -eq 78
+          grep -q 'cannot disable operator fidelity' /tmp/disable.err
+          grep -q 'cannot disable operator fidelity' /tmp/off.err
+          test ! -s /tmp/disable.out
+          test ! -s /tmp/off.out
 
   estate-registry:
     name: Estate registry quality
@@ -82,6 +109,13 @@ jobs:
 
       - name: Install quality tools
         run: python -m pip install --upgrade ruff mypy pytest
+
+      - name: Operator fidelity lock inside legacy required surface
+        run: |
+          python -m py_compile src/operator_fidelity_lock.py src/operator_fidelity_preflight.py
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_operator_fidelity_lock.py \
+            tests/test_operator_fidelity_preflight.py
 
       - name: Ruff lint
         run: ruff check scripts/scan_repos.py tests/test_scan_repos.py --output-format=github
