@@ -17,7 +17,9 @@ from typing import Any
 from auto_boot import EXIT_BOOT_BLOCKED, BootError
 from prime_directive_boot import receipt_from_environment
 
-DEFAULT_POLICY_PATH = Path(__file__).resolve().parents[1] / "config" / "notion_continuity_policy.json"
+DEFAULT_POLICY_PATH = (
+    Path(__file__).resolve().parents[1] / "config" / "notion_continuity_policy.json"
+)
 _SEAL = object()
 
 
@@ -36,7 +38,9 @@ class NotionContinuityValidation:
 _IN_PROCESS: NotionContinuityValidation | None = None
 
 
-def _issue(ok: bool, status: str, errors: Sequence[str] = ()) -> NotionContinuityValidation:
+def _issue(
+    ok: bool, status: str, errors: Sequence[str] = ()
+) -> NotionContinuityValidation:
     return NotionContinuityValidation(ok, status, tuple(errors), _SEAL)
 
 
@@ -61,9 +65,13 @@ def _norm(value: Any) -> str:
     return str(value or "").strip().lower().replace("::", ".")
 
 
+def _nonempty_text(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 def _matches(tool: Any, aliases: Sequence[str]) -> bool:
     name = _norm(tool)
-    allowed = {_norm(alias) for alias in aliases if str(alias).strip()}
+    allowed = {_norm(alias) for alias in aliases if _nonempty_text(alias)}
     return name in allowed or any(name.endswith(f".{alias}") for alias in allowed)
 
 
@@ -72,10 +80,20 @@ def _inventory(receipt: Mapping[str, Any], errors: list[str]) -> set[str]:
     if not isinstance(row, Mapping) or not isinstance(row.get("loaded_tools"), list):
         errors.append("tool_inventory.loaded_tools must exist before continuity preflight")
         return set()
-    return {_norm(value) for value in row["loaded_tools"] if str(value).strip()}
+    return {
+        _norm(value)
+        for value in row["loaded_tools"]
+        if isinstance(value, str) and value.strip()
+    }
 
 
-def _tool(stage: str, value: Any, aliases: Sequence[str], loaded: set[str], errors: list[str]) -> None:
+def _tool(
+    stage: str,
+    value: Any,
+    aliases: Sequence[str],
+    loaded: set[str],
+    errors: list[str],
+) -> None:
     name = _norm(value)
     if not name:
         errors.append(f"{stage}.tool is required")
@@ -85,15 +103,24 @@ def _tool(stage: str, value: Any, aliases: Sequence[str], loaded: set[str], erro
         errors.append(f"{stage}.tool must appear in tool_inventory.loaded_tools")
 
 
-def _operator_override_authorized(discovery: Mapping[str, Any], integration: Mapping[str, Any]) -> bool:
+def _operator_override_authorized(
+    discovery: Mapping[str, Any], integration: Mapping[str, Any]
+) -> bool:
     candidates = (discovery.get("operator_override"), integration.get("operator_override"))
     for row in candidates:
-        if isinstance(row, Mapping) and row.get("authorized") is True and str(row.get("reason", "")).strip():
+        reason = row.get("reason") if isinstance(row, Mapping) else None
+        if (
+            isinstance(row, Mapping)
+            and row.get("authorized") is True
+            and _nonempty_text(reason)
+        ):
             return True
     return False
 
 
-def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mapping[str, Any]) -> tuple[str, ...]:
+def validate_notion_continuity_receipt(
+    policy: Mapping[str, Any], receipt: Mapping[str, Any]
+) -> tuple[str, ...]:
     errors: list[str] = []
     loaded = _inventory(receipt, errors)
     aliases = policy.get("tool_aliases", {})
@@ -103,13 +130,30 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
     if not isinstance(boot, Mapping):
         errors.append("notion_boot_analysis must be an object")
     else:
-        _tool("notion_boot_analysis.search", boot.get("search_tool"), aliases.get("notion_search", ()), loaded, errors)
-        _tool("notion_boot_analysis.fetch", boot.get("fetch_tool"), aliases.get("notion_fetch", ()), loaded, errors)
+        _tool(
+            "notion_boot_analysis.search",
+            boot.get("search_tool"),
+            aliases.get("notion_search", ()),
+            loaded,
+            errors,
+        )
+        _tool(
+            "notion_boot_analysis.fetch",
+            boot.get("fetch_tool"),
+            aliases.get("notion_fetch", ()),
+            loaded,
+            errors,
+        )
         if _norm(boot.get("status")) != _norm(req.get("notion_status", "complete")):
             errors.append("notion_boot_analysis.status must be complete")
-        if not str(boot.get("query", "")).strip():
+        if not _nonempty_text(boot.get("query")):
             errors.append("notion_boot_analysis.query is required")
-        for key in ("identity_loaded", "expectations_loaded", "capabilities_loaded", "current_state_loaded"):
+        for key in (
+            "identity_loaded",
+            "expectations_loaded",
+            "capabilities_loaded",
+            "current_state_loaded",
+        ):
             if boot.get(key) is not True:
                 errors.append(f"notion_boot_analysis.{key} must be true")
         conflicts = boot.get("canonical_conflicts")
@@ -120,39 +164,60 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
 
         pages = boot.get("pages_loaded")
         ids: set[str] = set()
-        roles: set[str] = set()
+        page_roles: set[tuple[str, str]] = set()
         if not isinstance(pages, list):
             errors.append("notion_boot_analysis.pages_loaded must be an array")
         else:
-            for index, row in enumerate(pages):
-                if not isinstance(row, Mapping):
-                    errors.append(f"notion_boot_analysis.pages_loaded[{index}] must be an object")
+            for index, page in enumerate(pages):
+                if not isinstance(page, Mapping):
+                    errors.append(
+                        f"notion_boot_analysis.pages_loaded[{index}] must be an object"
+                    )
                     continue
-                page_id = str(row.get("id", "")).strip().lower()
-                role = _norm(row.get("role"))
-                source = str(row.get("source", "")).strip()
+                page_id = (
+                    page.get("id", "").strip().lower()
+                    if isinstance(page.get("id"), str)
+                    else ""
+                )
+                role = _norm(page.get("role"))
+                source = page.get("source")
                 if not page_id:
-                    errors.append(f"notion_boot_analysis.pages_loaded[{index}].id is required")
+                    errors.append(
+                        f"notion_boot_analysis.pages_loaded[{index}].id is required"
+                    )
                 if not role:
-                    errors.append(f"notion_boot_analysis.pages_loaded[{index}].role is required")
-                if not source:
-                    errors.append(f"notion_boot_analysis.pages_loaded[{index}].source is required")
-                elif not _matches(source.split(":", 1)[0], aliases.get("notion_fetch", ())):
-                    errors.append(f"notion_boot_analysis.pages_loaded[{index}].source must use Notion.fetch")
-                ids.add(page_id)
-                roles.add(role)
+                    errors.append(
+                        f"notion_boot_analysis.pages_loaded[{index}].role is required"
+                    )
+                if not _nonempty_text(source):
+                    errors.append(
+                        f"notion_boot_analysis.pages_loaded[{index}].source is required"
+                    )
+                elif not _matches(
+                    source.split(":", 1)[0], aliases.get("notion_fetch", ())
+                ):
+                    errors.append(
+                        f"notion_boot_analysis.pages_loaded[{index}].source must use Notion.fetch"
+                    )
+                if page_id:
+                    ids.add(page_id)
+                    page_roles.add((page_id, role))
             minimum = int(req.get("minimum_pages_loaded", 1))
-            if len(ids - {""}) < minimum:
-                errors.append(f"notion_boot_analysis must load at least {minimum} continuity pages")
-        for row in policy.get("canonical_notion_pages", ()):
-            if not isinstance(row, Mapping):
+            if len(ids) < minimum:
+                errors.append(
+                    f"notion_boot_analysis must load at least {minimum} continuity pages"
+                )
+        for required_page in policy.get("canonical_notion_pages", ()):
+            if not isinstance(required_page, Mapping):
                 continue
-            page_id = str(row.get("id", "")).strip().lower()
-            role = _norm(row.get("role"))
+            page_id = str(required_page.get("id", "")).strip().lower()
+            role = _norm(required_page.get("role"))
             if page_id and page_id not in ids:
                 errors.append(f"missing continuity Notion page: {page_id}")
-            if role and role not in roles:
-                errors.append(f"missing continuity Notion role: {role}")
+            elif page_id and role and (page_id, role) not in page_roles:
+                errors.append(
+                    f"continuity Notion page role mismatch: {page_id} expected {role}"
+                )
 
     discovery = receipt.get("existing_work_discovery")
     found_status = ""
@@ -161,22 +226,37 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
         errors.append("existing_work_discovery must be an object")
         discovery = {}
     else:
-        _tool("existing_work_discovery", discovery.get("tool"), aliases.get("work_search", ()), loaded, errors)
-        if not str(discovery.get("query", "")).strip():
+        _tool(
+            "existing_work_discovery",
+            discovery.get("tool"),
+            aliases.get("work_search", ()),
+            loaded,
+            errors,
+        )
+        if not _nonempty_text(discovery.get("query")):
             errors.append("existing_work_discovery.query is required")
         found_status = _norm(discovery.get("status"))
-        allowed = {_norm(value) for value in req.get("existing_work_statuses", ("found", "none_found"))}
+        allowed = {
+            _norm(value)
+            for value in req.get("existing_work_statuses", ("found", "none_found"))
+        }
         if found_status not in allowed:
             errors.append("existing_work_discovery.status must be found or none_found")
         systems = discovery.get("systems_searched")
-        system_set = {_norm(value) for value in systems if str(value).strip()} if isinstance(systems, list) else set()
+        system_set = (
+            {_norm(value) for value in systems if _nonempty_text(value)}
+            if isinstance(systems, list)
+            else set()
+        )
         if not isinstance(systems, list):
             errors.append("existing_work_discovery.systems_searched must be an array")
         if "notion" not in system_set:
             errors.append("existing_work_discovery.systems_searched must include Notion")
         minimum = int(req.get("minimum_existing_work_systems_searched", 2))
         if len(system_set) < minimum:
-            errors.append(f"existing_work_discovery must search at least {minimum} systems")
+            errors.append(
+                f"existing_work_discovery must search at least {minimum} systems"
+            )
         conflicts = discovery.get("canonical_conflicts")
         if not isinstance(conflicts, list):
             errors.append("existing_work_discovery.canonical_conflicts must be an array")
@@ -187,42 +267,61 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
         if not isinstance(discovery.get("candidates"), list):
             errors.append("existing_work_discovery.candidates must be an array")
         owner = discovery.get("canonical_owner")
+        if owner is not None and not isinstance(owner, Mapping):
+            errors.append("existing_work_discovery.canonical_owner must be an object or null")
         existing_owner = owner if isinstance(owner, Mapping) else None
         decision = _norm(discovery.get("decision"))
-        allowed_found_decisions = {_norm(value) for value in req.get("found_work_decisions", ("extend",))}
+        allowed_found_decisions = {
+            _norm(value)
+            for value in req.get("found_work_decisions", ("extend",))
+        }
         if found_status == "found":
             if not candidates:
                 errors.append("found existing work requires at least one candidate")
             if existing_owner is None:
                 errors.append("found existing work requires existing owner metadata")
             if decision not in allowed_found_decisions:
-                errors.append("found existing work requires decision=extend or operator_override")
+                errors.append(
+                    "found existing work requires decision=extend or operator_override"
+                )
         elif found_status == "none_found":
             if candidates:
                 errors.append("none_found existing work requires zero candidates")
-            if existing_owner is not None:
+            if owner is not None:
                 errors.append("none_found existing work requires canonical_owner=null")
             if decision != "create_if_needed":
-                errors.append("none_found existing work requires decision=create_if_needed")
+                errors.append(
+                    "none_found existing work requires decision=create_if_needed"
+                )
 
     integration = receipt.get("integration_map")
     if not isinstance(integration, Mapping):
         errors.append("integration_map must be an object")
         integration = {}
     else:
-        if _norm(integration.get("status")) != _norm(req.get("integration_status", "complete")):
+        if _norm(integration.get("status")) != _norm(
+            req.get("integration_status", "complete")
+        ):
             errors.append("integration_map.status must be complete")
         if integration.get("need_search_performed") is not True:
             errors.append("integration_map.need_search_performed must be true")
         searched = integration.get("searched_relationships")
-        relation_set = {_norm(value) for value in searched if str(value).strip()} if isinstance(searched, list) else set()
+        relation_set = (
+            {_norm(value) for value in searched if _nonempty_text(value)}
+            if isinstance(searched, list)
+            else set()
+        )
         if not isinstance(searched, list):
             errors.append("integration_map.searched_relationships must be an array")
         for relation in ("owner", "consumer", "dependency", "overlap"):
             if relation not in relation_set:
-                errors.append(f"integration_map.searched_relationships must include {relation}")
+                errors.append(
+                    f"integration_map.searched_relationships must include {relation}"
+                )
         link_plan = integration.get("link_plan")
-        if not isinstance(link_plan, list) or not any(str(value).strip() for value in link_plan):
+        if not isinstance(link_plan, list) or not any(
+            _nonempty_text(value) for value in link_plan
+        ):
             errors.append("integration_map.link_plan must contain at least one link")
         if integration.get("abandon_existing") is not False:
             errors.append("integration_map.abandon_existing must be false")
@@ -236,44 +335,73 @@ def validate_notion_continuity_receipt(policy: Mapping[str, Any], receipt: Mappi
                 relationships.extend(value)
 
         owner = integration.get("owner")
+        if owner is not None and not isinstance(owner, Mapping):
+            errors.append("integration_map.owner must be an object or null")
         decision = _norm(integration.get("decision"))
         override = _operator_override_authorized(discovery, integration)
         if found_status == "found":
             if not isinstance(owner, Mapping):
                 errors.append("integration_map.owner is required when work exists")
             elif existing_owner is not None:
-                a = (_norm(existing_owner.get("system")), str(existing_owner.get("id", "")).strip())
-                b = (_norm(owner.get("system")), str(owner.get("id", "")).strip())
+                a = (
+                    _norm(existing_owner.get("system")),
+                    str(existing_owner.get("id", "")).strip(),
+                )
+                b = (
+                    _norm(owner.get("system")),
+                    str(owner.get("id", "")).strip(),
+                )
                 if a != b:
-                    errors.append("integration_map.owner must match discovered existing owner metadata")
+                    errors.append(
+                        "integration_map.owner must match discovered existing owner metadata"
+                    )
 
             wants_new_root = integration.get("create_new_root") is True
             if wants_new_root:
                 if not override:
-                    errors.append("integration_map.create_new_root requires explicit Operator override when work exists")
+                    errors.append(
+                        "integration_map.create_new_root requires explicit Operator override when work exists"
+                    )
                 if decision != "operator_override":
-                    errors.append("new root with existing work requires decision=operator_override")
-            else:
-                if decision != "integrate":
-                    errors.append("integration_map.decision must be integrate when continuing existing work")
+                    errors.append(
+                        "new root with existing work requires decision=operator_override"
+                    )
+            elif decision != "integrate":
+                errors.append(
+                    "integration_map.decision must be integrate when continuing existing work"
+                )
         elif found_status == "none_found":
-            if relationships or isinstance(owner, Mapping):
+            if owner is not None and not isinstance(owner, Mapping):
+                pass
+            elif relationships or isinstance(owner, Mapping):
                 if decision != "integrate":
-                    errors.append("integration_map.decision must be integrate when a related node exists")
+                    errors.append(
+                        "integration_map.decision must be integrate when a related node exists"
+                    )
                 if integration.get("create_new_root") is not False:
-                    errors.append("integration_map.create_new_root must be false when a relationship exists")
+                    errors.append(
+                        "integration_map.create_new_root must be false when a relationship exists"
+                    )
             else:
-                if not str(integration.get("standalone_justification", "")).strip():
-                    errors.append("standalone work requires integration_map.standalone_justification")
+                if not _nonempty_text(integration.get("standalone_justification")):
+                    errors.append(
+                        "standalone work requires integration_map.standalone_justification"
+                    )
                 if decision != "standalone_last_resort":
-                    errors.append("standalone work requires decision=standalone_last_resort")
+                    errors.append(
+                        "standalone work requires decision=standalone_last_resort"
+                    )
                 if integration.get("create_new_root") is not True:
-                    errors.append("standalone_last_resort requires create_new_root=true")
+                    errors.append(
+                        "standalone_last_resort requires create_new_root=true"
+                    )
 
     return tuple(errors)
 
 
-def build_notion_preflight_request(policy: Mapping[str, Any], *, task: str) -> dict[str, Any]:
+def build_notion_preflight_request(
+    policy: Mapping[str, Any], *, task: str
+) -> dict[str, Any]:
     return {
         "request_type": "glaciereq_notion_continuity_preflight",
         "schema_version": policy.get("schema_version"),
@@ -309,7 +437,14 @@ def automatic_notion_continuity_preflight() -> NotionContinuityValidation | None
     task = os.getenv("CASEY_BOOT_TASK", "resume highest-value unfinished material action")
     receipt = receipt_from_environment()
     if receipt is None:
-        print(json.dumps(build_notion_preflight_request(policy, task=task), ensure_ascii=False, sort_keys=True), file=sys.stderr)
+        print(
+            json.dumps(
+                build_notion_preflight_request(policy, task=task),
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
         sys.stderr.flush()
         status = "blocked" if mode == "strict" else "degraded"
         os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] = status
@@ -323,12 +458,19 @@ def automatic_notion_continuity_preflight() -> NotionContinuityValidation | None
         return validation
 
     os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] = "blocked"
-    print(json.dumps({
-        "boot_status": "blocked",
-        "notion_continuity_status": "blocked",
-        "errors": list(validation.errors),
-        "external_action_authorized": False,
-    }, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+    print(
+        json.dumps(
+            {
+                "boot_status": "blocked",
+                "notion_continuity_status": "blocked",
+                "errors": list(validation.errors),
+                "external_action_authorized": False,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
+        file=sys.stderr,
+    )
     sys.stderr.flush()
     if mode == "strict":
         raise SystemExit(EXIT_BOOT_BLOCKED)
