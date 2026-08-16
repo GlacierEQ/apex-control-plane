@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.2.2",
+  "schema_version": "1.3.0",
   "manifest_name": "Casey Continuity Auto-Boot",
   "mem_collection": {
     "title": "00 AUTO BOOT — Casey Continuity Gate",
@@ -23,6 +23,30 @@
     "requires_current_source_open": true,
     "requires_receipt_validation": true,
     "blocks_user_facing_text_until_complete": true
+  },
+  "adaptive_intelligence": {
+    "status": "required-foundation",
+    "policy_path": "config/adaptive_intelligence_policy.json",
+    "module_path": "src/adaptive_intelligence.py",
+    "applies_to": [
+      "context-ranking",
+      "memory-ranking",
+      "source-ranking",
+      "tool-routing",
+      "connector-routing",
+      "model-routing",
+      "implementation-selection",
+      "verification-selection"
+    ],
+    "requires_semantic_enrichment_when_available": true,
+    "requires_failure_feedback": true,
+    "requires_operator_correction_feedback": true,
+    "requires_verified_success_feedback": true,
+    "requires_auditable_feature_contributions": true,
+    "requires_persistable_model_state": true,
+    "external_embedding_reranker_classifier_evaluator_hooks_allowed": true,
+    "learned_scores_are_not_project_authority": true,
+    "learned_scores_cannot_bypass_mutation_interlock": true
   },
   "profiles": {
     "always": [
@@ -88,15 +112,21 @@
     "legal_case": {
       "requires_current_sources": true,
       "requires_case_lane": true,
-      "requires_live_deadline_check_when_relevant": true
+      "requires_live_deadline_check_when_relevant": true,
+      "requires_adaptive_source_ranking": true,
+      "requires_correction_feedback": true
     },
     "systems": {
       "requires_current_sources": true,
-      "requires_repository_receipt": true
+      "requires_repository_receipt": true,
+      "requires_adaptive_context_ranking": true,
+      "requires_adaptive_tool_routing": true,
+      "requires_failure_feedback": true
     },
     "separate_matter": {
       "requires_current_sources": true,
-      "requires_matter_lane": true
+      "requires_matter_lane": true,
+      "requires_adaptive_source_ranking": true
     }
   },
   "default_profiles": [
