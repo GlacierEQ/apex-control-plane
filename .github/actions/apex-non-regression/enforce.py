@@ -40,7 +40,6 @@ STATE_DEMOTION_RE = re.compile(
     r"(?:\"state\"|principal_state|status)\s*[:=]\s*[\"']?(?:TESTED|PENDING|READ_ONLY|REJECTED)",
     re.IGNORECASE,
 )
-CONFLICT_RE = re.compile(r"^(<<<<<<<|=======|>>>>>>>)", re.MULTILINE)
 
 
 def output(*args: str) -> str:
@@ -82,18 +81,6 @@ def load_authorization(path: Path, expected: str) -> bool:
     )
 
 
-def changed_text_files(base: str, head: str):
-    names = output("git", "diff", "--name-only", f"{base}...{head}").splitlines()
-    for name in names:
-        path = Path(name)
-        if not path.is_file():
-            continue
-        try:
-            yield name, path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-
-
 def parse_file_patches(diff: str) -> dict[str, dict[str, list[str]]]:
     patches: dict[str, dict[str, list[str]]] = {}
     current: str | None = None
@@ -106,6 +93,45 @@ def parse_file_patches(diff: str) -> dict[str, dict[str, list[str]]]:
         elif current and line.startswith("-") and not line.startswith("---"):
             patches[current]["deleted"].append(line[1:])
     return patches
+
+
+def tree_conflicts(head: str) -> list[dict[str, str]]:
+    """Scan the complete resulting tree, not only this diff, for live conflict markers."""
+    proc = subprocess.run(
+        [
+            "git",
+            "grep",
+            "-n",
+            "-I",
+            "-E",
+            r"^(<<<<<<< |=======|>>>>>>> )",
+            head,
+            "--",
+            ".",
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.returncode not in {0, 1}:
+        raise RuntimeError(f"git grep failed: {proc.stderr.strip()}")
+    findings: list[dict[str, str]] = []
+    for line in proc.stdout.splitlines():
+        # Typical shape: <head>:path:line:marker text
+        parts = line.split(":", 3)
+        if len(parts) < 4:
+            continue
+        _, path, line_no, marker = parts
+        findings.append(
+            {
+                "code": "MERGE_CONFLICT_MARKER",
+                "file": path,
+                "line": line_no,
+                "marker": marker[:120],
+            }
+        )
+    return findings
 
 
 def main() -> int:
@@ -124,12 +150,8 @@ def main() -> int:
     digest = diff_hash(diff)
     authorized = load_authorization(Path(args.authorization), digest)
 
-    failures: list[dict[str, str]] = []
+    failures: list[dict[str, str]] = tree_conflicts(args.head)
     warnings: list[dict[str, str]] = []
-
-    for name, text in changed_text_files(args.base, args.head):
-        if CONFLICT_RE.search(text):
-            failures.append({"code": "MERGE_CONFLICT_MARKER", "file": name})
 
     for name, parts in parse_file_patches(diff).items():
         added = "\n".join(parts["added"])
@@ -159,12 +181,17 @@ def main() -> int:
             if finding["code"] == "MERGE_CONFLICT_MARKER"
         ]
 
+    # Keep one result per exact finding while retaining line-level conflict evidence.
+    failures = list({json.dumps(item, sort_keys=True): item for item in failures}.values())
+    warnings = list({json.dumps(item, sort_keys=True): item for item in warnings}.values())
+
     payload = {
-        "schema": "apex.estate-non-regression.v1",
+        "schema": "apex.estate-non-regression.v2",
         "base": args.base,
         "head": args.head,
         "diff_sha256": digest,
         "operator_reduction_authorization_bound": authorized,
+        "full_tree_conflict_scan": True,
         "failures": failures,
         "warnings": warnings,
         "status": "FAIL" if failures else "PASS",
@@ -174,7 +201,8 @@ def main() -> int:
     if failures:
         print(
             "APEX non-regression rejected this change. Repair forward or bind an "
-            "exact-diff Operator reduction authorization.",
+            "exact-diff Operator reduction authorization. Merge-conflict corruption "
+            "must always be repaired.",
             file=sys.stderr,
         )
         return 2
