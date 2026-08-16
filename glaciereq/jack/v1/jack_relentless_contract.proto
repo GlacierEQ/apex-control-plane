@@ -10,12 +10,27 @@ enum ExecutionStatus {
   COMPLETE = 4;
 }
 
+enum ApexExecutionState {
+  APEX_EXECUTION_STATE_UNSPECIFIED = 0;
+  OBSERVED = 1;
+  INFERRED = 2;
+  HYPOTHESIZED = 3;
+  PROPOSED = 4;
+  ATTEMPTED = 5;
+  EXECUTED = 6;
+  VERIFIED = 7;
+  COMMITTED = 8;
+  DEPLOYED = 9;
+  OBSERVED_IN_OPERATION = 10;
+}
+
 message GateVector {
   bool authority_valid = 1;
   bool safety_boundary_clear = 2;
   bool continuity_loaded = 3;
   bool resources_invoked = 4;
   bool existing_work_checked = 5;
+  // Compatibility name only: resolves existing-work topology, not project authority.
   bool canonical_owner_resolved = 6;
   bool objective_preserved = 7;
   bool required_sources_opened = 8;
@@ -43,6 +58,7 @@ message ActionReceipt {
   string provider_receipt = 3;
   bool executed = 4;
   bool verified = 5;
+  ApexExecutionState state = 6;
 }
 
 message VerificationReceipt {
@@ -56,6 +72,7 @@ message JackExecutionReceipt {
   string contract_version = 2;
   string task = 3;
   string objective = 4;
+  // Compatibility field: existing-work topology locator only.
   string canonical_owner = 5;
   repeated SourceReceipt sources_opened = 6;
   repeated ActionReceipt actions_executed = 7;
@@ -67,4 +84,6 @@ message JackExecutionReceipt {
   repeated string readback_receipts = 13;
   repeated VerificationReceipt verification = 14;
   repeated string resolved_blockers = 15;
+  // Must be OPERATOR_INTENT for project-direction authority.
+  string authority = 16;
 }
