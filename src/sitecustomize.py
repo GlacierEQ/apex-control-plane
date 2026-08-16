@@ -2,9 +2,9 @@
 """Optional Python startup hook for the combined APEX startup gate.
 
 The primary enforcement path is the explicit wrapper in ``src/control_plane.py``.
-This hook supplies the same Notion-first continuity preflight, Prime Directive
-proof, and APEX Genesis enforcement when ``src`` is already on ``PYTHONPATH`` or
-another entrypoint is forced with ``CASEY_AUTO_BOOT=1``.
+This hook supplies the same continuity, Prime Directive, Operator fidelity, and
+APEX Genesis enforcement when ``src`` is already on ``PYTHONPATH`` or another
+entrypoint is forced with ``CASEY_AUTO_BOOT=1``.
 
 The hook skips verifier CLIs and pytest and fails closed with exit code 78 unless
 boot mode is explicitly ``request`` or ``off``.
@@ -47,6 +47,7 @@ def _should_boot() -> bool:
     if entrypoint in {
         "auto_boot.py",
         "apex_enforced_startup.py",
+        "operator_fidelity_preflight.py",
         "notion_continuity_gate.py",
         "prime_directive_boot.py",
         "prime_directive_enforcer.py",
@@ -64,6 +65,7 @@ def _fail_closed(exc: Exception) -> NoReturn:
         "boot_status": "blocked",
         "notion_continuity_status": "blocked",
         "prime_directive_status": "blocked",
+        "operator_fidelity_status": "blocked",
         "apex_startup_status": "blocked",
         "error": f"{type(exc).__name__}: {exc}",
         "entrypoint": _entrypoint_path(),
@@ -78,10 +80,12 @@ if _should_boot():
     try:
         from apex_enforced_startup import automatic_apex_enforced_startup
         from notion_continuity_gate import automatic_notion_continuity_preflight
+        from operator_fidelity_preflight import automatic_operator_fidelity_preflight
         from prime_directive_boot import automatic_prime_directive_boot
 
         automatic_notion_continuity_preflight()
         automatic_prime_directive_boot()
+        automatic_operator_fidelity_preflight()
         automatic_apex_enforced_startup()
     except SystemExit:
         raise
