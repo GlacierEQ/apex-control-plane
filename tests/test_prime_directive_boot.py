@@ -195,7 +195,7 @@ def test_combined_boot_request_declares_prime_directive_contract() -> None:
     )
 
     assert request["request_type"] == "glaciereq_prime_directive_auto_boot"
-    assert request["prime_directive_policy"]["schema_version"] == "1.0.2"
+    assert request["prime_directive_policy"]["schema_version"] == "1.1.0"
     assert request["requirements"]["run_memory_search_before_text"] is True
     assert request["requirements"]["read_and_hash_verify_ground_truth_files"] is True
     assert request["requirements"]["enumerate_loaded_tools"] is True
@@ -215,6 +215,8 @@ def test_policy_requires_all_five_startup_stages() -> None:
         "current_source_open",
         "receipt_validation",
     ]
+    assert policy["apex_binding"]["project_direction_authority"] == "operator_intent"
+    assert policy["apex_binding"]["unearned_state_promotion_prohibited"] is True
 
 
 def test_policy_hashes_match_repository_ground_truth_files() -> None:
