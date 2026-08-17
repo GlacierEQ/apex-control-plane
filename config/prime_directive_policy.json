@@ -23,11 +23,11 @@
     },
     {
       "path": "APEX_ENFORCED_STARTUP.md",
-      "sha256": "c44bdda71fdd54071015725c57b67735638ce912f1ff8719de5fe9d64c493a4d"
+      "sha256": "57ff4d2dc7ed4af0e35e370506cfed5e57827dcade98ee8f91263954b7211126"
     },
     {
       "path": "OPERATOR_EXECUTION_LAW.md",
-      "sha256": "d4f3ff5730884ee7844c3824ead86b8b08600527b8b2e8a55a903dc8387edee0"
+      "sha256": "c6a9633ee2faade14c32b2430c4bfb5cdf814a5e308ad4a092dc989e31563d4f"
     }
   ],
   "hard_correction_role": "system",
@@ -35,6 +35,13 @@
   "apex_binding": {
     "protocol_path": "APEX_ENFORCED_STARTUP.md",
     "project_direction_authority": "operator_intent",
+    "operator_authority_mode": "absolute_project_direction",
+    "sole_human_project_authority": true,
+    "current_explicit_operator_instruction_is_sufficient_authorization_for_its_scope": true,
+    "secondary_human_approval_authority": false,
+    "lower_level_policy_veto": false,
+    "assistant_or_automation_override": false,
+    "repository_or_registry_override": false,
     "objective": "maximum_coherent_advance",
     "state_evolution": "current_state_plus_verified_gain",
     "context_before_mutation": true,
@@ -68,8 +75,11 @@
     "ai_may_invent_project_direction": false,
     "ai_may_take_unrequested_liberties": false,
     "explicit_operator_command_may_authorize_plan": true,
+    "current_explicit_operator_instruction_is_sufficient_human_authorization": true,
+    "secondary_human_reauthorization_required": false,
     "failure_mode": "fail_closed_execution_death",
     "operator_controls_project_direction": true,
+    "operator_project_direction_authority_is_absolute": true,
     "required_order": [
       "context_reconstruction",
       "literal_operator_words_binding",
@@ -110,7 +120,7 @@
     "current_source_open",
     "receipt_validation"
   ],
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "security": {
     "log_content": false,
     "log_tool_names": true,
