@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from apex_enforced_startup import (
+    build_apex_startup_request,
     load_apex_policy,
     validate_apex_startup_receipt,
     validate_state_transition,
@@ -50,6 +53,34 @@ def _receipt() -> dict:
 def test_valid_apex_startup_receipt_passes() -> None:
     policy = load_apex_policy()
     assert validate_apex_startup_receipt(policy, _receipt()) == ()
+
+
+def test_operator_project_direction_authority_is_absolute() -> None:
+    policy = load_apex_policy()
+    authority = policy["operator_authority"]
+    assert authority["mode"] == "absolute_project_direction"
+    assert authority["sole_human_project_authority"] is True
+    assert authority["current_explicit_instruction_is_sufficient_authorization_for_its_scope"] is True
+    assert authority["secondary_human_approval_authority"] is False
+    assert authority["lower_level_policy_veto"] is False
+    assert authority["assistant_or_automation_override"] is False
+    assert authority["repository_or_registry_override"] is False
+
+    interlock = policy["mutation_interlock"]
+    assert interlock["external_action_requires_operator_authorization_receipt"] is True
+    assert interlock["external_action_requires_secondary_human_approval"] is False
+
+
+def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> None:
+    policy = load_apex_policy()
+    request = build_apex_startup_request(policy, task="execute operator target")
+    requirements = request["requirements"]
+    assert requirements["operator_project_direction_authority_is_absolute"] is True
+    assert requirements["current_explicit_operator_instruction_is_authorization_for_its_scope"] is True
+    assert requirements["secondary_human_approval_authority"] is False
+    assert requirements["external_actions_require_operator_authorization_receipt"] is True
+    serialized = json.dumps(request, sort_keys=True)
+    assert "named_human_approval" not in serialized
 
 
 def test_mutation_interlock_fields_are_mandatory() -> None:
@@ -141,33 +172,44 @@ def test_advanced_material_claim_accepts_exact_transition_receipt() -> None:
     assert validate_apex_startup_receipt(policy, receipt) == ()
 
 
-def test_external_action_requires_named_human_approval() -> None:
+def test_external_action_requires_operator_authorization_not_second_approver() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
     receipt["apex_startup"]["action_scope"] = "external"
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert "external action requires apex_startup.named_human_approval" in errors
+    assert "external action requires apex_startup.operator_authorization" in errors
 
-    receipt["apex_startup"]["named_human_approval"] = {
-        "approver": "Casey Barton",
+    receipt["apex_startup"]["operator_authorization"] = {
         "authorized": True,
-        "approval_ref": "operator-command:turn-user-message",
+        "authorization_ref": "operator-command:turn-user-message",
     }
     assert validate_apex_startup_receipt(policy, receipt) == ()
 
 
-def test_generic_or_malformed_external_approval_is_rejected() -> None:
+def test_old_named_human_gate_cannot_substitute_for_operator_authorization() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
     receipt["apex_startup"]["action_scope"] = "external"
     receipt["apex_startup"]["named_human_approval"] = {
-        "approver": "operator",
+        "approver": "someone else",
         "authorized": True,
-        "approval_ref": "false",
+        "approval_ref": "other-human:approval",
     }
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert "named_human_approval.approver must identify a named human" in errors
-    assert "named_human_approval.approval_ref must be a receipt reference" in errors
+    assert "external action requires apex_startup.operator_authorization" in errors
+
+
+def test_malformed_operator_authorization_is_rejected() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["action_scope"] = "external"
+    receipt["apex_startup"]["operator_authorization"] = {
+        "authorized": False,
+        "authorization_ref": "false",
+    }
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert "operator_authorization.authorized must be true" in errors
+    assert "operator_authorization.authorization_ref must be a receipt reference" in errors
 
 
 def test_state_transition_requires_exact_evidence() -> None:

@@ -1,9 +1,9 @@
 """APEX Genesis fail-closed startup and execution-state enforcement.
 
 This layer sits above the existing continuity and Prime Directive proofs. It does
-not replace them. It binds those proofs to OPERATOR intent, continuation,
-preserved prior gain, maximum coherent path selection, and evidence-backed
-execution-state transitions.
+not replace them. It binds those proofs to absolute OPERATOR project-direction
+authority, continuation, preserved prior gain, maximum coherent path selection,
+and evidence-backed execution-state transitions.
 """
 from __future__ import annotations
 
@@ -60,6 +60,7 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
     required = {
         "schema_version",
         "authority",
+        "operator_authority",
         "objective",
         "required_startup_fields",
         "execution_states",
@@ -71,11 +72,35 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
     missing = sorted(required - value.keys())
     if missing:
         raise BootError("APEX startup policy missing: " + ", ".join(missing))
+
+    operator_authority = value.get("operator_authority")
+    if not isinstance(operator_authority, dict):
+        raise BootError("APEX operator_authority must be an object")
+    if operator_authority.get("mode") != "absolute_project_direction":
+        raise BootError("APEX operator_authority.mode must be absolute_project_direction")
+    required_authority_flags = {
+        "sole_human_project_authority": True,
+        "current_explicit_instruction_is_sufficient_authorization_for_its_scope": True,
+        "secondary_human_approval_authority": False,
+        "lower_level_policy_veto": False,
+        "assistant_or_automation_override": False,
+        "repository_or_registry_override": False,
+    }
+    for field_name, expected in required_authority_flags.items():
+        if operator_authority.get(field_name) is not expected:
+            raise BootError(
+                f"APEX operator_authority.{field_name} must be {expected!r}"
+            )
+
     interlock = value.get("mutation_interlock")
     if not isinstance(interlock, dict) or not isinstance(
         interlock.get("required_true_fields"), list
     ):
         raise BootError("APEX mutation_interlock.required_true_fields must be an array")
+    if interlock.get("external_action_requires_secondary_human_approval") is not False:
+        raise BootError(
+            "APEX cannot grant a secondary human approval layer authority over the Operator"
+        )
     return value
 
 
@@ -119,23 +144,16 @@ def validate_state_transition(
     return ()
 
 
-def _validate_external_approval(row: Mapping[str, Any], errors: list[str]) -> None:
-    approval = row.get("named_human_approval")
-    if not isinstance(approval, Mapping):
-        errors.append("external action requires apex_startup.named_human_approval")
+def _validate_operator_authorization(row: Mapping[str, Any], errors: list[str]) -> None:
+    """Require evidence of the Operator's authorization, never a second approver."""
+    authorization = row.get("operator_authorization")
+    if not isinstance(authorization, Mapping):
+        errors.append("external action requires apex_startup.operator_authorization")
         return
-    approver = approval.get("approver")
-    if not _nonempty_text(approver) or _norm(approver) in {
-        "human",
-        "operator",
-        "unknown",
-        "user",
-    }:
-        errors.append("named_human_approval.approver must identify a named human")
-    if approval.get("authorized") is not True:
-        errors.append("named_human_approval.authorized must be true")
-    if not _receipt_ref(approval.get("approval_ref")):
-        errors.append("named_human_approval.approval_ref must be a receipt reference")
+    if authorization.get("authorized") is not True:
+        errors.append("operator_authorization.authorized must be true")
+    if not _receipt_ref(authorization.get("authorization_ref")):
+        errors.append("operator_authorization.authorization_ref must be a receipt reference")
 
 
 def validate_apex_startup_receipt(
@@ -218,8 +236,12 @@ def validate_apex_startup_receipt(
         if action_scope not in {"internal", "external"}:
             errors.append("authorized mutation requires internal or external action_scope")
         if action_scope == "external" and isinstance(interlock, Mapping):
-            if interlock.get("external_action_requires_named_human_approval") is True:
-                _validate_external_approval(row, errors)
+            if interlock.get("external_action_requires_operator_authorization_receipt") is True:
+                _validate_operator_authorization(row, errors)
+            if interlock.get("external_action_requires_secondary_human_approval") is True:
+                errors.append(
+                    "secondary human approval cannot override or re-authorize the Operator"
+                )
 
     claims = row.get("material_claims", [])
     if not isinstance(claims, list):
@@ -273,19 +295,23 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
         "schema_version": policy.get("schema_version"),
         "task": task,
         "authority": policy.get("authority"),
+        "operator_authority": dict(policy.get("operator_authority", {})),
         "objective": policy.get("objective"),
         "requirements": {
             "context_before_mutation": True,
             "continuation_before_restart": True,
             "preserve_prior_valid_gains": True,
             "bind_operator_intent": True,
+            "operator_project_direction_authority_is_absolute": True,
+            "current_explicit_operator_instruction_is_authorization_for_its_scope": True,
+            "secondary_human_approval_authority": False,
             "classify_material_state": True,
             "resolve_contradictions_before_mutation": True,
             "select_maximum_coherent_path": True,
             "eliminate_artificial_minimization": True,
             "receipt_bind_material_action_claims": True,
             "verify_before_state_promotion": True,
-            "external_actions_require_named_human_approval": True,
+            "external_actions_require_operator_authorization_receipt": True,
             "integrate_only_verified_gain": True,
         },
         "receipt_contract": {
@@ -306,10 +332,9 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
                 "state_model_bound": True,
                 "mutation_intent": "none|authorized|blocked",
                 "action_scope": "none|internal|external",
-                "named_human_approval": {
-                    "approver": "named human; required for external actions",
+                "operator_authorization": {
                     "authorized": True,
-                    "approval_ref": "provider-or-conversation:receipt-reference",
+                    "authorization_ref": "operator-command:receipt-reference; required for external actions"
                 },
                 "selected_path": {
                     "id": "non-empty string",

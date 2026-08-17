@@ -7,8 +7,12 @@ of fake enforcement:
 2. receipts presenting an arbitrary SHA-256 string that is not bound to the
    literal constraints they claim to preserve.
 
-A real runtime cannot load unless this lock issues an in-process sealed proof.
-Only the explicit test harness may bypass runtime boot so CI can exercise units.
+Strict runtime execution cannot load unless this lock issues an in-process
+sealed proof. Request mode is deliberately diagnostic: it may continue in a
+degraded, non-authorized state so callers can inspect the complete startup
+request without accidentally converting inspection into runtime authorization.
+Only the explicit test harness may otherwise bypass runtime boot so CI can
+exercise units.
 """
 from __future__ import annotations
 
@@ -114,28 +118,40 @@ def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ..
     return tuple(dict.fromkeys(errors))
 
 
+def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
+    """Expose a diagnostic request-mode state without authorizing runtime action."""
+    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "degraded"
+    return _issue(False, "degraded", errors)
+
+
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    """Issue the sealed runtime proof or terminate before runtime loading."""
+    """Issue the sealed runtime proof, diagnostic degradation, or terminate."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
         return _IN_PROCESS
+
+    mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
+    if mode not in {"strict", "request", "off"}:
+        raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
     # Fidelity itself is not caller-disableable in a real runtime. This closes
     # the old escape hatch where an env var could turn the protection into prose.
     if not _testing():
         if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            errors = ("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",)
-            _block(errors)
-        if os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower() == "off":
-            errors = ("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",)
-            _block(errors)
+            _block(("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",))
+        if mode == "off":
+            _block(("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",))
 
     receipt = receipt_from_environment()
     if receipt is None:
+        if mode == "request":
+            return _degrade(("operator fidelity lock requires a boot receipt",))
         _block(("operator fidelity lock requires a boot receipt",))
 
     errors = validate_operator_fidelity_lock(receipt)
     if errors:
+        if mode == "request":
+            return _degrade(errors)
         _block(errors)
 
     validation = _issue(True, "complete")
