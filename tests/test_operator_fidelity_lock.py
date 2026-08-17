@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import os
+import pytest
 
+import operator_fidelity_lock as lock
 from operator_fidelity_lock import validate_operator_fidelity_lock
 from operator_fidelity_preflight import digest_operator_words
 
@@ -52,6 +53,28 @@ def _receipt() -> dict:
 
 def test_valid_lock_receipt_passes() -> None:
     assert validate_operator_fidelity_lock(_receipt()) == ()
+
+
+def test_request_mode_without_receipt_is_diagnostic_degraded(monkeypatch) -> None:
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "request")
+    monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
+    lock._IN_PROCESS = None
+    validation = lock.automatic_operator_fidelity_lock()
+    assert validation is not None
+    assert validation.ok is False
+    assert validation.status == "degraded"
+    assert "boot receipt" in validation.errors[0]
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "degraded"
+
+
+def test_strict_mode_without_receipt_still_fails_closed(monkeypatch) -> None:
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
+    lock._IN_PROCESS = None
+    with pytest.raises(SystemExit) as exc:
+        lock.automatic_operator_fidelity_lock()
+    assert exc.value.code == 78
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "blocked"
 
 
 def test_digest_is_cryptographically_bound_to_literal_constraints() -> None:
