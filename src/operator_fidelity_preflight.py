@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from anti_minimization_compiler import inspect_execution_text
+from anti_minimization_compiler import inspect_execution_text, supported_rule_codes
 from auto_boot import EXIT_BOOT_BLOCKED, BootError
 from prime_directive_boot import receipt_from_environment
 
@@ -64,20 +64,63 @@ def load_operator_fidelity_policy(
         raise BootError(f"invalid operator-fidelity policy: {exc}") from exc
     if not isinstance(value, dict):
         raise BootError("operator-fidelity policy must be a JSON object")
+
     required = {
         "schema_version",
         "failure_class",
         "authority",
         "objective",
         "direction",
+        "fail_closed",
         "required_true_fields",
         "required_nonempty_fields",
         "selected_path_requirements",
+        "anti_minimization",
+        "pro_code_elite_humanized_engineering",
         "correction_requirements",
     }
     missing = sorted(required - value.keys())
     if missing:
         raise BootError("operator-fidelity policy missing: " + ", ".join(missing))
+    if value.get("fail_closed") is not True:
+        raise BootError("operator-fidelity policy must remain fail_closed=true")
+
+    anti_minimization = value.get("anti_minimization")
+    if not isinstance(anti_minimization, Mapping):
+        raise BootError("operator-fidelity anti_minimization policy must be an object")
+    if str(anti_minimization.get("mode", "")).strip().lower() != "fail_closed":
+        raise BootError("operator-fidelity anti_minimization.mode must be fail_closed")
+    if anti_minimization.get("semantic_selected_path_scan") is not True:
+        raise BootError(
+            "operator-fidelity anti_minimization.semantic_selected_path_scan must be true"
+        )
+
+    declared_codes = anti_minimization.get("required_semantic_rule_codes")
+    if not isinstance(declared_codes, list) or not all(
+        isinstance(item, str) and item.strip() for item in declared_codes
+    ):
+        raise BootError(
+            "operator-fidelity anti_minimization.required_semantic_rule_codes must be a non-empty string array"
+        )
+    declared = tuple(dict.fromkeys(item.strip() for item in declared_codes))
+    compiled = supported_rule_codes()
+    if set(declared) != set(compiled):
+        missing_in_compiler = sorted(set(declared) - set(compiled))
+        missing_in_policy = sorted(set(compiled) - set(declared))
+        details: list[str] = []
+        if missing_in_compiler:
+            details.append("policy-only=" + ",".join(missing_in_compiler))
+        if missing_in_policy:
+            details.append("compiler-only=" + ",".join(missing_in_policy))
+        raise BootError(
+            "operator-fidelity semantic rule drift: " + "; ".join(details)
+        )
+
+    engineering = value.get("pro_code_elite_humanized_engineering")
+    if not isinstance(engineering, Mapping) or engineering.get("required") is not True:
+        raise BootError(
+            "operator-fidelity pro_code_elite_humanized_engineering.required must be true"
+        )
     return value
 
 
@@ -215,8 +258,6 @@ def validate_operator_fidelity_receipt(
                 "capability reduction requires operator_fidelity.operator_directed_reduction=true"
             )
 
-        # Boolean declarations cannot self-authorize contradictory prose. Scan
-        # every textual selected-path field and reject hidden downward routing.
         selected_path_text = "\n".join(_iter_text(path))
         for finding in inspect_execution_text(
             selected_path_text,
