@@ -1,5 +1,5 @@
 name: APEX Estate Non-Regression
-description: Reject high-confidence capability contraction and unresolved merge corruption without turning proof into the product ceiling.
+description: Reject high-confidence capability contraction, downward-routing policy, and unresolved merge corruption without turning proof into the product ceiling.
 
 inputs:
   base:
@@ -16,6 +16,11 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Self-test APEX anti-minimization compiler
+      shell: bash
+      run: |
+        python "${GITHUB_ACTION_PATH}/test_enforce.py"
+
     - name: APEX capability non-regression
       shell: bash
       run: |
