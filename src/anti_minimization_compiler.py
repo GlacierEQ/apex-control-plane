@@ -1,18 +1,17 @@
 """Semantic anti-minimization compiler for APEX execution vectors.
 
-The operator-fidelity receipt already carries structured booleans such as
-``minimum_scope_default=false``. Those booleans are necessary, but they are not
-sufficient: a caller could set them correctly while the human-readable path
-still says "take the safest slice" or "freeze architecture".
+Structured receipt flags such as ``minimum_scope_default=false`` are necessary
+but not sufficient. A caller can set compliant booleans while selected-path
+prose still says "take the safest slice" or "freeze architecture".
 
-This module closes that assertion bypass. It inspects execution-path language,
-distinguishes legitimate local narrowing (debugging, least privilege, rollback
-checkpoints) from product-level scope reduction, and produces an upward rewrite
-for every rejected route.
+This module closes that assertion bypass. It detects product-level downward
+routing and supplies deterministic upward rewrites while preserving legitimate
+engineering concepts such as least privilege, minimal defect reproducers, and
+rollback checkpoints. Exceptions are phrase-precise, never clause-wide, so a
+valid security phrase cannot camouflage minimization elsewhere in the sentence.
 
-It intentionally scans *selected execution language*, not literal operator
-constraints. Quoting a rejected phrase while preserving the Operator's words is
-not itself a regression.
+Only selected execution language should be scanned. Literal Operator words may
+quote rejected phrases and must remain intact for provenance.
 """
 from __future__ import annotations
 
@@ -43,9 +42,10 @@ class MinimizationFinding:
         )
 
 
-# Product-level downward routing. Patterns are deliberately phrase-oriented so
-# ordinary words such as "minimum" in "minimum necessary permissions" are not
-# treated as violations by themselves.
+# Product-level downward routing. Patterns are phrase-oriented. Legitimate
+# constructs such as "least privilege", "minimum necessary permissions", and
+# "minimal reproducer" do not match these rules at all, which is safer than a
+# broad exception that could accidentally exempt neighboring bad language.
 _RULES: Final[tuple[MinimizationRule, ...]] = (
     MinimizationRule(
         "SMALLEST_DEFAULT",
@@ -59,7 +59,7 @@ _RULES: Final[tuple[MinimizationRule, ...]] = (
     MinimizationRule(
         "MVP_DEFAULT",
         re.compile(
-            r"\b(?:minimum\s+viable|\bmvp\b)\s*"
+            r"\b(?:minimum\s+viable|mvp)\s*"
             r"(?:plan|product|implementation|slice|scope|feature|solution|version)?\b",
             re.IGNORECASE,
         ),
@@ -124,31 +124,32 @@ _RULES: Final[tuple[MinimizationRule, ...]] = (
 )
 
 
-# Narrowing is legitimate when it is clearly local to diagnosis, security, or
-# recovery. These clauses protect engineering rigor from being mistaken for a
-# product-level ambition ceiling.
-_LOCAL_NARROWING: Final[tuple[re.Pattern[str], ...]] = (
-    re.compile(r"\b(?:debug|debugging|diagnostic|fault\s+isolation|bisect(?:ion)?)\b", re.IGNORECASE),
-    re.compile(r"\bminimal\s+(?:repro|reproduction|reproducer|test\s+case)\b", re.IGNORECASE),
-    re.compile(r"\bleast\s+privilege\b", re.IGNORECASE),
-    re.compile(r"\bminimum\s+necessary\s+permissions?\b", re.IGNORECASE),
-    re.compile(r"\b(?:rollback|recovery)\s+(?:checkpoint|snapshot|path)\b", re.IGNORECASE),
-    re.compile(r"\bknown[- ]good\s+(?:checkpoint|snapshot|state)\b", re.IGNORECASE),
-    re.compile(r"\bimmutable\s+(?:checkpoint|snapshot)\b", re.IGNORECASE),
+# These are documented invariants and a regression corpus. They are not broad
+# bypass patterns. If a future forbidden rule overlaps one of these exact local
+# quality mechanisms, the rule must become more precise instead of skipping a
+# whole clause.
+PERMITTED_LOCAL_NARROWING: Final[tuple[str, ...]] = (
+    "debugging or diagnostic isolation",
+    "minimal reproduction of a defect",
+    "least privilege security",
+    "minimum necessary permissions",
+    "immutable rollback checkpoint",
+    "known-good snapshot",
 )
 
 
+def supported_rule_codes() -> tuple[str, ...]:
+    """Return the exact semantic enforcement surface for policy drift checks."""
+    return tuple(rule.code for rule in _RULES)
+
+
 def _clauses(text: str) -> tuple[str, ...]:
-    """Split prose finely enough to keep local exceptions local."""
+    """Split prose for precise findings and readable repair receipts."""
     return tuple(
         part.strip()
         for part in re.split(r"(?:[\n\r]+|(?<=[.!?;])\s+)", text)
         if part.strip()
     )
-
-
-def _is_local_narrowing(clause: str) -> bool:
-    return any(pattern.search(clause) for pattern in _LOCAL_NARROWING)
 
 
 def inspect_execution_text(
@@ -158,18 +159,15 @@ def inspect_execution_text(
 ) -> tuple[MinimizationFinding, ...]:
     """Return semantic downward-routing findings for selected-path prose.
 
-    Explicit Operator-directed reduction is authoritative and therefore not a
-    policy violation. Local diagnostic/security/recovery narrowing is also
-    preserved. Everything else matching the product-level regression lexicon is
-    rejected.
+    Explicit Operator-directed reduction is authoritative. Otherwise every
+    product-level regression phrase is rejected, even when a legitimate local
+    quality phrase appears in the same clause.
     """
     if operator_directed_reduction or not text.strip():
         return ()
 
     findings: list[MinimizationFinding] = []
     for clause in _clauses(text):
-        if _is_local_narrowing(clause):
-            continue
         for rule in _RULES:
             for match in rule.pattern.finditer(clause):
                 findings.append(
@@ -181,7 +179,6 @@ def inspect_execution_text(
                     )
                 )
 
-    # Preserve order while deduplicating overlapping/duplicate signals.
     unique: dict[tuple[str, str, str], MinimizationFinding] = {}
     for finding in findings:
         key = (finding.code, finding.matched_text.lower(), finding.clause.lower())
@@ -192,20 +189,15 @@ def inspect_execution_text(
 def compile_upward(text: str) -> str:
     """Rewrite product-level downward-routing language toward APEX objectives.
 
-    This is deterministic and conservative: only matched regression phrases are
-    replaced, and clauses containing legitimate local narrowing are left intact.
-    The function is suitable for planners that want repair instead of rejection.
-    Runtime authorization should still call :func:`inspect_execution_text` on
-    the resulting path.
+    Only matched regression phrases are replaced. Legitimate local engineering
+    language is naturally preserved because the forbidden patterns are precise.
+    Runtime authorization should still inspect the compiled result.
     """
     if not text.strip():
         return text
 
     compiled: list[str] = []
     for clause in _clauses(text):
-        if _is_local_narrowing(clause):
-            compiled.append(clause)
-            continue
         rewritten = clause
         for rule in _RULES:
             rewritten = rule.pattern.sub(rule.replacement, rewritten)
