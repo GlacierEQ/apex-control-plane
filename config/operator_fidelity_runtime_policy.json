@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "name": "APEX Operator Fidelity Runtime Enforcement",
   "failure_class": "INSTRUCTION_DISPLACEMENT",
   "authority": "operator_intent",
@@ -38,7 +38,19 @@
   },
   "anti_minimization": {
     "mode": "fail_closed",
+    "semantic_selected_path_scan": true,
     "principle": "Narrowing may isolate uncertainty but may never redefine the product objective.",
+    "required_semantic_rule_codes": [
+      "SMALLEST_DEFAULT",
+      "MVP_DEFAULT",
+      "SAFEST_SLICE_DEFAULT",
+      "BOUNDED_SLICE_DEFAULT",
+      "LEAST_CAPABILITY_DEFAULT",
+      "FREEZE_PRODUCT",
+      "FEATURE_FREEZE_DELIVERY",
+      "GOVERNANCE_FIRST",
+      "PRESERVE_INSTEAD_OF_ACT"
+    ],
     "forbidden_objective_signals": [
       "FORBIDDEN: reduce scope first",
       "FORBIDDEN: smallest useful next step",
@@ -55,7 +67,9 @@
       "FORBIDDEN: freeze architecture",
       "FORBIDDEN: freeze implementation",
       "FORBIDDEN: feature freeze as delivery strategy",
-      "FORBIDDEN: capability freeze"
+      "FORBIDDEN: capability freeze",
+      "FORBIDDEN: governance first",
+      "FORBIDDEN: preserve instead of act"
     ],
     "permitted_local_uses": [
       "debugging or diagnostic isolation",
@@ -68,8 +82,10 @@
     "required_rewrite_direction": [
       "maximum coherent executable tranche",
       "strongest coherent implementation",
+      "complete central mechanism plus hardening and proof",
       "preserve prior gains",
       "expand capability",
+      "control risk without reducing the target",
       "test adversarially",
       "repair forward",
       "compose stronger mechanisms",
