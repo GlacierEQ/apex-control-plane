@@ -32,8 +32,41 @@ EXECUTION_RE = re.compile(
     r"dynamic import|importlib|subprocess|httpx|requests\.|urllib|socket|webhook)\b",
     re.IGNORECASE,
 )
-MINIMIZE_RE = re.compile(
-    r"(smallest (?:possible|useful|change|slice)|minimum viable|bounded slice|safe(?:st)? slice)",
+
+# Downward-routing language is not merely advisory. When newly introduced as an
+# active engineering directive, it is a policy regression and must fail closed.
+DOWNWARD_SCOPE_RE = re.compile(
+    r"(smallest\s+(?:possible|useful|change|slice|step|implementation|scope|solution|version)|"
+    r"minimum\s+viable(?:\s+(?:product|plan|slice|scope|implementation|change))?|"
+    r"bounded\s+slice|safe(?:st)?\s+slice|"
+    r"least\s+(?:ambitious|capable|complex|scope|change|work|effort|powerful)|"
+    r"freeze\s+(?:scope|architecture|design|implementation|features?|capability|development)|"
+    r"(?:scope|architecture|design|implementation|features?|capability|development)\s+freeze)",
+    re.IGNORECASE,
+)
+DIRECTIVE_RE = re.compile(
+    r"\b(must|shall|should|always|default|prefer|choose|select|use|take|limit|reduce|"
+    r"minimi[sz]e|constrain|cap|freeze|keep|make|optimi[sz]e|target|objective)\b",
+    re.IGNORECASE,
+)
+ANTI_DOWNWARD_RE = re.compile(
+    r"\b(do\s+not|don't|never|must\s+not|shall\s+not|reject|forbid|prohibit|"
+    r"retire(?:d)?|deprecated|historical|anti[-_ ]minimi[sz]ation|no[-_ ]minimum|"
+    r"not\s+the\s+(?:goal|objective|target|mission|default)|zero\s+intrinsic\s+(?:score|priority))\b",
+    re.IGNORECASE,
+)
+DEBUG_EXCEPTION_RE = re.compile(
+    r"\b(debug|diagnos|reproduc|bisect|isolate|experiment|probe|test\s+fixture|"
+    r"failure\s+reproduction|minimal\s+reproducer)\b",
+    re.IGNORECASE,
+)
+ROLLBACK_EXCEPTION_RE = re.compile(
+    r"\b(rollback|checkpoint|snapshot|known[- ]good|restore\s+point|immutable\s+reference|"
+    r"baseline\s+capture)\b",
+    re.IGNORECASE,
+)
+SECURITY_EXCEPTION_RE = re.compile(
+    r"\bleast\s+privilege\b|\bminimum\s+permissions?\b|\bminimum\s+necessary\s+access\b",
     re.IGNORECASE,
 )
 STATE_DEMOTION_RE = re.compile(
@@ -95,10 +128,33 @@ def parse_file_patches(diff: str) -> dict[str, dict[str, list[str]]]:
     return patches
 
 
+def classify_downward_directive(line: str) -> str | None:
+    """Return a fatal regression code for active minimization directives.
+
+    Narrowing is permitted only as a local uncertainty-reduction technique, never
+    as the product objective. Security least-privilege language and immutable
+    rollback/checkpoint language are deliberately exempt because they increase
+    system quality rather than suppress capability.
+    """
+    if not DOWNWARD_SCOPE_RE.search(line):
+        return None
+    if SECURITY_EXCEPTION_RE.search(line):
+        return None
+    if ANTI_DOWNWARD_RE.search(line):
+        return None
+    if DEBUG_EXCEPTION_RE.search(line):
+        return None
+    if ROLLBACK_EXCEPTION_RE.search(line):
+        return None
+    if DIRECTIVE_RE.search(line) or re.search(r"[:=]\s*[\"']?(?:smallest|minimum|least|freeze)", line, re.IGNORECASE):
+        return "DOWNWARD_SCOPE_DIRECTIVE"
+    # Policy prose can omit an imperative verb while still declaring a target,
+    # e.g. "the smallest useful implementation." Fail closed on that ambiguity.
+    return "DOWNWARD_SCOPE_SIGNAL_UNQUALIFIED"
+
+
 def tree_conflicts(head: str) -> list[dict[str, str]]:
     """Scan the complete resulting tree for exact Git conflict-marker lines."""
-    # Git conflict markers are exactly seven equals on the separator line.  The
-    # old scanner matched decorative ===== headers and created a false gate.
     proc = subprocess.run(
         [
             "git",
@@ -120,7 +176,6 @@ def tree_conflicts(head: str) -> list[dict[str, str]]:
         raise RuntimeError(f"git grep failed: {proc.stderr.strip()}")
     findings: list[dict[str, str]] = []
     for line in proc.stdout.splitlines():
-        # Typical shape: <head>:path:line:marker text
         parts = line.split(":", 3)
         if len(parts) < 4:
             continue
@@ -168,14 +223,24 @@ def main() -> int:
                 {"code": "EXECUTION_TO_RESTRICTION_CONTRACTION", "file": name}
             )
 
-        if MINIMIZE_RE.search(added):
-            warnings.append({"code": "MINIMUM_SCOPE_SIGNAL", "file": name})
+        for line_number, line in enumerate(parts["added"], start=1):
+            code = classify_downward_directive(line)
+            if code:
+                failures.append(
+                    {
+                        "code": code,
+                        "file": name,
+                        "added_line": str(line_number),
+                        "signal": line.strip()[:240],
+                    }
+                )
 
         if STATE_DEMOTION_RE.search(added):
             warnings.append({"code": "STATE_DEMOTION_SIGNAL", "file": name})
 
-    # Exact-diff authorization may release deliberate capability reduction, but it
-    # never legalizes unresolved merge-conflict markers.
+    # Exact-diff authorization may release a deliberate capability reduction. It
+    # never legalizes unresolved merge corruption. The authorization must be
+    # explicit because downward routing is now a hard failure, not a suggestion.
     if authorized:
         failures = [
             finding
@@ -187,13 +252,19 @@ def main() -> int:
     warnings = list({json.dumps(item, sort_keys=True): item for item in warnings}.values())
 
     payload = {
-        "schema": "apex.estate-non-regression.v2",
+        "schema": "apex.estate-non-regression.v3",
         "base": args.base,
         "head": args.head,
         "diff_sha256": digest,
         "operator_reduction_authorization_bound": authorized,
         "full_tree_conflict_scan": True,
         "exact_conflict_marker_matching": True,
+        "anti_minimization_fail_closed": True,
+        "downward_scope_exceptions": [
+            "local_debug_or_diagnostic_isolation",
+            "least_privilege_security",
+            "rollback_or_known_good_checkpoint",
+        ],
         "failures": failures,
         "warnings": warnings,
         "status": "FAIL" if failures else "PASS",
@@ -202,9 +273,9 @@ def main() -> int:
 
     if failures:
         print(
-            "APEX non-regression rejected this change. Repair forward or bind an "
-            "exact-diff Operator reduction authorization. Merge-conflict corruption "
-            "must always be repaired.",
+            "APEX non-regression rejected this change. Repair forward into a stronger "
+            "coherent implementation or bind an exact-diff Operator reduction authorization. "
+            "Downward scope routing and merge-conflict corruption fail closed.",
             file=sys.stderr,
         )
         return 2
