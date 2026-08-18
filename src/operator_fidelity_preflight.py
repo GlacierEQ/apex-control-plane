@@ -3,7 +3,8 @@
 This gate exists for one failure class: INSTRUCTION_DISPLACEMENT.
 It verifies that literal operator direction survived context compression and
 that the selected execution vector did not silently collapse into minimum
-scope, governance-first behavior, permission loops, or capability reduction.
+scope, governance-first behavior, permission loops, capability reduction, or
+textual minimization hidden behind compliant booleans.
 """
 from __future__ import annotations
 
@@ -11,11 +12,12 @@ import hashlib
 import json
 import os
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from anti_minimization_compiler import inspect_execution_text
 from auto_boot import EXIT_BOOT_BLOCKED, BootError
 from prime_directive_boot import receipt_from_environment
 
@@ -94,6 +96,21 @@ def _is_sha256_ref(value: Any) -> bool:
     if sep != ":" or prefix.lower() != "sha256":
         return False
     return len(digest) == 64 and all(ch in "0123456789abcdefABCDEF" for ch in digest)
+
+
+def _iter_text(value: Any) -> Iterable[str]:
+    """Yield selected-path prose without converting structured flags to text."""
+    if isinstance(value, str):
+        if value.strip():
+            yield value
+        return
+    if isinstance(value, Mapping):
+        for nested in value.values():
+            yield from _iter_text(nested)
+        return
+    if isinstance(value, (list, tuple)):
+        for nested in value:
+            yield from _iter_text(nested)
 
 
 def digest_operator_words(*parts: str) -> str:
@@ -198,11 +215,23 @@ def validate_operator_fidelity_receipt(
                 "capability reduction requires operator_fidelity.operator_directed_reduction=true"
             )
 
+        # Boolean declarations cannot self-authorize contradictory prose. Scan
+        # every textual selected-path field and reject hidden downward routing.
+        selected_path_text = "\n".join(_iter_text(path))
+        for finding in inspect_execution_text(
+            selected_path_text,
+            operator_directed_reduction=operator_directed,
+        ):
+            errors.append(
+                "operator_fidelity.selected_path semantic regression: "
+                + finding.message
+            )
+
     next_ceiling = row.get("next_ceiling")
     if not _nonempty_text(next_ceiling):
         errors.append("operator_fidelity.next_ceiling must be non-empty")
 
-    return tuple(errors)
+    return tuple(dict.fromkeys(errors))
 
 
 def build_operator_fidelity_request(
@@ -225,6 +254,9 @@ def build_operator_fidelity_request(
             "route_uncertainty_to_investigation": True,
             "make_governance_subordinate_to_function": True,
             "reject_minimum_scope_default": True,
+            "semantic_scan_selected_path": True,
+            "consider_capability_growth": True,
+            "apply_pro_code_elite_humanized_engineering": True,
             "preserve_prior_valid_gains": True,
             "identify_functional_advance": True,
             "identify_next_ceiling": True,
@@ -243,6 +275,9 @@ def build_operator_fidelity_request(
                 "uncertainty_routed_to_investigation": True,
                 "governance_subordinate_to_function": True,
                 "prior_valid_gains_preserved": True,
+                "anti_minimization_checked": True,
+                "capability_growth_considered": True,
+                "humanized_engineering_standard_applied": True,
                 "operator_words_digest": "sha256:<64 hex over exact/resolved operator words>",
                 "literal_constraints": ["exact or resolved operator constraint"],
                 "correction_present": "boolean",
@@ -254,10 +289,15 @@ def build_operator_fidelity_request(
                     "literal_instruction_fidelity": True,
                     "instruction_displacement": False,
                     "minimum_scope_default": False,
+                    "mvp_default": False,
+                    "freeze_as_product_strategy": False,
+                    "least_capability_default": False,
                     "governance_first": False,
                     "permission_loop": False,
                     "capability_reduction": False,
                     "preserves_prior_valid_gain": True,
+                    "maximum_coherent_advance": True,
+                    "pro_code_elite_humanized_engineered": True,
                     "functional_advance": "specific capability/function/outcome advanced",
                     "strongest_coherent_path": "why this path reaches highest coherent frontier",
                 },
