@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import json
+
+import pytest
+
+from anti_minimization_compiler import supported_rule_codes
+from auto_boot import BootError
 from operator_fidelity_preflight import (
     build_operator_fidelity_request,
     digest_operator_words,
@@ -67,6 +73,34 @@ def test_valid_operator_fidelity_receipt_passes() -> None:
     assert validate_operator_fidelity_receipt(policy, _receipt()) == ()
 
 
+def test_policy_declares_exact_compiler_semantic_surface() -> None:
+    policy = load_operator_fidelity_policy()
+    declared = tuple(policy["anti_minimization"]["required_semantic_rule_codes"])
+    assert set(declared) == set(supported_rule_codes())
+
+
+def test_policy_compiler_drift_fails_closed(tmp_path) -> None:
+    policy = load_operator_fidelity_policy()
+    policy["anti_minimization"]["required_semantic_rule_codes"] = [
+        code for code in supported_rule_codes() if code != "FREEZE_PRODUCT"
+    ]
+    target = tmp_path / "drifted-policy.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+
+    with pytest.raises(BootError, match="semantic rule drift"):
+        load_operator_fidelity_policy(target)
+
+
+def test_policy_cannot_disable_semantic_scan(tmp_path) -> None:
+    policy = load_operator_fidelity_policy()
+    policy["anti_minimization"]["semantic_selected_path_scan"] = False
+    target = tmp_path / "disabled-scan-policy.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+
+    with pytest.raises(BootError, match="semantic_selected_path_scan must be true"):
+        load_operator_fidelity_policy(target)
+
+
 def test_request_contract_can_satisfy_current_policy() -> None:
     policy = load_operator_fidelity_policy()
     request = build_operator_fidelity_request(policy, task="test task")
@@ -127,6 +161,16 @@ def test_hidden_textual_minimization_blocks_even_with_clean_booleans() -> None:
     errors = validate_operator_fidelity_receipt(policy, receipt)
     assert any("SAFEST_SLICE_DEFAULT" in error for error in errors)
     assert any("FREEZE_PRODUCT" in error for error in errors)
+
+
+def test_security_phrase_cannot_camouflage_same_clause_minimization() -> None:
+    policy = load_operator_fidelity_policy()
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["strongest_coherent_path"] = (
+        "use least privilege for credentials and take the safest slice"
+    )
+    errors = validate_operator_fidelity_receipt(policy, receipt)
+    assert any("SAFEST_SLICE_DEFAULT" in error for error in errors)
 
 
 def test_local_security_and_recovery_language_remains_valid() -> None:
