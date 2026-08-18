@@ -9,6 +9,8 @@ routing and supplies deterministic upward rewrites while preserving legitimate
 engineering concepts such as least privilege, minimal defect reproducers, and
 rollback checkpoints. Exceptions are phrase-precise, never clause-wide, so a
 valid security phrase cannot camouflage minimization elsewhere in the sentence.
+Negation is match-local for the same reason: "never freeze architecture" remains
+a prohibition, but it cannot excuse "take the safest slice" later in the text.
 
 Only selected execution language should be scanned. Literal Operator words may
 quote rejected phrases and must remain intact for provenance.
@@ -42,10 +44,6 @@ class MinimizationFinding:
         )
 
 
-# Product-level downward routing. Patterns are phrase-oriented. Legitimate
-# constructs such as "least privilege", "minimum necessary permissions", and
-# "minimal reproducer" do not match these rules at all, which is safer than a
-# broad exception that could accidentally exempt neighboring bad language.
 _RULES: Final[tuple[MinimizationRule, ...]] = (
     MinimizationRule(
         "SMALLEST_DEFAULT",
@@ -124,10 +122,6 @@ _RULES: Final[tuple[MinimizationRule, ...]] = (
 )
 
 
-# These are documented invariants and a regression corpus. They are not broad
-# bypass patterns. If a future forbidden rule overlaps one of these exact local
-# quality mechanisms, the rule must become more precise instead of skipping a
-# whole clause.
 PERMITTED_LOCAL_NARROWING: Final[tuple[str, ...]] = (
     "debugging or diagnostic isolation",
     "minimal reproduction of a defect",
@@ -135,6 +129,15 @@ PERMITTED_LOCAL_NARROWING: Final[tuple[str, ...]] = (
     "minimum necessary permissions",
     "immutable rollback checkpoint",
     "known-good snapshot",
+)
+
+# Keep negation local to the specific matched phrase. A response-wide "never"
+# or "forbidden" must not become an escape hatch for a later downward directive.
+_NEGATION_PREFIX_RE: Final[re.Pattern[str]] = re.compile(
+    r"(?:\bdo\s+not\b|\bdon't\b|\bnever\b|\bmust\s+not\b|\bshall\s+not\b|"
+    r"\breject\b|\bforbid(?:den)?\b|\bprohibit(?:ed)?\b|\bnot\s+the\s+"
+    r"(?:goal|objective|target|mission|default)\b)\s*(?:\w+\s+){0,3}$",
+    re.IGNORECASE,
 )
 
 
@@ -152,6 +155,11 @@ def _clauses(text: str) -> tuple[str, ...]:
     )
 
 
+def _locally_negated(clause: str, match_start: int) -> bool:
+    prefix = clause[max(0, match_start - 96):match_start]
+    return bool(_NEGATION_PREFIX_RE.search(prefix))
+
+
 def inspect_execution_text(
     text: str,
     *,
@@ -161,7 +169,8 @@ def inspect_execution_text(
 
     Explicit Operator-directed reduction is authoritative. Otherwise every
     product-level regression phrase is rejected, even when a legitimate local
-    quality phrase appears in the same clause.
+    quality phrase appears in the same clause. Locally negated regression
+    phrases remain valid prohibitions.
     """
     if operator_directed_reduction or not text.strip():
         return ()
@@ -170,6 +179,8 @@ def inspect_execution_text(
     for clause in _clauses(text):
         for rule in _RULES:
             for match in rule.pattern.finditer(clause):
+                if _locally_negated(clause, match.start()):
+                    continue
                 findings.append(
                     MinimizationFinding(
                         code=rule.code,
@@ -189,8 +200,8 @@ def inspect_execution_text(
 def compile_upward(text: str) -> str:
     """Rewrite product-level downward-routing language toward APEX objectives.
 
-    Only matched regression phrases are replaced. Legitimate local engineering
-    language is naturally preserved because the forbidden patterns are precise.
+    Only non-negated regression phrases are replaced. Legitimate local
+    engineering language and explicit anti-minimization prohibitions survive.
     Runtime authorization should still inspect the compiled result.
     """
     if not text.strip():
@@ -200,6 +211,16 @@ def compile_upward(text: str) -> str:
     for clause in _clauses(text):
         rewritten = clause
         for rule in _RULES:
-            rewritten = rule.pattern.sub(rule.replacement, rewritten)
+            matches = [
+                match
+                for match in rule.pattern.finditer(rewritten)
+                if not _locally_negated(rewritten, match.start())
+            ]
+            for match in reversed(matches):
+                rewritten = (
+                    rewritten[:match.start()]
+                    + rule.replacement
+                    + rewritten[match.end():]
+                )
         compiled.append(rewritten)
     return "\n".join(compiled)
