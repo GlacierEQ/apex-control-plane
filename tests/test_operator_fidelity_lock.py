@@ -28,6 +28,9 @@ def _receipt() -> dict:
             "uncertainty_routed_to_investigation": True,
             "governance_subordinate_to_function": True,
             "prior_valid_gains_preserved": True,
+            "anti_minimization_checked": True,
+            "capability_growth_considered": True,
+            "humanized_engineering_standard_applied": True,
             "operator_words_digest": digest_operator_words(*words),
             "literal_constraints": words,
             "correction_present": True,
@@ -39,11 +42,16 @@ def _receipt() -> dict:
                 "literal_instruction_fidelity": True,
                 "instruction_displacement": False,
                 "minimum_scope_default": False,
+                "mvp_default": False,
+                "freeze_as_product_strategy": False,
+                "least_capability_default": False,
                 "governance_first": False,
                 "permission_loop": False,
                 "capability_reduction": False,
                 "preserves_prior_valid_gain": True,
-                "functional_advance": "hard runtime fidelity lock",
+                "maximum_coherent_advance": True,
+                "pro_code_elite_humanized_engineered": True,
+                "functional_advance": "hard runtime fidelity lock with semantic inspection",
                 "strongest_coherent_path": "runtime is rejected before loading on fidelity failure",
             },
             "next_ceiling": "propagate enforcement across every execution entrypoint",
@@ -119,6 +127,16 @@ def test_minimum_scope_and_governance_first_are_rejected() -> None:
     errors = validate_operator_fidelity_lock(receipt)
     assert any("minimum_scope_default" in error for error in errors)
     assert any("governance_first" in error for error in errors)
+
+
+def test_semantic_minimization_cannot_hide_behind_clean_flags() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["strongest_coherent_path"] = (
+        "use the least capable implementation and freeze architecture"
+    )
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("LEAST_CAPABILITY_DEFAULT" in error for error in errors)
+    assert any("FREEZE_PRODUCT" in error for error in errors)
 
 
 def test_capability_reduction_requires_operator_direction() -> None:
