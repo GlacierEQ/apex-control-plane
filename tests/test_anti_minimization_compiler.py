@@ -65,6 +65,18 @@ def test_legitimate_local_quality_phrase_cannot_camouflage_same_clause_regressio
     assert "FREEZE_PRODUCT" in codes
 
 
+def test_negation_is_match_local_not_response_wide() -> None:
+    text = "Never freeze architecture; take the safest slice for the implementation."
+    codes = {finding.code for finding in inspect_execution_text(text)}
+    assert "FREEZE_PRODUCT" not in codes
+    assert "SAFEST_SLICE_DEFAULT" in codes
+
+
+def test_direct_prohibition_is_not_misclassified_as_regression() -> None:
+    assert inspect_execution_text("Do not take the smallest useful step.") == ()
+    assert inspect_execution_text("Never freeze architecture.") == ()
+
+
 @pytest.mark.parametrize(
     "text",
     [
@@ -96,11 +108,20 @@ def test_compile_upward_repairs_product_level_minimization() -> None:
     assert inspect_execution_text(compiled) == ()
 
 
-def test_compile_upward_preserves_quality_signal_and_repairs_neighboring_regression() -> None:
+def test_compile_upward_preserves_quality_and_repairs_neighboring_regression() -> None:
     compiled = compile_upward(
         "Use least privilege for the GitHub token and take the safest slice."
     )
     assert "least privilege" in compiled
+    assert "control risk without reducing the target" in compiled
+    assert inspect_execution_text(compiled) == ()
+
+
+def test_compile_upward_preserves_negated_prohibition_and_repairs_other_clause() -> None:
+    compiled = compile_upward(
+        "Never freeze architecture; take the safest slice for the implementation."
+    )
+    assert "Never freeze architecture" in compiled
     assert "control risk without reducing the target" in compiled
     assert inspect_execution_text(compiled) == ()
 
