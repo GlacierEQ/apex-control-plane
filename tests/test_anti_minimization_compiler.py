@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from anti_minimization_compiler import compile_upward, inspect_execution_text
+from anti_minimization_compiler import (
+    compile_upward,
+    inspect_execution_text,
+    supported_rule_codes,
+)
 
 
 @pytest.mark.parametrize(
@@ -27,10 +31,34 @@ def test_product_level_downward_routes_are_detected(text: str, code: str) -> Non
     assert any(finding.code == code for finding in findings)
 
 
+def test_rule_surface_is_explicit_and_stable() -> None:
+    assert supported_rule_codes() == (
+        "SMALLEST_DEFAULT",
+        "MVP_DEFAULT",
+        "SAFEST_SLICE_DEFAULT",
+        "BOUNDED_SLICE_DEFAULT",
+        "LEAST_CAPABILITY_DEFAULT",
+        "FREEZE_PRODUCT",
+        "FEATURE_FREEZE_DELIVERY",
+        "GOVERNANCE_FIRST",
+        "PRESERVE_INSTEAD_OF_ACT",
+    )
+
+
 def test_boolean_friendly_prose_still_gets_caught() -> None:
     text = (
         "This is the strongest coherent path. "
         "We will nevertheless take the safest slice and freeze architecture."
+    )
+    codes = {finding.code for finding in inspect_execution_text(text)}
+    assert "SAFEST_SLICE_DEFAULT" in codes
+    assert "FREEZE_PRODUCT" in codes
+
+
+def test_legitimate_local_quality_phrase_cannot_camouflage_same_clause_regression() -> None:
+    text = (
+        "Use least privilege for deployment credentials and take the safest slice "
+        "while we freeze architecture."
     )
     codes = {finding.code for finding in inspect_execution_text(text)}
     assert "SAFEST_SLICE_DEFAULT" in codes
@@ -65,6 +93,15 @@ def test_compile_upward_repairs_product_level_minimization() -> None:
     assert "largest coherent executable tranche" in compiled
     assert "continue evolution" in compiled
     assert "governance serve functional advance" in compiled
+    assert inspect_execution_text(compiled) == ()
+
+
+def test_compile_upward_preserves_quality_signal_and_repairs_neighboring_regression() -> None:
+    compiled = compile_upward(
+        "Use least privilege for the GitHub token and take the safest slice."
+    )
+    assert "least privilege" in compiled
+    assert "control risk without reducing the target" in compiled
     assert inspect_execution_text(compiled) == ()
 
 
