@@ -1,9 +1,10 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "name": "APEX Operator Fidelity Runtime Enforcement",
   "failure_class": "INSTRUCTION_DISPLACEMENT",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
+  "engineering_standard": "pro_code_elite_humanized_engineered",
   "direction": "look_up",
   "fail_closed": true,
   "required_true_fields": [
@@ -14,7 +15,10 @@
     "objective_function_matches_operator",
     "uncertainty_routed_to_investigation",
     "governance_subordinate_to_function",
-    "prior_valid_gains_preserved"
+    "prior_valid_gains_preserved",
+    "anti_minimization_checked",
+    "capability_growth_considered",
+    "humanized_engineering_standard_applied"
   ],
   "required_nonempty_fields": [
     "operator_words_digest"
@@ -23,18 +27,101 @@
     "literal_instruction_fidelity": true,
     "instruction_displacement": false,
     "minimum_scope_default": false,
+    "mvp_default": false,
+    "freeze_as_product_strategy": false,
+    "least_capability_default": false,
     "governance_first": false,
     "permission_loop": false,
-    "preserves_prior_valid_gain": true
+    "preserves_prior_valid_gain": true,
+    "maximum_coherent_advance": true,
+    "pro_code_elite_humanized_engineered": true
+  },
+  "anti_minimization": {
+    "mode": "fail_closed",
+    "principle": "Narrowing may isolate uncertainty but may never redefine the product objective.",
+    "forbidden_objective_signals": [
+      "reduce scope first",
+      "smallest useful next step",
+      "smallest possible implementation",
+      "smallest useful change",
+      "minimum viable plan",
+      "minimum viable slice",
+      "minimum viable scope",
+      "bounded slice as default",
+      "safest slice as default",
+      "least ambitious implementation",
+      "least capable implementation",
+      "freeze scope",
+      "freeze architecture",
+      "freeze implementation",
+      "feature freeze as delivery strategy",
+      "capability freeze"
+    ],
+    "permitted_local_uses": [
+      "debugging or diagnostic isolation",
+      "minimal reproduction of a defect",
+      "least privilege security",
+      "minimum necessary permissions",
+      "immutable rollback checkpoint",
+      "known-good snapshot"
+    ],
+    "required_rewrite_direction": [
+      "maximum coherent executable tranche",
+      "strongest coherent implementation",
+      "preserve prior gains",
+      "expand capability",
+      "test adversarially",
+      "repair forward",
+      "compose stronger mechanisms",
+      "verify runtime behavior",
+      "continue frontier expansion"
+    ]
+  },
+  "pro_code_elite_humanized_engineering": {
+    "required": true,
+    "qualities": [
+      "complete coherent execution paths",
+      "clear purposeful naming",
+      "architecture-revealing structure",
+      "consequential WHY comments",
+      "human-recoverable errors",
+      "reliability",
+      "observability",
+      "security",
+      "performance",
+      "composability",
+      "maintainability",
+      "rollback",
+      "adversarial verification",
+      "measurable capability gain"
+    ],
+    "forbidden_delivery_substitutes": [
+      "placeholder presented as finished",
+      "fake adapter",
+      "simulated success",
+      "decorative scaffolding",
+      "TODO-as-delivery",
+      "governance substituted for implementation",
+      "proof substituted for product capability"
+    ]
   },
   "correction_requirements": {
     "reassess_objective_function": true,
+    "repair_affected_work": true,
     "effect_field": "correction_effect"
   },
   "regression_signatures": [
     "reduce scope first",
     "smallest useful next step",
+    "smallest possible implementation",
     "minimum viable plan",
+    "minimum viable slice",
+    "bounded slice as default",
+    "safest slice as default",
+    "freeze scope",
+    "freeze architecture",
+    "freeze implementation",
+    "least ambitious implementation",
     "governance instead of function",
     "preserve instead of act",
     "ask challenged institution to create its own legitimacy predicate"
