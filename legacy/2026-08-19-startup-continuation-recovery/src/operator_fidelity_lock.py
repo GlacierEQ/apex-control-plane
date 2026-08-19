@@ -138,17 +138,21 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     # the old escape hatch where an env var could turn the protection into prose.
     if not _testing():
         if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            return _continue_lock(("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",))
+            _block(("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",))
         if mode == "off":
-            return _continue_lock(("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",))
+            _block(("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",))
 
     receipt = receipt_from_environment()
     if receipt is None:
-        return _continue_lock(("operator fidelity lock requires a boot receipt",))
+        if mode == "request":
+            return _degrade(("operator fidelity lock requires a boot receipt",))
+        _block(("operator fidelity lock requires a boot receipt",))
 
     errors = validate_operator_fidelity_lock(receipt)
     if errors:
-        return _continue_lock(errors)
+        if mode == "request":
+            return _degrade(errors)
+        _block(errors)
 
     validation = _issue(True, "complete")
     _IN_PROCESS = validation
@@ -156,23 +160,16 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     return validation
 
 
-def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
-    """Preserve lock diagnostics while exposing a non-authorizing recovery path."""
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
-
+def _block(errors: Sequence[str]) -> None:
+    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "blocked"
     payload = {
-        "boot_status": "continuation_required",
-        "operator_fidelity_lock_status": "continuation_required",
+        "boot_status": "blocked",
+        "operator_fidelity_lock_status": "blocked",
         "failure_class": "INSTRUCTION_DISPLACEMENT",
         "errors": list(errors),
         "runtime_authorized": False,
         "external_action_authorized": False,
     }
-    continuation = record_startup_continuation(
-        "operator_fidelity_lock",
-        errors,
-        request=payload,
-        environment_key="GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS",
-    )
-    emit_startup_continuation(continuation)
-    return _issue(False, "continuation_required", errors)
+    print(json.dumps(payload, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+    sys.stderr.flush()
+    raise SystemExit(EXIT_BOOT_BLOCKED)

@@ -409,10 +409,12 @@ def validate_receipt(
 
 
 def automatic_boot() -> BootValidation | None:
-    """Run the environment-driven boot validation and surface recoverable continuations.
+    """Run the environment-driven gate used by the canonical entrypoint.
 
-    Missing or invalid evidence remains non-authorizing, but now returns a durable
-    continuation receipt so local diagnosis and receipt repair can proceed.
+    Modes:
+    - ``strict`` (default): exit 78 when no valid receipt is available.
+    - ``request``: emit a request and return a degraded validation.
+    - ``off``: explicitly disable the gate.
     """
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
     if mode == "off" or os.getenv("CASEY_AUTO_BOOT_DISABLE") == "1":
@@ -462,23 +464,21 @@ def automatic_boot() -> BootValidation | None:
         loaded_ids = ()
         degraded_errors = ("no boot receipt supplied",)
 
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
+    print(json.dumps(request, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+    sys.stderr.flush()
+    if mode == "request":
+        os.environ["CASEY_BOOT_STATUS"] = "degraded"
+        return BootValidation(
+            ok=False,
+            status="degraded",
+            profiles=tuple(profiles),
+            required_note_ids=tuple(request["required_note_ids"]),
+            loaded_note_ids=tuple(loaded_ids),
+            errors=tuple(degraded_errors),
+        )
 
-    continuation = record_startup_continuation(
-        "auto_boot",
-        degraded_errors,
-        request=request,
-        environment_key="CASEY_BOOT_STATUS",
-    )
-    emit_startup_continuation(continuation)
-    return BootValidation(
-        ok=False,
-        status="continuation_required",
-        profiles=tuple(profiles),
-        required_note_ids=tuple(request["required_note_ids"]),
-        loaded_note_ids=tuple(loaded_ids),
-        errors=tuple(degraded_errors),
-    )
+    os.environ["CASEY_BOOT_STATUS"] = "blocked"
+    os._exit(EXIT_BOOT_BLOCKED)
 
 
 def _profiles_from_args(values: Sequence[str]) -> tuple[str, ...]:

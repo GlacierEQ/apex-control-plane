@@ -48,7 +48,7 @@ _RULES: Final[tuple[MinimizationRule, ...]] = (
     MinimizationRule(
         "SMALLEST_DEFAULT",
         re.compile(
-            r"\b(?:smallest|least|minimal)\s+(?:possible\s+|useful\s+|safe\s+)?(?:next\s+)?"
+            r"\b(?:smallest|least|minimal)\s+(?:possible\s+|useful\s+|safe\s+)?"
             r"(?:change|step|task|implementation|slice|scope|solution|feature|move|patch)\b",
             re.IGNORECASE,
         ),

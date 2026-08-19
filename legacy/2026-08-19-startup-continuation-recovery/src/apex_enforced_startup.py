@@ -357,23 +357,6 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
     }
 
 
-def _continue_apex_startup(
-    errors: Sequence[str],
-    *,
-    request: Mapping[str, Any],
-) -> ApexStartupValidation:
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
-
-    continuation = record_startup_continuation(
-        "apex_enforced_startup",
-        errors,
-        request=request,
-        environment_key="GLACIEREQ_APEX_STARTUP_STATUS",
-    )
-    emit_startup_continuation(continuation)
-    return _issue(False, "continuation_required", errors)
-
-
 def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
     global _IN_PROCESS
     if _IN_PROCESS is not None:
@@ -400,10 +383,12 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
             file=sys.stderr,
         )
         sys.stderr.flush()
-        return _continue_apex_startup(
-            ("no boot receipt supplied",),
-            request=build_apex_startup_request(policy, task=task),
-        )
+        status = "blocked" if mode == "strict" else "degraded"
+        os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = status
+        validation = _issue(False, status, ("no boot receipt supplied",))
+        if mode == "strict":
+            raise SystemExit(EXIT_BOOT_BLOCKED)
+        return validation
 
     errors = validate_apex_startup_receipt(policy, receipt)
     validation = _issue(not errors, "complete" if not errors else "blocked", errors)
@@ -412,6 +397,23 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
         os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "complete"
         return validation
 
-    request = build_apex_startup_request(policy, task=task)
-    request["receipt_errors"] = list(validation.errors)
-    return _continue_apex_startup(validation.errors, request=request)
+    os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "blocked"
+    print(
+        json.dumps(
+            {
+                "boot_status": "blocked",
+                "apex_startup_status": "blocked",
+                "errors": list(validation.errors),
+                "external_action_authorized": False,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
+        file=sys.stderr,
+    )
+    sys.stderr.flush()
+    if mode == "strict":
+        raise SystemExit(EXIT_BOOT_BLOCKED)
+
+    os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "degraded"
+    return validation

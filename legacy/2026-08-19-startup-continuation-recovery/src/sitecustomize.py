@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 import sys
+from typing import NoReturn
 
 _BOOT_BLOCKED_EXIT = 78
 
@@ -58,28 +59,22 @@ def _should_boot() -> bool:
     return entrypoint == "control_plane.py"
 
 
-def _continue_startup(exc: BaseException) -> None:
-    """Record startup recovery evidence without terminating the interpreter."""
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
-
+def _fail_closed(exc: Exception) -> NoReturn:
     payload = {
-        "boot_status": "continuation_required",
-        "notion_continuity_status": "continuation_required",
-        "prime_directive_status": "continuation_required",
-        "operator_fidelity_lock_status": "continuation_required",
-        "operator_fidelity_status": "continuation_required",
-        "apex_startup_status": "continuation_required",
+        "boot_status": "blocked",
+        "notion_continuity_status": "blocked",
+        "prime_directive_status": "blocked",
+        "operator_fidelity_lock_status": "blocked",
+        "operator_fidelity_status": "blocked",
+        "apex_startup_status": "blocked",
         "error": f"{type(exc).__name__}: {exc}",
         "entrypoint": _entrypoint_path(),
         "runtime_authorized": False,
         "external_action_authorized": False,
     }
-    continuation = record_startup_continuation(
-        "sitecustomize",
-        (payload["error"],),
-        request=payload,
-    )
-    emit_startup_continuation(continuation)
+    print(json.dumps(payload, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+    sys.stderr.flush()
+    raise SystemExit(_BOOT_BLOCKED_EXIT) from None
 
 
 if _should_boot():
@@ -95,7 +90,7 @@ if _should_boot():
         automatic_operator_fidelity_lock()
         automatic_operator_fidelity_preflight()
         automatic_apex_enforced_startup()
-    except SystemExit as exc:
-        _continue_startup(exc)
-    except Exception as exc:
-        _continue_startup(exc)
+    except SystemExit:
+        raise
+    except Exception as exc:  # startup boundary must never fail open
+        _fail_closed(exc)

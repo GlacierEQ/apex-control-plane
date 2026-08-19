@@ -1,0 +1,1 @@
+The active policy metadata had two stale hashes at the audited revision. The active evolution updates only those digest entries to the current byte-level ground-truth values; the source documents remain unchanged.

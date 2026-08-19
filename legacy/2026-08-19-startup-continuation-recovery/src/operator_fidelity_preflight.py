@@ -348,23 +348,6 @@ def build_operator_fidelity_request(
     }
 
 
-def _continue_operator_fidelity(
-    errors: Sequence[str],
-    *,
-    request: Mapping[str, Any],
-) -> OperatorFidelityValidation:
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
-
-    continuation = record_startup_continuation(
-        "operator_fidelity_preflight",
-        errors,
-        request=request,
-        environment_key="GLACIEREQ_OPERATOR_FIDELITY_STATUS",
-    )
-    emit_startup_continuation(continuation)
-    return _issue(False, "continuation_required", errors)
-
-
 def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None:
     global _IN_PROCESS
     if _IN_PROCESS is not None:
@@ -393,10 +376,12 @@ def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None
             file=sys.stderr,
         )
         sys.stderr.flush()
-        return _continue_operator_fidelity(
-            ("no boot receipt supplied",),
-            request=build_operator_fidelity_request(policy, task=task),
-        )
+        status = "blocked" if mode == "strict" else "degraded"
+        os.environ["GLACIEREQ_OPERATOR_FIDELITY_STATUS"] = status
+        validation = _issue(False, status, ("no boot receipt supplied",))
+        if mode == "strict":
+            raise SystemExit(EXIT_BOOT_BLOCKED)
+        return validation
 
     errors = validate_operator_fidelity_receipt(policy, receipt)
     validation = _issue(not errors, "complete" if not errors else "blocked", errors)
@@ -405,6 +390,24 @@ def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None
         os.environ["GLACIEREQ_OPERATOR_FIDELITY_STATUS"] = "complete"
         return validation
 
-    request = build_operator_fidelity_request(policy, task=task)
-    request["receipt_errors"] = list(validation.errors)
-    return _continue_operator_fidelity(validation.errors, request=request)
+    os.environ["GLACIEREQ_OPERATOR_FIDELITY_STATUS"] = "blocked"
+    print(
+        json.dumps(
+            {
+                "boot_status": "blocked",
+                "operator_fidelity_status": "blocked",
+                "failure_class": policy.get("failure_class"),
+                "errors": list(validation.errors),
+                "external_action_authorized": False,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
+        file=sys.stderr,
+    )
+    sys.stderr.flush()
+    if mode == "strict":
+        raise SystemExit(EXIT_BOOT_BLOCKED)
+
+    os.environ["GLACIEREQ_OPERATOR_FIDELITY_STATUS"] = "degraded"
+    return validation
