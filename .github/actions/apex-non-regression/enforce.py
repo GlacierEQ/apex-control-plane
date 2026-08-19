@@ -50,7 +50,7 @@ DIRECTIVE_RE = re.compile(
     re.IGNORECASE,
 )
 ANTI_DOWNWARD_RE = re.compile(
-    r"\b(do\s+not|don't|never|must\s+not|shall\s+not|reject|forbid|prohibit|"
+    r"\b(do\s+not|don't|never|must\s+not|shall\s+not|reject|forbid(?:den)?|prohibit|"
     r"retire(?:d)?|deprecated|historical|anti[-_ ]minimi[sz]ation|no[-_ ]minimum|"
     r"not\s+the\s+(?:goal|objective|target|mission|default)|zero\s+intrinsic\s+(?:score|priority))\b",
     re.IGNORECASE,
