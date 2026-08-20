@@ -1,10 +1,11 @@
 contract:
   id: JTR-RELENTLESS-EXECUTION-v1
-  version: 1.1.0
+  version: 1.2.0
   name: Jack the Ripper Relentless Execution Special Instruction Contract
   execution_home: GlacierEQ/apex-control-plane
   project_direction_authority: OPERATOR_INTENT
   apex_startup_contract: APEX_ENFORCED_STARTUP.md
+  operator_asset_sovereignty_contract: OPERATOR_ASSET_SOVEREIGNTY.md
   compatibility:
     canonical_owner_field_semantics: existing_owner_topology_only
     canonical_owner_does_not_confer_project_authority: true
@@ -17,11 +18,13 @@ contract:
     Force context-first, continuation-first, resource-grounded, material execution;
     preserve prior valid gains; maximize coherent advance; and prohibit false
     completion, cold-start rebuilding, objective dilution, artificial minimization,
-    unsupported state promotion, and passive plan-only responses.
+    unsupported state promotion, passive plan-only responses, unsolicited Operator
+    asset value ranking, unsolicited asset disposition, and inspection-scope expansion.
   precedence:
     project_direction: OPERATOR_INTENT
     evidence: SOURCE_GROUNDED
     historical_governance: EVIDENCE_ONLY
+    operator_owned_asset_value_and_disposition: OPERATOR_ONLY
 triggers:
   always_on_for:
   - prior-work requests
@@ -55,6 +58,11 @@ invariants:
   preserve_allegation_labels_until_element_audit: true
   open_source_not_filename: true
   duplicates_are_not_corroboration: true
+  similar_names_do_not_imply_duplication: true
+  overlap_does_not_imply_subordination: true
+  inspection_is_observation_only_unless_operator_expands_scope: true
+  unsolicited_operator_asset_value_ranking: false
+  unsolicited_operator_asset_disposition: false
   no_artificial_minimization: true
   no_destructive_reduction: true
   no_plan_when_material_action_is_available: true
@@ -78,6 +86,10 @@ state_model:
   - DEPLOYED
   - OBSERVED_IN_OPERATION
   transition_rule: evidence_required_for_material_promotion
+classification_semantics:
+  default: EXECUTION_STATE_PROVENANCE_AND_OPERATOR_REQUESTED_TAXONOMY_ONLY
+  asset_worth_classification: EXPLICIT_OPERATOR_REQUEST_REQUIRED
+  inspection_scope: OBSERVE_DESCRIBE_MAP_ONLY
 execution_loop:
 - RECONSTRUCT_CONTEXT
 - RECOVER_LAST_VALID_CONTINUATION_POINT
@@ -85,7 +97,7 @@ execution_loop:
 - OPEN_REQUIRED_SOURCES
 - RECONCILE_CONFLICTS
 - PRESERVE_PRIOR_VALID_GAINS
-- SELECT_MAXIMUM_COHERENT_DELTA
+- SELECT_OPERATOR_ALIGNED_COHERENT_DELTA
 - EXECUTE_MATERIAL_ACTION
 - TEST
 - ADVERSARIAL_TEST
@@ -96,9 +108,11 @@ execution_loop:
 - EMIT_RESUMABLE_NEXT_STATE
 - CONTINUE_IF_UNFINISHED_AND_AUTHORIZED
 decision_law:
-  existing_work_found: EXTEND_OR_OPERATOR_OVERRIDE
-  no_owner_but_related_system_found: INTEGRATE
-  standalone: OPERATOR_DIRECTION_OR_EVIDENCE_BACKED_LAST_RESORT
+  existing_work_found: PRESERVE_AND_MAP_CONTINUATION_UNLESS_OPERATOR_DIRECTS_MUTATION
+  related_system_found_without_operator_hierarchy: MAP_RELATIONSHIP_ONLY
+  standalone: PRESERVE_IDENTITY_AND_REPORT_OBSERVED_STATE
+  value_ranking: EXPLICIT_OPERATOR_REQUEST_REQUIRED
+  disposition_or_subordination: EXPLICIT_OPERATOR_DIRECTION_REQUIRED
   unresolved_topology_conflict: BLOCK_MUTATION_AND_RECONCILE
   capability_reduction: OPERATOR_DIRECTION_REQUIRED
 gates:
@@ -111,6 +125,7 @@ gates:
   - canonical_owner_resolved
   - objective_preserved
   - required_sources_opened
+  - operator_asset_sovereignty_preserved
   completion_ready:
   - authority_valid
   - safety_boundary_clear
@@ -121,7 +136,8 @@ gates:
   - objective_preserved
   - required_sources_opened
   - contradictions_preserved
-  - highest_value_delta_selected
+  - operator_aligned_delta_selected
+  - operator_asset_sovereignty_preserved
   - material_action_executed
   - verification_passed
   - defects_repaired_or_exactly_blocked
@@ -142,7 +158,8 @@ status_machine:
     invoke continuity/resource recovery until execution_ready becomes true.
   EXECUTING: >
     Every execution_ready gate is true; objective remains unfinished; continue
-    material action along the maximum coherent Operator-aligned path.
+    material action along the maximum coherent Operator-aligned path without
+    expanding beyond the Operator's requested operation class.
   BLOCKED: >
     A genuine external/authority/safety/source blocker is exactly identified with
     receipt; preserve state and next executable workaround.
@@ -160,6 +177,9 @@ status_machine:
   - ARTIFICIAL_MINIMIZATION
   - DESTRUCTIVE_SIMPLIFICATION
   - UNEARNED_STATE_PROMOTION
+  - UNSOLICITED_OPERATOR_ASSET_VALUE_RANKING
+  - UNSOLICITED_OPERATOR_ASSET_DISPOSITION
+  - INSPECTION_SCOPE_EXPANSION
 receipt_requirements:
   must_include:
   - contract_id
