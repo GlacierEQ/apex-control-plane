@@ -30,6 +30,7 @@ VERSION_END = re.compile(r"[-_]v\d+(?:[-_.]\d+)*$", re.I)
 ITERATION_END = frozenset({"active","actual","build","check","code","exec","final","impl","live","only","patch","real","run","ship","work","write"})
 MAX_BRANCHES = 1000
 MAX_PATHS = 300
+MAX_TREE_ENTRIES = 100000
 PATH_SIGNALS = (
     (re.compile(r"(^|/)(tests?|specs?)(/|$)", re.I), 5, "tests"),
     (re.compile(r"(^|/)(evidence|forensic|timeline|contradiction|docket)(/|$)", re.I), 7, "legal-intelligence"),
@@ -45,6 +46,7 @@ class GitHubReader(Protocol):
     def repository(self, repository: str) -> Mapping[str, Any]: ...
     def branches(self, repository: str) -> list[Mapping[str, Any]]: ...
     def compare(self, repository: str, base: str, head: str) -> Mapping[str, Any]: ...
+    def tree(self, repository: str, commit_sha: str) -> tuple[Mapping[str, str], bool]: ...
 
 class GitHubAPI:
     """Bounded read-only GitHub REST adapter."""
@@ -96,10 +98,29 @@ class GitHubAPI:
         if not isinstance(payload, Mapping): raise BranchSynthesisError(f"{repository}:{head} comparison was not an object")
         return payload
 
+    def tree(self, repository: str, commit_sha: str) -> tuple[Mapping[str, str], bool]:
+        commit, _ = self._read(f"{self.api_url}/{self._path(repository, f'/git/commits/{commit_sha}')}" )
+        if not isinstance(commit, Mapping) or not isinstance(commit.get("tree"), Mapping):
+            raise BranchSynthesisError(f"{repository}:{commit_sha} did not expose a Git tree")
+        tree_sha = _sha(commit["tree"].get("sha"), f"{repository} tree")
+        tree, _ = self._read(f"{self.api_url}/{self._path(repository, f'/git/trees/{tree_sha}')}?recursive=1")
+        if not isinstance(tree, Mapping) or not isinstance(tree.get("tree"), list):
+            raise BranchSynthesisError(f"{repository}:{tree_sha} tree response was malformed")
+        entries = tree["tree"]
+        if len(entries) > MAX_TREE_ENTRIES:
+            raise BranchSynthesisError(f"{repository} default tree exceeds {MAX_TREE_ENTRIES} entries")
+        blobs = {
+            str(row.get("path")): str(row.get("sha")).lower()
+            for row in entries
+            if isinstance(row, Mapping) and row.get("type") == "blob" and row.get("path") and SHA_RE.fullmatch(str(row.get("sha") or ""))
+        }
+        return blobs, not bool(tree.get("truncated"))
+
 @dataclass(frozen=True)
 class BranchInventory:
     name: str; head_sha: str; protected: bool; family: str; relation: str; action: str
     ahead_by: int; behind_by: int; changed_paths: tuple[str, ...]; changed_paths_truncated: bool
+    content_relation: str; content_verified_count: int; content_delta_count: int
     capability_signals: tuple[str, ...]; priority_score: float; reasons: tuple[str, ...]
 
 @dataclass(frozen=True)
@@ -158,6 +179,34 @@ def _signals(paths: Iterable[str]) -> tuple[tuple[str, ...], float]:
             if pattern.search(path): found.add(signal); score += weight
     return tuple(sorted(found)), min(score, 40.0)
 
+def _content_relation(payload: Mapping[str, Any], default_tree: Mapping[str, str], tree_complete: bool) -> tuple[str, int, int]:
+    files = payload.get("files")
+    if not tree_complete or not isinstance(files, list) or len(files) >= MAX_PATHS:
+        return "CONTENT_REVIEW_REQUIRED", 0, 0
+    verified = delta = 0
+    for row in files:
+        if not isinstance(row, Mapping):
+            return "CONTENT_REVIEW_REQUIRED", verified, delta
+        filename = str(row.get("filename") or "").strip()
+        status = str(row.get("status") or "").casefold()
+        if not filename or not status:
+            return "CONTENT_REVIEW_REQUIRED", verified, delta
+        if status == "removed":
+            same = filename not in default_tree
+        else:
+            branch_blob = str(row.get("sha") or "").lower()
+            if not SHA_RE.fullmatch(branch_blob):
+                return "CONTENT_REVIEW_REQUIRED", verified, delta
+            same = default_tree.get(filename) == branch_blob
+            if status == "renamed":
+                previous = str(row.get("previous_filename") or "").strip()
+                if not previous:
+                    return "CONTENT_REVIEW_REQUIRED", verified, delta
+                same = same and previous not in default_tree
+        verified += 1
+        delta += int(not same)
+    return ("CONTENT_EQUIVALENT" if delta == 0 else "CONTENT_DELTA"), verified, delta
+
 def _relation(status: str, ahead: int, behind: int) -> tuple[str, str, tuple[str, ...], float]:
     status = status.casefold().strip()
     if status == "identical": return "IDENTICAL", "RETIRE_AFTER_REACHABILITY_PROOF", ("head equals current default",), 0
@@ -166,17 +215,22 @@ def _relation(status: str, ahead: int, behind: int) -> tuple[str, str, tuple[str
     if status == "diverged" and ahead > 0 and behind > 0: return "DIVERGED_DONOR", "PRESERVE_AND_FRESH_SYNTHESIZE", (f"{ahead} unique commit(s)", f"missing {behind} newer default commit(s); wholesale merge is unsafe"), 40
     return "REVIEW_REQUIRED", "PRESERVE_PENDING_REVIEW", (f"ambiguous compare state {status!r}: ahead={ahead}, behind={behind}",), 20
 
-def _branch(reader: GitHubReader, repository: str, default: str, default_sha: str, raw: Mapping[str, Any]) -> BranchInventory:
+def _branch(reader: GitHubReader, repository: str, default: str, default_sha: str, default_tree: Mapping[str, str], tree_complete: bool, raw: Mapping[str, Any]) -> BranchInventory:
     name = str(raw.get("name") or "").strip(); commit = raw.get("commit")
     if not name or not isinstance(commit, Mapping): raise BranchSynthesisError(f"{repository} returned malformed branch metadata")
     head = _sha(commit.get("sha"), f"{repository}:{name} head"); protected = bool(raw.get("protected")); family = branch_family_key(name)
     if name == default:
         if head != default_sha: raise BranchSynthesisError(f"{repository}:{default} default-head sources disagree")
-        return BranchInventory(name, head, protected, family, "BASELINE", "KEEP_BASELINE", 0, 0, (), False, (), 0, ("current default head is the synthesis floor",))
+        return BranchInventory(name, head, protected, family, "BASELINE", "KEEP_BASELINE", 0, 0, (), False, "BASELINE", 0, 0, (), 0, ("current default head is the synthesis floor",))
     payload = reader.compare(repository, default, name); ahead = _count(payload.get("ahead_by"), "ahead_by"); behind = _count(payload.get("behind_by"), "behind_by")
     relation, action, reasons, base_score = _relation(str(payload.get("status") or "UNKNOWN"), ahead, behind)
-    paths, truncated = _paths(payload); signals, path_score = _signals(paths)
-    return BranchInventory(name, head, protected, family, relation, action, ahead, behind, paths, truncated, signals, round(base_score + min(ahead, 20) + path_score + (2 if protected else 0), 2), reasons)
+    paths, truncated = _paths(payload); content_relation, verified, delta = _content_relation(payload, default_tree, tree_complete and not truncated)
+    if relation in {"FORWARD_DONOR", "DIVERGED_DONOR"} and content_relation == "CONTENT_EQUIVALENT":
+        action = "RETIRE_AFTER_CONTENT_EQUIVALENCE_PROOF"
+        reasons = reasons + ("every compared branch file effect already matches current default",)
+        base_score = 0
+    signals, path_score = _signals(paths)
+    return BranchInventory(name, head, protected, family, relation, action, ahead, behind, paths, truncated, content_relation, verified, delta, signals, round(base_score + min(ahead, 20) + path_score + (2 if protected else 0), 2), reasons)
 
 def _digest(repository: str, default: str, default_sha: str, rows: Iterable[BranchInventory]) -> str:
     payload = {"repository":repository,"default_branch":default,"default_head_sha":default_sha,"branches":[asdict(row) for row in rows]}
@@ -194,9 +248,10 @@ def inventory_repository(reader: GitHubReader, repository: str) -> RepositoryInv
     default_sha = _sha(defaults[0]["commit"].get("sha"), f"{repository} default")
     embedded = repo.get("default_branch_commit")
     if isinstance(embedded, Mapping) and _sha(embedded.get("sha"), f"{repository} default") != default_sha: raise BranchSynthesisError(f"{repository} default-head sources disagree")
-    rows = tuple(sorted((_branch(reader, repository, default, default_sha, row) for row in raw), key=lambda row: (-row.priority_score, row.name.casefold())))
+    default_tree, tree_complete = reader.tree(repository, default_sha)
+    rows = tuple(sorted((_branch(reader, repository, default, default_sha, default_tree, tree_complete, row) for row in raw), key=lambda row: (-row.priority_score, row.name.casefold())))
     preserve_actions = {"PRESERVE_AND_SYNTHESIZE","PRESERVE_AND_FRESH_SYNTHESIZE","PRESERVE_PENDING_REVIEW"}
-    preserve = tuple(sorted((row.name for row in rows if row.action in preserve_actions), key=str.casefold)); retire = tuple(sorted((row.name for row in rows if row.action == "RETIRE_AFTER_REACHABILITY_PROOF"), key=str.casefold))
+    preserve = tuple(sorted((row.name for row in rows if row.action in preserve_actions), key=str.casefold)); retire = tuple(sorted((row.name for row in rows if row.action in {"RETIRE_AFTER_REACHABILITY_PROOF","RETIRE_AFTER_CONTENT_EQUIVALENCE_PROOF"}), key=str.casefold))
     families: dict[str, list[str]] = {}
     for row in rows: families.setdefault(row.family, []).append(row.name)
     families_out = {key:tuple(sorted(members,key=str.casefold)) for key,members in sorted(families.items()) if len(members)>1}
@@ -215,7 +270,7 @@ def _report_repository(row: RepositoryInventory) -> dict[str, Any]:
 
 def synthesis_report(inventories: Iterable[RepositoryInventory]) -> dict[str, Any]:
     rows = sorted(inventories, key=lambda row: row.repository.casefold())
-    return {"schema":"APEX_BRANCH_SYNTHESIS_V1","generated_at":datetime.now(timezone.utc).isoformat(),"semantics":{"baseline":"current default is the floor","preservation":"unique/diverged/ambiguous branches remain donors until composed","retirement":"only reachable heads qualify; this tool never mutates refs","privacy":"changed paths are used in-memory for scoring but suppressed from reports; no source bytes or legal narratives"},"repository_count":len(rows),"branch_count":sum(row.branch_count for row in rows),"donor_count":sum(row.donor_count for row in rows),"absorbed_count":sum(row.absorbed_count for row in rows),"review_required_count":sum(row.review_required_count for row in rows),"repositories":[_report_repository(row) for row in rows]}
+    return {"schema":"APEX_BRANCH_SYNTHESIS_V1","generated_at":datetime.now(timezone.utc).isoformat(),"semantics":{"baseline":"current default is the floor","preservation":"unique/diverged/ambiguous branches remain donors until composed","retirement":"reachable heads or fully content-equivalent replayed heads qualify; this tool never mutates refs","privacy":"changed paths are used in-memory for scoring but suppressed from reports; no source bytes or legal narratives"},"repository_count":len(rows),"branch_count":sum(row.branch_count for row in rows),"donor_count":sum(row.donor_count for row in rows),"absorbed_count":sum(row.absorbed_count for row in rows),"review_required_count":sum(row.review_required_count for row in rows),"repositories":[_report_repository(row) for row in rows]}
 
 def write_report(path: str | Path, payload: Mapping[str, Any]) -> None:
     destination = Path(path); destination.parent.mkdir(parents=True, exist_ok=True); temp_path: Path | None = None
