@@ -12,8 +12,9 @@ all_true_gate_state :: proc() -> Gate_State {
         canonical_owner_resolved = true,
         objective_preserved = true,
         required_sources_opened = true,
+        operator_asset_sovereignty_preserved = true,
         contradictions_preserved = true,
-        highest_value_delta_selected = true,
+        operator_aligned_delta_selected = true,
         material_action_executed = true,
         verification_passed = true,
         defects_repaired_or_exactly_blocked = true,
@@ -32,4 +33,11 @@ blocker_precedes_complete :: proc(t: ^testing.T) {
 @(test)
 cold_start_is_recovering :: proc(t: ^testing.T) {
     testing.expect_value(t, evaluate(Gate_State{}, false), Execution_Status.RECOVERING)
+}
+
+@(test)
+asset_sovereignty_is_preflight_required :: proc(t: ^testing.T) {
+    g := all_true_gate_state()
+    g.operator_asset_sovereignty_preserved = false
+    testing.expect_value(t, evaluate(g, false), Execution_Status.RECOVERING)
 }
