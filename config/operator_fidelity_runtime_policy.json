@@ -1,11 +1,12 @@
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "name": "APEX Operator Fidelity Runtime Enforcement",
   "failure_class": "INSTRUCTION_DISPLACEMENT",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
   "engineering_standard": "pro_code_elite_humanized_engineered",
   "direction": "look_up",
+  "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "fail_closed": true,
   "required_true_fields": [
     "literal_operator_words_preserved",
@@ -34,7 +35,21 @@
     "permission_loop": false,
     "preserves_prior_valid_gain": true,
     "maximum_coherent_advance": true,
-    "pro_code_elite_humanized_engineered": true
+    "pro_code_elite_humanized_engineered": true,
+    "unsolicited_operator_asset_value_ranking": false,
+    "unsolicited_operator_asset_disposition": false,
+    "inspection_scope_expansion": false,
+    "operator_owned_asset_identity_preserved": true
+  },
+  "operator_asset_sovereignty": {
+    "look_inspect_list_inventory_map_are_observation_only": true,
+    "comparison_does_not_imply_disposition": true,
+    "asset_value_ranking_requires_explicit_operator_request": true,
+    "asset_disposition_requires_explicit_operator_request": true,
+    "similar_names_do_not_imply_duplication": true,
+    "overlap_does_not_imply_subordination": true,
+    "tool_access_is_capability_not_authority": true,
+    "observation_is_knowledge_not_authority": true
   },
   "anti_minimization": {
     "mode": "fail_closed",
@@ -140,6 +155,9 @@
     "FORBIDDEN: least ambitious implementation",
     "FORBIDDEN: governance instead of function",
     "FORBIDDEN: preserve instead of act",
-    "FORBIDDEN: ask challenged institution to create its own legitimacy predicate"
+    "FORBIDDEN: ask challenged institution to create its own legitimacy predicate",
+    "FORBIDDEN: unsolicited operator asset value ranking",
+    "FORBIDDEN: unsolicited operator asset disposition",
+    "FORBIDDEN: inspection scope expansion"
   ]
 }
