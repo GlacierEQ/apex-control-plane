@@ -202,9 +202,20 @@ def inventory_repository(reader: GitHubReader, repository: str) -> RepositoryInv
     families_out = {key:tuple(sorted(members,key=str.casefold)) for key,members in sorted(families.items()) if len(members)>1}
     return RepositoryInventory(repository, default, default_sha, len(rows), sum(row.relation in {"FORWARD_DONOR","DIVERGED_DONOR"} for row in rows), sum(row.relation in {"IDENTICAL","ABSORBED"} and row.name != default for row in rows), sum(row.relation == "REVIEW_REQUIRED" for row in rows), preserve, retire, families_out, rows, _digest(repository, default, default_sha, rows))
 
+def _report_repository(row: RepositoryInventory) -> dict[str, Any]:
+    payload = asdict(row)
+    safe_branches = []
+    for branch in row.branches:
+        item = asdict(branch)
+        paths = item.pop("changed_paths")
+        item["changed_path_count"] = len(paths)
+        safe_branches.append(item)
+    payload["branches"] = safe_branches
+    return payload
+
 def synthesis_report(inventories: Iterable[RepositoryInventory]) -> dict[str, Any]:
     rows = sorted(inventories, key=lambda row: row.repository.casefold())
-    return {"schema":"APEX_BRANCH_SYNTHESIS_V1","generated_at":datetime.now(timezone.utc).isoformat(),"semantics":{"baseline":"current default is the floor","preservation":"unique/diverged/ambiguous branches remain donors until composed","retirement":"only reachable heads qualify; this tool never mutates refs","privacy":"metadata only; no source bytes or legal narratives"},"repository_count":len(rows),"branch_count":sum(row.branch_count for row in rows),"donor_count":sum(row.donor_count for row in rows),"absorbed_count":sum(row.absorbed_count for row in rows),"review_required_count":sum(row.review_required_count for row in rows),"repositories":[asdict(row) for row in rows]}
+    return {"schema":"APEX_BRANCH_SYNTHESIS_V1","generated_at":datetime.now(timezone.utc).isoformat(),"semantics":{"baseline":"current default is the floor","preservation":"unique/diverged/ambiguous branches remain donors until composed","retirement":"only reachable heads qualify; this tool never mutates refs","privacy":"changed paths are used in-memory for scoring but suppressed from reports; no source bytes or legal narratives"},"repository_count":len(rows),"branch_count":sum(row.branch_count for row in rows),"donor_count":sum(row.donor_count for row in rows),"absorbed_count":sum(row.absorbed_count for row in rows),"review_required_count":sum(row.review_required_count for row in rows),"repositories":[_report_repository(row) for row in rows]}
 
 def write_report(path: str | Path, payload: Mapping[str, Any]) -> None:
     destination = Path(path); destination.parent.mkdir(parents=True, exist_ok=True); temp_path: Path | None = None
