@@ -1,11 +1,12 @@
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "name": "APEX Enforced Startup",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
   "direction": "expand_capability",
   "state_evolution": "preserve_plus_verified_gain",
   "protocol_path": "APEX_ENFORCED_STARTUP.md",
+  "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "fail_closed": true,
   "operator_authority": {
     "mode": "absolute_project_direction",
@@ -15,7 +16,16 @@
     "lower_level_policy_veto": false,
     "assistant_or_automation_override": false,
     "repository_or_registry_override": false,
-    "reality_constraints_are_reported_not_promoted_to_authority": true
+    "reality_constraints_are_reported_not_promoted_to_authority": true,
+    "operator_owned_asset_value_ranking_is_operator_only": true,
+    "operator_owned_asset_disposition_is_operator_only": true,
+    "inspection_does_not_expand_scope": true
+  },
+  "classification_semantics": {
+    "default_scope": "execution_state_provenance_and_operator_requested_taxonomy_only",
+    "asset_worth_classification_requires_explicit_operator_request": true,
+    "similar_names_do_not_imply_duplication": true,
+    "overlap_does_not_imply_subordination": true
   },
   "required_startup_fields": [
     "context_reconstructed",
@@ -70,7 +80,11 @@
     "destructive_reduction": false,
     "unsupported_action": false,
     "redundant_restart": false,
-    "preserves_prior_valid_gain": true
+    "preserves_prior_valid_gain": true,
+    "unsolicited_operator_asset_value_ranking": false,
+    "unsolicited_operator_asset_disposition": false,
+    "inspection_scope_expansion": false,
+    "operator_owned_asset_identity_preserved": true
   },
   "mutation_interlock": {
     "required_true_fields": [
@@ -88,7 +102,9 @@
     "action_claim_requires_receipt": true,
     "material_claim_requires_provenance": true,
     "external_action_requires_operator_authorization_receipt": true,
-    "external_action_requires_secondary_human_approval": false
+    "external_action_requires_secondary_human_approval": false,
+    "operator_owned_asset_disposition_requires_explicit_operator_direction": true,
+    "operator_owned_asset_value_ranking_requires_explicit_operator_direction": true
   },
   "completion_gate": {
     "proof_bound": true,
@@ -113,6 +129,7 @@
     "canonical_labels_do_not_confer_project_authority": true,
     "historical_governance_is_evidence_not_operator_override": true,
     "current_explicit_operator_instruction_supersedes_conflicting_project_policy": true,
-    "tool_access_is_capability_not_authority": true
+    "tool_access_is_capability_not_authority": true,
+    "observation_is_knowledge_not_authority": true
   }
 }
