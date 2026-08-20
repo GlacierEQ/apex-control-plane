@@ -37,6 +37,10 @@ def _receipt() -> dict:
                 "unsupported_action": False,
                 "redundant_restart": False,
                 "preserves_prior_valid_gain": True,
+                "unsolicited_operator_asset_value_ranking": False,
+                "unsolicited_operator_asset_disposition": False,
+                "inspection_scope_expansion": False,
+                "operator_owned_asset_identity_preserved": True,
             },
             "verification_plan": ["run tests", "adversarial state-promotion audit"],
             "material_claims": [
@@ -65,10 +69,15 @@ def test_operator_project_direction_authority_is_absolute() -> None:
     assert authority["lower_level_policy_veto"] is False
     assert authority["assistant_or_automation_override"] is False
     assert authority["repository_or_registry_override"] is False
+    assert authority["operator_owned_asset_value_ranking_is_operator_only"] is True
+    assert authority["operator_owned_asset_disposition_is_operator_only"] is True
+    assert authority["inspection_does_not_expand_scope"] is True
 
     interlock = policy["mutation_interlock"]
     assert interlock["external_action_requires_operator_authorization_receipt"] is True
     assert interlock["external_action_requires_secondary_human_approval"] is False
+    assert interlock["operator_owned_asset_disposition_requires_explicit_operator_direction"] is True
+    assert interlock["operator_owned_asset_value_ranking_requires_explicit_operator_direction"] is True
 
 
 def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> None:
@@ -81,6 +90,36 @@ def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> No
     assert requirements["external_actions_require_operator_authorization_receipt"] is True
     serialized = json.dumps(request, sort_keys=True)
     assert "named_human_approval" not in serialized
+
+
+def test_operator_asset_sovereignty_is_in_every_selected_path() -> None:
+    policy = load_apex_policy()
+    path = policy["path_requirements"]
+    assert path["unsolicited_operator_asset_value_ranking"] is False
+    assert path["unsolicited_operator_asset_disposition"] is False
+    assert path["inspection_scope_expansion"] is False
+    assert path["operator_owned_asset_identity_preserved"] is True
+
+    request = build_apex_startup_request(policy, task="look at legal repos")
+    selected = request["receipt_contract"]["apex_startup"]["selected_path"]
+    for key, expected in path.items():
+        assert selected[key] is expected
+
+
+def test_unsolicited_asset_ranking_fails_closed() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["selected_path"]["unsolicited_operator_asset_value_ranking"] = True
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert any("unsolicited_operator_asset_value_ranking" in error for error in errors)
+
+
+def test_inspection_scope_expansion_fails_closed() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["selected_path"]["inspection_scope_expansion"] = True
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert any("inspection_scope_expansion" in error for error in errors)
 
 
 def test_mutation_interlock_fields_are_mandatory() -> None:
