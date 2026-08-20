@@ -44,8 +44,9 @@ def _receipt() -> dict:
             "corrections_applied": [
                 "minimum-scope default removed",
                 "function restored above governance",
+                "unsolicited Operator asset ranking removed",
             ],
-            "correction_effect": "path selection now maximizes coherent capability",
+            "correction_effect": "path selection preserves literal scope and cannot invent asset disposition authority",
             "operator_directed_reduction": False,
             "selected_path": {
                 "literal_instruction_fidelity": True,
@@ -60,6 +61,10 @@ def _receipt() -> dict:
                 "preserves_prior_valid_gain": True,
                 "maximum_coherent_advance": True,
                 "pro_code_elite_humanized_engineered": True,
+                "unsolicited_operator_asset_value_ranking": False,
+                "unsolicited_operator_asset_disposition": False,
+                "inspection_scope_expansion": False,
+                "operator_owned_asset_identity_preserved": True,
                 "functional_advance": "bind semantic fidelity enforcement into runtime boot",
                 "strongest_coherent_path": "reject contradictory routing prose before runtime authorization",
             },
@@ -110,6 +115,43 @@ def test_request_contract_can_satisfy_current_policy() -> None:
         assert contract[field_name] is True
     for field_name, expected in policy["selected_path_requirements"].items():
         assert contract["selected_path"][field_name] is expected
+
+
+def test_operator_asset_sovereignty_is_machine_bound() -> None:
+    policy = load_operator_fidelity_policy()
+    asset = policy["operator_asset_sovereignty"]
+    assert asset["look_inspect_list_inventory_map_are_observation_only"] is True
+    assert asset["asset_value_ranking_requires_explicit_operator_request"] is True
+    assert asset["asset_disposition_requires_explicit_operator_request"] is True
+    path = policy["selected_path_requirements"]
+    assert path["unsolicited_operator_asset_value_ranking"] is False
+    assert path["unsolicited_operator_asset_disposition"] is False
+    assert path["inspection_scope_expansion"] is False
+    assert path["operator_owned_asset_identity_preserved"] is True
+
+
+def test_unsolicited_operator_asset_ranking_blocks() -> None:
+    policy = load_operator_fidelity_policy()
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["unsolicited_operator_asset_value_ranking"] = True
+    errors = validate_operator_fidelity_receipt(policy, receipt)
+    assert any("unsolicited_operator_asset_value_ranking" in error for error in errors)
+
+
+def test_operator_asset_disposition_without_scope_blocks() -> None:
+    policy = load_operator_fidelity_policy()
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["unsolicited_operator_asset_disposition"] = True
+    errors = validate_operator_fidelity_receipt(policy, receipt)
+    assert any("unsolicited_operator_asset_disposition" in error for error in errors)
+
+
+def test_inspection_scope_expansion_blocks() -> None:
+    policy = load_operator_fidelity_policy()
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["inspection_scope_expansion"] = True
+    errors = validate_operator_fidelity_receipt(policy, receipt)
+    assert any("inspection_scope_expansion" in error for error in errors)
 
 
 def test_missing_literal_words_blocks() -> None:
