@@ -145,7 +145,7 @@ def build_boot_request(
     manifest: Mapping[str, Any],
     profiles: Sequence[str],
     *,
-    task: str = "resume highest-value unfinished material action",
+    task: str = "resume Operator-directed unfinished material action",
     restricted_authorized: bool = False,
 ) -> dict[str, Any]:
     versions = required_note_versions(
@@ -173,6 +173,9 @@ def build_boot_request(
             "emit_provider_receipt": True,
             "preserve_case_boundaries": True,
             "no_external_action_without_authority": True,
+            "preserve_literal_operator_operation_scope": True,
+            "no_unsolicited_operator_asset_value_ranking": True,
+            "no_unsolicited_operator_asset_disposition": True,
         },
         "receipt_contract": {
             "boot_manifest_id": "string",
@@ -428,7 +431,7 @@ def automatic_boot() -> BootValidation | None:
     )
     task = os.getenv(
         "CASEY_BOOT_TASK",
-        "resume highest-value unfinished material action",
+        "resume Operator-directed unfinished material action",
     )
     receipt = _receipt_from_environment()
 
@@ -502,7 +505,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[],
         help="boot profile; repeat or use comma-separated values",
     )
-    parser.add_argument("--task", default="resume highest-value unfinished material action")
+    parser.add_argument("--task", default="resume Operator-directed unfinished material action")
     parser.add_argument("--emit-request", action="store_true")
     parser.add_argument("--verify-receipt", type=Path)
     parser.add_argument("--restricted-authorized", action="store_true")
