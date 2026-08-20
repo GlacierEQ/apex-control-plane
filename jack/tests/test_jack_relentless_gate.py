@@ -21,7 +21,7 @@ def _receipt(gates: dict[str, bool], status: str, blockers=None):
         "contract_version": CONTRACT_VERSION,
         "authority": "OPERATOR_INTENT",
         "task": "continue existing APEX work",
-        "objective": "execute maximum coherent verified delta",
+        "objective": "execute Operator-aligned coherent verified delta",
         "canonical_owner": "GlacierEQ/apex-control-plane",
         "sources_opened": [
             {"system": "Notion", "object_id": "continuity", "opened": True}
@@ -45,7 +45,7 @@ def _receipt(gates: dict[str, bool], status: str, blockers=None):
         "status": status,
         "exact_blockers": blockers or [],
         "resolved_blockers": [],
-        "next_material_action": "resume next unresolved delta",
+        "next_material_action": "resume next Operator-aligned unresolved delta",
     }
 
 
@@ -54,6 +54,19 @@ def test_all_true_is_complete():
     assert completion_ready(g)
     assert evaluate(g) == Status.COMPLETE
     assert missing(g) == []
+
+
+def test_operator_asset_sovereignty_is_required_for_execution():
+    values = _all_true()
+    values["operator_asset_sovereignty_preserved"] = False
+    g = GateState(**values)
+    assert evaluate(g) == Status.RECOVERING
+    assert "operator_asset_sovereignty_preserved" in missing(g)
+
+
+def test_operator_aligned_delta_replaces_highest_value_ranking_gate():
+    assert "operator_aligned_delta_selected" in GateState.__dataclass_fields__
+    assert "highest_value_delta_selected" not in GateState.__dataclass_fields__
 
 
 def test_one_missing_cannot_complete():
@@ -106,7 +119,7 @@ def test_receipt_rejects_missing_gate():
     try:
         validate_receipt(_receipt(values, "EXECUTING"))
     except ValueError as exc:
-        assert "exactly 16 gates" in str(exc)
+        assert "gates; missing=" in str(exc)
     else:
         raise AssertionError("receipt with missing gate was accepted")
 
