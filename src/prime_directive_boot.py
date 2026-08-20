@@ -328,6 +328,9 @@ def build_prime_directive_boot_request(
             "validate_combined_receipt": True,
             "tool_call_without_success_does_not_complete_stage": True,
             "block_user_facing_text_until_gate_complete": True,
+            "preserve_literal_operator_operation_scope": True,
+            "no_unsolicited_operator_asset_value_ranking": True,
+            "no_unsolicited_operator_asset_disposition": True,
         }
     )
     request["receipt_contract"].update(
@@ -422,7 +425,7 @@ def automatic_prime_directive_boot() -> PrimeDirectiveBootValidation | None:
     )
     task = os.getenv(
         "CASEY_BOOT_TASK",
-        "resume highest-value unfinished material action",
+        "resume Operator-directed unfinished material action",
     )
     receipt = receipt_from_environment()
 
