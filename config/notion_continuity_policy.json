@@ -1,19 +1,24 @@
 {
-  "schema_version": "1.1.0",
-  "name": "Notion-First Continuity + Integration Preflight",
+  "schema_version": "1.2.0",
+  "name": "Notion-First Continuity + Relationship Mapping Preflight",
   "stage_order": [
     "notion_boot_analysis",
     "existing_work_discovery",
     "integration_map"
   ],
   "block_user_facing_text_until_complete": true,
+  "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "authority_semantics": {
     "project_direction_authority": "operator_intent",
     "canonical_fields_are_compatibility_labels": true,
     "canonical_fields_do_not_override_operator_intent": true,
     "historical_governance_is_evidence_not_project_authority": true,
     "continuation_before_restart": true,
-    "operator_override_may_authorize_new_root": true
+    "operator_override_may_authorize_new_root": true,
+    "discovered_relationships_do_not_authorize_integration": true,
+    "inspection_and_mapping_are_observation_only": true,
+    "operator_owned_asset_value_ranking_requires_explicit_operator_request": true,
+    "operator_owned_asset_disposition_requires_explicit_operator_request": true
   },
   "canonical_notion_pages": [
     {
@@ -53,9 +58,10 @@
     "minimum_existing_work_systems_searched": 2,
     "integration_status": "complete",
     "found_work_decisions": [
-      "extend",
+      "map_existing",
       "operator_override"
-    ]
+    ],
+    "default_relationship_decision": "map_only"
   },
   "tool_aliases": {
     "notion_search": [
@@ -80,12 +86,15 @@
   "laws": [
     "CONTEXT BEFORE MUTATION",
     "BEFORE STARTING, DETERMINE WHETHER IT IS ALREADY STARTED",
-    "CONTINUE AND EXTEND EXISTING VALID WORK BEFORE RESTARTING",
-    "BEFORE MAKING, DISCOVER WHO NEEDS, OWNS, CONSUMES, DEPENDS ON, OR OVERLAPS WITH IT",
-    "PRESERVE AND LINK VALID PRIOR CAPABILITY",
-    "TOPOLOGY CONFLICTS REQUIRE RESOLUTION BEFORE MATERIAL MUTATION",
+    "CONTINUE EXISTING VALID WORK WHEN THE OPERATOR DIRECTS CONTINUATION",
+    "DISCOVER OWNER CONSUMER DEPENDENCY AND OVERLAP RELATIONSHIPS WITHOUT TURNING DISCOVERY INTO HIERARCHY",
+    "RELATIONSHIP DISCOVERY PRODUCES A MAP NOT AN INTEGRATION ORDER",
+    "LOOK INSPECT LIST INVENTORY MAP AND TRACE ARE OBSERVATION ONLY",
+    "SIMILAR NAMES DO NOT IMPLY DUPLICATION",
+    "OVERLAP DOES NOT IMPLY SUBORDINATION",
     "OPERATOR INTENT CONTROLS PROJECT DIRECTION",
-    "NEW ROOTS REQUIRE OPERATOR DIRECTION OR EVIDENCE THAT CONTINUATION CANNOT SATISFY THE TARGET"
+    "VALUE RANKING AND DISPOSITION OF OPERATOR ASSETS REQUIRE EXPLICIT OPERATOR DIRECTION",
+    "NEW ROOTS REQUIRE EXPLICIT OPERATOR DIRECTION"
   ],
   "security": {
     "never_embed_secrets": true,
