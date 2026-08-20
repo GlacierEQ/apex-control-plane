@@ -35,13 +35,18 @@ message GateVector {
   bool objective_preserved = 7;
   bool required_sources_opened = 8;
   bool contradictions_preserved = 9;
-  bool highest_value_delta_selected = 10;
+  // Field number 10 is retained for wire compatibility. The renamed field means
+  // the selected delta is aligned to explicit Operator direction; it does not
+  // authorize autonomous asset-value ranking.
+  bool operator_aligned_delta_selected = 10;
   bool material_action_executed = 11;
   bool verification_passed = 12;
   bool defects_repaired_or_exactly_blocked = 13;
   bool persistence_written = 14;
   bool readback_verified = 15;
   bool next_state_resumable = 16;
+  // Observation/tool access never grants asset-value or disposition authority.
+  bool operator_asset_sovereignty_preserved = 17;
 }
 
 message SourceReceipt {
