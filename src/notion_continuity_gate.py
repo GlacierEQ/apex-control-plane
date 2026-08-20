@@ -3,6 +3,11 @@
 Compatibility fields that contain the word ``canonical`` remain supported for
 existing receipts, but they are topology/source labels only. They never confer
 project-direction authority over explicit Operator intent.
+
+Relationship discovery is observational. It may map owner, consumer,
+dependency, and overlap relationships, but it may not convert those observations
+into integration, hierarchy, value ranking, disposition, or a new root without
+explicit Operator direction.
 """
 from __future__ import annotations
 
@@ -58,6 +63,18 @@ def load_notion_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]
         raise BootError(f"invalid Notion continuity policy: {exc}") from exc
     if not isinstance(value, dict):
         raise BootError("Notion continuity policy must be a JSON object")
+    authority = value.get("authority_semantics")
+    if not isinstance(authority, Mapping):
+        raise BootError("Notion continuity authority_semantics must be an object")
+    required = {
+        "discovered_relationships_do_not_authorize_integration": True,
+        "inspection_and_mapping_are_observation_only": True,
+        "operator_owned_asset_value_ranking_requires_explicit_operator_request": True,
+        "operator_owned_asset_disposition_requires_explicit_operator_request": True,
+    }
+    for name, expected in required.items():
+        if authority.get(name) is not expected:
+            raise BootError(f"Notion continuity authority_semantics.{name} must be {expected!r}")
     return value
 
 
@@ -273,7 +290,7 @@ def validate_notion_continuity_receipt(
         decision = _norm(discovery.get("decision"))
         allowed_found_decisions = {
             _norm(value)
-            for value in req.get("found_work_decisions", ("extend",))
+            for value in req.get("found_work_decisions", ("map_existing",))
         }
         if found_status == "found":
             if not candidates:
@@ -282,16 +299,16 @@ def validate_notion_continuity_receipt(
                 errors.append("found existing work requires existing owner metadata")
             if decision not in allowed_found_decisions:
                 errors.append(
-                    "found existing work requires decision=extend or operator_override"
+                    "found existing work requires decision=map_existing or operator_override"
                 )
         elif found_status == "none_found":
             if candidates:
                 errors.append("none_found existing work requires zero candidates")
             if owner is not None:
                 errors.append("none_found existing work requires canonical_owner=null")
-            if decision != "create_if_needed":
+            if decision != "map_none_found":
                 errors.append(
-                    "none_found existing work requires decision=create_if_needed"
+                    "none_found existing work requires decision=map_none_found"
                 )
 
     integration = receipt.get("integration_map")
@@ -322,7 +339,7 @@ def validate_notion_continuity_receipt(
         if not isinstance(link_plan, list) or not any(
             _nonempty_text(value) for value in link_plan
         ):
-            errors.append("integration_map.link_plan must contain at least one link")
+            errors.append("integration_map.link_plan must contain at least one observational link")
         if integration.get("abandon_existing") is not False:
             errors.append("integration_map.abandon_existing must be false")
 
@@ -339,62 +356,41 @@ def validate_notion_continuity_receipt(
             errors.append("integration_map.owner must be an object or null")
         decision = _norm(integration.get("decision"))
         override = _operator_override_authorized(discovery, integration)
-        if found_status == "found":
-            if not isinstance(owner, Mapping):
-                errors.append("integration_map.owner is required when work exists")
-            elif existing_owner is not None:
-                a = (
-                    _norm(existing_owner.get("system")),
-                    str(existing_owner.get("id", "")).strip(),
-                )
-                b = (
-                    _norm(owner.get("system")),
-                    str(owner.get("id", "")).strip(),
-                )
-                if a != b:
-                    errors.append(
-                        "integration_map.owner must match discovered existing owner metadata"
-                    )
+        create_new_root = integration.get("create_new_root") is True
 
-            wants_new_root = integration.get("create_new_root") is True
-            if wants_new_root:
-                if not override:
-                    errors.append(
-                        "integration_map.create_new_root requires explicit Operator override when work exists"
-                    )
-                if decision != "operator_override":
-                    errors.append(
-                        "new root with existing work requires decision=operator_override"
-                    )
-            elif decision != "integrate":
+        if found_status == "found" and isinstance(owner, Mapping) and existing_owner is not None:
+            a = (
+                _norm(existing_owner.get("system")),
+                str(existing_owner.get("id", "")).strip(),
+            )
+            b = (
+                _norm(owner.get("system")),
+                str(owner.get("id", "")).strip(),
+            )
+            if a != b:
                 errors.append(
-                    "integration_map.decision must be integrate when continuing existing work"
+                    "integration_map.owner must match discovered existing owner metadata"
                 )
-        elif found_status == "none_found":
-            if owner is not None and not isinstance(owner, Mapping):
-                pass
-            elif relationships or isinstance(owner, Mapping):
-                if decision != "integrate":
-                    errors.append(
-                        "integration_map.decision must be integrate when a related node exists"
-                    )
-                if integration.get("create_new_root") is not False:
-                    errors.append(
-                        "integration_map.create_new_root must be false when a relationship exists"
-                    )
-            else:
-                if not _nonempty_text(integration.get("standalone_justification")):
-                    errors.append(
-                        "standalone work requires integration_map.standalone_justification"
-                    )
-                if decision != "standalone_last_resort":
-                    errors.append(
-                        "standalone work requires decision=standalone_last_resort"
-                    )
-                if integration.get("create_new_root") is not True:
-                    errors.append(
-                        "standalone_last_resort requires create_new_root=true"
-                    )
+
+        if override:
+            if decision != "operator_override":
+                errors.append("explicit Operator override requires decision=operator_override")
+        else:
+            if decision != _norm(req.get("default_relationship_decision", "map_only")):
+                errors.append(
+                    "relationship discovery without Operator override requires decision=map_only"
+                )
+            if create_new_root:
+                errors.append(
+                    "integration_map.create_new_root requires explicit Operator direction"
+                )
+
+        if integration.get("asset_value_ranking_performed") is not False:
+            errors.append("integration_map.asset_value_ranking_performed must be false unless explicitly Operator-directed")
+        if integration.get("asset_disposition_performed") is not False:
+            errors.append("integration_map.asset_disposition_performed must be false unless explicitly Operator-directed")
+        if integration.get("inspection_scope_expanded") is not False:
+            errors.append("integration_map.inspection_scope_expanded must be false")
 
     return tuple(errors)
 
@@ -415,7 +411,10 @@ def build_notion_preflight_request(
             "determine_whether_work_already_exists_before_starting": True,
             "resolve_existing_owner_as_topology_not_project_authority": True,
             "discover_owner_consumers_dependencies_and_overlap_before_making": True,
-            "continue_and_link_before_restarting": True,
+            "relationship_discovery_produces_map_not_integration_order": True,
+            "preserve_literal_operator_operation_scope": True,
+            "no_unsolicited_operator_asset_value_ranking": True,
+            "no_unsolicited_operator_asset_disposition": True,
             "operator_override_may_authorize_new_root": True,
             "topology_conflicts_require_resolution": True,
         },
@@ -434,7 +433,7 @@ def automatic_notion_continuity_preflight() -> NotionContinuityValidation | None
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
     policy = load_notion_policy()
-    task = os.getenv("CASEY_BOOT_TASK", "resume highest-value unfinished material action")
+    task = os.getenv("CASEY_BOOT_TASK", "resume Operator-directed unfinished material action")
     receipt = receipt_from_environment()
     if receipt is None:
         print(
