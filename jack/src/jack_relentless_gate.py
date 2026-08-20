@@ -3,6 +3,11 @@
 The historical ``canonical_owner`` receipt field is retained only as an
 existing-work topology locator. Project-direction authority is always explicit
 Operator intent.
+
+Operator-owned project assets remain under Operator disposition authority.
+Observation, inspection, mapping, overlap, similarity, tool access, and path
+selection do not authorize unsolicited value ranking, subordination, merger,
+retirement, or other disposition.
 """
 from __future__ import annotations
 
@@ -11,7 +16,7 @@ from enum import Enum
 from typing import Mapping
 
 CONTRACT_ID = "JTR-RELENTLESS-EXECUTION-v1"
-CONTRACT_VERSION = "1.1.0"
+CONTRACT_VERSION = "1.2.0"
 REQUIRED_AUTHORITY = "OPERATOR_INTENT"
 APEX_STATES = {
     "OBSERVED",
@@ -57,8 +62,9 @@ class GateState:
     canonical_owner_resolved: bool = False
     objective_preserved: bool = False
     required_sources_opened: bool = False
+    operator_asset_sovereignty_preserved: bool = False
     contradictions_preserved: bool = False
-    highest_value_delta_selected: bool = False
+    operator_aligned_delta_selected: bool = False
     material_action_executed: bool = False
     verification_passed: bool = False
     defects_repaired_or_exactly_blocked: bool = False
@@ -76,6 +82,7 @@ PRE_FLIGHT = [
     "canonical_owner_resolved",
     "objective_preserved",
     "required_sources_opened",
+    "operator_asset_sovereignty_preserved",
 ]
 COMPLETION = list(GateState.__dataclass_fields__)
 RESUME = [
@@ -197,7 +204,8 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
         missing_names = sorted(allowed - set(raw_gates))
         unknown_names = sorted(set(raw_gates) - allowed)
         raise ValueError(
-            f"receipt.gates must contain exactly 16 gates; missing={missing_names}, unknown={unknown_names}"
+            f"receipt.gates must contain exactly {len(allowed)} gates; "
+            f"missing={missing_names}, unknown={unknown_names}"
         )
 
     gates = from_mapping(raw_gates)
