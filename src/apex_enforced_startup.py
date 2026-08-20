@@ -2,8 +2,9 @@
 
 This layer sits above the existing continuity and Prime Directive proofs. It does
 not replace them. It binds those proofs to absolute OPERATOR project-direction
-authority, continuation, preserved prior gain, maximum coherent path selection,
-and evidence-backed execution-state transitions.
+authority, continuation, preserved prior gain, Operator-aligned coherent path
+selection, Operator asset sovereignty, and evidence-backed execution-state
+transitions.
 """
 from __future__ import annotations
 
@@ -85,6 +86,9 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         "lower_level_policy_veto": False,
         "assistant_or_automation_override": False,
         "repository_or_registry_override": False,
+        "operator_owned_asset_value_ranking_is_operator_only": True,
+        "operator_owned_asset_disposition_is_operator_only": True,
+        "inspection_does_not_expand_scope": True,
     }
     for field_name, expected in required_authority_flags.items():
         if operator_authority.get(field_name) is not expected:
@@ -100,6 +104,14 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
     if interlock.get("external_action_requires_secondary_human_approval") is not False:
         raise BootError(
             "APEX cannot grant a secondary human approval layer authority over the Operator"
+        )
+    if interlock.get("operator_owned_asset_disposition_requires_explicit_operator_direction") is not True:
+        raise BootError(
+            "APEX operator-owned asset disposition must remain Operator-directed"
+        )
+    if interlock.get("operator_owned_asset_value_ranking_requires_explicit_operator_direction") is not True:
+        raise BootError(
+            "APEX operator-owned asset value ranking must remain Operator-directed"
         )
     return value
 
@@ -305,14 +317,18 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
             "operator_project_direction_authority_is_absolute": True,
             "current_explicit_operator_instruction_is_authorization_for_its_scope": True,
             "secondary_human_approval_authority": False,
-            "classify_material_state": True,
+            "describe_material_state_within_operator_requested_taxonomy": True,
+            "asset_worth_classification_requires_explicit_operator_request": True,
+            "preserve_literal_operator_operation_scope": True,
             "resolve_contradictions_before_mutation": True,
-            "select_maximum_coherent_path": True,
+            "select_operator_aligned_coherent_path_within_requested_operation": True,
             "eliminate_artificial_minimization": True,
             "receipt_bind_material_action_claims": True,
             "verify_before_state_promotion": True,
             "external_actions_require_operator_authorization_receipt": True,
             "integrate_only_verified_gain": True,
+            "no_unsolicited_operator_asset_value_ranking": True,
+            "no_unsolicited_operator_asset_disposition": True,
         },
         "receipt_contract": {
             "apex_startup": {
@@ -387,7 +403,7 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
     policy = load_apex_policy()
-    task = os.getenv("CASEY_BOOT_TASK", "resume highest-value unfinished material action")
+    task = os.getenv("CASEY_BOOT_TASK", "resume Operator-directed unfinished material action")
     receipt = receipt_from_environment()
 
     if receipt is None:
