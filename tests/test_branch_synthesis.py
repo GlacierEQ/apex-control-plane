@@ -181,6 +181,9 @@ def test_synthesis_report_emits_metadata_not_patch_or_file_contents():
     report_keys = set(keys(report))
     assert "patch" not in report_keys
     assert "content" not in report_keys
+    encoded = json.dumps(report)
+    assert "evidence/timeline.py" not in encoded
+    assert report["repositories"][0]["branches"][0]["changed_path_count"] == 1
     assert report["donor_count"] == 1
 
 
