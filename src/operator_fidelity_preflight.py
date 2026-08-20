@@ -1,10 +1,11 @@
 """Fail-closed operator-fidelity preflight for APEX runtime startup.
 
 This gate exists for one failure class: INSTRUCTION_DISPLACEMENT.
-It verifies that literal operator direction survived context compression and
+It verifies that literal Operator direction survived context compression and
 that the selected execution vector did not silently collapse into minimum
-scope, governance-first behavior, permission loops, capability reduction, or
-textual minimization hidden behind compliant booleans.
+scope, governance-first behavior, permission loops, capability reduction,
+unsolicited Operator-asset valuation or disposition, inspection-scope
+expansion, or textual minimization hidden behind compliant booleans.
 """
 from __future__ import annotations
 
@@ -75,6 +76,7 @@ def load_operator_fidelity_policy(
         "required_true_fields",
         "required_nonempty_fields",
         "selected_path_requirements",
+        "operator_asset_sovereignty",
         "anti_minimization",
         "pro_code_elite_humanized_engineering",
         "correction_requirements",
@@ -84,6 +86,24 @@ def load_operator_fidelity_policy(
         raise BootError("operator-fidelity policy missing: " + ", ".join(missing))
     if value.get("fail_closed") is not True:
         raise BootError("operator-fidelity policy must remain fail_closed=true")
+
+    asset_sovereignty = value.get("operator_asset_sovereignty")
+    if not isinstance(asset_sovereignty, Mapping):
+        raise BootError("operator-fidelity operator_asset_sovereignty must be an object")
+    required_asset_flags = {
+        "look_inspect_list_inventory_map_are_observation_only": True,
+        "asset_value_ranking_requires_explicit_operator_request": True,
+        "asset_disposition_requires_explicit_operator_request": True,
+        "similar_names_do_not_imply_duplication": True,
+        "overlap_does_not_imply_subordination": True,
+        "tool_access_is_capability_not_authority": True,
+        "observation_is_knowledge_not_authority": True,
+    }
+    for field_name, expected in required_asset_flags.items():
+        if asset_sovereignty.get(field_name) is not expected:
+            raise BootError(
+                f"operator-fidelity operator_asset_sovereignty.{field_name} must be {expected!r}"
+            )
 
     anti_minimization = value.get("anti_minimization")
     if not isinstance(anti_minimization, Mapping):
@@ -278,6 +298,14 @@ def validate_operator_fidelity_receipt(
 def build_operator_fidelity_request(
     policy: Mapping[str, Any], *, task: str
 ) -> dict[str, Any]:
+    selected_path_contract = {
+        **dict(policy.get("selected_path_requirements", {})),
+        "capability_reduction": False,
+        "functional_advance": "specific capability/function/outcome advanced",
+        "strongest_coherent_path": (
+            "why this path best executes the Operator-defined operation without scope expansion"
+        ),
+    }
     return {
         "request_type": "glaciereq_operator_fidelity_preflight",
         "schema_version": policy.get("schema_version"),
@@ -299,6 +327,10 @@ def build_operator_fidelity_request(
             "consider_capability_growth": True,
             "apply_pro_code_elite_humanized_engineering": True,
             "preserve_prior_valid_gains": True,
+            "preserve_literal_operator_operation_scope": True,
+            "no_unsolicited_operator_asset_value_ranking": True,
+            "no_unsolicited_operator_asset_disposition": True,
+            "inspection_scope_expansion_forbidden": True,
             "identify_functional_advance": True,
             "identify_next_ceiling": True,
         },
@@ -326,23 +358,8 @@ def build_operator_fidelity_request(
                 "corrections_applied": ["how the correction changed execution"],
                 "correction_effect": "required when correction_present=true",
                 "operator_directed_reduction": False,
-                "selected_path": {
-                    "literal_instruction_fidelity": True,
-                    "instruction_displacement": False,
-                    "minimum_scope_default": False,
-                    "mvp_default": False,
-                    "freeze_as_product_strategy": False,
-                    "least_capability_default": False,
-                    "governance_first": False,
-                    "permission_loop": False,
-                    "capability_reduction": False,
-                    "preserves_prior_valid_gain": True,
-                    "maximum_coherent_advance": True,
-                    "pro_code_elite_humanized_engineered": True,
-                    "functional_advance": "specific capability/function/outcome advanced",
-                    "strongest_coherent_path": "why this path reaches highest coherent frontier",
-                },
-                "next_ceiling": "what the verified gain unlocks next",
+                "selected_path": selected_path_contract,
+                "next_ceiling": "what the verified gain unlocks next within Operator direction",
             }
         },
     }
@@ -379,7 +396,7 @@ def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None
 
     policy = load_operator_fidelity_policy()
     task = os.getenv(
-        "CASEY_BOOT_TASK", "resume highest-value unfinished material action"
+        "CASEY_BOOT_TASK", "resume Operator-directed unfinished material action"
     )
     receipt = receipt_from_environment()
 
