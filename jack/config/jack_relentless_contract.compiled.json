@@ -1,8 +1,9 @@
 {
   "contract_id": "JTR-RELENTLESS-EXECUTION-v1",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "project_direction_authority": "OPERATOR_INTENT",
   "startup_contract": "APEX_ENFORCED_STARTUP.md",
+  "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "compatibility": {
     "canonical_owner_field_semantics": "existing_owner_topology_only",
     "canonical_owner_does_not_confer_project_authority": true
@@ -15,7 +16,8 @@
     "existing_work_checked",
     "canonical_owner_resolved",
     "objective_preserved",
-    "required_sources_opened"
+    "required_sources_opened",
+    "operator_asset_sovereignty_preserved"
   ],
   "completion_gates": [
     "authority_valid",
@@ -27,7 +29,8 @@
     "objective_preserved",
     "required_sources_opened",
     "contradictions_preserved",
-    "highest_value_delta_selected",
+    "operator_aligned_delta_selected",
+    "operator_asset_sovereignty_preserved",
     "material_action_executed",
     "verification_passed",
     "defects_repaired_or_exactly_blocked",
@@ -54,6 +57,11 @@
     "DEPLOYED",
     "OBSERVED_IN_OPERATION"
   ],
+  "classification_semantics": {
+    "default": "EXECUTION_STATE_PROVENANCE_AND_OPERATOR_REQUESTED_TAXONOMY_ONLY",
+    "asset_worth_classification": "EXPLICIT_OPERATOR_REQUEST_REQUIRED",
+    "inspection_scope": "OBSERVE_DESCRIBE_MAP_ONLY"
+  },
   "statuses": [
     "RECOVERING",
     "EXECUTING",
@@ -61,18 +69,26 @@
     "COMPLETE"
   ],
   "decision_law": {
-    "existing_work_found": "EXTEND_OR_OPERATOR_OVERRIDE",
-    "no_owner_but_related_system_found": "INTEGRATE",
-    "standalone": "OPERATOR_DIRECTION_OR_EVIDENCE_BACKED_LAST_RESORT",
+    "existing_work_found": "PRESERVE_AND_MAP_CONTINUATION_UNLESS_OPERATOR_DIRECTS_MUTATION",
+    "related_system_found_without_operator_hierarchy": "MAP_RELATIONSHIP_ONLY",
+    "standalone": "PRESERVE_IDENTITY_AND_REPORT_OBSERVED_STATE",
+    "value_ranking": "EXPLICIT_OPERATOR_REQUEST_REQUIRED",
+    "disposition_or_subordination": "EXPLICIT_OPERATOR_DIRECTION_REQUIRED",
     "unresolved_topology_conflict": "BLOCK_MUTATION_AND_RECONCILE",
     "capability_reduction": "OPERATOR_DIRECTION_REQUIRED"
   },
+  "forbidden": [
+    "UNSOLICITED_OPERATOR_ASSET_VALUE_RANKING",
+    "UNSOLICITED_OPERATOR_ASSET_DISPOSITION",
+    "INSPECTION_SCOPE_EXPANSION"
+  ],
   "receipt_validation": {
     "fixed_gate_vector": true,
     "complete_requires_all_completion_gates": true,
     "unknown_gates_rejected": true,
     "current_exact_blocker_precedes_complete": true,
-    "canonical_owner_is_topology_only": true
+    "canonical_owner_is_topology_only": true,
+    "operator_asset_sovereignty_is_mandatory": true
   },
   "onnx_condition_input": "current_blocker_present",
   "onnx_types": "boolean"
