@@ -17,11 +17,13 @@ SHA_MAIN = "1" * 40
 
 
 class FakeGitHub:
-    def __init__(self, *, branches, comparisons, default="main", embedded_head=False):
+    def __init__(self, *, branches, comparisons, default="main", embedded_head=False, tree=None, tree_complete=True):
         self._branches = branches
         self._comparisons = comparisons
         self._default = default
         self._embedded_head = embedded_head
+        self._tree = tree or {}
+        self._tree_complete = tree_complete
 
     def repository(self, repository):
         payload = {"default_branch": self._default}
@@ -35,6 +37,10 @@ class FakeGitHub:
     def compare(self, repository, base, head):
         assert base == self._default
         return self._comparisons[head]
+
+    def tree(self, repository, commit_sha):
+        assert commit_sha == SHA_MAIN or len(commit_sha) == 40
+        return self._tree, self._tree_complete
 
 
 def branch(name, sha, protected=False):
@@ -168,7 +174,6 @@ def test_synthesis_report_emits_metadata_not_patch_or_file_contents():
     )
     report = synthesis_report([inventory_repository(reader, "GlacierEQ/legal")])
     assert report["schema"] == "APEX_BRANCH_SYNTHESIS_V1"
-
     def keys(value):
         if isinstance(value, dict):
             for key, child in value.items():
@@ -177,7 +182,6 @@ def test_synthesis_report_emits_metadata_not_patch_or_file_contents():
         elif isinstance(value, list):
             for child in value:
                 yield from keys(child)
-
     report_keys = set(keys(report))
     assert "patch" not in report_keys
     assert "content" not in report_keys
@@ -204,3 +208,63 @@ def test_repository_identity_must_be_exact_owner_name():
     reader = FakeGitHub(branches=[branch("main", SHA_MAIN)], comparisons={})
     with pytest.raises(BranchSynthesisError, match="invalid repository identity"):
         inventory_repository(reader, "GlacierEQ/legal/extra")
+
+def test_diverged_lineage_can_retire_when_all_file_effects_are_content_equivalent():
+    same_blob = "a" * 40
+    reader = FakeGitHub(
+        branches=[branch("main", SHA_MAIN), branch("replayed", "2" * 40)],
+        tree={"engine.py": same_blob},
+        comparisons={
+            "replayed": {
+                "status": "diverged",
+                "ahead_by": 3,
+                "behind_by": 50,
+                "files": [{"filename": "engine.py", "status": "modified", "sha": same_blob}],
+            }
+        },
+    )
+    inventory = inventory_repository(reader, "GlacierEQ/legal")
+    row = {item.name: item for item in inventory.branches}["replayed"]
+    assert row.content_relation == "CONTENT_EQUIVALENT"
+    assert row.content_delta_count == 0
+    assert row.action == "RETIRE_AFTER_CONTENT_EQUIVALENCE_PROOF"
+    assert inventory.retirement_candidates == ("replayed",)
+
+
+def test_content_delta_keeps_diverged_branch_in_preservation_set():
+    reader = FakeGitHub(
+        branches=[branch("main", SHA_MAIN), branch("donor", "2" * 40)],
+        tree={"engine.py": "a" * 40},
+        comparisons={
+            "donor": {
+                "status": "diverged",
+                "ahead_by": 2,
+                "behind_by": 10,
+                "files": [{"filename": "engine.py", "status": "modified", "sha": "b" * 40}],
+            }
+        },
+    )
+    inventory = inventory_repository(reader, "GlacierEQ/legal")
+    row = {item.name: item for item in inventory.branches}["donor"]
+    assert row.content_relation == "CONTENT_DELTA"
+    assert row.content_delta_count == 1
+    assert row.action == "PRESERVE_AND_FRESH_SYNTHESIZE"
+    assert inventory.preservation_set == ("donor",)
+
+
+def test_removed_file_effect_is_equivalent_when_default_also_lacks_path():
+    reader = FakeGitHub(
+        branches=[branch("main", SHA_MAIN), branch("cleanup", "2" * 40)],
+        tree={},
+        comparisons={
+            "cleanup": {
+                "status": "ahead",
+                "ahead_by": 1,
+                "behind_by": 0,
+                "files": [{"filename": "obsolete.py", "status": "removed", "sha": "c" * 40}],
+            }
+        },
+    )
+    row = {item.name: item for item in inventory_repository(reader, "GlacierEQ/legal").branches}["cleanup"]
+    assert row.content_relation == "CONTENT_EQUIVALENT"
+    assert row.action == "RETIRE_AFTER_CONTENT_EQUIVALENCE_PROOF"
