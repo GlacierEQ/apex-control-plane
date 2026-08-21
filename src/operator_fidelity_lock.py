@@ -1,18 +1,22 @@
-"""APEX OPERATOR source-fidelity verifier.
+"""APEX AKOS/OPERATOR epistemic-use fidelity verifier.
 
 The filename and public API retain ``operator_fidelity_lock`` for compatibility,
-but this component does not define what OPERATOR must want or say.
+but this component does not define what OPERATOR must want or what AKOS must know.
 
-It protects two things only:
+The boundary is:
 
-1. words attributed to OPERATOR remain cryptographically bound to the literal
-   constraints supplied by the receipt; and
-2. source identity remains explicit so AKOS/framework material, evidence, and
-   agent inference cannot silently impersonate the singular proper-name
-   designation OPERATOR.
+1. AKOS is how knowledge is known: evidence, provenance, inference, qualification,
+   contradiction, and verification contribute to an explicit knowledge state;
+2. OPERATOR is how knowledge is used: direction, priority, objective, and chosen
+   application remain attached to the singular proper-name designation OPERATOR;
+3. AKOS knowledge state does not silently become use-direction; and
+4. OPERATOR use-direction does not silently rewrite epistemic status.
 
-The verifier may detect attribution/integrity failure. It may not manufacture
-mandatory OPERATOR phrases, objectives, corrections, or doctrine.
+Literal words attributed to OPERATOR remain cryptographically bound to the
+receipt. The verifier may detect attribution, integrity, or boundary failure.
+It may not manufacture mandatory OPERATOR phrases, objectives, corrections, or
+doctrine, and it may not manufacture AKOS knowledge merely because OPERATOR
+wants a particular use.
 """
 from __future__ import annotations
 
@@ -43,7 +47,7 @@ class OperatorFidelityLockValidation:
 
     def __post_init__(self) -> None:
         if self._seal is not _SEAL:
-            raise TypeError("OPERATOR source-fidelity proof must be issued in-process")
+            raise TypeError("AKOS/OPERATOR fidelity proof must be issued in-process")
 
 
 _IN_PROCESS: OperatorFidelityLockValidation | None = None
@@ -68,7 +72,7 @@ def _text_list(value: Any) -> list[str]:
 
 
 def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ...]:
-    """Validate source identity and integrity without inventing OPERATOR direction."""
+    """Validate epistemic-use identity and integrity without inventing either side."""
     errors: list[str] = []
     policy = load_operator_fidelity_policy()
     errors.extend(validate_operator_fidelity_receipt(policy, receipt))
@@ -86,9 +90,6 @@ def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ..
                 "operator_fidelity.operator_words_digest is not bound to literal_constraints"
             )
 
-    # Do not inspect OPERATOR's words for machine-selected slogans or durable
-    # phrases. The machine verifies attribution/integrity, not the content of
-    # OPERATOR's direction.
     path = row.get("selected_path")
     if isinstance(path, Mapping):
         if path.get("operator_designation") != "OPERATOR":
@@ -99,6 +100,20 @@ def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ..
             errors.append("OPERATOR designation must remain singular")
         if path.get("source_identity_preserved") is not True:
             errors.append("source identity must remain explicit")
+
+        if path.get("akos_is_how_knowledge_is_known") is not True:
+            errors.append("AKOS must remain the knowledge-state function: how knowledge is known")
+        if path.get("operator_is_how_knowledge_is_used") is not True:
+            errors.append("OPERATOR must remain the use-direction function: how knowledge is used")
+        if path.get("knowledge_state_is_not_use_direction") is not True:
+            errors.append("AKOS knowledge state must not be collapsed into OPERATOR use-direction")
+        if path.get("use_direction_is_not_knowledge_state") is not True:
+            errors.append("OPERATOR use-direction must not be collapsed into AKOS knowledge state")
+        if path.get("akos_knowledge_state_alone_does_not_choose_use") is not True:
+            errors.append("AKOS knowledge state alone must not choose how knowledge is used")
+        if path.get("operator_direction_alone_does_not_rewrite_knowledge_state") is not True:
+            errors.append("OPERATOR direction alone must not rewrite AKOS knowledge state")
+
         if path.get("akos_material_is_framework_not_operator") is not True:
             errors.append("AKOS material must not be attributed to OPERATOR")
         if path.get("agent_inference_is_not_operator") is not True:
@@ -126,7 +141,7 @@ def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
 
 
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    """Issue source-fidelity proof or expose a resumable diagnostic state."""
+    """Issue fidelity proof or expose a resumable diagnostic state."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
         return _IN_PROCESS
