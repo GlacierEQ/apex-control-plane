@@ -9,7 +9,7 @@ all_true_gate_state :: proc() -> Gate_State {
         continuity_loaded = true,
         resources_invoked = true,
         existing_work_checked = true,
-        canonical_owner_resolved = true,
+        apex_owner_topology_resolved = true,
         objective_preserved = true,
         required_sources_opened = true,
         operator_asset_sovereignty_preserved = true,
@@ -39,5 +39,12 @@ cold_start_is_recovering :: proc(t: ^testing.T) {
 asset_sovereignty_is_preflight_required :: proc(t: ^testing.T) {
     g := all_true_gate_state()
     g.operator_asset_sovereignty_preserved = false
+    testing.expect_value(t, evaluate(g, false), Execution_Status.RECOVERING)
+}
+
+@(test)
+apex_owner_topology_is_preflight_required :: proc(t: ^testing.T) {
+    g := all_true_gate_state()
+    g.apex_owner_topology_resolved = false
     testing.expect_value(t, evaluate(g, false), Execution_Status.RECOVERING)
 }
