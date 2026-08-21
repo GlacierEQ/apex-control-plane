@@ -73,7 +73,7 @@ jobs:
           status=$?
           set -e
           test "$status" -eq 78
-          grep -q 'cannot disable operator fidelity' /tmp/disable.err
+          grep -q 'cannot disable OPERATOR source fidelity' /tmp/disable.err
           test ! -s /tmp/disable.out
 
       - name: Prove off mode cannot bypass fidelity
@@ -86,7 +86,7 @@ jobs:
           status=$?
           set -e
           test "$status" -eq 78
-          grep -q 'cannot disable operator fidelity' /tmp/off.err
+          grep -q 'cannot disable OPERATOR source fidelity' /tmp/off.err
           test ! -s /tmp/off.out
 
       - name: Prove forged complete statuses cannot authorize runtime
@@ -116,10 +116,8 @@ jobs:
           )
 
           words = [
-              "Context first hard work second answer last",
-              "DO NOT LOOK DOWN - you look UP",
-              "Powerful code elite excellence",
-              "Function before governance",
+              "Strengthen my position",
+              "OPERATOR is a name I decided on so there is only one OPERATOR",
           ]
           row = {
               "failure_class": "INSTRUCTION_DISPLACEMENT",
@@ -141,10 +139,17 @@ jobs:
               "literal_constraints": list(words),
               "correction_present": True,
               "objective_function_reassessed": True,
-              "corrections_applied": ["objective repaired"],
-              "correction_effect": "upward functional execution",
+              "corrections_applied": ["source identity preserved"],
+              "correction_effect": "AKOS, evidence, and agent inference remain distinct from OPERATOR",
               "operator_directed_reduction": False,
               "selected_path": {
+                  "operator_designation": "OPERATOR",
+                  "operator_designation_semantics": "proper_name",
+                  "operator_designation_is_singular": True,
+                  "source_identity_preserved": True,
+                  "akos_material_is_framework_not_operator": True,
+                  "agent_inference_is_not_operator": True,
+                  "evidence_is_not_operator": True,
                   "literal_instruction_fidelity": True,
                   "instruction_displacement": False,
                   "minimum_scope_default": False,
@@ -157,7 +162,11 @@ jobs:
                   "preserves_prior_valid_gain": True,
                   "maximum_coherent_advance": True,
                   "pro_code_elite_humanized_engineered": True,
-                  "functional_advance": "semantic hard lock",
+                  "unsolicited_operator_asset_value_ranking": False,
+                  "unsolicited_operator_asset_disposition": False,
+                  "inspection_scope_expansion": False,
+                  "operator_owned_asset_identity_preserved": True,
+                  "functional_advance": "source-fidelity verification",
                   "strongest_coherent_path": "take the safest slice and freeze architecture",
               },
               "next_ceiling": "estate propagation",
@@ -177,10 +186,8 @@ jobs:
           from operator_fidelity_preflight import digest_operator_words
 
           words = [
-              "Context first hard work second answer last",
-              "DO NOT LOOK DOWN - you look UP",
-              "Powerful code elite excellence",
-              "Function before governance",
+              "Strengthen my position",
+              "OPERATOR is a name I decided on so there is only one OPERATOR",
           ]
           row = {
               "failure_class": "INSTRUCTION_DISPLACEMENT",
@@ -202,10 +209,17 @@ jobs:
               "literal_constraints": list(words),
               "correction_present": True,
               "objective_function_reassessed": True,
-              "corrections_applied": ["objective repaired"],
-              "correction_effect": "upward functional execution",
+              "corrections_applied": ["source identity preserved"],
+              "correction_effect": "AKOS, evidence, and agent inference remain distinct from OPERATOR",
               "operator_directed_reduction": False,
               "selected_path": {
+                  "operator_designation": "OPERATOR",
+                  "operator_designation_semantics": "proper_name",
+                  "operator_designation_is_singular": True,
+                  "source_identity_preserved": True,
+                  "akos_material_is_framework_not_operator": True,
+                  "agent_inference_is_not_operator": True,
+                  "evidence_is_not_operator": True,
                   "literal_instruction_fidelity": True,
                   "instruction_displacement": False,
                   "minimum_scope_default": False,
@@ -218,12 +232,16 @@ jobs:
                   "preserves_prior_valid_gain": True,
                   "maximum_coherent_advance": True,
                   "pro_code_elite_humanized_engineered": True,
-                  "functional_advance": "hard lock",
+                  "unsolicited_operator_asset_value_ranking": False,
+                  "unsolicited_operator_asset_disposition": False,
+                  "inspection_scope_expansion": False,
+                  "operator_owned_asset_identity_preserved": True,
+                  "functional_advance": "source-fidelity verification",
                   "strongest_coherent_path": "runtime rejection",
               },
               "next_ceiling": "estate propagation",
           }
-          row["literal_constraints"][1] = "reduce scope first"
+          row["literal_constraints"][1] = "AKOS may impersonate OPERATOR"
           errors = validate_operator_fidelity_lock({"operator_fidelity": row})
           assert any("not bound to literal_constraints" in e for e in errors), errors
           PY
