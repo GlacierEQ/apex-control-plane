@@ -73,8 +73,24 @@ jobs:
           status=$?
           set -e
           test "$status" -eq 78
-          grep -q 'cannot disable OPERATOR source fidelity' /tmp/disable.err
           test ! -s /tmp/disable.out
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          records = []
+          for line in Path('/tmp/disable.err').read_text(encoding='utf-8').splitlines():
+              try:
+                  value = json.loads(line)
+              except json.JSONDecodeError:
+                  continue
+              if isinstance(value, dict):
+                  records.append(value)
+          record = next(r for r in records if r.get('gate') == 'operator_fidelity_lock')
+          assert record['status'] == 'continuation_required'
+          assert record['external_action_authorized'] is False
+          assert any('CASEY_AUTO_BOOT_DISABLE' in error for error in record['errors'])
+          PY
 
       - name: Prove off mode cannot bypass fidelity
         shell: bash
@@ -86,8 +102,24 @@ jobs:
           status=$?
           set -e
           test "$status" -eq 78
-          grep -q 'cannot disable OPERATOR source fidelity' /tmp/off.err
           test ! -s /tmp/off.out
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          records = []
+          for line in Path('/tmp/off.err').read_text(encoding='utf-8').splitlines():
+              try:
+                  value = json.loads(line)
+              except json.JSONDecodeError:
+                  continue
+              if isinstance(value, dict):
+                  records.append(value)
+          record = next(r for r in records if r.get('gate') == 'operator_fidelity_lock')
+          assert record['status'] == 'continuation_required'
+          assert record['external_action_authorized'] is False
+          assert any('CASEY_AUTO_BOOT_MODE=off' in error for error in record['errors'])
+          PY
 
       - name: Prove forged complete statuses cannot authorize runtime
         shell: bash
