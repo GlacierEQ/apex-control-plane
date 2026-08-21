@@ -258,7 +258,7 @@ def validate_operator_fidelity_receipt(
         for field_name, expected in policy.get(
             "selected_path_requirements", {}
         ).items():
-            if path.get(field_name) is not expected:
+            if path.get(field_name) != expected:
                 errors.append(
                     f"operator_fidelity.selected_path.{field_name} must be {expected!r}"
                 )
