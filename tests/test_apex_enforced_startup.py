@@ -39,8 +39,9 @@ def _receipt() -> dict:
                 "preserves_prior_valid_gain": True,
                 "unsolicited_operator_asset_value_ranking": False,
                 "unsolicited_operator_asset_disposition": False,
-                "inspection_scope_expansion": False,
                 "operator_owned_asset_identity_preserved": True,
+                "inspection_scope_expansion": False,
+                "mission_aligned_hardening": False,
             },
             "verification_plan": ["run tests", "adversarial state-promotion audit"],
             "material_claims": [
@@ -71,7 +72,7 @@ def test_operator_project_direction_authority_is_absolute() -> None:
     assert authority["repository_or_registry_override"] is False
     assert authority["operator_owned_asset_value_ranking_is_operator_only"] is True
     assert authority["operator_owned_asset_disposition_is_operator_only"] is True
-    assert authority["inspection_does_not_expand_scope"] is True
+    assert authority["inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation"] is True
 
     interlock = policy["mutation_interlock"]
     assert interlock["external_action_requires_operator_authorization_receipt"] is True
@@ -88,6 +89,7 @@ def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> No
     assert requirements["current_explicit_operator_instruction_is_authorization_for_its_scope"] is True
     assert requirements["secondary_human_approval_authority"] is False
     assert requirements["external_actions_require_operator_authorization_receipt"] is True
+    assert requirements["allow_mission_aligned_non_destructive_hardening"] is True
     serialized = json.dumps(request, sort_keys=True)
     assert "named_human_approval" not in serialized
 
@@ -97,13 +99,15 @@ def test_operator_asset_sovereignty_is_in_every_selected_path() -> None:
     path = policy["path_requirements"]
     assert path["unsolicited_operator_asset_value_ranking"] is False
     assert path["unsolicited_operator_asset_disposition"] is False
-    assert path["inspection_scope_expansion"] is False
+    assert "inspection_scope_expansion" not in path
     assert path["operator_owned_asset_identity_preserved"] is True
 
     request = build_apex_startup_request(policy, task="look at legal repos")
     selected = request["receipt_contract"]["apex_startup"]["selected_path"]
     for key, expected in path.items():
         assert selected[key] is expected
+    assert selected["inspection_scope_expansion"] is False
+    assert selected["mission_aligned_hardening"] is False
 
 
 def test_unsolicited_asset_ranking_fails_closed() -> None:
@@ -114,12 +118,29 @@ def test_unsolicited_asset_ranking_fails_closed() -> None:
     assert any("unsolicited_operator_asset_value_ranking" in error for error in errors)
 
 
-def test_inspection_scope_expansion_fails_closed() -> None:
+def test_mission_aligned_inspection_expansion_is_allowed() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
     receipt["apex_startup"]["selected_path"]["inspection_scope_expansion"] = True
+    receipt["apex_startup"]["selected_path"]["mission_aligned_hardening"] = True
+    assert validate_apex_startup_receipt(policy, receipt) == ()
+
+
+def test_inspection_expansion_without_hardening_binding_fails_closed() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["selected_path"]["inspection_scope_expansion"] = True
+    receipt["apex_startup"]["selected_path"]["mission_aligned_hardening"] = False
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert any("inspection_scope_expansion" in error for error in errors)
+    assert any("mission_aligned_hardening=true" in error for error in errors)
+
+
+def test_dynamic_scope_fields_are_strict_booleans() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["selected_path"]["inspection_scope_expansion"] = "true"
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert any("inspection_scope_expansion must be boolean" in error for error in errors)
 
 
 def test_mutation_interlock_fields_are_mandatory() -> None:
@@ -253,12 +274,7 @@ def test_malformed_operator_authorization_is_rejected() -> None:
 
 def test_state_transition_requires_exact_evidence() -> None:
     policy = load_apex_policy()
-    errors = validate_state_transition(
-        policy,
-        "ATTEMPTED",
-        "EXECUTED",
-        evidence={},
-    )
+    errors = validate_state_transition(policy, "ATTEMPTED", "EXECUTED", evidence={})
     assert errors == (
         "state transition ATTEMPTED->EXECUTED requires receipt reference: execution_receipt",
     )
