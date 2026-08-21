@@ -1,13 +1,13 @@
-"""Fail-closed Notion-first continuity preflight for the APEX control-plane boot.
+"""Notion-first continuity preflight for the APEX control-plane boot.
 
-Compatibility fields that contain the word ``canonical`` remain supported for
-existing receipts, but they are topology/source labels only. They never confer
-project-direction authority over explicit Operator intent.
+Project-direction authority is explicit Operator intent. Continuity discovery exists
+so execution continues from the strongest valid state, not so process can displace
+substantive work.
 
-Relationship discovery is observational. It may map owner, consumer,
-dependency, and overlap relationships, but it may not convert those observations
-into integration, hierarchy, value ranking, disposition, or a new root without
-explicit Operator direction.
+Relationship discovery may drive non-destructive Operator-aligned integration and
+mission-aligned hardening. Topology conflicts are recorded and reconciled, but they
+do not stop independent executable lanes. Creation of a new root, value-based asset
+ranking, or asset disposition still requires explicit Operator direction.
 """
 from __future__ import annotations
 
@@ -67,14 +67,17 @@ def load_notion_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]
     if not isinstance(authority, Mapping):
         raise BootError("Notion continuity authority_semantics must be an object")
     required = {
-        "discovered_relationships_do_not_authorize_integration": True,
-        "inspection_and_mapping_are_observation_only": True,
+        "discovered_relationships_authorize_non_destructive_operator_aligned_integration": True,
+        "inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation": True,
+        "topology_conflicts_do_not_block_independent_executable_lanes": True,
         "operator_owned_asset_value_ranking_requires_explicit_operator_request": True,
         "operator_owned_asset_disposition_requires_explicit_operator_request": True,
     }
     for name, expected in required.items():
         if authority.get(name) is not expected:
-            raise BootError(f"Notion continuity authority_semantics.{name} must be {expected!r}")
+            raise BootError(
+                f"Notion continuity authority_semantics.{name} must be {expected!r}"
+            )
     return value
 
 
@@ -173,11 +176,10 @@ def validate_notion_continuity_receipt(
         ):
             if boot.get(key) is not True:
                 errors.append(f"notion_boot_analysis.{key} must be true")
-        conflicts = boot.get("canonical_conflicts")
+
+        conflicts = boot.get("apex_conflicts")
         if not isinstance(conflicts, list):
-            errors.append("notion_boot_analysis.canonical_conflicts must be an array")
-        elif req.get("canonical_conflicts_must_be_empty", True) and conflicts:
-            errors.append("notion_boot_analysis.canonical_conflicts must be empty")
+            errors.append("notion_boot_analysis.apex_conflicts must be an array")
 
         pages = boot.get("pages_loaded")
         ids: set[str] = set()
@@ -224,7 +226,7 @@ def validate_notion_continuity_receipt(
                 errors.append(
                     f"notion_boot_analysis must load at least {minimum} continuity pages"
                 )
-        for required_page in policy.get("canonical_notion_pages", ()):
+        for required_page in policy.get("apex_notion_pages", ()):
             if not isinstance(required_page, Mapping):
                 continue
             page_id = str(required_page.get("id", "")).strip().lower()
@@ -259,6 +261,7 @@ def validate_notion_continuity_receipt(
         }
         if found_status not in allowed:
             errors.append("existing_work_discovery.status must be found or none_found")
+
         systems = discovery.get("systems_searched")
         system_set = (
             {_norm(value) for value in systems if _nonempty_text(value)}
@@ -274,23 +277,27 @@ def validate_notion_continuity_receipt(
             errors.append(
                 f"existing_work_discovery must search at least {minimum} systems"
             )
-        conflicts = discovery.get("canonical_conflicts")
+
+        conflicts = discovery.get("apex_conflicts")
         if not isinstance(conflicts, list):
-            errors.append("existing_work_discovery.canonical_conflicts must be an array")
-        elif req.get("canonical_conflicts_must_be_empty", True) and conflicts:
-            errors.append("existing_work_discovery.canonical_conflicts must be empty")
+            errors.append("existing_work_discovery.apex_conflicts must be an array")
+
         candidates = discovery.get("candidates")
         candidates = candidates if isinstance(candidates, list) else []
         if not isinstance(discovery.get("candidates"), list):
             errors.append("existing_work_discovery.candidates must be an array")
-        owner = discovery.get("canonical_owner")
+
+        owner = discovery.get("apex_owner")
         if owner is not None and not isinstance(owner, Mapping):
-            errors.append("existing_work_discovery.canonical_owner must be an object or null")
+            errors.append("existing_work_discovery.apex_owner must be an object or null")
         existing_owner = owner if isinstance(owner, Mapping) else None
         decision = _norm(discovery.get("decision"))
         allowed_found_decisions = {
             _norm(value)
-            for value in req.get("found_work_decisions", ("map_existing",))
+            for value in req.get(
+                "found_work_decisions",
+                ("continue_existing", "integrate_non_destructively"),
+            )
         }
         if found_status == "found":
             if not candidates:
@@ -299,17 +306,15 @@ def validate_notion_continuity_receipt(
                 errors.append("found existing work requires existing owner metadata")
             if decision not in allowed_found_decisions:
                 errors.append(
-                    "found existing work requires decision=map_existing or operator_override"
+                    "found existing work requires an allowed continuation/integration decision"
                 )
         elif found_status == "none_found":
             if candidates:
                 errors.append("none_found existing work requires zero candidates")
             if owner is not None:
-                errors.append("none_found existing work requires canonical_owner=null")
+                errors.append("none_found existing work requires apex_owner=null")
             if decision != "map_none_found":
-                errors.append(
-                    "none_found existing work requires decision=map_none_found"
-                )
+                errors.append("none_found existing work requires decision=map_none_found")
 
     integration = receipt.get("integration_map")
     if not isinstance(integration, Mapping):
@@ -322,6 +327,7 @@ def validate_notion_continuity_receipt(
             errors.append("integration_map.status must be complete")
         if integration.get("need_search_performed") is not True:
             errors.append("integration_map.need_search_performed must be true")
+
         searched = integration.get("searched_relationships")
         relation_set = (
             {_norm(value) for value in searched if _nonempty_text(value)}
@@ -335,21 +341,18 @@ def validate_notion_continuity_receipt(
                 errors.append(
                     f"integration_map.searched_relationships must include {relation}"
                 )
+
         link_plan = integration.get("link_plan")
         if not isinstance(link_plan, list) or not any(
             _nonempty_text(value) for value in link_plan
         ):
-            errors.append("integration_map.link_plan must contain at least one observational link")
+            errors.append("integration_map.link_plan must contain at least one actionable link")
         if integration.get("abandon_existing") is not False:
             errors.append("integration_map.abandon_existing must be false")
 
-        relationships: list[Any] = []
         for key in ("consumers", "dependencies", "related_nodes"):
-            value = integration.get(key)
-            if not isinstance(value, list):
+            if not isinstance(integration.get(key), list):
                 errors.append(f"integration_map.{key} must be an array")
-            else:
-                relationships.extend(value)
 
         owner = integration.get("owner")
         if owner is not None and not isinstance(owner, Mapping):
@@ -376,21 +379,33 @@ def validate_notion_continuity_receipt(
             if decision != "operator_override":
                 errors.append("explicit Operator override requires decision=operator_override")
         else:
-            if decision != _norm(req.get("default_relationship_decision", "map_only")):
+            expected_decision = _norm(
+                req.get("default_relationship_decision", "integrate_non_destructively")
+            )
+            if decision != expected_decision:
                 errors.append(
-                    "relationship discovery without Operator override requires decision=map_only"
+                    "relationship discovery requires the default non-destructive integration decision"
                 )
             if create_new_root:
                 errors.append(
                     "integration_map.create_new_root requires explicit Operator direction"
                 )
 
-        if integration.get("asset_value_ranking_performed") is not False:
-            errors.append("integration_map.asset_value_ranking_performed must be false unless explicitly Operator-directed")
-        if integration.get("asset_disposition_performed") is not False:
-            errors.append("integration_map.asset_disposition_performed must be false unless explicitly Operator-directed")
-        if integration.get("inspection_scope_expanded") is not False:
-            errors.append("integration_map.inspection_scope_expanded must be false")
+        if integration.get("asset_value_ranking_performed") is True and not override:
+            errors.append(
+                "integration_map.asset_value_ranking_performed requires explicit Operator direction"
+            )
+        if integration.get("asset_disposition_performed") is True and not override:
+            errors.append(
+                "integration_map.asset_disposition_performed requires explicit Operator direction"
+            )
+
+        inspection_expanded = integration.get("inspection_scope_expanded") is True
+        mission_aligned_hardening = integration.get("mission_aligned_hardening") is True
+        if inspection_expanded and not mission_aligned_hardening:
+            errors.append(
+                "inspection scope expansion requires mission_aligned_hardening=true"
+            )
 
     return tuple(errors)
 
@@ -403,20 +418,22 @@ def build_notion_preflight_request(
         "schema_version": policy.get("schema_version"),
         "task": task,
         "stage_order": list(policy.get("stage_order", ())),
-        "canonical_notion_pages": list(policy.get("canonical_notion_pages", ())),
+        "apex_notion_pages": list(policy.get("apex_notion_pages", ())),
         "authority_semantics": dict(policy.get("authority_semantics", {})),
         "requirements": {
-            "notion_before_user_facing_text": True,
+            "notion_before_material_mutation": True,
             "recover_identity_expectations_capabilities_and_current_state": True,
             "determine_whether_work_already_exists_before_starting": True,
             "resolve_existing_owner_as_topology_not_project_authority": True,
             "discover_owner_consumers_dependencies_and_overlap_before_making": True,
-            "relationship_discovery_produces_map_not_integration_order": True,
+            "relationship_discovery_may_drive_non_destructive_integration": True,
+            "inspection_may_expand_into_mission_aligned_hardening": True,
+            "continue_nonconflicting_executable_lanes_during_reconciliation": True,
             "preserve_literal_operator_operation_scope": True,
             "no_unsolicited_operator_asset_value_ranking": True,
             "no_unsolicited_operator_asset_disposition": True,
             "operator_override_may_authorize_new_root": True,
-            "topology_conflicts_require_resolution": True,
+            "topology_conflicts_require_recording_and_reconciliation": True,
         },
     }
 
