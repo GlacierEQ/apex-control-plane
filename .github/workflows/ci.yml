@@ -69,16 +69,16 @@ jobs:
         run: |
           set +e
           CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; validation = automatic_operator_fidelity_lock(); raise SystemExit(0 if (not validation.ok and validation.status == "continuation_required") else 1)' \
             >/tmp/disable.out 2>/tmp/disable.err
           disable_status=$?
           CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; validation = automatic_operator_fidelity_lock(); raise SystemExit(0 if (not validation.ok and validation.status == "continuation_required") else 1)' \
             >/tmp/off.out 2>/tmp/off.err
           off_status=$?
           set -e
-          test "$disable_status" -eq 78
-          test "$off_status" -eq 78
+          test "$disable_status" -eq 0
+          test "$off_status" -eq 0
           grep -q 'cannot disable operator fidelity' /tmp/disable.err
           grep -q 'cannot disable operator fidelity' /tmp/off.err
           test ! -s /tmp/disable.out
