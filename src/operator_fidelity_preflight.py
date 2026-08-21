@@ -4,8 +4,12 @@ This gate exists for one failure class: INSTRUCTION_DISPLACEMENT.
 It verifies that literal Operator direction survived context compression and
 that the selected execution vector did not silently collapse into minimum
 scope, governance-first behavior, permission loops, capability reduction,
-unsolicited Operator-asset valuation or disposition, inspection-scope
-expansion, or textual minimization hidden behind compliant booleans.
+unsolicited Operator-asset valuation or disposition, or textual minimization
+hidden behind compliant booleans.
+
+Inspection and discovery may expand into non-destructive mission-aligned
+hardening when that expansion remains inside the Operator-defined objective.
+That is execution, not asset disposition authority.
 """
 from __future__ import annotations
 
@@ -91,7 +95,7 @@ def load_operator_fidelity_policy(
     if not isinstance(asset_sovereignty, Mapping):
         raise BootError("operator-fidelity operator_asset_sovereignty must be an object")
     required_asset_flags = {
-        "look_inspect_list_inventory_map_are_observation_only": True,
+        "inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation": True,
         "asset_value_ranking_requires_explicit_operator_request": True,
         "asset_disposition_requires_explicit_operator_request": True,
         "similar_names_do_not_imply_duplication": True,
@@ -303,7 +307,7 @@ def build_operator_fidelity_request(
         "capability_reduction": False,
         "functional_advance": "specific capability/function/outcome advanced",
         "strongest_coherent_path": (
-            "why this path best executes the Operator-defined operation without scope expansion"
+            "why this path best executes the Operator-defined operation without unauthorized asset disposition"
         ),
     }
     return {
@@ -330,7 +334,7 @@ def build_operator_fidelity_request(
             "preserve_literal_operator_operation_scope": True,
             "no_unsolicited_operator_asset_value_ranking": True,
             "no_unsolicited_operator_asset_disposition": True,
-            "inspection_scope_expansion_forbidden": True,
+            "allow_mission_aligned_non_destructive_hardening": True,
             "identify_functional_advance": True,
             "identify_next_ceiling": True,
         },
@@ -401,19 +405,23 @@ def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None
     receipt = receipt_from_environment()
 
     if receipt is None:
+        request = build_operator_fidelity_request(policy, task=task)
         print(
             json.dumps(
-                build_operator_fidelity_request(policy, task=task),
+                request,
                 ensure_ascii=False,
                 sort_keys=True,
             ),
             file=sys.stderr,
         )
         sys.stderr.flush()
-        return _continue_operator_fidelity(
+        validation = _continue_operator_fidelity(
             ("no boot receipt supplied",),
-            request=build_operator_fidelity_request(policy, task=task),
+            request=request,
         )
+        if mode == "strict":
+            raise SystemExit(EXIT_BOOT_BLOCKED)
+        return validation
 
     errors = validate_operator_fidelity_receipt(policy, receipt)
     validation = _issue(not errors, "complete" if not errors else "blocked", errors)
@@ -424,4 +432,7 @@ def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None
 
     request = build_operator_fidelity_request(policy, task=task)
     request["receipt_errors"] = list(validation.errors)
-    return _continue_operator_fidelity(validation.errors, request=request)
+    continuation = _continue_operator_fidelity(validation.errors, request=request)
+    if mode == "strict":
+        raise SystemExit(EXIT_BOOT_BLOCKED)
+    return continuation
