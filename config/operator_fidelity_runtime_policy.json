@@ -1,12 +1,22 @@
 {
-  "schema_version": "1.4.0",
-  "name": "APEX Operator Fidelity Runtime Enforcement",
+  "schema_version": "1.5.0",
+  "name": "APEX OPERATOR Source Fidelity Runtime Verification",
   "failure_class": "INSTRUCTION_DISPLACEMENT",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
   "engineering_standard": "pro_code_elite_humanized_engineered",
   "direction": "look_up",
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
+  "source_identity": {
+    "operator_designation": "OPERATOR",
+    "designation_semantics": "proper_name",
+    "singular": true,
+    "akos_source_class": "FRAMEWORK",
+    "agent_source_class": "AGENT",
+    "evidence_source_class": "EVIDENCE",
+    "source_classes_never_collapse": true,
+    "framework_material_never_becomes_operator_words_by_retrieval": true
+  },
   "fail_closed": true,
   "required_true_fields": [
     "literal_operator_words_preserved",
@@ -25,6 +35,13 @@
     "operator_words_digest"
   ],
   "selected_path_requirements": {
+    "operator_designation": "OPERATOR",
+    "operator_designation_semantics": "proper_name",
+    "operator_designation_is_singular": true,
+    "source_identity_preserved": true,
+    "akos_material_is_framework_not_operator": true,
+    "agent_inference_is_not_operator": true,
+    "evidence_is_not_operator": true,
     "literal_instruction_fidelity": true,
     "instruction_displacement": false,
     "minimum_scope_default": false,
