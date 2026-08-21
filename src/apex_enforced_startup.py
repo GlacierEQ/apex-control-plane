@@ -1,10 +1,13 @@
 """APEX Genesis fail-closed startup and execution-state enforcement.
 
 This layer sits above the existing continuity and Prime Directive proofs. It does
-not replace them. It binds those proofs to absolute OPERATOR project-direction
-authority, continuation, preserved prior gain, Operator-aligned coherent path
-selection, Operator asset sovereignty, and evidence-backed execution-state
-transitions.
+not replace them. It binds those proofs to OPERATOR project-direction authority,
+continuation, preserved prior gain, Operator-aligned coherent path selection,
+Operator asset sovereignty, and evidence-backed execution-state transitions.
+
+Inspection may expand into non-destructive mission-aligned hardening when that
+expansion remains inside the Operator-defined objective. Asset ranking and
+asset disposition remain separately bound to explicit Operator direction.
 """
 from __future__ import annotations
 
@@ -67,6 +70,7 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         "execution_states",
         "transition_requirements",
         "path_requirements",
+        "path_dynamic_rules",
         "mutation_interlock",
         "completion_gate",
     }
@@ -88,13 +92,24 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         "repository_or_registry_override": False,
         "operator_owned_asset_value_ranking_is_operator_only": True,
         "operator_owned_asset_disposition_is_operator_only": True,
-        "inspection_does_not_expand_scope": True,
+        "inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation": True,
     }
     for field_name, expected in required_authority_flags.items():
         if operator_authority.get(field_name) is not expected:
             raise BootError(
                 f"APEX operator_authority.{field_name} must be {expected!r}"
             )
+
+    dynamic = value.get("path_dynamic_rules")
+    if not isinstance(dynamic, dict):
+        raise BootError("APEX path_dynamic_rules must be an object")
+    for name in (
+        "inspection_scope_expansion_must_be_boolean",
+        "mission_aligned_hardening_must_be_boolean",
+        "inspection_scope_expansion_requires_mission_aligned_hardening",
+    ):
+        if dynamic.get(name) is not True:
+            raise BootError(f"APEX path_dynamic_rules.{name} must be true")
 
     interlock = value.get("mutation_interlock")
     if not isinstance(interlock, dict) or not isinstance(
@@ -168,6 +183,21 @@ def _validate_operator_authorization(row: Mapping[str, Any], errors: list[str]) 
         errors.append("operator_authorization.authorization_ref must be a receipt reference")
 
 
+def _validate_dynamic_path(path: Mapping[str, Any], errors: list[str]) -> None:
+    expanded = path.get("inspection_scope_expansion")
+    hardening = path.get("mission_aligned_hardening")
+    if type(expanded) is not bool:
+        errors.append("apex_startup.selected_path.inspection_scope_expansion must be boolean")
+        return
+    if type(hardening) is not bool:
+        errors.append("apex_startup.selected_path.mission_aligned_hardening must be boolean")
+        return
+    if expanded and not hardening:
+        errors.append(
+            "inspection_scope_expansion requires apex_startup.selected_path.mission_aligned_hardening=true"
+        )
+
+
 def validate_apex_startup_receipt(
     policy: Mapping[str, Any], receipt: Mapping[str, Any]
 ) -> tuple[str, ...]:
@@ -222,6 +252,7 @@ def validate_apex_startup_receipt(
                 errors.append(f"apex_startup.selected_path.{key} must be {expected!r}")
         if not _nonempty_text(path.get("id")):
             errors.append("apex_startup.selected_path.id is required")
+        _validate_dynamic_path(path, errors)
 
     plan = row.get("verification_plan")
     if not isinstance(plan, list) or not any(_nonempty_text(value) for value in plan):
@@ -327,6 +358,7 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
             "verify_before_state_promotion": True,
             "external_actions_require_operator_authorization_receipt": True,
             "integrate_only_verified_gain": True,
+            "allow_mission_aligned_non_destructive_hardening": True,
             "no_unsolicited_operator_asset_value_ranking": True,
             "no_unsolicited_operator_asset_disposition": True,
         },
@@ -355,6 +387,8 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
                 "selected_path": {
                     "id": "non-empty string",
                     **dict(policy.get("path_requirements", {})),
+                    "inspection_scope_expansion": False,
+                    "mission_aligned_hardening": False
                 },
                 "verification_plan": ["at least one verification step"],
                 "material_claims": [
@@ -407,19 +441,13 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
     receipt = receipt_from_environment()
 
     if receipt is None:
+        request = build_apex_startup_request(policy, task=task)
         print(
-            json.dumps(
-                build_apex_startup_request(policy, task=task),
-                ensure_ascii=False,
-                sort_keys=True,
-            ),
+            json.dumps(request, ensure_ascii=False, sort_keys=True),
             file=sys.stderr,
         )
         sys.stderr.flush()
-        return _continue_apex_startup(
-            ("no boot receipt supplied",),
-            request=build_apex_startup_request(policy, task=task),
-        )
+        return _continue_apex_startup(("no boot receipt supplied",), request=request)
 
     errors = validate_apex_startup_receipt(policy, receipt)
     validation = _issue(not errors, "complete" if not errors else "blocked", errors)
