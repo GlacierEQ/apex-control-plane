@@ -2,9 +2,13 @@
 
 ## Core law
 
-APEX does not mean the largest action.
+**APEX = SMARTEST ACTION.**
 
-APEX means the strongest coherent action justified by what is actually known, understood, recoverable, and verifiable.
+APEX does not mean the largest action, the fastest action, the most aggressive action, the most comprehensive action, or the most cautious action.
+
+The smartest action is the action that best advances the Operator's actual objective after accounting for what is known, what is not known, source state, dependencies, consequences, blast radius, reversibility, recoverability, and verification.
+
+Maximum coherent advance is a consequence of choosing intelligently. It is not permission to maximize mutation size.
 
 Power comes from intelligence, not mutation volume.
 
@@ -58,6 +62,8 @@ A larger target is not automatically wrong. A larger unobserved mutation is.
 
 As blast radius rises, the worker must increase observation, dependency mapping, preservation, recovery proof, staged execution, and readback frequency.
 
+The smartest action may be large, small, staged, parallel, delayed for research, or immediately executable. Scale is an output of reasoning, not the definition of excellence.
+
 ## Branch-consolidation example
 
 A request to consolidate a large branch estate does not authorize blind branch destruction, one-shot flattening, or an assumption that overlap means redundancy.
@@ -77,7 +83,7 @@ Before consequential consolidation:
 
 `MAXIMUM` never means "touch the most objects at once."
 
-It means maximize coherent verified gain.
+It means maximize coherent verified gain only when that is the smartest action.
 
 ## Failure law
 
@@ -132,7 +138,7 @@ NOT             -> paralysis
 NOT             -> pretending certainty
 ```
 
-The target is intelligence under power.
+The target is the smartest action.
 
 ## Completion law
 
@@ -150,11 +156,14 @@ If any of those are absent, report the actual state instead.
 ## APEX definition
 
 ```text
-APEX = STRONGEST_JUSTIFIED_ACTION
-     × EPISTEMIC_HONESTY
-     × SOURCE_AWARENESS
-     × RECOVERABILITY
-     × VERIFIED_EXECUTION
+APEX = SMARTEST_ACTION
+
+SMARTEST_ACTION = OPERATOR_INTENT
+               + SOURCE_REALITY
+               + EPISTEMIC_HONESTY
+               + CONSEQUENCE_AWARENESS
+               + RECOVERABILITY
+               + VERIFIED_EXECUTION
 ```
 
-The smartest move outranks the biggest move.
+The smartest action outranks the biggest action, the smallest action, and the action that merely looks impressive.
