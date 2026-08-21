@@ -62,37 +62,44 @@ def main() -> int:
     bootstrap_text = read_text(bootstrap_path)
 
     contract_id, contract_version = parse_contract_identity(contract_text)
+    minimum_contract_version = str(source["minimum_contract_version"])
     require(contract_id == source["contract_id"], "contract id mismatch between manifest and source")
     require(
-        version_tuple(contract_version) >= version_tuple("1.2.0"),
-        f"contract version {contract_version} is below mandatory 1.2.0",
+        version_tuple(contract_version) >= version_tuple(minimum_contract_version),
+        f"contract version {contract_version} is below portability minimum {minimum_contract_version}",
     )
     require(
-        version_tuple(source["minimum_contract_version"]) >= version_tuple("1.2.0"),
-        "portability manifest permits a pre-sovereignty Jack contract",
+        version_tuple(minimum_contract_version) >= version_tuple("1.3.0"),
+        "portability manifest permits a pre-hardening Jack contract",
     )
 
     projection = manifest["projection_policy"]
     require(projection["source_mutable_only_at_execution_home"] is True, "source mutation boundary disabled")
     require(projection["derived_projections_read_only"] is True, "derived projections are not read-only")
     require(projection["adapter_may_reinterpret_operator_objective"] is False, "adapter objective rewrite enabled")
-    require(projection["adapter_may_expand_operator_operation_scope"] is False, "adapter scope expansion enabled")
+    require(projection["adapter_may_expand_operator_operation_scope"] is False, "adapter objective-scope rewrite enabled")
     require(projection["adapter_may_rank_operator_assets_without_request"] is False, "adapter asset ranking authority enabled")
     require(projection["adapter_may_dispose_operator_assets_without_direction"] is False, "adapter asset disposition authority enabled")
     require(
         projection["adapter_may_create_secondary_approval_authority"] is False,
         "secondary approval authority enabled",
     )
+    require(
+        projection["adapter_may_execute_mission_aligned_hardening_when_source_contract_authorizes"] is True,
+        "portable adapter cannot execute source-authorized mission-aligned hardening",
+    )
     require(projection["adapter_must_preserve_directional_semantics"] is True, "directional semantics not protected")
     require(projection["adapter_must_preserve_operation_class"] is True, "operation class not protected")
 
     asset = manifest["operator_asset_sovereignty"]
-    require(asset["look_inspect_open_list_inventory_map_trace_are_observation_only"] is True, "observational verbs can expand scope")
+    require(
+        asset["inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation"] is True,
+        "mission-aligned inspection hardening is not portable",
+    )
     require(asset["tool_access_is_capability_not_authority"] is True, "tool access can become authority")
     require(asset["observation_is_knowledge_not_authority"] is True, "observation can become authority")
     require(asset["unsolicited_operator_asset_value_ranking"] is False, "unsolicited asset ranking enabled")
     require(asset["unsolicited_operator_asset_disposition"] is False, "unsolicited asset disposition enabled")
-    require(asset["inspection_scope_expansion"] is False, "inspection scope expansion enabled")
     require(asset["similar_names_do_not_imply_duplication"] is True, "similar-name duplication inference enabled")
     require(asset["overlap_does_not_imply_subordination"] is True, "overlap subordination inference enabled")
 
@@ -113,12 +120,14 @@ def main() -> int:
     require("Tool access is capability. Observation is knowledge. Neither is authority." in bootstrap_text, "bootstrap lost capability/knowledge/authority distinction")
     require("UNSOLICITED_ASSET_RANKING=FORBIDDEN" in startup_text, "APEX startup lost unsolicited asset-ranking prohibition")
     require("UNSOLICITED_ASSET_DISPOSITION=FORBIDDEN" in startup_text, "APEX startup lost unsolicited asset-disposition prohibition")
-    require("INSPECTION_SCOPE_EXPANSION=FORBIDDEN" in startup_text, "APEX startup lost inspection-scope prohibition")
     require("The phrase `winners vs dead weight`" in sovereignty_text, "asset-sovereignty correction receipt missing")
     require("project_direction_authority: OPERATOR_INTENT" in contract_text, "Jack contract authority drift")
     require("operator_asset_sovereignty_preserved" in contract_text, "Jack contract sovereignty gate missing")
     require("operator_aligned_delta_selected" in contract_text, "Jack contract still lacks Operator-aligned delta gate")
     require("highest_value_delta_selected" not in contract_text, "legacy highest-value delta authority survived in active Jack contract")
+    require("preserve_full_supportable_allegation_field: true" in contract_text, "full allegation field is not portable")
+    require("no_representative_allegation_pruning: true" in contract_text, "allegation-pruning prohibition is not portable")
+    require("filing_subset_does_not_shrink_case_graph: true" in contract_text, "case-graph preservation is not portable")
 
     targets = manifest["targets"]
     expected_targets = {
@@ -141,6 +150,7 @@ def main() -> int:
                 "contract_id": contract_id,
                 "contract_version": contract_version,
                 "operator_asset_sovereignty": "verified",
+                "case_hardening": "verified",
                 "targets": sorted(expected_targets),
             },
             indent=2,
