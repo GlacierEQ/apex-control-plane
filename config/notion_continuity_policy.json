@@ -6,7 +6,7 @@
     "existing_work_discovery",
     "integration_map"
   ],
-  "block_user_facing_text_until_complete": true,
+  "block_user_facing_text_until_complete": false,
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "authority_semantics": {
     "project_direction_authority": "operator_intent",
@@ -15,6 +15,7 @@
     "operator_override_may_authorize_new_root": true,
     "discovered_relationships_authorize_non_destructive_operator_aligned_integration": true,
     "inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation": true,
+    "topology_conflicts_do_not_block_independent_executable_lanes": true,
     "operator_owned_asset_value_ranking_requires_explicit_operator_request": true,
     "operator_owned_asset_disposition_requires_explicit_operator_request": true
   },
@@ -48,7 +49,7 @@
   "receipt_requirements": {
     "notion_status": "complete",
     "minimum_pages_loaded": 5,
-    "apex_conflicts_must_be_empty": true,
+    "apex_conflicts_must_be_recorded": true,
     "existing_work_statuses": [
       "found",
       "none_found"
@@ -95,7 +96,7 @@
     "VALUE RANKING AND DISPOSITION OF OPERATOR ASSETS REQUIRE EXPLICIT OPERATOR DIRECTION",
     "NEW ROOTS REQUIRE EXPLICIT OPERATOR DIRECTION",
     "PROCESS GATES MUST NOT DISPLACE SUBSTANTIVE EXECUTION",
-    "NONCONFLICTING EXECUTABLE LANES CONTINUE WHILE TOPOLOGY CONFLICTS ARE RECONCILED"
+    "TOPOLOGY CONFLICTS ARE RECORDED AND RECONCILED WITHOUT STOPPING INDEPENDENT EXECUTABLE LANES"
   ],
   "security": {
     "never_embed_secrets": true,
