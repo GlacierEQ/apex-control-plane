@@ -1,5 +1,6 @@
 import sys
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -17,11 +18,40 @@ from control_plane import (  # noqa: E402
     ThreatLevel,
     VerificationStatus,
     Worker,
+    _require_completed_startup_validations,
     canonical_sha256,
     create_envelope,
 )
 
 FIXED_NOW = datetime(2026, 7, 15, 12, 0, tzinfo=UTC)
+
+
+def _startup_validation(*, ok: bool = True, status: str = "complete") -> SimpleNamespace:
+    return SimpleNamespace(ok=ok, status=status)
+
+
+def test_runtime_authorization_requires_every_gate_to_complete() -> None:
+    completed = _startup_validation()
+    _require_completed_startup_validations(
+        (
+            ("notion_continuity", completed),
+            ("prime_directive", completed),
+            ("operator_fidelity_lock", completed),
+            ("operator_fidelity", completed),
+            ("apex_startup", completed),
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="operator_fidelity_lock"):
+        _require_completed_startup_validations(
+            (
+                ("notion_continuity", completed),
+                ("prime_directive", completed),
+                ("operator_fidelity_lock", _startup_validation(ok=False, status="continuation_required")),
+                ("operator_fidelity", completed),
+                ("apex_startup", completed),
+            )
+        )
 
 
 def source() -> SourcePointer:
