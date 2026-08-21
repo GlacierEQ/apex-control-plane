@@ -8,7 +8,7 @@ from operator_fidelity_preflight import digest_operator_words
 def _receipt() -> dict:
     words = [
         "Strengthen my position",
-        "OPERATOR is a name I decided on so there is only one OPERATOR",
+        "AKOS IS HOW KNOWLEDGE IS KNOWN - OPERATOR IS HOW KNOWLEDGE IS USED",
     ]
     return {
         "operator_fidelity": {
@@ -31,8 +31,8 @@ def _receipt() -> dict:
             "literal_constraints": words,
             "correction_present": True,
             "objective_function_reassessed": True,
-            "corrections_applied": ["preserve singular OPERATOR source identity"],
-            "correction_effect": "framework material cannot impersonate OPERATOR",
+            "corrections_applied": ["separate AKOS knowledge from OPERATOR use"],
+            "correction_effect": "AKOS determines knowledge state while OPERATOR directs how knowledge is used",
             "operator_directed_reduction": False,
             "selected_path": {
                 "operator_designation": "OPERATOR",
@@ -40,6 +40,12 @@ def _receipt() -> dict:
                 "operator_designation_is_singular": True,
                 "source_identity_preserved": True,
                 "akos_material_is_framework_not_operator": True,
+                "akos_is_how_knowledge_is_known": True,
+                "operator_is_how_knowledge_is_used": True,
+                "knowledge_state_is_not_use_direction": True,
+                "use_direction_is_not_knowledge_state": True,
+                "akos_knowledge_state_alone_does_not_choose_use": True,
+                "operator_direction_alone_does_not_rewrite_knowledge_state": True,
                 "agent_inference_is_not_operator": True,
                 "evidence_is_not_operator": True,
                 "literal_instruction_fidelity": True,
@@ -58,10 +64,10 @@ def _receipt() -> dict:
                 "preserves_prior_valid_gain": True,
                 "maximum_coherent_advance": True,
                 "pro_code_elite_humanized_engineered": True,
-                "functional_advance": "preserve OPERATOR source identity at runtime",
-                "strongest_coherent_path": "verify attribution without inventing OPERATOR content",
+                "functional_advance": "preserve AKOS knowledge and OPERATOR use separation at runtime",
+                "strongest_coherent_path": "verify epistemic state and use direction without allowing either to impersonate the other",
             },
-            "next_ceiling": "propagate source identity through downstream agent envelopes",
+            "next_ceiling": "propagate epistemic-use separation through downstream agent envelopes",
         }
     }
 
@@ -110,13 +116,22 @@ def test_runtime_does_not_invent_required_operator_phrases() -> None:
     assert validate_operator_fidelity_lock(receipt) == ()
 
 
-def test_akos_cannot_impersonate_operator() -> None:
+def test_akos_knowledge_cannot_be_recast_as_operator_use() -> None:
     receipt = _receipt()
-    receipt["operator_fidelity"]["selected_path"]["operator_designation"] = "AKOS"
-    receipt["operator_fidelity"]["selected_path"]["akos_material_is_framework_not_operator"] = False
+    receipt["operator_fidelity"]["selected_path"]["akos_is_how_knowledge_is_known"] = False
+    receipt["operator_fidelity"]["selected_path"]["akos_knowledge_state_alone_does_not_choose_use"] = False
     errors = validate_operator_fidelity_lock(receipt)
-    assert any("operator_designation" in error or "singular proper-name" in error for error in errors)
-    assert any("akos_material_is_framework_not_operator" in error or "AKOS material" in error for error in errors)
+    assert any("akos_is_how_knowledge_is_known" in error for error in errors)
+    assert any("akos_knowledge_state_alone_does_not_choose_use" in error for error in errors)
+
+
+def test_operator_use_cannot_rewrite_akos_knowledge_state() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["operator_is_how_knowledge_is_used"] = False
+    receipt["operator_fidelity"]["selected_path"]["operator_direction_alone_does_not_rewrite_knowledge_state"] = False
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("operator_is_how_knowledge_is_used" in error for error in errors)
+    assert any("operator_direction_alone_does_not_rewrite_knowledge_state" in error for error in errors)
 
 
 def test_operator_cannot_be_recast_as_generic_role() -> None:
