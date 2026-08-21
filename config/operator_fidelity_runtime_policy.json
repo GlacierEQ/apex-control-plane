@@ -38,11 +38,10 @@
     "pro_code_elite_humanized_engineered": true,
     "unsolicited_operator_asset_value_ranking": false,
     "unsolicited_operator_asset_disposition": false,
-    "inspection_scope_expansion": false,
     "operator_owned_asset_identity_preserved": true
   },
   "operator_asset_sovereignty": {
-    "look_inspect_list_inventory_map_are_observation_only": true,
+    "inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation": true,
     "comparison_does_not_imply_disposition": true,
     "asset_value_ranking_requires_explicit_operator_request": true,
     "asset_disposition_requires_explicit_operator_request": true,
@@ -167,7 +166,6 @@
     "FORBIDDEN: preserve instead of act",
     "FORBIDDEN: ask challenged institution to create its own legitimacy predicate",
     "FORBIDDEN: unsolicited operator asset value ranking",
-    "FORBIDDEN: unsolicited operator asset disposition",
-    "FORBIDDEN: inspection scope expansion"
+    "FORBIDDEN: unsolicited operator asset disposition"
   ]
 }
