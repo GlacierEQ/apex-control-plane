@@ -55,6 +55,17 @@ _RULES: Final[tuple[MinimizationRule, ...]] = (
         "largest coherent executable tranche",
     ),
     MinimizationRule(
+        "MINIMUM_DEFAULT",
+        re.compile(
+            r"\b(?:bare\s+minimum|minimum\s+(?:required|necessary|needed|acceptable|"
+            r"sufficient|possible|effort|scope|work|implementation|change|step|solution|"
+            r"feature|coverage|delivery|proof|testing|analysis|research|output|answer|response|"
+            r"permissions?))\b",
+            re.IGNORECASE,
+        ),
+        "maximum coherent advance consistent with the Operator-defined target",
+    ),
+    MinimizationRule(
         "MVP_DEFAULT",
         re.compile(
             r"\b(?:minimum\s+viable|mvp)\s*"
@@ -126,7 +137,6 @@ PERMITTED_LOCAL_NARROWING: Final[tuple[str, ...]] = (
     "debugging or diagnostic isolation",
     "minimal reproduction of a defect",
     "least privilege security",
-    "minimum necessary permissions",
     "immutable rollback checkpoint",
     "known-good snapshot",
 )
