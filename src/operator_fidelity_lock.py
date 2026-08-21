@@ -124,6 +124,15 @@ def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
     return _issue(False, "degraded", errors)
 
 
+def _reject_or_degrade(
+    errors: Sequence[str], *, mode: str, always_reject: bool = False
+) -> OperatorFidelityLockValidation:
+    validation = _continue_lock(errors)
+    if always_reject or mode == "strict":
+        raise SystemExit(EXIT_BOOT_BLOCKED)
+    return validation
+
+
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     """Issue the sealed runtime proof, diagnostic degradation, or terminate."""
     global _IN_PROCESS
@@ -138,17 +147,27 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     # the old escape hatch where an env var could turn the protection into prose.
     if not _testing():
         if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            return _continue_lock(("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",))
+            return _reject_or_degrade(
+                ("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",),
+                mode=mode,
+                always_reject=True,
+            )
         if mode == "off":
-            return _continue_lock(("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",))
+            return _reject_or_degrade(
+                ("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",),
+                mode=mode,
+                always_reject=True,
+            )
 
     receipt = receipt_from_environment()
     if receipt is None:
-        return _continue_lock(("operator fidelity lock requires a boot receipt",))
+        return _reject_or_degrade(
+            ("operator fidelity lock requires a boot receipt",), mode=mode
+        )
 
     errors = validate_operator_fidelity_lock(receipt)
     if errors:
-        return _continue_lock(errors)
+        return _reject_or_degrade(errors, mode=mode)
 
     validation = _issue(True, "complete")
     _IN_PROCESS = validation
