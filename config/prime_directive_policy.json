@@ -19,11 +19,11 @@
     },
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
-      "sha256": "07fad4130886a99884e1574f7a63fd5ff7952495fc52ca65704400c7acd41fba"
+      "sha256": "9779bccacc2d89807458bb8efd00e0bcf917d86977424f98c5c4277e16f52740"
     },
     {
       "path": "APEX_ENFORCED_STARTUP.md",
-      "sha256": "4f62acc8aaf25c78115ac781118d5616777ae52ae696ee3e539b981b45f4c98c"
+      "sha256": "b3b2e059a0e7155fe930a573ae3120b0e7274e41384aadf031cae1e237a3e154"
     },
     {
       "path": "OPERATOR_EXECUTION_LAW.md",
@@ -50,7 +50,7 @@
     "artificial_minimization_prohibited": true,
     "destructive_reduction_prohibited": true,
     "unearned_state_promotion_prohibited": true,
-    "canonical_labels_are_descriptive_only": true,
+    "legacy_project_control_labels_are_descriptive_only": true,
     "operator_fidelity_required": true,
     "instruction_displacement_is_execution_failure": true,
     "literal_operator_words_control_direction": true,
@@ -120,7 +120,7 @@
     "current_source_open",
     "receipt_validation"
   ],
-  "schema_version": "1.3.0",
+  "schema_version": "1.3.1",
   "security": {
     "log_content": false,
     "log_tool_names": true,
