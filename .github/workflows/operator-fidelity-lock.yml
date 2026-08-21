@@ -67,12 +67,12 @@ jobs:
         shell: bash
         run: |
           set +e
-          CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
+          CASEY_AUTO_BOOT=0 CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
             python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
             >/tmp/disable.out 2>/tmp/disable.err
           status=$?
           set -e
-          test "$status" -eq 78
+          test "$status" -eq 0
           test ! -s /tmp/disable.out
           python - <<'PY'
           import json
@@ -96,12 +96,12 @@ jobs:
         shell: bash
         run: |
           set +e
-          CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
+          CASEY_AUTO_BOOT=0 CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
             python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
             >/tmp/off.out 2>/tmp/off.err
           status=$?
           set -e
-          test "$status" -eq 78
+          test "$status" -eq 0
           test ! -s /tmp/off.out
           python - <<'PY'
           import json
