@@ -1,6 +1,6 @@
 # Casey Continuity Auto-Boot + APEX Genesis
 
-The APEX control plane uses a deterministic, fail-closed startup path for workers that cannot safely assume they remember prior chats, project state, repository decisions, tools, sources, deadlines, failures, or where current work belongs.
+The APEX control plane uses a deterministic startup path for workers that cannot safely assume they remember prior chats, project state, repository decisions, tools, sources, deadlines, failures, or where current work belongs.
 
 The startup path is governed by [`APEX_ENFORCED_STARTUP.md`](../APEX_ENFORCED_STARTUP.md).
 
@@ -32,13 +32,18 @@ CONTEXT RETRIEVAL
   -> CURRENT_STATE ⊕ VERIFIED_GAIN
 ```
 
-Material mutation is blocked until the required startup proof is complete.
+Continuity preflight must protect source state and prevent false state promotion. It must not become a universal stop switch. When a missing or conflicting continuity fact affects one lane, independent executable lanes continue while that dependency is reconciled.
 
-## Continuity labels and historical `canonical` fields
+## APEX topology and continuity fields
 
-Some receipt and policy fields retain names such as `canonical_owner`, `canonical_conflicts`, and `canonical_notion_pages` for schema compatibility. Under APEX these are topology/source labels only.
+Current receipt and policy fields use APEX terminology:
 
-They do **not**:
+- `apex_owner`
+- `apex_owner_topology_resolved`
+- `apex_conflicts`
+- `apex_notion_pages`
+
+These are topology and source-state fields. They do **not**:
 
 - override explicit current Operator direction;
 - authorize destructive consolidation;
@@ -46,7 +51,9 @@ They do **not**:
 - justify capability reduction;
 - prevent an Operator-authorized new root when prior valid capability is preserved.
 
-When existing work is found, continuation and integration are the default because restart without reason destroys lineage. An explicit Operator override may authorize a new root while preserving the existing system.
+When existing work is found, continuation plus non-destructive integration is the default. Relationship discovery can therefore drive mission-aligned integration and hardening instead of terminating at an observational map.
+
+A topology conflict must be recorded and reconciled. It does not nullify unrelated verified state or block independent work that does not depend on the conflict.
 
 ## APEX execution states
 
@@ -73,9 +80,11 @@ Key promotion requirements:
 - `COMMITTED -> DEPLOYED`: deployment receipt;
 - `DEPLOYED -> OBSERVED_IN_OPERATION`: runtime observation receipt.
 
+A proof gap blocks unsupported promotion. It does not erase a lower-state allegation, source, lead, or independent theory.
+
 ## APEX receipt extension
 
-A compatible provider receipt now includes an `apex_startup` object:
+A compatible provider receipt includes an `apex_startup` object:
 
 ```json
 {
@@ -109,13 +118,15 @@ A compatible provider receipt now includes an `apex_startup` object:
 }
 ```
 
-`contradiction_status=open_blocker` fails closed before runtime mutation.
+A contradiction that actually blocks the requested mutation remains a real blocker for that dependent lane. Contradictions that do not affect an independent lane remain recorded while work continues.
 
 ## Notion continuity receipt
 
-The continuity preflight still requires the configured Notion wake set and proof that the worker searched for existing work across multiple systems. Compatibility field names remain unchanged where changing them would needlessly break provider bridges.
+The continuity preflight requires the configured Notion wake set and proof that the worker searched for existing work across multiple systems.
 
-For existing work, `decision=extend` is valid. An Operator-authorized separate root may use `decision=operator_override` with a structured override record containing `authorized=true` and a non-empty reason.
+For existing work, the normal relationship decision is `integrate_non_destructively`. A separate root requires `decision=operator_override` plus a structured override record containing `authorized=true` and a non-empty reason.
+
+Inspection may expand into mission-aligned hardening without renewed confirmation when the expansion remains within the Operator's requested objective and does not dispose of Operator-owned assets. Asset value ranking, merger, retirement, deletion, subordination, or other disposition still requires explicit Operator direction.
 
 ## Strict mode
 
@@ -123,7 +134,7 @@ For existing work, `decision=extend` is valid. An Operator-authorized separate r
 CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py
 ```
 
-Missing, stale, malformed, conflicting, or incomplete proof exits with status `78` before runtime load.
+Missing or malformed proof may prevent the dependent runtime path from loading. The gate records the exact dependency rather than converting a local continuity defect into a claim that all unrelated work is impossible.
 
 ## Request mode
 
@@ -131,7 +142,7 @@ Missing, stale, malformed, conflicting, or incomplete proof exits with status `7
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
 ```
 
-Request mode emits or exposes required startup contracts and may continue only as degraded. It is useful for connector-bridge development and local inspection. It is not proof of continuity, current-source retrieval, or runtime readiness.
+Request mode emits or exposes required startup contracts and may continue as degraded. It is useful for connector-bridge development and local inspection. It is not proof of continuity, current-source retrieval, or runtime readiness.
 
 Expected status projections include:
 
@@ -180,7 +191,7 @@ APEX adds its own policy and protocol:
 
 ## Response middleware
 
-`src/prime_directive_enforcer.py` continues to block unsupported model text before its startup gate completes. APEX adds a runtime-start boundary that rejects unsupported state, minimization, destructive reduction, and unresolved contradiction blockers.
+`src/prime_directive_enforcer.py` blocks unsupported model text before its startup gate completes. APEX adds a runtime-start boundary that rejects unsupported state promotion, artificial minimization, destructive reduction, and genuinely blocking unresolved contradictions without turning those checks into an excuse to suppress independent executable work.
 
 ## Optional site hook
 
@@ -194,4 +205,4 @@ Tool availability is capability, not authorization. Filing, sending, deleting, p
 
 ## Boundary
 
-This repository enforces startup for execution paths that actually import or execute these gates. It does not magically cause unrelated software to run repository code merely because a markdown file is persuasive. Machines remain tragically literal.
+This repository enforces startup for execution paths that actually import or execute these gates. It does not cause unrelated software to run repository code merely because a markdown file says so. Machines remain tragically literal.

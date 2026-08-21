@@ -1,13 +1,12 @@
 """Fail-closed Jack relentless-execution evaluator bound to APEX Genesis.
 
-The historical ``canonical_owner`` receipt field is retained only as an
-existing-work topology locator. Project-direction authority is always explicit
-Operator intent.
+Project-direction authority is explicit Operator intent. The owning-repository field
+locates existing topology only; it does not create project authority.
 
-Operator-owned project assets remain under Operator disposition authority.
-Observation, inspection, mapping, overlap, similarity, tool access, and path
-selection do not authorize unsolicited value ranking, subordination, merger,
-retirement, or other disposition.
+Operator-owned project assets remain under Operator disposition authority. Jack may
+inspect, map, connect, harden, and non-destructively integrate systems when doing so
+advances the Operator's objective, but value-based disposal, merger, retirement, or
+subordination of Operator assets still requires explicit Operator direction.
 """
 from __future__ import annotations
 
@@ -16,7 +15,7 @@ from enum import Enum
 from typing import Mapping
 
 CONTRACT_ID = "JTR-RELENTLESS-EXECUTION-v1"
-CONTRACT_VERSION = "1.2.0"
+CONTRACT_VERSION = "1.3.0"
 REQUIRED_AUTHORITY = "OPERATOR_INTENT"
 APEX_STATES = {
     "OBSERVED",
@@ -59,7 +58,7 @@ class GateState:
     continuity_loaded: bool = False
     resources_invoked: bool = False
     existing_work_checked: bool = False
-    canonical_owner_resolved: bool = False
+    apex_owner_topology_resolved: bool = False
     objective_preserved: bool = False
     required_sources_opened: bool = False
     operator_asset_sovereignty_preserved: bool = False
@@ -79,7 +78,7 @@ PRE_FLIGHT = [
     "continuity_loaded",
     "resources_invoked",
     "existing_work_checked",
-    "canonical_owner_resolved",
+    "apex_owner_topology_resolved",
     "objective_preserved",
     "required_sources_opened",
     "operator_asset_sovereignty_preserved",
@@ -87,7 +86,7 @@ PRE_FLIGHT = [
 COMPLETION = list(GateState.__dataclass_fields__)
 RESUME = [
     "continuity_loaded",
-    "canonical_owner_resolved",
+    "apex_owner_topology_resolved",
     "persistence_written",
     "readback_verified",
     "next_state_resumable",
@@ -193,7 +192,7 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
     if authority != REQUIRED_AUTHORITY:
         raise ValueError(f"authority must be {REQUIRED_AUTHORITY}")
 
-    for name in ("task", "objective", "canonical_owner", "next_material_action"):
+    for name in ("task", "objective", "apex_owner", "next_material_action"):
         _nonempty_string(receipt, name)
 
     raw_gates = receipt.get("gates")

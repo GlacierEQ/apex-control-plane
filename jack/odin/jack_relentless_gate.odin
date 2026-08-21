@@ -1,8 +1,7 @@
 package jack_relentless
 
 // APEX project direction is controlled by OPERATOR_INTENT.
-// The historical canonical_owner_resolved gate name is retained only for
-// compatibility and means existing-work topology has been resolved.
+// Existing-owner topology resolution does not create project authority.
 // Observation and tool access do not grant authority to rank, subordinate,
 // merge, retire, archive, or otherwise dispose of Operator-owned assets.
 
@@ -32,7 +31,7 @@ Gate_State :: struct {
     continuity_loaded: bool,
     resources_invoked: bool,
     existing_work_checked: bool,
-    canonical_owner_resolved: bool, // topology only, not project authority
+    apex_owner_topology_resolved: bool,
     objective_preserved: bool,
     required_sources_opened: bool,
     operator_asset_sovereignty_preserved: bool,
@@ -52,7 +51,7 @@ execution_ready :: proc(g: Gate_State) -> bool {
            g.continuity_loaded &&
            g.resources_invoked &&
            g.existing_work_checked &&
-           g.canonical_owner_resolved &&
+           g.apex_owner_topology_resolved &&
            g.objective_preserved &&
            g.required_sources_opened &&
            g.operator_asset_sovereignty_preserved
@@ -72,7 +71,7 @@ completion_ready :: proc(g: Gate_State) -> bool {
 
 resume_ready :: proc(g: Gate_State) -> bool {
     return g.continuity_loaded &&
-           g.canonical_owner_resolved &&
+           g.apex_owner_topology_resolved &&
            g.persistence_written &&
            g.readback_verified &&
            g.next_state_resumable

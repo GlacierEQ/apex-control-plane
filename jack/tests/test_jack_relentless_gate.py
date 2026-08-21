@@ -22,7 +22,7 @@ def _receipt(gates: dict[str, bool], status: str, blockers=None):
         "authority": "OPERATOR_INTENT",
         "task": "continue existing APEX work",
         "objective": "execute Operator-aligned coherent verified delta",
-        "canonical_owner": "GlacierEQ/apex-control-plane",
+        "apex_owner": "GlacierEQ/apex-control-plane",
         "sources_opened": [
             {"system": "Notion", "object_id": "continuity", "opened": True}
         ],
@@ -64,6 +64,19 @@ def test_operator_asset_sovereignty_is_required_for_execution():
     assert "operator_asset_sovereignty_preserved" in missing(g)
 
 
+def test_apex_owner_topology_is_required_for_execution():
+    values = _all_true()
+    values["apex_owner_topology_resolved"] = False
+    g = GateState(**values)
+    assert evaluate(g) == Status.RECOVERING
+    assert "apex_owner_topology_resolved" in missing(g)
+
+
+def test_legacy_owner_gate_is_not_present():
+    assert "apex_owner_topology_resolved" in GateState.__dataclass_fields__
+    assert "canonical_owner_resolved" not in GateState.__dataclass_fields__
+
+
 def test_operator_aligned_delta_replaces_highest_value_ranking_gate():
     assert "operator_aligned_delta_selected" in GateState.__dataclass_fields__
     assert "highest_value_delta_selected" not in GateState.__dataclass_fields__
@@ -100,6 +113,17 @@ def test_non_boolean_gate_is_rejected():
         assert "must be a bool" in str(exc)
     else:
         raise AssertionError("string gate value was accepted")
+
+
+def test_legacy_owner_gate_is_rejected_as_unknown():
+    values = _all_true()
+    values["canonical_owner_resolved"] = True
+    try:
+        from_mapping(values)
+    except ValueError as exc:
+        assert "unknown Jack gate" in str(exc)
+    else:
+        raise AssertionError("legacy owner gate was accepted")
 
 
 def test_receipt_rejects_false_complete():
@@ -144,6 +168,17 @@ def test_receipt_requires_operator_intent_authority():
         assert "authority must be OPERATOR_INTENT" in str(exc)
     else:
         raise AssertionError("non-Operator project authority was accepted")
+
+
+def test_receipt_requires_apex_owner_field():
+    receipt = _receipt(_all_true(), "COMPLETE")
+    receipt.pop("apex_owner")
+    try:
+        validate_receipt(receipt)
+    except ValueError as exc:
+        assert "apex_owner must be a non-empty string" in str(exc)
+    else:
+        raise AssertionError("receipt without apex_owner was accepted")
 
 
 def test_executed_action_requires_execution_state_and_receipt():

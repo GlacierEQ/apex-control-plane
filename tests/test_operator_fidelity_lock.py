@@ -50,7 +50,6 @@ def _receipt() -> dict:
                 "capability_reduction": False,
                 "unsolicited_operator_asset_value_ranking": False,
                 "unsolicited_operator_asset_disposition": False,
-                "inspection_scope_expansion": False,
                 "operator_owned_asset_identity_preserved": True,
                 "preserves_prior_valid_gain": True,
                 "maximum_coherent_advance": True,
@@ -80,14 +79,13 @@ def test_request_mode_without_receipt_yields_non_authorizing_continuation(monkey
     assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
 
 
-def test_strict_compatibility_mode_without_receipt_yields_continuation(monkeypatch) -> None:
+def test_strict_mode_without_receipt_fails_closed_after_recording_continuation(monkeypatch) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
     lock._IN_PROCESS = None
-    validation = lock.automatic_operator_fidelity_lock()
-    assert validation is not None
-    assert validation.ok is False
-    assert validation.status == "continuation_required"
+    with pytest.raises(SystemExit) as exc:
+        lock.automatic_operator_fidelity_lock()
+    assert exc.value.code == 78
     assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
     assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
 

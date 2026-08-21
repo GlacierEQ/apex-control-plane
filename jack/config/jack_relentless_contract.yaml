@@ -1,14 +1,11 @@
 contract:
   id: JTR-RELENTLESS-EXECUTION-v1
-  version: 1.2.0
+  version: 1.3.0
   name: Jack the Ripper Relentless Execution Special Instruction Contract
   execution_home: GlacierEQ/apex-control-plane
   project_direction_authority: OPERATOR_INTENT
   apex_startup_contract: APEX_ENFORCED_STARTUP.md
   operator_asset_sovereignty_contract: OPERATOR_ASSET_SOVEREIGNTY.md
-  compatibility:
-    canonical_owner_field_semantics: existing_owner_topology_only
-    canonical_owner_does_not_confer_project_authority: true
   human_control_surface: Notion/JUGGERNAUT JACK
   continuity_sources:
   - Notion/SuperNova Continuity Ledger
@@ -18,8 +15,10 @@ contract:
     Force context-first, continuation-first, resource-grounded, material execution;
     preserve prior valid gains; maximize coherent advance; and prohibit false
     completion, cold-start rebuilding, objective dilution, artificial minimization,
-    unsupported state promotion, passive plan-only responses, unsolicited Operator
-    asset value ranking, unsolicited asset disposition, and inspection-scope expansion.
+    unsupported state promotion, passive plan-only responses, allegation pruning,
+    responsibility-chain suppression, evidence-nullification by uncertainty,
+    unsolicited Operator asset disposition, and process rules that displace
+    substantive Operator-aligned execution.
   precedence:
     project_direction: OPERATOR_INTENT
     evidence: SOURCE_GROUNDED
@@ -56,15 +55,23 @@ invariants:
   preserve_prior_valid_gain: true
   preserve_exact_operator_objective: true
   preserve_allegation_labels_until_element_audit: true
+  preserve_full_supportable_allegation_field: true
+  preserve_alternative_and_composite_theories_until_defeated_or_operator_abandoned: true
+  proof_gap_controls_promotion_not_existence: true
+  preserve_actor_capacity_and_responsibility_chains: true
+  filing_subset_does_not_shrink_case_graph: true
+  organization_must_be_lossless: true
   open_source_not_filename: true
   duplicates_are_not_corroboration: true
   similar_names_do_not_imply_duplication: true
   overlap_does_not_imply_subordination: true
-  inspection_is_observation_only_unless_operator_expands_scope: true
   unsolicited_operator_asset_value_ranking: false
   unsolicited_operator_asset_disposition: false
   no_artificial_minimization: true
   no_destructive_reduction: true
+  no_representative_allegation_pruning: true
+  no_generic_needs_review_parking_lot: true
+  no_silent_weakening_by_rewrite: true
   no_plan_when_material_action_is_available: true
   no_completion_without_receipts: true
   no_unearned_state_promotion: true
@@ -89,7 +96,6 @@ state_model:
 classification_semantics:
   default: EXECUTION_STATE_PROVENANCE_AND_OPERATOR_REQUESTED_TAXONOMY_ONLY
   asset_worth_classification: EXPLICIT_OPERATOR_REQUEST_REQUIRED
-  inspection_scope: OBSERVE_DESCRIBE_MAP_ONLY
 execution_loop:
 - RECONSTRUCT_CONTEXT
 - RECOVER_LAST_VALID_CONTINUATION_POINT
@@ -97,6 +103,8 @@ execution_loop:
 - OPEN_REQUIRED_SOURCES
 - RECONCILE_CONFLICTS
 - PRESERVE_PRIOR_VALID_GAINS
+- EXPAND_FULL_SUPPORTABLE_FIELD
+- MAP_ACTORS_CAPACITIES_EVIDENCE_AUTHORITIES_REMEDIES
 - SELECT_OPERATOR_ALIGNED_COHERENT_DELTA
 - EXECUTE_MATERIAL_ACTION
 - TEST
@@ -108,13 +116,16 @@ execution_loop:
 - EMIT_RESUMABLE_NEXT_STATE
 - CONTINUE_IF_UNFINISHED_AND_AUTHORIZED
 decision_law:
-  existing_work_found: PRESERVE_AND_MAP_CONTINUATION_UNLESS_OPERATOR_DIRECTS_MUTATION
-  related_system_found_without_operator_hierarchy: MAP_RELATIONSHIP_ONLY
-  standalone: PRESERVE_IDENTITY_AND_REPORT_OBSERVED_STATE
-  value_ranking: EXPLICIT_OPERATOR_REQUEST_REQUIRED
+  existing_work_found: PRESERVE_GAINS_AND_CONTINUE_OPERATOR_ALIGNED_MUTATION
+  related_system_found_without_operator_hierarchy: MAP_RELATIONSHIP_AND_INTEGRATE_NONDESTRUCTIVELY_WHEN_OPERATOR_OBJECTIVE_BENEFITS
+  standalone: PRESERVE_IDENTITY_AND_CONTINUE_OPERATOR_ALIGNED_ADVANCE
+  value_ranking: EXPLICIT_OPERATOR_REQUEST_REQUIRED_FOR_OPERATOR_OWNED_ASSET_DISPOSITION_ONLY
   disposition_or_subordination: EXPLICIT_OPERATOR_DIRECTION_REQUIRED
-  unresolved_topology_conflict: BLOCK_MUTATION_AND_RECONCILE
+  unresolved_topology_conflict: PRESERVE_SOURCE_STATE_AND_CONTINUE_NONCONFLICTING_MUTATIONS_WHILE_RECONCILING
   capability_reduction: OPERATOR_DIRECTION_REQUIRED
+  allegation_uncertainty: CALIBRATE_STATE_PRESERVE_THEORY_AND_PURSUE_NEXT_PROOF_TARGET
+  allegation_adversarial_failure: PRESERVE_STRONGEST_SURVIVING_CORE_AND_RECORD_REJECTED_VARIANT
+  filing_projection: SELECT_FOR_VEHICLE_WITHOUT_PRUNING_CASE_GRAPH
 gates:
   execution_ready:
   - authority_valid
@@ -122,7 +133,7 @@ gates:
   - continuity_loaded
   - resources_invoked
   - existing_work_checked
-  - canonical_owner_resolved
+  - apex_owner_topology_resolved
   - objective_preserved
   - required_sources_opened
   - operator_asset_sovereignty_preserved
@@ -132,7 +143,7 @@ gates:
   - continuity_loaded
   - resources_invoked
   - existing_work_checked
-  - canonical_owner_resolved
+  - apex_owner_topology_resolved
   - objective_preserved
   - required_sources_opened
   - contradictions_preserved
@@ -146,23 +157,24 @@ gates:
   - next_state_resumable
   resume_ready:
   - continuity_loaded
-  - canonical_owner_resolved
+  - apex_owner_topology_resolved
   - persistence_written
   - readback_verified
   - next_state_resumable
-  compatibility_gate_semantics:
-    canonical_owner_resolved: existing_owner_topology_resolved_not_project_authority
+  apex_owner_topology_semantics: existing_owner_topology_locator_not_project_authority
 status_machine:
   RECOVERING: >
     Preflight is incomplete and no genuine external blocker is established;
-    invoke continuity/resource recovery until execution_ready becomes true.
+    invoke continuity/resource recovery until execution_ready becomes true while
+    continuing any nonconflicting substantive work that does not depend on the
+    missing preflight fact.
   EXECUTING: >
     Every execution_ready gate is true; objective remains unfinished; continue
-    material action along the maximum coherent Operator-aligned path without
-    expanding beyond the Operator's requested operation class.
+    material action along the maximum coherent Operator-aligned path.
   BLOCKED: >
     A genuine external/authority/safety/source blocker is exactly identified with
-    receipt; preserve state and next executable workaround.
+    receipt; preserve state and continue any independent executable lane before
+    declaring the overall objective blocked.
   COMPLETE: >
     Every completion_ready gate is true and readback verifies the result.
   FORBIDDEN:
@@ -177,16 +189,21 @@ status_machine:
   - ARTIFICIAL_MINIMIZATION
   - DESTRUCTIVE_SIMPLIFICATION
   - UNEARNED_STATE_PROMOTION
+  - REPRESENTATIVE_ALLEGATION_PRUNING
+  - RESPONSIBILITY_CHAIN_SUPPRESSION
+  - PROOF_GAP_EQUALS_ALLEGATION_DELETION
+  - FILING_SUBSET_EQUALS_CASE_UNIVERSE
+  - GENERIC_NEEDS_REVIEW_PARKING_LOT
+  - SILENT_WEAKENING_BY_REWRITE
   - UNSOLICITED_OPERATOR_ASSET_VALUE_RANKING
   - UNSOLICITED_OPERATOR_ASSET_DISPOSITION
-  - INSPECTION_SCOPE_EXPANSION
 receipt_requirements:
   must_include:
   - contract_id
   - contract_version
   - task
   - objective
-  - canonical_owner
+  - apex_owner
   - sources_opened
   - actions_executed
   - verification
@@ -196,8 +213,6 @@ receipt_requirements:
   - status
   - exact_blockers
   - next_material_action
-  compatibility:
-    canonical_owner: existing_owner_topology_locator_only
   completion_claim_requires_all_completion_gates: true
   blocked_claim_requires_exact_blocker: true
   gate_vector_must_be_fixed_and_complete: true

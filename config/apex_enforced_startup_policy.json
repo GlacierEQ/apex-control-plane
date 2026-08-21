@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "name": "APEX Enforced Startup",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
@@ -19,7 +19,7 @@
     "reality_constraints_are_reported_not_promoted_to_authority": true,
     "operator_owned_asset_value_ranking_is_operator_only": true,
     "operator_owned_asset_disposition_is_operator_only": true,
-    "inspection_does_not_expand_scope": true
+    "inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation": true
   },
   "classification_semantics": {
     "default_scope": "execution_state_provenance_and_operator_requested_taxonomy_only",
@@ -44,27 +44,11 @@
     "selected_path",
     "verification_plan"
   ],
-  "contradiction_statuses": [
-    "none",
-    "resolved",
-    "open_blocker"
-  ],
-  "action_scopes": [
-    "none",
-    "internal",
-    "external"
-  ],
+  "contradiction_statuses": ["none", "resolved", "open_blocker"],
+  "action_scopes": ["none", "internal", "external"],
   "execution_states": [
-    "OBSERVED",
-    "INFERRED",
-    "HYPOTHESIZED",
-    "PROPOSED",
-    "ATTEMPTED",
-    "EXECUTED",
-    "VERIFIED",
-    "COMMITTED",
-    "DEPLOYED",
-    "OBSERVED_IN_OPERATION"
+    "OBSERVED", "INFERRED", "HYPOTHESIZED", "PROPOSED", "ATTEMPTED",
+    "EXECUTED", "VERIFIED", "COMMITTED", "DEPLOYED", "OBSERVED_IN_OPERATION"
   ],
   "transition_requirements": {
     "PROPOSED->ATTEMPTED": "operator_authorization_or_bound_plan",
@@ -83,20 +67,18 @@
     "preserves_prior_valid_gain": true,
     "unsolicited_operator_asset_value_ranking": false,
     "unsolicited_operator_asset_disposition": false,
-    "inspection_scope_expansion": false,
     "operator_owned_asset_identity_preserved": true
+  },
+  "path_dynamic_rules": {
+    "inspection_scope_expansion_must_be_boolean": true,
+    "mission_aligned_hardening_must_be_boolean": true,
+    "inspection_scope_expansion_requires_mission_aligned_hardening": true
   },
   "mutation_interlock": {
     "required_true_fields": [
-      "context_reconstructed",
-      "prior_state_retrieved",
-      "continuation_resolved",
-      "target_identity_resolved",
-      "operator_intent_resolved",
-      "prior_valid_gains_identified",
-      "prior_valid_gains_preserved",
-      "relevant_source_inspected",
-      "state_model_bound"
+      "context_reconstructed", "prior_state_retrieved", "continuation_resolved",
+      "target_identity_resolved", "operator_intent_resolved", "prior_valid_gains_identified",
+      "prior_valid_gains_preserved", "relevant_source_inspected", "state_model_bound"
     ],
     "capability_reduction_requires_operator_direction": true,
     "action_claim_requires_receipt": true,
@@ -108,25 +90,16 @@
   },
   "completion_gate": {
     "proof_bound": true,
-    "allow_statuses": [
-      "complete",
-      "blocked",
-      "continue"
-    ],
+    "allow_statuses": ["complete", "blocked", "continue"],
     "complete_requires": [
-      "target_reached",
-      "material_claims_supported",
-      "required_receipts_present",
-      "verification_passed",
-      "prior_valid_gains_preserved",
-      "no_unearned_state_promotion",
-      "no_material_regression",
-      "operator_intent_aligned"
+      "target_reached", "material_claims_supported", "required_receipts_present",
+      "verification_passed", "prior_valid_gains_preserved", "no_unearned_state_promotion",
+      "no_material_regression", "operator_intent_aligned"
     ]
   },
   "compatibility": {
-    "canonical_labels_are_descriptive_only": true,
-    "canonical_labels_do_not_confer_project_authority": true,
+    "legacy_project_control_labels_are_descriptive_only": true,
+    "legacy_project_control_labels_do_not_confer_project_authority": true,
     "historical_governance_is_evidence_not_operator_override": true,
     "current_explicit_operator_instruction_supersedes_conflicting_project_policy": true,
     "tool_access_is_capability_not_authority": true,

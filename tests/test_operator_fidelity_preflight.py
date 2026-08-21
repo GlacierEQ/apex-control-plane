@@ -63,7 +63,6 @@ def _receipt() -> dict:
                 "pro_code_elite_humanized_engineered": True,
                 "unsolicited_operator_asset_value_ranking": False,
                 "unsolicited_operator_asset_disposition": False,
-                "inspection_scope_expansion": False,
                 "operator_owned_asset_identity_preserved": True,
                 "functional_advance": "bind semantic fidelity enforcement into runtime boot",
                 "strongest_coherent_path": "reject contradictory routing prose before runtime authorization",
@@ -115,18 +114,22 @@ def test_request_contract_can_satisfy_current_policy() -> None:
         assert contract[field_name] is True
     for field_name, expected in policy["selected_path_requirements"].items():
         assert contract["selected_path"][field_name] is expected
+    assert request["requirements"]["allow_mission_aligned_non_destructive_hardening"] is True
 
 
 def test_operator_asset_sovereignty_is_machine_bound() -> None:
     policy = load_operator_fidelity_policy()
     asset = policy["operator_asset_sovereignty"]
-    assert asset["look_inspect_list_inventory_map_are_observation_only"] is True
+    assert (
+        asset["inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation"]
+        is True
+    )
     assert asset["asset_value_ranking_requires_explicit_operator_request"] is True
     assert asset["asset_disposition_requires_explicit_operator_request"] is True
     path = policy["selected_path_requirements"]
     assert path["unsolicited_operator_asset_value_ranking"] is False
     assert path["unsolicited_operator_asset_disposition"] is False
-    assert path["inspection_scope_expansion"] is False
+    assert "inspection_scope_expansion" not in path
     assert path["operator_owned_asset_identity_preserved"] is True
 
 
@@ -146,12 +149,12 @@ def test_operator_asset_disposition_without_scope_blocks() -> None:
     assert any("unsolicited_operator_asset_disposition" in error for error in errors)
 
 
-def test_inspection_scope_expansion_blocks() -> None:
+def test_mission_aligned_inspection_scope_expansion_is_not_a_rejection_gate() -> None:
     policy = load_operator_fidelity_policy()
     receipt = _receipt()
     receipt["operator_fidelity"]["selected_path"]["inspection_scope_expansion"] = True
-    errors = validate_operator_fidelity_receipt(policy, receipt)
-    assert any("inspection_scope_expansion" in error for error in errors)
+    receipt["operator_fidelity"]["selected_path"]["mission_aligned_hardening"] = True
+    assert validate_operator_fidelity_receipt(policy, receipt) == ()
 
 
 def test_missing_literal_words_blocks() -> None:

@@ -30,14 +30,14 @@ message GateVector {
   bool continuity_loaded = 3;
   bool resources_invoked = 4;
   bool existing_work_checked = 5;
-  // Compatibility name only: resolves existing-work topology, not project authority.
-  bool canonical_owner_resolved = 6;
+  // Existing-work topology locator only; never project-direction authority.
+  bool apex_owner_topology_resolved = 6;
   bool objective_preserved = 7;
   bool required_sources_opened = 8;
   bool contradictions_preserved = 9;
-  // Field number 10 is retained for wire compatibility. The renamed field means
-  // the selected delta is aligned to explicit Operator direction; it does not
-  // authorize autonomous asset-value ranking.
+  // Field number 10 is retained for wire compatibility. The selected delta is
+  // aligned to explicit Operator direction and does not authorize autonomous
+  // Operator-asset value ranking or disposition.
   bool operator_aligned_delta_selected = 10;
   bool material_action_executed = 11;
   bool verification_passed = 12;
@@ -45,7 +45,6 @@ message GateVector {
   bool persistence_written = 14;
   bool readback_verified = 15;
   bool next_state_resumable = 16;
-  // Observation/tool access never grants asset-value or disposition authority.
   bool operator_asset_sovereignty_preserved = 17;
 }
 
@@ -77,8 +76,8 @@ message JackExecutionReceipt {
   string contract_version = 2;
   string task = 3;
   string objective = 4;
-  // Compatibility field: existing-work topology locator only.
-  string canonical_owner = 5;
+  // Existing-work topology locator only; never project-direction authority.
+  string apex_owner = 5;
   repeated SourceReceipt sources_opened = 6;
   repeated ActionReceipt actions_executed = 7;
   GateVector gates = 8;
