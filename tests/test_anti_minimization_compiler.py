@@ -13,6 +13,9 @@ from anti_minimization_compiler import (
     ("text", "code"),
     [
         ("Take the smallest useful next step.", "SMALLEST_DEFAULT"),
+        ("Do the bare minimum.", "MINIMUM_DEFAULT"),
+        ("Use the minimum required effort.", "MINIMUM_DEFAULT"),
+        ("Use minimum necessary permissions.", "MINIMUM_DEFAULT"),
         ("Ship the minimum viable implementation.", "MVP_DEFAULT"),
         ("Choose the safest slice for now.", "SAFEST_SLICE_DEFAULT"),
         ("Use a bounded scope as the delivery target.", "BOUNDED_SLICE_DEFAULT"),
@@ -34,6 +37,7 @@ def test_product_level_downward_routes_are_detected(text: str, code: str) -> Non
 def test_rule_surface_is_explicit_and_stable() -> None:
     assert supported_rule_codes() == (
         "SMALLEST_DEFAULT",
+        "MINIMUM_DEFAULT",
         "MVP_DEFAULT",
         "SAFEST_SLICE_DEFAULT",
         "BOUNDED_SLICE_DEFAULT",
@@ -75,6 +79,7 @@ def test_negation_is_match_local_not_response_wide() -> None:
 def test_direct_prohibition_is_not_misclassified_as_regression() -> None:
     assert inspect_execution_text("Do not take the smallest useful step.") == ()
     assert inspect_execution_text("Never freeze architecture.") == ()
+    assert inspect_execution_text("Never do the bare minimum.") == ()
 
 
 @pytest.mark.parametrize(
@@ -83,7 +88,6 @@ def test_direct_prohibition_is_not_misclassified_as_regression() -> None:
         "Use least privilege for the deployment token.",
         "Build a minimal reproducer for the race condition.",
         "Capture a known-good rollback checkpoint before mutation.",
-        "Use minimum necessary permissions for the worker identity.",
         "Perform fault isolation on the failing adapter.",
     ],
 )
@@ -100,11 +104,19 @@ def test_explicit_operator_directed_reduction_is_authoritative() -> None:
 
 def test_compile_upward_repairs_product_level_minimization() -> None:
     compiled = compile_upward(
-        "Take the smallest useful step. Freeze architecture. Governance first."
+        "Do the bare minimum. Take the smallest useful step. Freeze architecture. Governance first."
     )
+    assert "maximum coherent advance consistent with the Operator-defined target" in compiled
     assert "largest coherent executable tranche" in compiled
     assert "continue evolution" in compiled
     assert "governance serve functional advance" in compiled
+    assert inspect_execution_text(compiled) == ()
+
+
+def test_compile_upward_rewrites_minimum_permissions_language() -> None:
+    compiled = compile_upward("Use minimum necessary permissions for the worker identity.")
+    assert "minimum necessary permissions" not in compiled.lower()
+    assert "maximum coherent advance consistent with the Operator-defined target" in compiled
     assert inspect_execution_text(compiled) == ()
 
 
