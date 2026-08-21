@@ -44,11 +44,18 @@ def _receipt() -> dict:
             "corrections_applied": [
                 "minimum-scope default removed",
                 "function restored above governance",
-                "unsolicited Operator asset ranking removed",
+                "unsolicited OPERATOR asset ranking removed",
             ],
             "correction_effect": "path selection preserves literal scope and cannot invent asset disposition authority",
             "operator_directed_reduction": False,
             "selected_path": {
+                "operator_designation": "OPERATOR",
+                "operator_designation_semantics": "proper_name",
+                "operator_designation_is_singular": True,
+                "source_identity_preserved": True,
+                "akos_material_is_framework_not_operator": True,
+                "agent_inference_is_not_operator": True,
+                "evidence_is_not_operator": True,
                 "literal_instruction_fidelity": True,
                 "instruction_displacement": False,
                 "minimum_scope_default": False,
@@ -115,6 +122,21 @@ def test_request_contract_can_satisfy_current_policy() -> None:
         assert contract[field_name] is True
     for field_name, expected in policy["selected_path_requirements"].items():
         assert contract["selected_path"][field_name] is expected
+
+
+def test_source_identity_is_machine_bound() -> None:
+    policy = load_operator_fidelity_policy()
+    source = policy["source_identity"]
+    assert source["operator_designation"] == "OPERATOR"
+    assert source["designation_semantics"] == "proper_name"
+    assert source["singular"] is True
+    path = policy["selected_path_requirements"]
+    assert path["operator_designation"] == "OPERATOR"
+    assert path["operator_designation_semantics"] == "proper_name"
+    assert path["operator_designation_is_singular"] is True
+    assert path["akos_material_is_framework_not_operator"] is True
+    assert path["agent_inference_is_not_operator"] is True
+    assert path["evidence_is_not_operator"] is True
 
 
 def test_operator_asset_sovereignty_is_machine_bound() -> None:
