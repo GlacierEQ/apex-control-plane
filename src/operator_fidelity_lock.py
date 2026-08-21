@@ -1,18 +1,22 @@
-"""Non-bypassable APEX operator-fidelity lock.
+"""APEX AKOS/OPERATOR epistemic-use fidelity verifier.
 
-This sits above the descriptive/preflight layer. It exists to stop two classes
-of fake enforcement:
+The filename and public API retain ``operator_fidelity_lock`` for compatibility,
+but this component does not define what OPERATOR must want or what AKOS must know.
 
-1. caller-controlled environment switches disabling fidelity; and
-2. receipts presenting an arbitrary SHA-256 string that is not bound to the
-   literal constraints they claim to preserve.
+The boundary is:
 
-Strict runtime execution cannot load unless this lock issues an in-process
-sealed proof. Request mode is deliberately diagnostic: it may continue in a
-degraded, non-authorized state so callers can inspect the complete startup
-request without accidentally converting inspection into runtime authorization.
-Only the explicit test harness may otherwise bypass runtime boot so CI can
-exercise units.
+1. AKOS is how knowledge is known: evidence, provenance, inference, qualification,
+   contradiction, and verification contribute to an explicit knowledge state;
+2. OPERATOR is how knowledge is used: direction, priority, objective, and chosen
+   application remain attached to the singular proper-name designation OPERATOR;
+3. AKOS knowledge state does not silently become use-direction; and
+4. OPERATOR use-direction does not silently rewrite epistemic status.
+
+Literal words attributed to OPERATOR remain cryptographically bound to the
+receipt. The verifier may detect attribution, integrity, or boundary failure.
+It may not manufacture mandatory OPERATOR phrases, objectives, corrections, or
+doctrine, and it may not manufacture AKOS knowledge merely because OPERATOR
+wants a particular use.
 """
 from __future__ import annotations
 
@@ -43,7 +47,7 @@ class OperatorFidelityLockValidation:
 
     def __post_init__(self) -> None:
         if self._seal is not _SEAL:
-            raise TypeError("operator-fidelity lock proof must be issued in-process")
+            raise TypeError("AKOS/OPERATOR fidelity proof must be issued in-process")
 
 
 _IN_PROCESS: OperatorFidelityLockValidation | None = None
@@ -68,7 +72,7 @@ def _text_list(value: Any) -> list[str]:
 
 
 def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ...]:
-    """Validate the hard invariants that must not be satisfiable by assertion alone."""
+    """Validate epistemic-use identity and integrity without inventing either side."""
     errors: list[str] = []
     policy = load_operator_fidelity_policy()
     errors.extend(validate_operator_fidelity_receipt(policy, receipt))
@@ -86,34 +90,46 @@ def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ..
                 "operator_fidelity.operator_words_digest is not bound to literal_constraints"
             )
 
-    # Durable directional anchors prevent a task-local receipt from erasing the
-    # cross-estate correction while still allowing additional task-specific words.
-    normalized = "\n".join(constraints).lower()
-    anchor_groups = (
-        ("context first",),
-        ("look up", "look up!", "do not look down"),
-        ("powerful code", "elite excellence"),
-        ("function", "functional"),
-    )
-    for group in anchor_groups:
-        if not any(anchor in normalized for anchor in group):
-            errors.append(
-                "operator_fidelity.literal_constraints missing durable directional anchor: "
-                + " | ".join(group)
-            )
-
     path = row.get("selected_path")
     if isinstance(path, Mapping):
+        if path.get("operator_designation") != "OPERATOR":
+            errors.append("OPERATOR is the singular proper-name designation")
+        if path.get("operator_designation_semantics") != "proper_name":
+            errors.append("OPERATOR designation semantics must be proper_name")
+        if path.get("operator_designation_is_singular") is not True:
+            errors.append("OPERATOR designation must remain singular")
+        if path.get("source_identity_preserved") is not True:
+            errors.append("source identity must remain explicit")
+
+        if path.get("akos_is_how_knowledge_is_known") is not True:
+            errors.append("AKOS must remain the knowledge-state function: how knowledge is known")
+        if path.get("operator_is_how_knowledge_is_used") is not True:
+            errors.append("OPERATOR must remain the use-direction function: how knowledge is used")
+        if path.get("knowledge_state_is_not_use_direction") is not True:
+            errors.append("AKOS knowledge state must not be collapsed into OPERATOR use-direction")
+        if path.get("use_direction_is_not_knowledge_state") is not True:
+            errors.append("OPERATOR use-direction must not be collapsed into AKOS knowledge state")
+        if path.get("akos_knowledge_state_alone_does_not_choose_use") is not True:
+            errors.append("AKOS knowledge state alone must not choose how knowledge is used")
+        if path.get("operator_direction_alone_does_not_rewrite_knowledge_state") is not True:
+            errors.append("OPERATOR direction alone must not rewrite AKOS knowledge state")
+
+        if path.get("akos_material_is_framework_not_operator") is not True:
+            errors.append("AKOS material must not be attributed to OPERATOR")
+        if path.get("agent_inference_is_not_operator") is not True:
+            errors.append("agent inference must not be attributed to OPERATOR")
+        if path.get("evidence_is_not_operator") is not True:
+            errors.append("evidence must not be attributed to OPERATOR")
         if path.get("capability_reduction") is True and row.get("operator_directed_reduction") is not True:
-            errors.append("operator fidelity lock rejects non-operator-directed capability reduction")
+            errors.append("OPERATOR source-fidelity verifier rejects non-OPERATOR-directed capability reduction")
         if path.get("instruction_displacement") is not False:
-            errors.append("operator fidelity lock requires instruction_displacement=false")
+            errors.append("OPERATOR source-fidelity verifier requires instruction_displacement=false")
         if path.get("minimum_scope_default") is not False:
-            errors.append("operator fidelity lock requires minimum_scope_default=false")
+            errors.append("OPERATOR source-fidelity verifier requires minimum_scope_default=false")
         if path.get("governance_first") is not False:
-            errors.append("operator fidelity lock requires governance_first=false")
+            errors.append("OPERATOR source-fidelity verifier requires governance_first=false")
         if path.get("permission_loop") is not False:
-            errors.append("operator fidelity lock requires permission_loop=false")
+            errors.append("OPERATOR source-fidelity verifier requires permission_loop=false")
 
     return tuple(dict.fromkeys(errors))
 
@@ -125,7 +141,7 @@ def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
 
 
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    """Issue the sealed runtime proof, diagnostic degradation, or terminate."""
+    """Issue fidelity proof or expose a resumable diagnostic state."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
         return _IN_PROCESS
@@ -134,17 +150,15 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     if mode not in {"strict", "request", "off"}:
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
-    # Fidelity itself is not caller-disableable in a real runtime. This closes
-    # the old escape hatch where an env var could turn the protection into prose.
     if not _testing():
         if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            return _continue_lock(("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",))
+            return _continue_lock(("CASEY_AUTO_BOOT_DISABLE cannot disable OPERATOR source fidelity",))
         if mode == "off":
-            return _continue_lock(("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",))
+            return _continue_lock(("CASEY_AUTO_BOOT_MODE=off cannot disable OPERATOR source fidelity",))
 
     receipt = receipt_from_environment()
     if receipt is None:
-        return _continue_lock(("operator fidelity lock requires a boot receipt",))
+        return _continue_lock(("OPERATOR source-fidelity verification requires a boot receipt",))
 
     errors = validate_operator_fidelity_lock(receipt)
     if errors:
@@ -157,7 +171,7 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
 
 
 def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
-    """Preserve lock diagnostics while exposing a non-authorizing recovery path."""
+    """Preserve diagnostics while exposing a non-authorizing recovery path."""
     from startup_continuation import emit_startup_continuation, record_startup_continuation
 
     payload = {

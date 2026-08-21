@@ -16,9 +16,8 @@ from operator_fidelity_preflight import (
 
 def _receipt() -> dict:
     words = (
-        "Context first hard work second answer last",
-        "DO NOT LOOK DOWN - you look UP",
-        "Powerful code elite excellence",
+        "Strengthen my position",
+        "AKOS IS HOW KNOWLEDGE IS KNOWN - OPERATOR IS HOW KNOWLEDGE IS USED",
     )
     return {
         "operator_fidelity": {
@@ -42,13 +41,26 @@ def _receipt() -> dict:
             "correction_present": True,
             "objective_function_reassessed": True,
             "corrections_applied": [
+                "AKOS knowledge separated from OPERATOR use",
                 "minimum-scope default removed",
-                "function restored above governance",
-                "unsolicited Operator asset ranking removed",
+                "unsolicited OPERATOR asset ranking removed",
             ],
-            "correction_effect": "path selection preserves literal scope and cannot invent asset disposition authority",
+            "correction_effect": "AKOS governs epistemic state while OPERATOR directs use of that knowledge",
             "operator_directed_reduction": False,
             "selected_path": {
+                "operator_designation": "OPERATOR",
+                "operator_designation_semantics": "proper_name",
+                "operator_designation_is_singular": True,
+                "source_identity_preserved": True,
+                "akos_material_is_framework_not_operator": True,
+                "akos_is_how_knowledge_is_known": True,
+                "operator_is_how_knowledge_is_used": True,
+                "knowledge_state_is_not_use_direction": True,
+                "use_direction_is_not_knowledge_state": True,
+                "akos_knowledge_state_alone_does_not_choose_use": True,
+                "operator_direction_alone_does_not_rewrite_knowledge_state": True,
+                "agent_inference_is_not_operator": True,
+                "evidence_is_not_operator": True,
                 "literal_instruction_fidelity": True,
                 "instruction_displacement": False,
                 "minimum_scope_default": False,
@@ -65,10 +77,10 @@ def _receipt() -> dict:
                 "unsolicited_operator_asset_disposition": False,
                 "inspection_scope_expansion": False,
                 "operator_owned_asset_identity_preserved": True,
-                "functional_advance": "bind semantic fidelity enforcement into runtime boot",
-                "strongest_coherent_path": "reject contradictory routing prose before runtime authorization",
+                "functional_advance": "bind epistemic-use separation into runtime boot",
+                "strongest_coherent_path": "preserve AKOS knowledge integrity and OPERATOR use direction without collapse",
             },
-            "next_ceiling": "propagate the same invariant into downstream agents",
+            "next_ceiling": "propagate epistemic-use separation across downstream agents",
         }
     }
 
@@ -114,7 +126,26 @@ def test_request_contract_can_satisfy_current_policy() -> None:
     for field_name in policy["required_true_fields"]:
         assert contract[field_name] is True
     for field_name, expected in policy["selected_path_requirements"].items():
-        assert contract["selected_path"][field_name] is expected
+        assert contract["selected_path"][field_name] == expected
+
+
+def test_epistemic_use_split_is_machine_bound() -> None:
+    policy = load_operator_fidelity_policy()
+    source = policy["source_identity"]
+    assert source["operator_designation"] == "OPERATOR"
+    assert source["designation_semantics"] == "proper_name"
+    assert source["singular"] is True
+    assert source["akos_source_class"] == "KNOWLEDGE_SYSTEM"
+    assert source["operator_source_class"] == "KNOWLEDGE_USE_DIRECTION"
+    assert source["akos_function"] == "HOW_KNOWLEDGE_IS_KNOWN"
+    assert source["operator_function"] == "HOW_KNOWLEDGE_IS_USED"
+    assert source["knowledge_state_is_not_use_direction"] is True
+    assert source["use_direction_is_not_knowledge_state"] is True
+    path = policy["selected_path_requirements"]
+    assert path["akos_is_how_knowledge_is_known"] is True
+    assert path["operator_is_how_knowledge_is_used"] is True
+    assert path["akos_knowledge_state_alone_does_not_choose_use"] is True
+    assert path["operator_direction_alone_does_not_rewrite_knowledge_state"] is True
 
 
 def test_operator_asset_sovereignty_is_machine_bound() -> None:
