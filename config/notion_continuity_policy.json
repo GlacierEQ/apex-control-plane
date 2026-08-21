@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.2.0",
-  "name": "Notion-First Continuity + Relationship Mapping Preflight",
+  "schema_version": "1.3.0",
+  "name": "Notion-First Continuity + APEX Relationship Integration Preflight",
   "stage_order": [
     "notion_boot_analysis",
     "existing_work_discovery",
@@ -10,17 +10,15 @@
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "authority_semantics": {
     "project_direction_authority": "operator_intent",
-    "canonical_fields_are_compatibility_labels": true,
-    "canonical_fields_do_not_override_operator_intent": true,
     "historical_governance_is_evidence_not_project_authority": true,
     "continuation_before_restart": true,
     "operator_override_may_authorize_new_root": true,
-    "discovered_relationships_do_not_authorize_integration": true,
-    "inspection_and_mapping_are_observation_only": true,
+    "discovered_relationships_authorize_non_destructive_operator_aligned_integration": true,
+    "inspection_may_expand_into_mission_aligned_hardening_without_reconfirmation": true,
     "operator_owned_asset_value_ranking_requires_explicit_operator_request": true,
     "operator_owned_asset_disposition_requires_explicit_operator_request": true
   },
-  "canonical_notion_pages": [
+  "apex_notion_pages": [
     {
       "id": "6b2f21f8-a845-4aa6-9c53-3824900ea43b",
       "role": "continuity_state",
@@ -50,7 +48,7 @@
   "receipt_requirements": {
     "notion_status": "complete",
     "minimum_pages_loaded": 5,
-    "canonical_conflicts_must_be_empty": true,
+    "apex_conflicts_must_be_empty": true,
     "existing_work_statuses": [
       "found",
       "none_found"
@@ -58,10 +56,11 @@
     "minimum_existing_work_systems_searched": 2,
     "integration_status": "complete",
     "found_work_decisions": [
-      "map_existing",
+      "continue_existing",
+      "integrate_non_destructively",
       "operator_override"
     ],
-    "default_relationship_decision": "map_only"
+    "default_relationship_decision": "integrate_non_destructively"
   },
   "tool_aliases": {
     "notion_search": [
@@ -85,16 +84,18 @@
   },
   "laws": [
     "CONTEXT BEFORE MUTATION",
-    "BEFORE STARTING, DETERMINE WHETHER IT IS ALREADY STARTED",
+    "BEFORE STARTING DETERMINE WHETHER IT IS ALREADY STARTED",
     "CONTINUE EXISTING VALID WORK WHEN THE OPERATOR DIRECTS CONTINUATION",
-    "DISCOVER OWNER CONSUMER DEPENDENCY AND OVERLAP RELATIONSHIPS WITHOUT TURNING DISCOVERY INTO HIERARCHY",
-    "RELATIONSHIP DISCOVERY PRODUCES A MAP NOT AN INTEGRATION ORDER",
-    "LOOK INSPECT LIST INVENTORY MAP AND TRACE ARE OBSERVATION ONLY",
+    "DISCOVER OWNER CONSUMER DEPENDENCY AND OVERLAP RELATIONSHIPS",
+    "RELATIONSHIP DISCOVERY MAY DRIVE NONDESTRUCTIVE OPERATOR ALIGNED INTEGRATION",
+    "INSPECTION MAY EXPAND INTO MISSION ALIGNED HARDENING WITHOUT RECONFIRMATION",
     "SIMILAR NAMES DO NOT IMPLY DUPLICATION",
     "OVERLAP DOES NOT IMPLY SUBORDINATION",
     "OPERATOR INTENT CONTROLS PROJECT DIRECTION",
     "VALUE RANKING AND DISPOSITION OF OPERATOR ASSETS REQUIRE EXPLICIT OPERATOR DIRECTION",
-    "NEW ROOTS REQUIRE EXPLICIT OPERATOR DIRECTION"
+    "NEW ROOTS REQUIRE EXPLICIT OPERATOR DIRECTION",
+    "PROCESS GATES MUST NOT DISPLACE SUBSTANTIVE EXECUTION",
+    "NONCONFLICTING EXECUTABLE LANES CONTINUE WHILE TOPOLOGY CONFLICTS ARE RECONCILED"
   ],
   "security": {
     "never_embed_secrets": true,
