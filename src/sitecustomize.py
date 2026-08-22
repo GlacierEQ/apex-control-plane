@@ -6,8 +6,9 @@ When this hook is active, it establishes the same sealed boot session used by
 Operator-fidelity preflight, APEX startup, and the verified runtime kernel.
 
 Verifier CLIs and pytest are excluded so enforcement code can be tested directly.
-Explicit strongest-boot activation is fail-closed: an incomplete boot cannot be
-converted into a merely advisory continuation by this hook.
+Strict runtime startup is fail-closed. Request mode remains a diagnostic lane:
+it may continue only without a strong-boot session or runtime kernel, with all
+execution authorization remaining false.
 """
 from __future__ import annotations
 
@@ -37,6 +38,10 @@ def _is_pytest_startup() -> bool:
     )
 
 
+def _request_mode() -> bool:
+    return os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower() == "request"
+
+
 def _should_boot() -> bool:
     entrypoint = _entrypoint_name()
     if entrypoint in {
@@ -58,7 +63,7 @@ def _should_boot() -> bool:
 
 
 def _record_blocked_startup(exc: BaseException) -> None:
-    """Persist exact recovery evidence before the interpreter terminates."""
+    """Persist exact recovery evidence without granting execution authority."""
     from startup_continuation import emit_startup_continuation, record_startup_continuation
 
     payload = {
@@ -88,7 +93,9 @@ if _should_boot():
         APEX_STRONG_BOOT_SESSION = apply_strongest_boot()
         APEX_RUNTIME_KERNEL = APEX_STRONG_BOOT_SESSION.runtime_kernel
     except SystemExit:
+        # Explicit hard-lock bypass attempts remain terminal even in diagnostic mode.
         raise
     except Exception as exc:
         _record_blocked_startup(exc)
-        raise SystemExit(_BOOT_BLOCKED_EXIT) from None
+        if not _request_mode():
+            raise SystemExit(_BOOT_BLOCKED_EXIT) from None
