@@ -25,15 +25,15 @@ steps:
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
       git diff --exit-code
-      python -m pip install --upgrade pip
-      python -m pip install -r requirements.txt pytest
-      python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
-      python -m py_compile \
+      python3 -m pip install --upgrade pip
+      python3 -m pip install -r requirements.txt pytest
+      python3 -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
+      python3 -m py_compile \
         src/operator_fidelity_lock.py \
         src/operator_fidelity_preflight.py \
         src/control_plane.py \
         src/sitecustomize.py
-      CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+      CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python3 -m pytest -q \
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \
         --junitxml=artifacts/buildkite/operator-fidelity.xml \
@@ -59,8 +59,8 @@ steps:
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
-      python -m pip install --upgrade pip
-      python -m pip install -r requirements.txt ruff mypy pytest
+      python3 -m pip install --upgrade pip
+      python3 -m pip install -r requirements.txt ruff mypy pytest
       ruff check \
         scripts/scan_repos.py \
         src/audit_engine.py \
@@ -78,7 +78,7 @@ steps:
         tests/test_scan_repos.py \
         tests/test_audit_hardening.py
       mypy scripts/scan_repos.py --ignore-missing-imports
-      PYTHONPATH=src:. python -m pytest -q \
+      PYTHONPATH=src:. python3 -m pytest -q \
         tests/test_scan_repos.py \
         tests/test_audit_hardening.py \
         --junitxml=artifacts/buildkite/registry-audit.xml \
@@ -106,7 +106,7 @@ steps:
         artifacts/buildkite/operator-fidelity.xml \
         artifacts/buildkite/registry-audit.xml \
         > artifacts/buildkite/SHA256SUMS
-      python - <<'PY' > artifacts/buildkite/verified-ci-receipt.json
+      python3 - <<'PY' > artifacts/buildkite/verified-ci-receipt.json
       import datetime
       import json
       import os
