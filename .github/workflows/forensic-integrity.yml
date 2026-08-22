@@ -1,0 +1,29 @@
+name: forensic-integrity
+
+on:
+  pull_request:
+    paths:
+      - 'src/forensic_integrity.py'
+      - 'tests/test_forensic_integrity.py'
+      - 'db/migrations/20260822_forensic_integrity_v1.sql'
+      - '.github/workflows/forensic-integrity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test runner
+        run: python -m pip install pytest
+      - name: Compile forensic kernel
+        run: python -m py_compile src/forensic_integrity.py
+      - name: Run forensic integrity tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_forensic_integrity.py
