@@ -86,7 +86,11 @@ def test_catalog_loads_and_prohibits_credential_storage():
         "file.extract_text",
         "file.download_preserve",
     )
-    assert catalog.connectors["github"]["write_operations"]["issue.create"]["enabled"] is False
+    github_issue = catalog.connectors["github"]["write_operations"]["issue.create"]
+    assert github_issue["enabled"] is True
+    assert github_issue["approval_required"] is True
+    assert github_issue["idempotency_required"] is True
+    assert github_issue["terminal_readback_required"] is True
 
 
 def test_read_receipt_is_accepted_as_evidence_not_action_authority():
@@ -143,11 +147,18 @@ def test_build_read_request_only_allows_catalogued_profile_operation():
         )
 
 
-def test_default_write_route_is_inactive_even_with_full_approval_record():
+def test_inactive_write_route_remains_blocked_even_with_full_approval_record():
     catalog = load_connector_catalog(CATALOG_PATH)
 
     with pytest.raises(ConnectorReceiptError, match="inactive"):
-        validate_action_request(action_request(), catalog)
+        validate_action_request(
+            action_request(
+                connector="notion",
+                operation="page.create",
+                target={"parent_page_id": "page-001"},
+            ),
+            catalog,
+        )
 
 
 def test_enabled_write_route_requires_exact_approval_and_stated_consequence(tmp_path):
@@ -195,7 +206,7 @@ def test_runtime_admits_read_receipt_with_safe_audit_details_and_deduplicates():
     assert audit.details["external_action_authorized"] is False
 
 
-def test_action_proposal_remains_non_authorizing_when_route_is_inactive():
+def test_action_proposal_remains_non_authorizing_when_route_is_active():
     catalog = load_connector_catalog(CATALOG_PATH)
 
     proposal = build_action_proposal(
@@ -207,6 +218,6 @@ def test_action_proposal_remains_non_authorizing_when_route_is_inactive():
         catalog=catalog,
     )
 
-    assert proposal["operation_active"] is False
+    assert proposal["operation_active"] is True
     assert proposal["approval_required"] is True
     assert proposal["external_action_authorized"] is False
