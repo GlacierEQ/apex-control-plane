@@ -54,16 +54,17 @@ jobs:
           echo "status=${audit_status}" >> "$GITHUB_OUTPUT"
 
       - name: Verify exact run receipt and local readback
+        id: verify_receipt
         if: always()
         env:
           RUN_DATE: ${{ github.run_id }}
         run: python apex_runner.py --verify-run "${RUN_DATE}"
 
-      - name: Upload immutable receipt bundle
+      - name: Upload exact audit evidence bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: apex-audit-receipt-${{ github.run_id }}
+          name: apex-audit-evidence-${{ github.run_id }}-${{ steps.verify_receipt.outcome }}
           path: |
             audit_log/run_${{ github.run_id }}.json
             audit_log/proof_${{ github.run_id }}.json
@@ -72,7 +73,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish and read back durable audit ledger
-        if: always()
+        if: always() && steps.verify_receipt.outcome == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
@@ -92,6 +93,6 @@ jobs:
             exit 2
           fi
           if [[ "$status" -ne 0 ]]; then
-            echo "Audit completed with status ${status}; exact receipts, artifact persistence, and ledger readback were attempted before propagation." >&2
+            echo "Audit completed with status ${status}; exact receipts, evidence artifact, and verified-ledger publication were attempted before propagation." >&2
             exit "$status"
           fi
