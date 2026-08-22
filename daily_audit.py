@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Compatibility surface for the retired legacy daily audit engine.
 
 All audit behavior delegates to ``src.audit_engine`` through ``apex_runner``. This
