@@ -179,6 +179,14 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
                 raise ConnectorReceiptError(
                     f"connector {name}.{operation} must require exact approval"
                 )
+            if raw_rule.get("idempotency_required") is not True:
+                raise ConnectorReceiptError(
+                    f"connector {name}.{operation} must require idempotency"
+                )
+            if raw_rule.get("terminal_readback_required") is not True:
+                raise ConnectorReceiptError(
+                    f"connector {name}.{operation} must require terminal readback"
+                )
             checked_writes[operation] = dict(raw_rule)
         connectors[name] = {
             "data_class": str(raw_definition["data_class"]),

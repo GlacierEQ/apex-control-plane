@@ -23,6 +23,14 @@ import time
 from typing import Any, Callable, Mapping, Sequence
 from uuid import uuid4
 
+from approved_operation_bridge import (
+    ApprovedConnectorAction,
+    ConnectorExecutionReceipt,
+    action_audit_scope,
+    execution_receipt_audit_details,
+    validate_approved_action_request,
+    validate_execution_receipt,
+)
 from connector_receipts import ConnectorReadReceipt, receipt_audit_details, validate_read_receipt
 
 ENVELOPE_VERSION = "1.0.0"
@@ -541,6 +549,9 @@ class CaseBrainOrchestrator:
     breakers: dict[str, CircuitBreaker] = field(default_factory=dict)
     connector_receipts: list[ConnectorReadReceipt] = field(default_factory=list)
     connector_receipt_index: dict[str, str] = field(default_factory=dict)
+    connector_execution_receipts: list[ConnectorExecutionReceipt] = field(default_factory=list)
+    connector_execution_receipt_index: dict[str, str] = field(default_factory=dict)
+    connector_action_idempotency_index: dict[str, str] = field(default_factory=dict)
 
     def process_event(
         self,
@@ -645,6 +656,70 @@ class CaseBrainOrchestrator:
             "connector": receipt.connector,
             "operation": receipt.operation,
             "external_action_authorized": False,
+        }
+
+    def admit_connector_execution_receipt(
+        self,
+        action_request: Mapping[str, Any],
+        receipt_payload: Mapping[str, Any],
+        catalog: Any,
+        *,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Admit a completed exact-approved provider action without provider content.
+
+        The runtime revalidates the active catalog rule, immutable approval scope, and
+        mutation readiness. A duplicate idempotency key may only name the same approval
+        scope, and a duplicate execution receipt may only repeat its original payload.
+        """
+        action: ApprovedConnectorAction = validate_approved_action_request(
+            action_request,
+            catalog,
+            now=now,
+        )
+        prior_scope = self.connector_action_idempotency_index.get(action.idempotency_key)
+        if prior_scope is not None and prior_scope != action.approval_scope_sha256:
+            raise ValueError("connector action idempotency key collision with different approval scope")
+
+        receipt = validate_execution_receipt(receipt_payload, action)
+        input_sha256 = canonical_sha256(receipt_payload)
+        prior_receipt = self.connector_execution_receipt_index.get(receipt.execution_receipt_id)
+        if prior_receipt is not None:
+            if prior_receipt != input_sha256:
+                raise ValueError("connector execution receipt ID collision with different payload")
+            return {
+                "status": "duplicate",
+                "execution_receipt_id": receipt.execution_receipt_id,
+                "action_request_id": action.action_request_id,
+                "external_action_authorized": True,
+            }
+
+        self.connector_action_idempotency_index[action.idempotency_key] = action.approval_scope_sha256
+        self.connector_execution_receipts.append(receipt)
+        self.connector_execution_receipt_index[receipt.execution_receipt_id] = input_sha256
+        details = execution_receipt_audit_details(receipt, action)
+        self.receipts.append(
+            AuditReceipt(
+                receipt_id=str(uuid4()),
+                trace_id=str(uuid4()),
+                action="admit_connector_execution_receipt",
+                status=receipt.result_state,
+                recorded_at=datetime.now(UTC),
+                input_sha256=canonical_sha256(
+                    {"action": action_audit_scope(action), "receipt": receipt_payload}
+                ),
+                output_sha256=canonical_sha256(details),
+                details=details,
+            )
+        )
+        return {
+            "status": "accepted",
+            "execution_receipt_id": receipt.execution_receipt_id,
+            "action_request_id": action.action_request_id,
+            "connector": action.connector,
+            "operation": action.operation,
+            "result_state": receipt.result_state,
+            "external_action_authorized": True,
         }
 
     def call_connector(

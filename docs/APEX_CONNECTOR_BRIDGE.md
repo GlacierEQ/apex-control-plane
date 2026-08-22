@@ -10,7 +10,7 @@ The connector bridge allows APEX to admit evidence from authenticated session in
 
 The active catalog is [`../config/apex_connector_catalog.json`](../config/apex_connector_catalog.json). It declares the provider, profile, operation, data class, and write policy. The initial profiles support repository integrity, evidence intake, current-source review, knowledge continuity, structured-state review, and API verification.
 
-The first enabled operations are read operations only. GitHub, Dropbox, Google Workspace, Notion, Mem, Supabase, and Postman may provide receipt-backed retrieval when their named catalog operation is requested. Connector credentials remain in the authenticated session environment and never appear in repository source, tests, artifacts, workflow logs, audit receipts, or GitHub Actions configuration.
+GitHub, Dropbox, Google Workspace, Notion, Mem, Supabase, and Postman may provide receipt-backed retrieval when their named catalog operation is requested. The catalog also identifies selected provider mutations that can become available only through the exact-approval action bridge described below. Connector credentials remain in the authenticated session environment and never appear in repository source, tests, artifacts, workflow logs, audit receipts, or GitHub Actions configuration.
 
 ## Read flow
 
@@ -24,16 +24,17 @@ A failed, malformed, stale, unlisted, or action-claiming read receipt is refused
 
 ## External action flow
 
-Every external write remains inactive in the initial catalog. This includes repository changes, issue creation, messages, emails, files, documents, database rows, deployments, signature requests, calendar changes, and any other provider mutation.
+A provider mutation can be considered only when its specific catalog operation is active. Activation does not create standing authority: every use still requires an immutable, exact approval scope, a direct authenticated-host operation plan, and an execution receipt with terminal readback. Provider surfaces whose host mappings have not been verified remain inactive.
 
-A later action can be considered only when all of the following records exist:
+An action can be considered only when all of the following records exist:
 
 1. The specific provider operation is active in the versioned catalog and is marked as requiring approval.
 2. A request names the provider, operation, target, stated consequence, and evidence receipts.
-3. The user has supplied an exact approval record naming the approver, approval time, and approval reference.
-4. The authenticated bridge produces an execution receipt identifying the resulting provider object.
+3. The user has supplied an exact approval record naming the approver, approval time, approval reference, and the SHA-256 digest of the immutable action scope.
+4. The action supplies an idempotency key and passes mutation-readiness evidence, including the necessary preservation, staging, reversibility, and recovery controls.
+5. The authenticated host performs exactly the mapped provider action, then produces an execution receipt and terminal readback observation identifying the resulting provider object.
 
-The bridge contract rejects generic, targetless, missing, or mismatched approval records. Health probes, prior read receipts, system recommendations, and broad prior instructions are not execution authority.
+The bridge contract rejects generic, targetless, stale, missing, or mismatched approval records; reused idempotency keys with different scopes; unsafe database mutation input; missing terminal readback; and incomplete mutation-readiness evidence. Health probes, prior read receipts, system recommendations, and broad prior instructions are not execution authority. The repository itself never invokes a provider. See [Approved Provider-Operation Bridge](APEX_APPROVED_OPERATION_BRIDGE.md) for the complete contract and the safe local operator commands.
 
 ## Operational limits
 
@@ -41,14 +42,16 @@ Scheduled connector writes remain disabled. The connector bridge does not introd
 
 ## Verification
 
-Run the connector receipt regression suite and the audit-hardening suite:
+Run the connector receipt, exact-approval action, and audit-hardening suites:
 
 ```bash
 python -m pytest -q tests/test_connector_receipts.py
+python -m pytest -q tests/test_approved_operation_bridge.py
+python -m pytest -q tests/test_approved_operation_commands.py
 python -m pytest -q tests/test_audit_hardening.py
 ```
 
-The tests prove that catalogued reads can be admitted as non-authorizing evidence; unknown operations, stale receipts, malformed input, and write operations without active rules and exact approval are refused.
+The tests prove that catalogued reads remain non-authorizing evidence; unknown operations, stale receipts, malformed input, inactive mutation routes, scope mismatches, unsafe queries, missing terminal readback, repeated idempotency keys with changed scope, and provider-content leakage are refused.
 
 ## Authenticated-session operation path
 
