@@ -63,7 +63,7 @@ def _json_object(response: Any, *, operation: str) -> dict[str, Any]:
     except ValueError as error:
         raise RuntimeError(f"{operation} returned invalid JSON") from error
     if not isinstance(payload, dict):
-        raise RuntimeError(f"{operation} returned invalid JSON shape")
+        raise TypeError(f"{operation} returned invalid JSON shape")
     return payload
 
 
@@ -76,9 +76,9 @@ def _load_run(run_id: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
     run = log.get("run") if isinstance(log, dict) else None
     if not isinstance(run, dict):
-        raise RuntimeError("audit log is missing run object")
+        raise TypeError("audit log is missing run object")
     if not isinstance(queue, list) or not all(isinstance(item, dict) for item in queue):
-        raise RuntimeError("audit queue must be a list of objects")
+        raise TypeError("audit queue must be a list of objects")
     return run, queue
 
 
@@ -110,8 +110,10 @@ def _entry_body(
         for item in material:
             lines.extend(
                 [
-                    f"- **{item.get('severity', 'unknown')} · {item.get('domain', 'unknown')}**: "
-                    f"{item.get('title', 'untitled')}",
+                    (
+                        f"- **{item.get('severity', 'unknown')} · "
+                        f"{item.get('domain', 'unknown')}**: {item.get('title', 'untitled')}"
+                    ),
                     f"  - Action: {item.get('action', 'unspecified')}",
                 ]
             )
@@ -120,8 +122,10 @@ def _entry_body(
     lines.extend(
         [
             "",
-            "This entry was generated only after local receipt verification and was read back "
-            "from GitHub after publication.",
+            (
+                "This entry was generated only after local receipt verification and was read "
+                "back from GitHub after publication."
+            ),
         ]
     )
     return "\n".join(lines)
@@ -139,14 +143,14 @@ def _find_or_create_ledger(*, base: str, token: str) -> int:
             raise RuntimeError(f"ledger lookup failed: http_status={response.status_code}")
         payload = response.json()
         if not isinstance(payload, list):
-            raise RuntimeError("ledger lookup returned invalid JSON shape")
+            raise TypeError("ledger lookup returned invalid JSON shape")
         existing = next(
             (issue for issue in payload if issue.get("title") == LEDGER_TITLE), None
         )
         if existing is not None:
             number = existing.get("number")
             if not isinstance(number, int):
-                raise RuntimeError("ledger issue is missing a numeric issue number")
+                raise TypeError("ledger issue is missing a numeric issue number")
             return number
         if len(payload) < 100:
             break
@@ -168,7 +172,7 @@ def _find_or_create_ledger(*, base: str, token: str) -> int:
     payload = _json_object(create, operation="ledger creation")
     number = payload.get("number")
     if not isinstance(number, int):
-        raise RuntimeError("created ledger is missing a numeric issue number")
+        raise TypeError("created ledger is missing a numeric issue number")
     return number
 
 
@@ -186,7 +190,7 @@ def _find_run_comment(
             raise RuntimeError(f"ledger comment lookup failed: http_status={response.status_code}")
         payload = response.json()
         if not isinstance(payload, list):
-            raise RuntimeError("ledger comment lookup returned invalid JSON shape")
+            raise TypeError("ledger comment lookup returned invalid JSON shape")
         existing = next(
             (comment for comment in payload if marker in str(comment.get("body") or "")), None
         )
@@ -223,7 +227,7 @@ def _write_and_readback_comment(
     else:
         comment_id = existing.get("id")
         if not isinstance(comment_id, int):
-            raise RuntimeError("existing ledger comment is missing numeric id")
+            raise TypeError("existing ledger comment is missing numeric id")
         write = _request(
             "PATCH",
             f"{base}/issues/comments/{comment_id}",
@@ -236,7 +240,7 @@ def _write_and_readback_comment(
     written = _json_object(write, operation="ledger write")
     comment_id = written.get("id")
     if not isinstance(comment_id, int):
-        raise RuntimeError("ledger write is missing numeric comment id")
+        raise TypeError("ledger write is missing numeric comment id")
 
     readback = _request(
         "GET",
@@ -337,7 +341,14 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         return publish_run(run_id=run_id, token=token, repo=repo)
-    except (AuditInvariantError, RuntimeError, OSError, ValueError, json.JSONDecodeError) as error:
+    except (
+        AuditInvariantError,
+        RuntimeError,
+        TypeError,
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as error:
         print(f"APEX audit ledger failure: {error}")
         return 2
 
