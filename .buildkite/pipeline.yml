@@ -23,7 +23,7 @@ steps:
       set -euo pipefail
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
-      test "$actual" = "$BUILDKITE_COMMIT"
+      test "$$actual" = "$BUILDKITE_COMMIT"
       git diff --exit-code
       python -m pip install --upgrade pip
       python -m pip install -r requirements.txt pytest
@@ -101,7 +101,7 @@ steps:
       set -euo pipefail
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
-      test "$actual" = "$BUILDKITE_COMMIT"
+      test "$$actual" = "$BUILDKITE_COMMIT"
       sha256sum \
         artifacts/buildkite/operator-fidelity.xml \
         artifacts/buildkite/registry-audit.xml \
