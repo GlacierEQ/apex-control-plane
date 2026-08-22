@@ -2,9 +2,9 @@
 """APEX control-plane entrypoint with one mandatory strongest-boot path.
 
 The entrypoint does not assemble startup proofs independently. It requires the
-sealed strong-boot session, which proves all mandatory in-process startup gates
-and creates the verified post-boot runtime kernel before the preserved runtime
-can load.
+sealed strong-boot session, then transfers that exact session and runtime kernel
+to the verified runtime boundary. The preserved runtime implementation is loaded
+as a library behind that boundary rather than executed directly.
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         raise SystemExit(EXIT_BOOT_BLOCKED) from None
 
     runpy.run_path(
-        str(Path(__file__).with_name("control_plane_runtime.py")),
+        str(Path(__file__).with_name("verified_runtime_entrypoint.py")),
         run_name="__main__",
         init_globals={
             "APEX_STRONG_BOOT_SESSION": boot_session,
