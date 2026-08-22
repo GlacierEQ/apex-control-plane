@@ -117,6 +117,26 @@ def test_missing_in_process_validation_fails_closed(monkeypatch) -> None:
     assert get_in_process_strong_boot() is None
 
 
+def test_incomplete_gate_preserves_later_diagnostics_before_block(monkeypatch) -> None:
+    calls = _arm_complete_boot(monkeypatch)
+    state = {"value": None}
+    validation = SimpleNamespace(ok=False, status="continuation_required")
+
+    def incomplete_notion():
+        calls.append("notion_continuity")
+        state["value"] = validation
+        return validation
+
+    monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", incomplete_notion)
+    monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
+
+    with pytest.raises(StrongBootViolation, match="notion_continuity"):
+        apply_strongest_boot()
+
+    assert calls == list(EXPECTED_GATES)
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "blocked"
+
+
 def test_incomplete_gate_fails_before_kernel_creation(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     state = {"value": None}
