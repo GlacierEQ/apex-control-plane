@@ -2,7 +2,7 @@
 
 ## Purpose
 
-APEX now has two authenticated connector transports that must not be confused or permission-unioned:
+APEX has two authenticated connector transports that must not be confused or permission-unioned:
 
 1. `authenticated_session_provider_bridge` is the repository-side host bridge described by `config/apex_connector_catalog.json`.
 2. `authenticated_chatgpt_connectors` is the direct connector transport whose governed route and pipeline state lives in `supabase-backend-ops` and is source-projected by `config/apex_direct_connector_runtime.json`.
@@ -17,7 +17,9 @@ That is not a permission contradiction. It is a transport-scoped capability diff
 
 ## Direct runtime authority
 
-Operational authority is `supabase-backend-ops` (`dyhprklicgewmrimecey`). Route identity comes from `public.connector_route_policy_v3`; runtime state comes from `public.connector_route_runtime_v3`.
+Operational authority is exactly `supabase-backend-ops` project `dyhprklicgewmrimecey`. The source projection validates that project identity and the exact runtime table identities rather than accepting arbitrary nonempty authority strings.
+
+Route identity comes from `public.connector_route_policy_v3`; runtime state comes from `public.connector_route_runtime_v3`.
 
 The pipeline layer installed on 2026-08-22 adds:
 
@@ -30,17 +32,28 @@ The pipeline layer installed on 2026-08-22 adds:
 
 The runtime functions are service-role execution surfaces. `anon` and `authenticated` execution are denied.
 
+Two additional live database integrity gates are installed:
+
+- `connector_pipeline_definitions_v1_definition_hash_matches_check` binds every stored definition hash to the exact `jsonb` behavior stored in Supabase.
+- `connector_pipeline_definitions_v1_acyclic_check` rejects dependency cycles before execution.
+
+A runtime trigger also rejects any pipeline containing a write unless `initiated_by = 'OPERATOR'` and a bound approval reference is present. `OPERATOR` here is the one human proper-name source defined by `AGENTS.md`; it is not a generic runtime role.
+
 ## Promotion invariants
 
 A direct pipeline is not complete merely because connector calls returned success.
 
 - Route policy v3 is binding.
-- Every write carries a bound operator approval reference.
+- Every write carries a bound approval reference issued by `OPERATOR`.
 - A write may become `succeeded`; it cannot self-certify as `verified`.
 - Every write names a terminal readback stage.
 - The readback must use the same connector and the same target object.
 - The readback must depend on the write it verifies.
+- Pipeline dependency graphs must be acyclic.
+- Pipeline definition hashes must match the exact behavior stored in Supabase.
 - Successful stages require request hash, result hash, invocation reference, and source references.
+- Verified receipt identity includes pipeline key, version, definition hash, stage count, verified-read count, succeeded-write count, and zero bad terminals.
+- Every verified write carries per-step `OPERATOR` approval evidence bound to the run, connector, exact target text, and target hash.
 - `failed` or `ambiguous` external outcomes cannot promote to a verified pipeline.
 - Finalization refuses incomplete write/readback pairs.
 
@@ -53,6 +66,10 @@ Pipeline hash: `40691dea85db8d3ca0113d691973a9f0b82cf98ba642e76bea750a1f25fb9aaa
 Run: `b1764a8d-dddd-4c16-a2bc-7e75f9f24f98`
 
 Correlation: `af0c31b1-ed45-4b41-a86e-c63e24b3304e`
+
+Approval source: `OPERATOR`
+
+Approval reference: `conversation:2026-08-22:orchestrate-pipelines`
 
 Path:
 
@@ -78,6 +95,18 @@ Final state: `verified`
 
 Stage proof: 3 verified reads, no writes, 0 failed or ambiguous terminals.
 
+## Production admission enforcement
+
+Transport reconciliation is not a CI-only assertion. These production command paths call `validate_connector_transport_admission(...)` before connector admission or host dispatch:
+
+- `scripts/admit_session_connector_receipts.py`
+- `scripts/prepare_approved_connector_action.py`
+- `scripts/admit_session_connector_execution_receipts.py`
+
+If the transport registry, authority identity, runtime projection, receipt evidence, or protected-main boundary becomes invalid, those commands fail closed before connector work is admitted.
+
+The direct Supabase runtime independently enforces its own definition-hash, acyclic-graph, `OPERATOR` approval, terminal-readback, and service-role boundaries.
+
 ## GitHub branch protection boundary
 
 A direct update to protected `main` was attempted while reconciling the runtime and GitHub rejected it because the repository requires four status checks:
@@ -87,7 +116,7 @@ A direct update to protected `main` was attempted while reconciling the runtime 
 - `Operator fidelity hard stop`
 - `Repository security / 📊 Status`
 
-That protection was not weakened or bypassed. Source reconciliation therefore travels through the repository's required pull-request path.
+That protection was not weakened or bypassed. The source contract requires `github_main_direct_write = blocked_by_required_status_checks`; changing the projection to `allowed` fails validation.
 
 ## Known nonclaims
 
@@ -97,13 +126,18 @@ The source projection also does not replace Supabase operational truth. If the r
 
 ## Validation
 
-`src/direct_connector_runtime_contract.py` validates the registry and runtime projection. The regression suite proves:
+`src/direct_connector_runtime_contract.py` validates the registry and runtime projection. The regression suite proves that:
 
 - permissions cannot be unioned across transports;
-- the verified direct runtime loads with its two pipelines and five governed routes;
-- bridge-side Notion mutation remains inactive while direct-runtime Notion projection authority remains separately represented;
+- registered transport identities cannot drift;
+- the authority project and table identities cannot drift;
+- projected behavior cannot change while retaining a stale runtime definition hash;
+- stored definition text cannot change while retaining a stale hash;
 - writes without terminal readback fail validation;
-- cross-connector readback fails validation;
-- same-connector/different-target readback fails validation;
-- verified-run hash mismatch fails validation; and
+- cross-connector and same-connector/different-target readbacks fail validation;
+- cyclic dependency graphs fail validation even with a consistent replacement hash;
+- receipt pipeline versions and read/write outcome counts must match the referenced pipeline;
+- verified writes require `OPERATOR` approval evidence bound to the exact write target;
+- protected-main state cannot be rewritten as directly writable;
+- bridge-side Notion mutation remains inactive while direct-runtime Notion projection authority remains separately represented; and
 - a registry that permits permission union fails validation.
