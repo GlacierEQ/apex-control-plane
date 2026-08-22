@@ -19,7 +19,7 @@
   },
   "security": {
     "route_policy_v3_is_binding": true,
-    "writes_require_bound_operator_approval": true,
+    "writes_require_bound_OPERATOR_approval": true,
     "writes_cannot_self_certify": true,
     "writes_require_same_connector_same_target_terminal_readback": true,
     "ambiguous_external_outcome_can_never_promote_to_verified": true,
@@ -200,6 +200,26 @@
       "verified_reads": 3,
       "succeeded_writes": 2,
       "bad_terminal": 0,
+      "approval_source": "OPERATOR",
+      "approval_reference": "conversation:2026-08-22:orchestrate-pipelines",
+      "write_approvals": [
+        {
+          "step_id": "append_backend_receipt",
+          "connector_key": "supabase.backend_ops",
+          "target_text": "{\"table\": \"public.connector_upgrade_changelog_v2\", \"project_id\": \"dyhprklicgewmrimecey\", \"receipt_key\": \"apex.direct_control_plane_checkpoint.v1\"}",
+          "target_hash": "31861bceb5a38e75f39887448df141c66c26e7e9686ace3ec04616b71a5473b8",
+          "approval_source": "OPERATOR",
+          "approval_reference": "conversation:2026-08-22:orchestrate-pipelines"
+        },
+        {
+          "step_id": "publish_notion_projection",
+          "connector_key": "notion",
+          "target_text": "{\"page_id\": \"355b1e4f-3223-81de-b8a6-f783a875df5b\"}",
+          "target_hash": "d1565fa0b2c5c12c57965fb6a61d995a043c588f51287f27376946adbd1c0f5a",
+          "approval_source": "OPERATOR",
+          "approval_reference": "conversation:2026-08-22:orchestrate-pipelines"
+        }
+      ],
       "completed_at": "2026-08-22T17:07:06.007338Z"
     },
     {
@@ -213,6 +233,7 @@
       "verified_reads": 3,
       "succeeded_writes": 0,
       "bad_terminal": 0,
+      "write_approvals": [],
       "completed_at": "2026-08-22T17:09:07.783751Z"
     }
   ],
