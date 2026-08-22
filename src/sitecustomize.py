@@ -59,7 +59,7 @@ def _should_boot() -> bool:
     if os.getenv("CASEY_AUTO_BOOT", "0") == "1":
         return True
 
-    return entrypoint == "control_plane.py"
+    return entrypoint in {"control_plane.py", "verified_runtime_entrypoint.py"}
 
 
 def _record_blocked_startup(exc: BaseException) -> None:
@@ -85,6 +85,17 @@ def _record_blocked_startup(exc: BaseException) -> None:
 
 APEX_STRONG_BOOT_SESSION = None
 APEX_RUNTIME_KERNEL = None
+
+# `control_plane_runtime.py` is the preserved implementation library, not an
+# executable authorization boundary. Direct execution would bypass the verified
+# lifecycle wrapper, so it is rejected and callers are routed to control_plane.py.
+if _entrypoint_name() == "control_plane_runtime.py" and not _is_pytest_startup():
+    _record_blocked_startup(
+        RuntimeError(
+            "direct control_plane_runtime execution is disabled; use control_plane.py"
+        )
+    )
+    raise SystemExit(_BOOT_BLOCKED_EXIT)
 
 if _should_boot():
     try:
