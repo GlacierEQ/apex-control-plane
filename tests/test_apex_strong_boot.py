@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
+import runpy
 import sys
 
 import pytest
@@ -91,6 +93,25 @@ def test_strong_boot_is_idempotent_inside_process(monkeypatch) -> None:
 
     assert second is first
     assert calls == list(EXPECTED_GATES)
+
+
+def test_concurrent_first_boot_publishes_one_session_and_kernel(monkeypatch) -> None:
+    calls = _arm_complete_boot(monkeypatch)
+    kernel_calls: list[str] = []
+
+    def kernel_factory():
+        kernel_calls.append("create")
+        return _fake_kernel()
+
+    monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        sessions = list(pool.map(lambda _: apply_strongest_boot(), range(64)))
+
+    assert len({id(session) for session in sessions}) == 1
+    assert len({id(session.runtime_kernel) for session in sessions}) == 1
+    assert calls == list(EXPECTED_GATES)
+    assert kernel_calls == ["create"]
 
 
 def test_session_cannot_be_forged() -> None:
@@ -198,18 +219,92 @@ def test_require_strong_boot_does_not_secretly_run_boot(monkeypatch) -> None:
         require_strong_boot()
 
 
-def test_control_plane_and_sitecustomize_share_one_boot_orchestrator() -> None:
-    control_plane = (SRC / "control_plane.py").read_text(encoding="utf-8")
-    sitecustomize = (SRC / "sitecustomize.py").read_text(encoding="utf-8")
+def test_control_plane_executes_verified_boundary_with_exact_boot_objects(
+    monkeypatch,
+) -> None:
+    kernel = SimpleNamespace(runtime_id="kernel-1")
+    session = SimpleNamespace(session_id="session-1", runtime_kernel=kernel)
+    fake_boot = ModuleType("apex_strong_boot")
+    fake_boot.apply_strongest_boot = lambda: session
+    fake_auto = ModuleType("auto_boot")
+    fake_auto.EXIT_BOOT_BLOCKED = 78
+    monkeypatch.setitem(sys.modules, "apex_strong_boot", fake_boot)
+    monkeypatch.setitem(sys.modules, "auto_boot", fake_auto)
 
-    assert "apply_strongest_boot" in control_plane
-    assert "apply_strongest_boot" in sitecustomize
-    for legacy_stage in (
-        "automatic_notion_continuity_preflight",
-        "automatic_prime_directive_boot",
-        "automatic_operator_fidelity_lock",
-        "automatic_operator_fidelity_preflight",
-        "automatic_apex_enforced_startup",
-    ):
-        assert legacy_stage not in control_plane
-        assert legacy_stage not in sitecustomize
+    captured: dict[str, object] = {}
+
+    def fake_run_path(path, *, run_name, init_globals):
+        captured["path"] = str(path)
+        captured["run_name"] = run_name
+        captured["init_globals"] = init_globals
+        return {}
+
+    monkeypatch.setattr(runpy, "run_path", fake_run_path)
+    target = SRC / "control_plane.py"
+    namespace = {"__name__": "__main__", "__file__": str(target)}
+    exec(compile(target.read_text(encoding="utf-8"), str(target), "exec"), namespace)
+
+    assert captured["path"].endswith("verified_runtime_entrypoint.py")
+    assert captured["run_name"] == "__main__"
+    injected = captured["init_globals"]
+    assert injected["APEX_STRONG_BOOT_SESSION"] is session
+    assert injected["APEX_RUNTIME_KERNEL"] is kernel
+
+
+def test_control_plane_blocks_before_runtime_when_strong_boot_fails(
+    monkeypatch, capsys
+) -> None:
+    fake_boot = ModuleType("apex_strong_boot")
+
+    def fail_boot():
+        raise RuntimeError("boot proof missing")
+
+    fake_boot.apply_strongest_boot = fail_boot
+    fake_auto = ModuleType("auto_boot")
+    fake_auto.EXIT_BOOT_BLOCKED = 78
+    monkeypatch.setitem(sys.modules, "apex_strong_boot", fake_boot)
+    monkeypatch.setitem(sys.modules, "auto_boot", fake_auto)
+
+    called = {"runtime": False}
+
+    def forbidden_run_path(*args, **kwargs):
+        called["runtime"] = True
+        raise AssertionError("runtime must not load")
+
+    monkeypatch.setattr(runpy, "run_path", forbidden_run_path)
+    target = SRC / "control_plane.py"
+    namespace = {"__name__": "__main__", "__file__": str(target)}
+
+    with pytest.raises(SystemExit) as exc_info:
+        exec(compile(target.read_text(encoding="utf-8"), str(target), "exec"), namespace)
+
+    assert exc_info.value.code == 78
+    assert called["runtime"] is False
+    assert '"strong_boot_status": "blocked"' in capsys.readouterr().err
+
+
+def test_sitecustomize_executes_same_strong_boot_session(monkeypatch) -> None:
+    kernel = SimpleNamespace(runtime_id="kernel-site")
+    session = SimpleNamespace(session_id="session-site", runtime_kernel=kernel)
+    fake_boot = ModuleType("apex_strong_boot")
+    calls: list[str] = []
+
+    def fake_apply():
+        calls.append("boot")
+        return session
+
+    fake_boot.apply_strongest_boot = fake_apply
+    monkeypatch.setitem(sys.modules, "apex_strong_boot", fake_boot)
+    monkeypatch.setattr(sys, "argv", [str(SRC / "verified_runtime_entrypoint.py")])
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.delenv("CASEY_AUTO_BOOT_TESTING", raising=False)
+    monkeypatch.delenv("CASEY_AUTO_BOOT", raising=False)
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+
+    target = SRC / "sitecustomize.py"
+    namespace = {"__name__": "sitecustomize_test", "__file__": str(target)}
+    exec(compile(target.read_text(encoding="utf-8"), str(target), "exec"), namespace)
+
+    assert calls == ["boot"]
+    assert namespace["APEX_STRONG_BOOT_SESSION"] is session
+    assert namespace["APEX_RUNTIME_KERNEL"] is kernel
