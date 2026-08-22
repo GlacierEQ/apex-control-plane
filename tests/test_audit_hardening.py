@@ -72,13 +72,14 @@ def test_secret_scan_excludes_generated_history_and_redacts_values(tmp_path):
 def test_secret_scan_covers_password_xai_notion_and_private_key_forms(tmp_path):
     source = tmp_path / "config"
     source.mkdir()
+    password_key = "DB_" + "PASSWORD"
     password_value = "hunter" + "123"
     xai_key = "xai-" + ("X" * 24)
     legacy_notion = "secret_" + ("N" * 24)
     private_key_header = ("-" * 5) + "BEGIN RSA PRIVATE KEY" + ("-" * 5)
     (source / ".env.local").write_text(
         (
-            f"DB_PASSWORD={password_value}\n"
+            f"{password_key}={password_value}\n"
             f"XAI_API_KEY={xai_key}\n"
             f"NOTION_TOKEN={legacy_notion}\n"
         ),
@@ -152,6 +153,32 @@ def test_persist_and_verify_are_run_exact_atomic_and_digest_bound(tmp_path):
     assert not list(tmp_path.rglob("*.tmp"))
 
 
+def test_queue_preserves_evidence_and_recommendation_provenance(tmp_path):
+    finding = apex_runner.Finding(
+        severity="P1",
+        domain="cicd",
+        title="Unsafe token source",
+        evidence="Observed assignment used a literal token alias",
+        action="Replace it with an approved GitHub expression",
+    )
+    run = apex_runner.AuditRun(
+        run_id="provenance",
+        started_at="2026-08-22T16:00:00Z",
+        completed_at="2026-08-22T16:00:01Z",
+        status="findings",
+        findings=[finding],
+        p1_count=1,
+    )
+    _, queue_path, _ = apex_runner.persist_run(run, tmp_path)
+    item = json.loads(queue_path.read_text(encoding="utf-8"))[0]
+    assert item["evidence"] == finding.evidence
+    assert item["evidence_state"] == "OBSERVED"
+    assert item["evidence_source_class"] == "EVIDENCE"
+    assert item["action"] == finding.action
+    assert item["action_state"] == "PROPOSED"
+    assert item["action_source_class"] == "AGENT"
+
+
 def test_readback_rejects_tampered_log(tmp_path):
     run = apex_runner.AuditRun(
         run_id="tamper",
@@ -170,6 +197,27 @@ def test_readback_rejects_tampered_log(tmp_path):
         assert "digest mismatch" in str(error)
     else:
         raise AssertionError("tampered audit log passed readback")
+
+
+def test_readback_rejects_proof_source_sha_mismatch(tmp_path):
+    run = apex_runner.AuditRun(
+        run_id="source-bind",
+        started_at="2026-08-22T16:00:00Z",
+        completed_at="2026-08-22T16:00:01Z",
+        source_sha="expected-sha",
+        status="clean",
+    )
+    _, _, proof_path = apex_runner.persist_run(run, tmp_path)
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["source_sha"] = "wrong-sha"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    try:
+        apex_runner.verify_run_receipt("source-bind", tmp_path)
+    except apex_runner.AuditInvariantError as error:
+        assert "source_sha mismatch" in str(error)
+    else:
+        raise AssertionError("source identity mismatch passed readback")
 
 
 def test_execute_audit_persists_then_reads_back(tmp_path, monkeypatch):
@@ -246,12 +294,21 @@ class _FakeGitHubRequests:
 
 def test_audit_ledger_is_exact_idempotent_and_read_back(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    finding = apex_runner.Finding(
+        severity="P1",
+        domain="cicd",
+        title="Unsafe token source",
+        evidence="Observed assignment used a literal token alias",
+        action="Replace it with an approved GitHub expression",
+    )
     run = apex_runner.AuditRun(
         run_id="123",
         started_at="2026-08-22T16:00:00Z",
         completed_at="2026-08-22T16:00:01Z",
         source_sha="deadbeef",
-        status="clean",
+        status="findings",
+        findings=[finding],
+        p1_count=1,
     )
     apex_runner.persist_run(run)
     fake = _FakeGitHubRequests()
@@ -264,6 +321,8 @@ def test_audit_ledger_is_exact_idempotent_and_read_back(tmp_path, monkeypatch):
     assert "<!-- apex-audit-run:123 -->" in only_comment["body"]
     assert "deadbeef" in only_comment["body"]
     assert "External action authorized by audit:** `false`" in only_comment["body"]
+    assert "Evidence [OBSERVED / EVIDENCE]" in only_comment["body"]
+    assert "Recommended action [PROPOSED / AGENT]" in only_comment["body"]
 
     assert apex_issue_writer.publish_run(run_id="123", token="token", repo="x/y") == 0
     assert len(fake.issues) == 1
