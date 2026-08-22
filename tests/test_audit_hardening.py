@@ -106,7 +106,7 @@ def test_daily_secret_scan_covers_env_variants_uppercase_and_private_keys(tmp_pa
 def test_secret_scanners_cover_password_configuration_forms(tmp_path):
     source = tmp_path / "config"
     source.mkdir()
-    password_value = "hunter" + "123"
+    password_value = "".join(("hunter", "123"))
     env_key = "DB_" + "PASSWORD"
     yaml_key = "pass" + "word"
     json_key = '"' + yaml_key + '"'
