@@ -37,18 +37,17 @@ jobs:
         run: python -m pytest -q
       - name: Synthetic read-only smoke test in explicit degraded mode
         run: |
+          set +e
           CASEY_AUTO_BOOT_MODE=request \
           python src/control_plane.py \
             > /tmp/casebrain-smoke.json \
             2> /tmp/casebrain-boot-request.json
+          exit_code=$?
+          set -e
+          test "$exit_code" -eq 78
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/casebrain-boot-request.json
           grep -q 'ground_truth_files_loaded' /tmp/casebrain-boot-request.json
           grep -q 'tool_inventory' /tmp/casebrain-boot-request.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          result = json.loads(Path('/tmp/casebrain-smoke.json').read_text())
-          assert result['status'] == 'completed'
-          assert result['human_review_required'] is True
-          assert result['external_action_authorized'] is False
-          PY
+          grep -q '"status": "continuation_required"' /tmp/casebrain-boot-request.json
+          grep -q '"runtime_authorized": false' /tmp/casebrain-boot-request.json
+          grep -q '"external_action_authorized": false' /tmp/casebrain-boot-request.json
