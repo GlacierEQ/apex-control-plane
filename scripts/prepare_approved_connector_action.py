@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Prepare one exact-approved APEX provider-operation plan.
 
 This command validates a local action-request JSON document against the active catalog
@@ -8,12 +7,13 @@ load a credential, schedule work, or retain provider content.
 from __future__ import annotations
 
 import argparse
+import json
+import sys
+from collections.abc import Mapping
 from dataclasses import asdict
 from datetime import UTC, datetime
-import json
 from pathlib import Path
-import sys
-from typing import Any, Mapping
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
