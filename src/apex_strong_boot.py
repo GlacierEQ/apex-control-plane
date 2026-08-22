@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 import os
+from threading import RLock
 from typing import Any, Callable
 from uuid import uuid4
 
@@ -48,6 +49,7 @@ EXPECTED_GATES = (
     "apex_startup",
 )
 _SESSION_SEAL = object()
+_BOOT_LOCK = RLock()
 _IN_PROCESS: StrongBootSession | None = None
 
 
@@ -82,18 +84,23 @@ class StrongBootSession:
 
 
 def get_in_process_strong_boot() -> StrongBootSession | None:
-    return _IN_PROCESS
+    with _BOOT_LOCK:
+        return _IN_PROCESS
 
 
 def apply_strongest_boot() -> StrongBootSession:
     """Run or recover the one complete APEX boot path and return its sealed session.
 
-    The function is idempotent inside a process. No caller-controlled environment
-    status can satisfy a stage. Every diagnostic gate is allowed to emit its own
-    recovery request before the aggregate boot blocks, so stronger composition
-    does not erase the complete repair surface that existed before this module.
-    The runtime kernel is created only if every gate is complete.
+    The complete check-to-create-to-publish sequence is serialized. Concurrent
+    callers therefore observe one process-owned session and one runtime kernel,
+    and startup side effects execute at most once after a successful first boot.
     """
+    with _BOOT_LOCK:
+        return _apply_strongest_boot_locked()
+
+
+def _apply_strongest_boot_locked() -> StrongBootSession:
+    """Build the strong-boot session while `_BOOT_LOCK` is held."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
         _validate_existing_session(_IN_PROCESS)
@@ -164,11 +171,12 @@ def apply_strongest_boot() -> StrongBootSession:
 
 def require_strong_boot() -> StrongBootSession:
     """Return the current complete session or fail closed without running boot."""
-    session = get_in_process_strong_boot()
-    if session is None:
-        raise StrongBootViolation("strong boot session has not been established")
-    _validate_existing_session(session)
-    return session
+    with _BOOT_LOCK:
+        session = _IN_PROCESS
+        if session is None:
+            raise StrongBootViolation("strong boot session has not been established")
+        _validate_existing_session(session)
+        return session
 
 
 def _validate_existing_session(session: StrongBootSession) -> None:
