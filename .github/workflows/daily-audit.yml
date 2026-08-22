@@ -24,10 +24,13 @@ jobs:
           python-version: '3.12'
 
       - name: Run APEX Daily Audit
+        id: audit
         env:
           APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}
           APEX_NOTION_TOKEN: ${{ secrets.APEX_NOTION_TOKEN }}
-        run: python daily_audit.py
+        run: |
+          echo "started_at=$(date -u '+%Y%m%d_%H%M%S')" >> "$GITHUB_OUTPUT"
+          python daily_audit.py
 
       - name: Commit audit log
         run: |
@@ -40,14 +43,34 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Open GitHub Issue for P0 findings
-        if: always()
         uses: actions/github-script@v7
+        env:
+          STARTED_AT: ${{ steps.audit.outputs.started_at }}
         with:
           script: |
             const fs = require('fs');
-            const files = fs.readdirSync('audit_logs').sort().reverse();
-            if (!files.length) return;
-            const log = JSON.parse(fs.readFileSync('audit_logs/' + files[0]));
+
+            // Only accept a log this run actually produced. If daily_audit.py stops
+            // writing one, fail the job instead of re-filing whatever log is newest
+            // on disk — that is how #45-#56 got replayed for ten days straight.
+            const files = fs.readdirSync('audit_logs')
+              .filter(name => /^run_\d{8}_\d{6}\.json$/.test(name))
+              .sort();
+            const newest = files[files.length - 1];
+            if (!newest) {
+              core.setFailed('daily_audit.py wrote no audit log.');
+              return;
+            }
+            const log = JSON.parse(fs.readFileSync('audit_logs/' + newest, 'utf8'));
+            const runId = log.run && log.run.run_id;
+            if (!runId || runId < process.env.STARTED_AT) {
+              core.setFailed(
+                `Newest audit log ${newest} (run_id=${runId}) predates this run ` +
+                `(started ${process.env.STARTED_AT}); refusing to re-file a stale finding.`
+              );
+              return;
+            }
+
             const p0 = log.action_queue.immediate;
             if (!p0.length) {
               console.log('No P0 findings. No issue created.');
@@ -56,6 +79,27 @@ jobs:
             const body = p0.map(f =>
               `### ${f.severity} — ${f.domain}: ${f.title}\n**Evidence:** ${f.evidence}\n**Action:** ${f.action}`
             ).join('\n\n');
+
+            // One rolling issue: a finding that persists for N days gets N comments,
+            // not N issues.
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'auto-audit',
+              per_page: 1
+            });
+            if (open.data.length) {
+              const existing = open.data[0].number;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing,
+                body: `Still present as of audit run \`${runId}\`:\n\n${body}`
+              });
+              console.log(`Commented on existing #${existing} instead of opening a duplicate.`);
+              return;
+            }
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,

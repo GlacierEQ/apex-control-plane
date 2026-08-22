@@ -267,3 +267,7 @@ def main() -> AuditRun:
             log(f"    ACTION: {finding['action']}")
 
     return run
+
+
+if __name__ == "__main__":
+    main()
