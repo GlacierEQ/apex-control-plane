@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "catalog_id": "apex-connector-catalog",
-  "version": 1,
+  "version": 2,
   "profiles": {
     "repository_integrity": ["github"],
     "evidence_intake": ["dropbox"],
@@ -22,8 +22,8 @@
         "issue.read"
       ],
       "write_operations": {
-        "issue.create": {"enabled": false, "approval_required": true},
-        "pull_request.create": {"enabled": false, "approval_required": true}
+        "issue.create": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "pull_request.create": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true}
       }
     },
     "dropbox": {
@@ -35,7 +35,10 @@
         "file.extract_text",
         "file.download_preserve"
       ],
-      "write_operations": {}
+      "write_operations": {
+        "file.upload": {"enabled": false, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "file.move": {"enabled": false, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true}
+      }
     },
     "google_workspace": {
       "data_class": "current_source",
@@ -45,24 +48,35 @@
         "spreadsheet.read",
         "presentation.read"
       ],
-      "write_operations": {}
+      "write_operations": {
+        "document.create": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "document.update": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true}
+      }
     },
     "notion": {
       "data_class": "knowledge_record",
       "read_operations": ["page.search", "page.read", "database.read"],
-      "write_operations": {}
+      "write_operations": {
+        "page.create": {"enabled": false, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "page.update": {"enabled": false, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true}
+      }
     },
     "mem": {
       "data_class": "continuity_record",
       "read_operations": ["record.search", "record.read"],
-      "write_operations": {}
+      "write_operations": {
+        "note.create": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "note.update": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "collection.create": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "collection.update": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true}
+      }
     },
     "supabase": {
       "data_class": "structured_state",
       "read_operations": ["schema.read", "table.read", "query.read"],
       "write_operations": {
-        "row.insert": {"enabled": false, "approval_required": true},
-        "row.update": {"enabled": false, "approval_required": true}
+        "row.insert": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "row.update": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true}
       }
     },
     "postman": {
@@ -73,7 +87,12 @@
         "spec.read",
         "monitor.read"
       ],
-      "write_operations": {}
+      "write_operations": {
+        "collection.create": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "collection.update": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "spec.create": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true},
+        "monitor.create": {"enabled": true, "approval_required": true, "idempotency_required": true, "terminal_readback_required": true}
+      }
     }
   },
   "security": {
