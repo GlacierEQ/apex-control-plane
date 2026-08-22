@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """CLI for the evidence-led APEX audit engine."""
 from __future__ import annotations
 
@@ -14,21 +13,21 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from audit_engine import (  # noqa: E402
-    AuditInvariantError,
-    AuditReadback,
-    AuditRun,
-    ConnectorStatus,
-    Finding,
-    analyze_structure,
-    detect_workflow_drift,
-    execute_audit,
-    persist_run,
-    scan_for_secrets,
-    should_scan_secret_file,
-    validate_connectors,
-    verify_run_receipt,
-)
+import audit_engine as _engine
+
+AuditInvariantError = _engine.AuditInvariantError
+AuditReadback = _engine.AuditReadback
+AuditRun = _engine.AuditRun
+ConnectorStatus = _engine.ConnectorStatus
+Finding = _engine.Finding
+analyze_structure = _engine.analyze_structure
+detect_workflow_drift = _engine.detect_workflow_drift
+execute_audit = _engine.execute_audit
+persist_run = _engine.persist_run
+scan_for_secrets = _engine.scan_for_secrets
+should_scan_secret_file = _engine.should_scan_secret_file
+validate_connectors = _engine.validate_connectors
+verify_run_receipt = _engine.verify_run_receipt
 
 APEX_VERSION = "4.0.0-evidence-led"
 
