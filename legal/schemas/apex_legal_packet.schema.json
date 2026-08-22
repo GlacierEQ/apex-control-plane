@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://glaciereq.local/schemas/apex-legal-packet.schema.json",
+  "title": "APEX Legal Analysis Packet",
+  "type": "object",
+  "required": ["matter_id", "generated_at", "allegations", "evidence", "chronology", "authorities", "actors", "remedies", "proof_gaps"],
+  "properties": {
+    "matter_id": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "allegations": {"type": "array", "items": {"$ref": "#/$defs/allegation"}},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "chronology": {"type": "array", "items": {"$ref": "#/$defs/event"}},
+    "contradictions": {"type": "array", "items": {"$ref": "#/$defs/contradiction"}},
+    "authorities": {"type": "array", "items": {"$ref": "#/$defs/authority"}},
+    "actors": {"type": "array", "items": {"$ref": "#/$defs/actor"}},
+    "remedies": {"type": "array", "items": {"$ref": "#/$defs/remedy"}},
+    "proof_gaps": {"type": "array", "items": {"$ref": "#/$defs/proof_gap"}},
+    "preservation_targets": {"type": "array", "items": {"$ref": "#/$defs/preservation_target"}}
+  },
+  "$defs": {
+    "allegation": {
+      "type": "object",
+      "required": ["id", "label", "status", "elements", "evidence_ids"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "status": {"enum": ["FACT", "SOURCE_STATEMENT", "INFERENCE", "ALLEGATION", "LEGAL_THEORY"]},
+        "elements": {"type": "array", "items": {"type": "object", "required": ["name", "supporting_evidence_ids", "contrary_evidence_ids", "proof_gap_ids"], "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "supporting_evidence_ids": {"type": "array", "items": {"type": "string"}},
+          "contrary_evidence_ids": {"type": "array", "items": {"type": "string"}},
+          "proof_gap_ids": {"type": "array", "items": {"type": "string"}}
+        }}},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}},
+        "actor_ids": {"type": "array", "items": {"type": "string"}},
+        "authority_ids": {"type": "array", "items": {"type": "string"}},
+        "remedy_ids": {"type": "array", "items": {"type": "string"}},
+        "event_ids": {"type": "array", "items": {"type": "string"}},
+        "notes": {"type": "string"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["id", "kind", "source", "provenance", "verification_state"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "provenance": {"type": "string", "minLength": 1},
+        "verification_state": {"enum": ["OBSERVED", "INFERRED", "HYPOTHESIZED", "PROPOSED", "ATTEMPTED", "EXECUTED", "VERIFIED"]},
+        "captured_at": {"type": ["string", "null"]},
+        "hash": {"type": ["string", "null"]},
+        "custodian": {"type": ["string", "null"]},
+        "notes": {"type": "string"}
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "time_basis", "description", "source_evidence_ids"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "timestamp": {"type": ["string", "null"]},
+        "time_basis": {"enum": ["EXACT", "ESTIMATED", "RANGE", "UNKNOWN"]},
+        "description": {"type": "string", "minLength": 1},
+        "actor_ids": {"type": "array", "items": {"type": "string"}},
+        "source_evidence_ids": {"type": "array", "items": {"type": "string"}},
+        "legal_effect": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "contradiction": {
+      "type": "object",
+      "required": ["id", "left_source_id", "right_source_id", "issue"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "left_source_id": {"type": "string", "minLength": 1},
+        "right_source_id": {"type": "string", "minLength": 1},
+        "issue": {"type": "string", "minLength": 1},
+        "resolution_state": {"enum": ["OPEN", "PARTIALLY_RECONCILED", "RECONCILED", "IMPEACHMENT_TARGET"]},
+        "downstream_effect": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "required": ["id", "citation", "authority_type", "temporal_fit"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "citation": {"type": "string", "minLength": 1},
+        "authority_type": {"enum": ["CONSTITUTION", "STATUTE", "RULE", "CASE", "ORDER", "REGULATION", "POLICY", "OTHER"]},
+        "temporal_fit": {"enum": ["GOVERNING_AT_EVENT", "CURRENT_ONLY", "HISTORICAL_ONLY", "UNKNOWN"]},
+        "effective_from": {"type": ["string", "null"]},
+        "effective_to": {"type": ["string", "null"]},
+        "proposition": {"type": "string"},
+        "source_url": {"type": ["string", "null"]},
+        "verified": {"type": "boolean"}
+      }
+    },
+    "actor": {
+      "type": "object",
+      "required": ["id", "name_or_role", "responsibility_modes"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name_or_role": {"type": "string", "minLength": 1},
+        "responsibility_modes": {"type": "array", "items": {"enum": ["DIRECT", "DIRECTED", "APPROVED", "RATIFIED", "FAILED_TO_INTERVENE", "SUPERVISED", "TRAINED", "POLICY_CUSTOM", "RECORD_CUSTODIAN", "ENTITY"]}},
+        "event_ids": {"type": "array", "items": {"type": "string"}},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "remedy": {
+      "type": "object",
+      "required": ["id", "type", "basis"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"type": "string", "minLength": 1},
+        "basis": {"type": "string", "minLength": 1},
+        "authority_ids": {"type": "array", "items": {"type": "string"}},
+        "allegation_ids": {"type": "array", "items": {"type": "string"}},
+        "proof_required": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "proof_gap": {
+      "type": "object",
+      "required": ["id", "description", "target_type"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1},
+        "target_type": {"enum": ["RETRIEVAL", "DISCOVERY", "PRESERVATION", "AUTHORITY_CHECK", "IDENTITY", "TIMELINE", "DAMAGES", "OTHER"]},
+        "target": {"type": "string"},
+        "priority": {"enum": ["P0", "P1", "P2", "P3"]}
+      }
+    },
+    "preservation_target": {
+      "type": "object",
+      "required": ["id", "description", "custodian_or_system"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1},
+        "custodian_or_system": {"type": "string", "minLength": 1},
+        "retention_risk": {"enum": ["IMMEDIATE", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]},
+        "requested_at": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
