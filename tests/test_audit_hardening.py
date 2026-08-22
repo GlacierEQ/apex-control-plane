@@ -186,8 +186,7 @@ def test_issue_writer_uses_only_exact_queue(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     assert (
-        apex_issue_writer.publish_run(run_id="123", token="test-token", repo="x/y")
-        == 0
+        apex_issue_writer.publish_run(run_id="123", token="test-token", repo="x/y") == 0
     )
 
 
