@@ -110,6 +110,21 @@ jobs:
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/strong.err
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/strong.err
 
+      - name: Prove strict Python auto-boot preserves blocked exit code
+        shell: bash
+        run: |
+          set +e
+          PYTHONPATH=src \
+          CASEY_AUTO_BOOT=1 \
+          CASEY_AUTO_BOOT_MODE=strict \
+          python -c 'print("RAN")' >/tmp/site.out 2>/tmp/site.err
+          status=$?
+          set -e
+          test "$status" -eq 78
+          test ! -s /tmp/site.out
+          grep -q 'glaciereq_notion_continuity_preflight' /tmp/site.err
+          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/site.err
+
       - name: Prove legacy runtime cannot bypass verified boundary
         shell: bash
         run: |
