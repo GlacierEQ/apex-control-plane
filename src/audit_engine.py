@@ -4,6 +4,7 @@ The engine observes repository and connector state, persists one run-specific re
 and immediately reads that receipt back before a run can be considered complete.
 Connector probes never authorize external action.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -167,7 +168,9 @@ def validate_connectors() -> list[ConnectorStatus]:
                     notes=f"repository={payload.get('full_name', github_repo)}",
                 )
             elif response.status_code == 200:
-                github = ConnectorStatus(name="GitHub", declared=True, notes="invalid_json_response")
+                github = ConnectorStatus(
+                    name="GitHub", declared=True, notes="invalid_json_response"
+                )
             else:
                 github = ConnectorStatus(
                     name="GitHub", declared=True, notes=f"http_status={response.status_code}"
@@ -175,7 +178,9 @@ def validate_connectors() -> list[ConnectorStatus]:
         except requests.RequestException as error:
             github = ConnectorStatus(name="GitHub", declared=True, notes=str(error))
     elif github_token:
-        github = ConnectorStatus(name="GitHub", declared=True, notes="requests dependency unavailable")
+        github = ConnectorStatus(
+            name="GitHub", declared=True, notes="requests dependency unavailable"
+        )
     statuses.append(github)
 
     notion_token = os.environ.get("NOTION_TOKEN", "")
@@ -201,7 +206,9 @@ def validate_connectors() -> list[ConnectorStatus]:
         except requests.RequestException as error:
             notion = ConnectorStatus(name="Notion", declared=True, notes=str(error))
     elif notion_token:
-        notion = ConnectorStatus(name="Notion", declared=True, notes="requests dependency unavailable")
+        notion = ConnectorStatus(
+            name="Notion", declared=True, notes="requests dependency unavailable"
+        )
     statuses.append(notion)
 
     supabase_url = os.environ.get("SUPABASE_URL", "")
@@ -236,7 +243,10 @@ def validate_connectors() -> list[ConnectorStatus]:
 
 
 CREDENTIAL_PATTERNS = (
-    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b")),
+    (
+        "GitHub token",
+        re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\b"),
+    ),
     ("OpenAI-style API key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
     ("xAI API key", re.compile(r"\bxai-[A-Za-z0-9_-]{20,}\b")),
     ("Notion token", re.compile(r"\bntn_[A-Za-z0-9]{20,}\b")),
@@ -245,9 +255,14 @@ CREDENTIAL_PATTERNS = (
     ("Stripe live key", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
     (
         "JWT credential",
-        re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b"),
+        re.compile(
+            r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b"
+        ),
     ),
-    ("private key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
+    (
+        "private key",
+        re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+    ),
     (
         "password assignment",
         re.compile(
@@ -287,6 +302,16 @@ SECRET_SCAN_SUFFIXES = {
     ".conf",
 }
 TOKEN_ASSIGNMENT = re.compile(r"(?m)^\s*GITHUB_TOKEN\s*:\s*(?P<value>.+?)\s*$")
+APPROVED_TOKEN_EXPRESSION = re.compile(
+    r"\$\{\{\s*(?:secrets\.[A-Za-z_][A-Za-z0-9_]*|github\.token|env\.GITHUB_TOKEN)\s*\}\}"
+)
+
+
+def _is_approved_token_source(value: str) -> bool:
+    candidate = value.strip()
+    if len(candidate) >= 2 and candidate[0] == candidate[-1] and candidate[0] in {"'", '"'}:
+        candidate = candidate[1:-1].strip()
+    return APPROVED_TOKEN_EXPRESSION.fullmatch(candidate) is not None
 
 
 def should_scan_secret_file(filename: str) -> bool:
@@ -331,7 +356,6 @@ def detect_workflow_drift(root: str = ".") -> list[Finding]:
     workflow_dir = Path(root) / ".github" / "workflows"
     if not workflow_dir.is_dir():
         return []
-    accepted_token_sources = ("secrets.", "github.token", "env.GITHUB_TOKEN")
     findings: list[Finding] = []
     for file_path in sorted(workflow_dir.iterdir()):
         if not file_path.is_file():
@@ -342,7 +366,7 @@ def detect_workflow_drift(root: str = ".") -> list[Finding]:
             continue
         for match in TOKEN_ASSIGNMENT.finditer(content):
             value = match.group("value")
-            if any(source in value for source in accepted_token_sources):
+            if _is_approved_token_source(value):
                 continue
             line_number = content.count("\n", 0, match.start()) + 1
             findings.append(
@@ -360,9 +384,27 @@ def detect_workflow_drift(root: str = ".") -> list[Finding]:
 def analyze_structure(root: str = ".") -> list[Finding]:
     base = Path(root)
     checks = (
-        (".env.example", "P1", "security", "Missing .env.example", "Create .env.example with variable names only"),
-        (".gitignore", "P1", "security", "Missing .gitignore", "Create a comprehensive .gitignore"),
-        ("README.md", "P2", "documentation", "Missing README.md", "Create repository documentation"),
+        (
+            ".env.example",
+            "P1",
+            "security",
+            "Missing .env.example",
+            "Create .env.example with variable names only",
+        ),
+        (
+            ".gitignore",
+            "P1",
+            "security",
+            "Missing .gitignore",
+            "Create a comprehensive .gitignore",
+        ),
+        (
+            "README.md",
+            "P2",
+            "documentation",
+            "Missing README.md",
+            "Create repository documentation",
+        ),
     )
     findings: list[Finding] = []
     for relative, severity, domain, title, action in checks:
