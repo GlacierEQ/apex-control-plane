@@ -35,7 +35,10 @@ steps:
         src/operator_fidelity_preflight.py \
         src/control_plane.py \
         src/direct_connector_runtime_contract.py \
-        src/sitecustomize.py
+        src/sitecustomize.py \
+        scripts/admit_session_connector_receipts.py \
+        scripts/prepare_approved_connector_action.py \
+        scripts/admit_session_connector_execution_receipts.py
       CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python3 -m pytest -q \
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \
@@ -67,6 +70,9 @@ steps:
       python3 -m pip install -r requirements.txt ruff mypy pytest
       ruff check \
         scripts/scan_repos.py \
+        scripts/admit_session_connector_receipts.py \
+        scripts/prepare_approved_connector_action.py \
+        scripts/admit_session_connector_execution_receipts.py \
         src/audit_engine.py \
         src/direct_connector_runtime_contract.py \
         apex_runner.py \
@@ -77,6 +83,9 @@ steps:
         tests/test_direct_connector_runtime_contract.py
       ruff format --check \
         scripts/scan_repos.py \
+        scripts/admit_session_connector_receipts.py \
+        scripts/prepare_approved_connector_action.py \
+        scripts/admit_session_connector_execution_receipts.py \
         src/audit_engine.py \
         src/direct_connector_runtime_contract.py \
         apex_runner.py \
@@ -85,7 +94,13 @@ steps:
         tests/test_scan_repos.py \
         tests/test_audit_hardening.py \
         tests/test_direct_connector_runtime_contract.py
-      mypy scripts/scan_repos.py src/direct_connector_runtime_contract.py --ignore-missing-imports
+      mypy \
+        scripts/scan_repos.py \
+        scripts/admit_session_connector_receipts.py \
+        scripts/prepare_approved_connector_action.py \
+        scripts/admit_session_connector_execution_receipts.py \
+        src/direct_connector_runtime_contract.py \
+        --ignore-missing-imports
       PYTHONPATH=src:. python3 -m pytest -q \
         tests/test_scan_repos.py \
         tests/test_audit_hardening.py \
