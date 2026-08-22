@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "catalog_id": "apex-connector-catalog",
+  "version": 1,
+  "profiles": {
+    "repository_integrity": ["github"],
+    "evidence_intake": ["dropbox"],
+    "current_source_review": ["google_workspace"],
+    "knowledge_continuity": ["notion", "mem"],
+    "structured_state_review": ["supabase"],
+    "api_verification": ["postman"]
+  },
+  "connectors": {
+    "github": {
+      "data_class": "repository_metadata",
+      "read_operations": [
+        "repository.read_metadata",
+        "branch_protection.read",
+        "pull_request.read",
+        "commit.read",
+        "workflow_run.read",
+        "issue.read"
+      ],
+      "write_operations": {
+        "issue.create": {"enabled": false, "approval_required": true},
+        "pull_request.create": {"enabled": false, "approval_required": true}
+      }
+    },
+    "dropbox": {
+      "data_class": "evidence_artifact",
+      "read_operations": [
+        "file.search",
+        "file.list",
+        "file.metadata.read",
+        "file.extract_text",
+        "file.download_preserve"
+      ],
+      "write_operations": {}
+    },
+    "google_workspace": {
+      "data_class": "current_source",
+      "read_operations": [
+        "drive.search",
+        "document.read",
+        "spreadsheet.read",
+        "presentation.read"
+      ],
+      "write_operations": {}
+    },
+    "notion": {
+      "data_class": "knowledge_record",
+      "read_operations": ["page.search", "page.read", "database.read"],
+      "write_operations": {}
+    },
+    "mem": {
+      "data_class": "continuity_record",
+      "read_operations": ["record.search", "record.read"],
+      "write_operations": {}
+    },
+    "supabase": {
+      "data_class": "structured_state",
+      "read_operations": ["schema.read", "table.read", "query.read"],
+      "write_operations": {
+        "row.insert": {"enabled": false, "approval_required": true},
+        "row.update": {"enabled": false, "approval_required": true}
+      }
+    },
+    "postman": {
+      "data_class": "api_contract",
+      "read_operations": [
+        "workspace.read",
+        "collection.read",
+        "spec.read",
+        "monitor.read"
+      ],
+      "write_operations": {}
+    }
+  },
+  "security": {
+    "credentials_in_source": false,
+    "bridge_receipt_required": true,
+    "external_write_requires_exact_approval": true,
+    "scheduled_connector_writes": false,
+    "maximum_receipt_age_seconds": 86400
+  }
+}
