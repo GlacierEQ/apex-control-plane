@@ -19,6 +19,19 @@ DEFAULT_REGISTRY_PATH = REPO_ROOT / "config" / "apex_connector_contract_registry
 DEFAULT_BRIDGE_CATALOG_PATH = REPO_ROOT / "config" / "apex_connector_catalog.json"
 DEFAULT_DIRECT_RUNTIME_PATH = REPO_ROOT / "config" / "apex_direct_connector_runtime.json"
 
+EXPECTED_BRIDGE_TRANSPORT = "authenticated_session_provider_bridge"
+EXPECTED_DIRECT_TRANSPORT = "authenticated_chatgpt_connectors"
+EXPECTED_AUTHORITY = {
+    "system": "supabase-backend-ops",
+    "project_id": "dyhprklicgewmrimecey",
+    "route_policy_table": "public.connector_route_policy_v3",
+    "route_runtime_table": "public.connector_route_runtime_v3",
+    "pipeline_definition_table": "public.connector_pipeline_definitions_v1",
+    "pipeline_run_table": "public.connector_pipeline_runs_v1",
+    "pipeline_stage_table": "public.connector_pipeline_stage_runs_v1",
+}
+EXPECTED_GITHUB_MAIN_DIRECT_WRITE = "blocked_by_required_status_checks"
+
 
 class DirectConnectorRuntimeContractError(ValueError):
     """Raised when connector transport contracts cannot be reconciled safely."""
@@ -61,6 +74,16 @@ def _positive_int(value: Any, field_name: str) -> int:
         raise DirectConnectorRuntimeContractError(f"{field_name} must be an integer") from exc
     if number < 1:
         raise DirectConnectorRuntimeContractError(f"{field_name} must be positive")
+    return number
+
+
+def _nonnegative_int(value: Any, field_name: str) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError) as exc:
+        raise DirectConnectorRuntimeContractError(f"{field_name} must be an integer") from exc
+    if number < 0:
+        raise DirectConnectorRuntimeContractError(f"{field_name} must be nonnegative")
     return number
 
 
@@ -136,11 +159,17 @@ def load_contract_registry(path: Path | None = None) -> Mapping[str, Any]:
     if not isinstance(resolution, Mapping):
         raise DirectConnectorRuntimeContractError("registry resolution must be an object")
 
-    required_contracts = {
-        "authenticated_session_provider_bridge": "config/apex_connector_catalog.json",
-        "authenticated_chatgpt_direct_runtime": "config/apex_direct_connector_runtime.json",
+    expected_contracts = {
+        "authenticated_session_provider_bridge": (
+            "config/apex_connector_catalog.json",
+            EXPECTED_BRIDGE_TRANSPORT,
+        ),
+        "authenticated_chatgpt_direct_runtime": (
+            "config/apex_direct_connector_runtime.json",
+            EXPECTED_DIRECT_TRANSPORT,
+        ),
     }
-    for contract_name, expected_path in required_contracts.items():
+    for contract_name, (expected_path, expected_transport) in expected_contracts.items():
         contract = contracts.get(contract_name)
         if not isinstance(contract, Mapping):
             raise DirectConnectorRuntimeContractError(f"missing registry contract: {contract_name}")
@@ -148,7 +177,10 @@ def load_contract_registry(path: Path | None = None) -> Mapping[str, Any]:
             raise DirectConnectorRuntimeContractError(
                 f"registry path mismatch for {contract_name}: expected {expected_path}"
             )
-        _required_text(contract.get("transport"), f"{contract_name}.transport")
+        if contract.get("transport") != expected_transport:
+            raise DirectConnectorRuntimeContractError(
+                f"registry transport mismatch for {contract_name}: expected {expected_transport}"
+            )
         _required_text(contract.get("authority"), f"{contract_name}.authority")
         _positive_int(contract.get("source_version"), f"{contract_name}.source_version")
 
@@ -178,21 +210,15 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
 
     if not isinstance(authority, Mapping):
         raise DirectConnectorRuntimeContractError("authority must be an object")
-    if authority.get("system") != "supabase-backend-ops":
-        raise DirectConnectorRuntimeContractError("direct runtime authority must be supabase-backend-ops")
-    _required_text(authority.get("project_id"), "authority.project_id")
-    for field_name in (
-        "route_policy_table",
-        "route_runtime_table",
-        "pipeline_definition_table",
-        "pipeline_run_table",
-        "pipeline_stage_table",
-    ):
-        _required_text(authority.get(field_name), f"authority.{field_name}")
+    for key, expected in EXPECTED_AUTHORITY.items():
+        if authority.get(key) != expected:
+            raise DirectConnectorRuntimeContractError(
+                f"authority.{key} must match verified runtime identity {expected}"
+            )
 
     if not isinstance(transport, Mapping):
         raise DirectConnectorRuntimeContractError("transport must be an object")
-    if transport.get("name") != "authenticated_chatgpt_connectors":
+    if transport.get("name") != EXPECTED_DIRECT_TRANSPORT:
         raise DirectConnectorRuntimeContractError("unexpected direct runtime transport")
     _require_boolean(transport, "credential_material_in_repository", False)
     _require_boolean(transport, "scheduled_execution", False)
@@ -202,7 +228,7 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
         raise DirectConnectorRuntimeContractError("security must be an object")
     for security_flag in (
         "route_policy_v3_is_binding",
-        "writes_require_bound_operator_approval",
+        "writes_require_bound_OPERATOR_approval",
         "writes_cannot_self_certify",
         "writes_require_same_connector_same_target_terminal_readback",
         "ambiguous_external_outcome_can_never_promote_to_verified",
@@ -248,7 +274,11 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
     if not isinstance(pipelines, Mapping) or not pipelines:
         raise DirectConnectorRuntimeContractError("pipelines must be a non-empty object")
     pipeline_step_counts: dict[str, int] = {}
+    pipeline_versions: dict[str, int] = {}
     pipeline_hashes: dict[str, str] = {}
+    pipeline_read_counts: dict[str, int] = {}
+    pipeline_write_steps: dict[str, dict[str, Mapping[str, Any]]] = {}
+
     for pipeline_key, raw_pipeline in pipelines.items():
         name = _required_text(pipeline_key, "pipeline key")
         if not isinstance(raw_pipeline, Mapping):
@@ -277,7 +307,7 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
             "schema_version": 1,
             "pipeline_key": name,
             "version": version,
-            "transport": "authenticated_chatgpt_connectors",
+            "transport": EXPECTED_DIRECT_TRANSPORT,
             "invariants": invariants,
             "steps": raw_steps,
         }
@@ -313,10 +343,17 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
                     )
         _assert_acyclic_pipeline(name, steps)
 
+        write_steps: dict[str, Mapping[str, Any]] = {}
+        read_count = 0
         for step_id, step in steps.items():
             route = validated_routes[str(step["route_key"])]
-            if route["mutation_class"] != "write":
+            if route["mutation_class"] == "read":
+                read_count += 1
                 continue
+            write_steps[step_id] = {
+                "connector_key": route["connector_key"],
+                "target": step["target"],
+            }
             readback_step_id = _required_text(
                 step.get("readback_step_id"),
                 f"{name}.{step_id}.readback_step_id",
@@ -345,7 +382,10 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
                 )
 
         pipeline_step_counts[name] = len(steps)
+        pipeline_versions[name] = version
         pipeline_hashes[name] = definition_hash
+        pipeline_read_counts[name] = read_count
+        pipeline_write_steps[name] = write_steps
 
     if not isinstance(receipts, list) or not receipts:
         raise DirectConnectorRuntimeContractError("verified_receipts must be a non-empty array")
@@ -365,16 +405,92 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
         _required_text(receipt.get("correlation_id"), "receipt.correlation_id")
         if receipt.get("status") != "verified":
             raise DirectConnectorRuntimeContractError(f"receipt is not verified: {run_id}")
+        if _positive_int(receipt.get("pipeline_version"), "receipt.pipeline_version") != pipeline_versions[pipeline_key]:
+            raise DirectConnectorRuntimeContractError(f"pipeline version mismatch: {run_id}")
         if receipt.get("pipeline_hash") != pipeline_hashes[pipeline_key]:
             raise DirectConnectorRuntimeContractError(f"pipeline hash mismatch: {run_id}")
-        if int(receipt.get("stage_count", -1)) != pipeline_step_counts[pipeline_key]:
+        if _nonnegative_int(receipt.get("stage_count"), "receipt.stage_count") != pipeline_step_counts[pipeline_key]:
             raise DirectConnectorRuntimeContractError(f"stage count mismatch: {run_id}")
-        if int(receipt.get("bad_terminal", -1)) != 0:
+        expected_reads = pipeline_read_counts[pipeline_key]
+        expected_writes = len(pipeline_write_steps[pipeline_key])
+        if _nonnegative_int(receipt.get("verified_reads"), "receipt.verified_reads") != expected_reads:
+            raise DirectConnectorRuntimeContractError(f"verified read count mismatch: {run_id}")
+        if _nonnegative_int(receipt.get("succeeded_writes"), "receipt.succeeded_writes") != expected_writes:
+            raise DirectConnectorRuntimeContractError(f"succeeded write count mismatch: {run_id}")
+        if _nonnegative_int(receipt.get("bad_terminal"), "receipt.bad_terminal") != 0:
             raise DirectConnectorRuntimeContractError(f"verified run has bad terminal state: {run_id}")
+
+        raw_approvals = receipt.get("write_approvals")
+        if not isinstance(raw_approvals, list):
+            raise DirectConnectorRuntimeContractError("receipt.write_approvals must be an array")
+        expected_write_steps = pipeline_write_steps[pipeline_key]
+        if len(raw_approvals) != expected_writes:
+            raise DirectConnectorRuntimeContractError(f"write approval count mismatch: {run_id}")
+        if expected_writes:
+            if receipt.get("approval_source") != "OPERATOR":
+                raise DirectConnectorRuntimeContractError(
+                    f"verified mutating run must name OPERATOR as approval source: {run_id}"
+                )
+            approval_reference = _required_text(
+                receipt.get("approval_reference"),
+                "receipt.approval_reference",
+            )
+            approvals_by_step: dict[str, Mapping[str, Any]] = {}
+            for raw_approval in raw_approvals:
+                if not isinstance(raw_approval, Mapping):
+                    raise DirectConnectorRuntimeContractError("write approval must be an object")
+                step_id = _required_text(raw_approval.get("step_id"), "write approval step_id")
+                if step_id in approvals_by_step:
+                    raise DirectConnectorRuntimeContractError(
+                        f"duplicate write approval for {pipeline_key}.{step_id}"
+                    )
+                approvals_by_step[step_id] = raw_approval
+            if set(approvals_by_step) != set(expected_write_steps):
+                raise DirectConnectorRuntimeContractError(f"write approval step mismatch: {run_id}")
+            for step_id, expected_stage in expected_write_steps.items():
+                approval = approvals_by_step[step_id]
+                if approval.get("connector_key") != expected_stage["connector_key"]:
+                    raise DirectConnectorRuntimeContractError(
+                        f"write approval connector mismatch: {pipeline_key}.{step_id}"
+                    )
+                if approval.get("approval_source") != "OPERATOR":
+                    raise DirectConnectorRuntimeContractError(
+                        f"write approval source must be OPERATOR: {pipeline_key}.{step_id}"
+                    )
+                if approval.get("approval_reference") != approval_reference:
+                    raise DirectConnectorRuntimeContractError(
+                        f"write approval reference mismatch: {pipeline_key}.{step_id}"
+                    )
+                target_text = _required_text(
+                    approval.get("target_text"),
+                    f"{pipeline_key}.{step_id}.target_text",
+                )
+                target_hash = _required_text(
+                    approval.get("target_hash"),
+                    f"{pipeline_key}.{step_id}.target_hash",
+                )
+                if not _is_sha256(target_hash) or _digest_text(target_text) != target_hash:
+                    raise DirectConnectorRuntimeContractError(
+                        f"write approval target hash mismatch: {pipeline_key}.{step_id}"
+                    )
+                try:
+                    approved_target = json.loads(target_text)
+                except json.JSONDecodeError as exc:
+                    raise DirectConnectorRuntimeContractError(
+                        f"write approval target text is invalid JSON: {pipeline_key}.{step_id}"
+                    ) from exc
+                if approved_target != expected_stage["target"]:
+                    raise DirectConnectorRuntimeContractError(
+                        f"write approval target mismatch: {pipeline_key}.{step_id}"
+                    )
         _required_text(receipt.get("completed_at"), "receipt.completed_at")
 
     if not isinstance(boundaries, Mapping):
         raise DirectConnectorRuntimeContractError("known_boundaries must be an object")
+    if boundaries.get("github_main_direct_write") != EXPECTED_GITHUB_MAIN_DIRECT_WRITE:
+        raise DirectConnectorRuntimeContractError(
+            "github_main_direct_write must preserve the observed protected-main boundary"
+        )
     _require_boolean(boundaries, "github_branch_protection_bypassed", False)
     for undeployed_boundary in (
         "cloudflare_queue_consumer_deployed",
@@ -404,8 +520,10 @@ def reconcile_connector_contracts(
         raise DirectConnectorRuntimeContractError("bridge catalog version does not match registry")
     if int(direct_runtime.get("version", -1)) != int(direct_contract["source_version"]):
         raise DirectConnectorRuntimeContractError("direct runtime version does not match registry")
-    if bridge_contract["transport"] == direct_contract["transport"]:
-        raise DirectConnectorRuntimeContractError("bridge and direct runtime transports must be distinct")
+    if bridge_contract["transport"] != EXPECTED_BRIDGE_TRANSPORT:
+        raise DirectConnectorRuntimeContractError("bridge transport identity mismatch")
+    if direct_contract["transport"] != direct_runtime["transport"]["name"]:
+        raise DirectConnectorRuntimeContractError("direct runtime transport identity mismatch")
 
     notion_bridge = bridge_catalog.get("connectors", {}).get("notion", {})
     notion_page_update = notion_bridge.get("write_operations", {}).get("page.update", {})
@@ -431,4 +549,22 @@ def reconcile_connector_contracts(
         pipeline_count=len(direct_runtime["pipelines"]),
         verified_receipt_count=len(direct_runtime["verified_receipts"]),
         transport=str(direct_runtime["transport"]["name"]),
+    )
+
+
+def validate_connector_transport_admission(
+    transport: str,
+    *,
+    registry_path: Path | None = None,
+    bridge_catalog_path: Path | None = None,
+    direct_runtime_path: Path | None = None,
+) -> DirectRuntimeSummary:
+    """Fail closed before a production connector admission or dispatch operation."""
+    selected = _required_text(transport, "transport")
+    if selected not in {EXPECTED_BRIDGE_TRANSPORT, EXPECTED_DIRECT_TRANSPORT}:
+        raise DirectConnectorRuntimeContractError(f"unregistered connector transport: {selected}")
+    return reconcile_connector_contracts(
+        registry_path=registry_path,
+        bridge_catalog_path=bridge_catalog_path,
+        direct_runtime_path=direct_runtime_path,
     )
