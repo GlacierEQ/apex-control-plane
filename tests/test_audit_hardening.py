@@ -153,7 +153,7 @@ def test_readback_rejects_tampered_log(tmp_path):
 
 
 def test_execute_audit_persists_then_reads_back(tmp_path, monkeypatch):
-    monkeypatch.setattr(audit_engine, "validate_connectors", lambda: [])
+    monkeypatch.setattr(audit_engine, "validate_connectors", list)
     (tmp_path / ".env.example").write_text("A=\n", encoding="utf-8")
     (tmp_path / ".gitignore").write_text(".env\n", encoding="utf-8")
     (tmp_path / "README.md").write_text("# test\n", encoding="utf-8")
