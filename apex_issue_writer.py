@@ -114,7 +114,16 @@ def _entry_body(
                         f"- **{item.get('severity', 'unknown')} · "
                         f"{item.get('domain', 'unknown')}**: {item.get('title', 'untitled')}"
                     ),
-                    f"  - Action: {item.get('action', 'unspecified')}",
+                    (
+                        f"  - Evidence [{item.get('evidence_state', 'UNKNOWN')} / "
+                        f"{item.get('evidence_source_class', 'UNKNOWN')}]: "
+                        f"{item.get('evidence', 'unspecified')}"
+                    ),
+                    (
+                        f"  - Recommended action [{item.get('action_state', 'UNKNOWN')} / "
+                        f"{item.get('action_source_class', 'UNKNOWN')}]: "
+                        f"{item.get('action', 'unspecified')}"
+                    ),
                 ]
             )
     else:
