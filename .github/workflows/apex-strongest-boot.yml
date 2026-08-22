@@ -6,7 +6,9 @@ on:
     paths:
       - "src/apex_strong_boot.py"
       - "src/apex_runtime_kernel.py"
+      - "src/verified_runtime_entrypoint.py"
       - "src/control_plane.py"
+      - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
       - "src/apex_enforced_startup.py"
       - "src/operator_fidelity_lock.py"
@@ -15,6 +17,7 @@ on:
       - "src/prime_directive_boot.py"
       - "tests/test_apex_strong_boot.py"
       - "tests/test_apex_runtime_kernel.py"
+      - "tests/test_verified_runtime_entrypoint.py"
       - "tests/test_control_plane.py"
       - ".github/workflows/apex-strongest-boot.yml"
   pull_request:
@@ -22,7 +25,9 @@ on:
     paths:
       - "src/apex_strong_boot.py"
       - "src/apex_runtime_kernel.py"
+      - "src/verified_runtime_entrypoint.py"
       - "src/control_plane.py"
+      - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
       - "src/apex_enforced_startup.py"
       - "src/operator_fidelity_lock.py"
@@ -31,6 +36,7 @@ on:
       - "src/prime_directive_boot.py"
       - "tests/test_apex_strong_boot.py"
       - "tests/test_apex_runtime_kernel.py"
+      - "tests/test_verified_runtime_entrypoint.py"
       - "tests/test_control_plane.py"
       - ".github/workflows/apex-strongest-boot.yml"
 
@@ -60,17 +66,19 @@ jobs:
       - name: Install test runner
         run: python -m pip install --disable-pip-version-check pytest
 
-      - name: Compile complete boot spine
+      - name: Compile complete boot and runtime spine
         run: |
           python -m py_compile \
             src/apex_strong_boot.py \
             src/apex_runtime_kernel.py \
+            src/verified_runtime_entrypoint.py \
             src/apex_enforced_startup.py \
             src/notion_continuity_gate.py \
             src/prime_directive_boot.py \
             src/operator_fidelity_lock.py \
             src/operator_fidelity_preflight.py \
             src/control_plane.py \
+            src/control_plane_runtime.py \
             src/sitecustomize.py
 
       - name: Prove strong-boot and runtime invariants
@@ -78,6 +86,7 @@ jobs:
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
             tests/test_apex_strong_boot.py \
             tests/test_apex_runtime_kernel.py \
+            tests/test_verified_runtime_entrypoint.py \
             tests/test_control_plane.py
 
       - name: Prove runtime entrypoint fails closed without receipts
@@ -91,6 +100,17 @@ jobs:
           test ! -s /tmp/strong.out
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/strong.err
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/strong.err
+
+      - name: Prove legacy runtime cannot bypass verified boundary
+        shell: bash
+        run: |
+          set +e
+          CASEY_AUTO_BOOT_MODE=strict python src/control_plane_runtime.py >/tmp/legacy.out 2>/tmp/legacy.err
+          status=$?
+          set -e
+          test "$status" -eq 78
+          test ! -s /tmp/legacy.out
+          grep -q 'direct control_plane_runtime execution is disabled' /tmp/legacy.err
 
       - name: Prove request-mode auto-boot is diagnostic only
         shell: bash
