@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Admit host-side exact-approved provider execution observations into APEX.
 
 The manifest points to local action-result and terminal-readback files created by a direct
@@ -9,11 +8,12 @@ provider material to the JSONL receipt ledger.
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime
 import json
-from pathlib import Path
 import sys
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
