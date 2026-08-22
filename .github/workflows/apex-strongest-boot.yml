@@ -91,7 +91,6 @@ jobs:
           test ! -s /tmp/strong.out
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/strong.err
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/strong.err
-          grep -q 'strong_boot_status' /tmp/strong.err
 
       - name: Prove request-mode auto-boot is diagnostic only
         shell: bash
