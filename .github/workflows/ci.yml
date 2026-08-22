@@ -1,7 +1,6 @@
 name: CI
 
 on:
-  workflow_dispatch:
   push:
     branches: [main, develop]
   pull_request:
@@ -64,21 +63,36 @@ jobs:
           fi
           test ! -s /tmp/fidelity.out
 
+      - name: Prove APEX is operational by default without external authority
+        shell: bash
+        run: |
+          unset CASEY_AUTO_BOOT_MODE CASEY_AUTO_BOOT_DISABLE CASEY_BOOT_RECEIPT_PATH
+          python src/control_plane.py >/tmp/apex-runtime.json 2>/tmp/apex-preflight.jsonl
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result = json.loads(Path("/tmp/apex-runtime.json").read_text())
+          assert result["status"] == "completed"
+          assert result["external_action_authorized"] is False
+          assert result["human_review_required"] is True
+          PY
+
       - name: Prove environment disable cannot bypass fidelity
         shell: bash
         run: |
           set +e
           CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; validation = automatic_operator_fidelity_lock(); raise SystemExit(0 if (not validation.ok and validation.status == "continuation_required") else 1)' \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
             >/tmp/disable.out 2>/tmp/disable.err
           disable_status=$?
           CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; validation = automatic_operator_fidelity_lock(); raise SystemExit(0 if (not validation.ok and validation.status == "continuation_required") else 1)' \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
             >/tmp/off.out 2>/tmp/off.err
           off_status=$?
           set -e
-          test "$disable_status" -eq 0
-          test "$off_status" -eq 0
+          test "$disable_status" -eq 78
+          test "$off_status" -eq 78
           grep -q 'cannot disable operator fidelity' /tmp/disable.err
           grep -q 'cannot disable operator fidelity' /tmp/off.err
           test ! -s /tmp/disable.out

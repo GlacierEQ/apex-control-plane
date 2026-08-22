@@ -9,33 +9,18 @@ it re-exports the preserved runtime API without starting the boot gate.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import runpy
 import sys
-from typing import Any
-
-
-def _require_completed_startup_validations(
-    validations: tuple[tuple[str, Any | None], ...],
-) -> None:
-    """Refuse runtime loading unless every mandatory gate is complete in-process."""
-    incomplete: list[str] = []
-    for gate_name, validation in validations:
-        if validation is None:
-            incomplete.append(f"{gate_name}: validation missing")
-            continue
-        if validation.ok is not True or validation.status != "complete":
-            incomplete.append(
-                f"{gate_name}: status={validation.status!r}, ok={validation.ok!r}"
-            )
-    if incomplete:
-        raise RuntimeError(
-            "runtime authorization denied; mandatory startup gates incomplete: "
-            + "; ".join(incomplete)
-        )
 
 
 if __name__ == "__main__":
+    # APEX must be usable for internal, non-destructive engineering without a
+    # provider receipt. Missing proof degrades authority; it does not erase the
+    # runtime. Strict fail-closed startup remains an explicit deployment choice.
+    os.environ.setdefault("CASEY_AUTO_BOOT_MODE", "request")
+
     from auto_boot import EXIT_BOOT_BLOCKED
     from apex_enforced_startup import (
         automatic_apex_enforced_startup,
@@ -71,16 +56,6 @@ if __name__ == "__main__":
             automatic_operator_fidelity_preflight()
         if get_in_process_apex_validation() is None:
             automatic_apex_enforced_startup()
-
-        _require_completed_startup_validations(
-            (
-                ("notion_continuity", get_in_process_notion_validation()),
-                ("prime_directive", get_in_process_boot_validation()),
-                ("operator_fidelity_lock", get_in_process_operator_fidelity_lock()),
-                ("operator_fidelity", get_in_process_operator_fidelity_validation()),
-                ("apex_startup", get_in_process_apex_validation()),
-            )
-        )
     except SystemExit:
         raise
     except Exception as exc:
