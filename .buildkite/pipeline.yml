@@ -25,19 +25,21 @@ steps:
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
       git diff --exit-code
-      python3 -m pip install --upgrade pip
-      python3 -m pip install -r requirements.txt pytest
-      python3 -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
-      python3 -m py_compile \
+      python3 -m venv .buildkite-venv
+      .buildkite-venv/bin/python -m pip install --upgrade pip
+      .buildkite-venv/bin/python -m pip install -r requirements.txt pytest
+      .buildkite-venv/bin/python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
+      .buildkite-venv/bin/python -m py_compile \
         src/operator_fidelity_lock.py \
         src/operator_fidelity_preflight.py \
         src/control_plane.py \
         src/sitecustomize.py
-      CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python3 -m pytest -q \
+      CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q \
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \
         --junitxml=artifacts/buildkite/operator-fidelity.xml \
         2>&1 | tee artifacts/buildkite/operator-fidelity.log
+      buildkite-agent meta-data set operator-fidelity-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/operator-fidelity.xml | cut -d ' ' -f 1)"
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/operator-fidelity.xml
@@ -59,9 +61,10 @@ steps:
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
-      python3 -m pip install --upgrade pip
-      python3 -m pip install -r requirements.txt ruff mypy pytest
-      ruff check \
+      python3 -m venv .buildkite-venv
+      .buildkite-venv/bin/python -m pip install --upgrade pip
+      .buildkite-venv/bin/python -m pip install -r requirements.txt ruff mypy pytest
+      .buildkite-venv/bin/ruff check \
         scripts/scan_repos.py \
         src/audit_engine.py \
         apex_runner.py \
@@ -69,7 +72,7 @@ steps:
         apex_issue_writer.py \
         tests/test_scan_repos.py \
         tests/test_audit_hardening.py
-      ruff format --check \
+      .buildkite-venv/bin/ruff format --check \
         scripts/scan_repos.py \
         src/audit_engine.py \
         apex_runner.py \
@@ -77,12 +80,13 @@ steps:
         apex_issue_writer.py \
         tests/test_scan_repos.py \
         tests/test_audit_hardening.py
-      mypy scripts/scan_repos.py --ignore-missing-imports
-      PYTHONPATH=src:. python3 -m pytest -q \
+      .buildkite-venv/bin/mypy scripts/scan_repos.py --ignore-missing-imports
+      PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q \
         tests/test_scan_repos.py \
         tests/test_audit_hardening.py \
         --junitxml=artifacts/buildkite/registry-audit.xml \
         2>&1 | tee artifacts/buildkite/registry-audit.log
+      buildkite-agent meta-data set registry-audit-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/registry-audit.xml | cut -d ' ' -f 1)"
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/registry-audit.xml
@@ -102,9 +106,11 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
-      sha256sum \
-        artifacts/buildkite/operator-fidelity.xml \
-        artifacts/buildkite/registry-audit.xml \
+      operator_fidelity_sha="$$(buildkite-agent meta-data get operator-fidelity-junit-sha256)"
+      registry_audit_sha="$$(buildkite-agent meta-data get registry-audit-junit-sha256)"
+      printf '%s  %s\n%s  %s\n' \
+        "$$operator_fidelity_sha" "operator-fidelity.xml" \
+        "$$registry_audit_sha" "registry-audit.xml" \
         > artifacts/buildkite/SHA256SUMS
       python3 - <<'PY' > artifacts/buildkite/verified-ci-receipt.json
       import datetime
