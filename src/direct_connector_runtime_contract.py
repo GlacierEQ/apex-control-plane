@@ -1,9 +1,9 @@
 """Validation for the APEX direct authenticated connector runtime contract.
 
-The repository already contains an authenticated-session provider bridge catalog.  The
-direct runtime installed in ``supabase-backend-ops`` is a different transport and
-therefore a different permission domain.  This module makes that distinction
-machine-checkable so capabilities are never unioned across transports by accident.
+The repository-side authenticated-session bridge and the direct ChatGPT connector
+runtime are different transports and therefore different permission domains. This
+module keeps those capabilities separate and validates the source projection of the
+verified Supabase runtime.
 """
 from __future__ import annotations
 
@@ -69,19 +69,57 @@ def _is_sha256(value: Any) -> bool:
     return len(text) == 64 and all(character in "0123456789abcdef" for character in text)
 
 
-def _canonical_json(value: Any) -> str:
+def _digest_text(value: str) -> str:
+    return sha256(value.encode("utf-8")).hexdigest()
+
+
+def _stable_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def _target_digest(target: Any) -> str:
     if not isinstance(target, Mapping) or not target:
         raise DirectConnectorRuntimeContractError("pipeline step target must be a non-empty object")
-    return sha256(_canonical_json(target).encode("utf-8")).hexdigest()
+    return _digest_text(_stable_json(target))
 
 
 def _require_boolean(mapping: Mapping[str, Any], key: str, expected: bool) -> None:
     if mapping.get(key) is not expected:
         raise DirectConnectorRuntimeContractError(f"{key} must be {expected}")
+
+
+def _string_list(value: Any, field_name: str) -> list[str]:
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or not item.strip() for item in value
+    ):
+        raise DirectConnectorRuntimeContractError(f"{field_name} must be an array of text values")
+    if len(value) != len(set(value)):
+        raise DirectConnectorRuntimeContractError(f"{field_name} contains duplicates")
+    return list(value)
+
+
+def _assert_acyclic_pipeline(
+    pipeline_name: str,
+    steps: Mapping[str, Mapping[str, Any]],
+) -> None:
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(step_id: str) -> None:
+        if step_id in visiting:
+            raise DirectConnectorRuntimeContractError(
+                f"dependency cycle detected in {pipeline_name}: {step_id}"
+            )
+        if step_id in visited:
+            return
+        visiting.add(step_id)
+        for dependency in steps[step_id]["depends_on"]:
+            visit(str(dependency))
+        visiting.remove(step_id)
+        visited.add(step_id)
+
+    for step_id in steps:
+        visit(step_id)
 
 
 def load_contract_registry(path: Path | None = None) -> Mapping[str, Any]:
@@ -172,6 +210,8 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
         "successful_stages_require_result_hash",
         "successful_stages_require_invocation_reference",
         "successful_stages_require_source_references",
+        "definition_hash_binds_stored_behavior",
+        "dependency_graph_must_be_acyclic",
         "service_role_execution_allowed",
     ):
         _require_boolean(security, security_flag, True)
@@ -213,13 +253,38 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
         name = _required_text(pipeline_key, "pipeline key")
         if not isinstance(raw_pipeline, Mapping):
             raise DirectConnectorRuntimeContractError(f"pipeline must be an object: {name}")
-        _positive_int(raw_pipeline.get("version"), f"{name}.version")
-        definition_hash = raw_pipeline.get("definition_hash")
+        version = _positive_int(raw_pipeline.get("version"), f"{name}.version")
+        definition_hash = _required_text(raw_pipeline.get("definition_hash"), f"{name}.definition_hash")
         if not _is_sha256(definition_hash):
             raise DirectConnectorRuntimeContractError(f"{name}.definition_hash must be sha256")
+        definition_text = _required_text(raw_pipeline.get("definition_text"), f"{name}.definition_text")
+        if _digest_text(definition_text) != definition_hash:
+            raise DirectConnectorRuntimeContractError(
+                f"{name}.definition_hash does not match stored definition text"
+            )
+        try:
+            stored_definition = json.loads(definition_text)
+        except json.JSONDecodeError as exc:
+            raise DirectConnectorRuntimeContractError(
+                f"{name}.definition_text must contain valid JSON"
+            ) from exc
+
+        invariants = _string_list(raw_pipeline.get("invariants"), f"{name}.invariants")
         raw_steps = raw_pipeline.get("steps")
         if not isinstance(raw_steps, list) or not raw_steps:
             raise DirectConnectorRuntimeContractError(f"{name}.steps must be non-empty")
+        expected_definition = {
+            "schema_version": 1,
+            "pipeline_key": name,
+            "version": version,
+            "transport": "authenticated_chatgpt_connectors",
+            "invariants": invariants,
+            "steps": raw_steps,
+        }
+        if stored_definition != expected_definition:
+            raise DirectConnectorRuntimeContractError(
+                f"{name}.definition_text does not match projected pipeline behavior"
+            )
 
         steps: dict[str, Mapping[str, Any]] = {}
         for raw_step in raw_steps:
@@ -234,14 +299,11 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
                     f"unknown route in {name}.{step_id}: {route_key}"
                 )
             _target_digest(raw_step.get("target"))
-            dependencies = raw_step.get("depends_on")
-            if not isinstance(dependencies, list) or any(
-                not isinstance(item, str) or not item.strip() for item in dependencies
-            ):
-                raise DirectConnectorRuntimeContractError(
-                    f"{name}.{step_id}.depends_on must be an array of step ids"
-                )
-            steps[step_id] = dict(raw_step)
+            dependencies = _string_list(
+                raw_step.get("depends_on"),
+                f"{name}.{step_id}.depends_on",
+            )
+            steps[step_id] = {**dict(raw_step), "depends_on": dependencies}
 
         for step_id, step in steps.items():
             for dependency in step["depends_on"]:
@@ -249,18 +311,22 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
                     raise DirectConnectorRuntimeContractError(
                         f"unknown dependency in {name}.{step_id}: {dependency}"
                     )
-            route = validated_routes[step["route_key"]]
+        _assert_acyclic_pipeline(name, steps)
+
+        for step_id, step in steps.items():
+            route = validated_routes[str(step["route_key"])]
             if route["mutation_class"] != "write":
                 continue
             readback_step_id = _required_text(
-                step.get("readback_step_id"), f"{name}.{step_id}.readback_step_id"
+                step.get("readback_step_id"),
+                f"{name}.{step_id}.readback_step_id",
             )
             readback = steps.get(readback_step_id)
             if readback is None:
                 raise DirectConnectorRuntimeContractError(
                     f"unknown readback step in {name}.{step_id}: {readback_step_id}"
                 )
-            readback_route = validated_routes[readback["route_key"]]
+            readback_route = validated_routes[str(readback["route_key"])]
             if readback_route["mutation_class"] != "read":
                 raise DirectConnectorRuntimeContractError(
                     f"readback route must be read-only: {name}.{readback_step_id}"
@@ -279,7 +345,7 @@ def load_direct_runtime_contract(path: Path | None = None) -> Mapping[str, Any]:
                 )
 
         pipeline_step_counts[name] = len(steps)
-        pipeline_hashes[name] = str(definition_hash)
+        pipeline_hashes[name] = definition_hash
 
     if not isinstance(receipts, list) or not receipts:
         raise DirectConnectorRuntimeContractError("verified_receipts must be a non-empty array")
@@ -331,8 +397,9 @@ def reconcile_connector_contracts(
     bridge_catalog = _read_json(bridge_catalog_path or DEFAULT_BRIDGE_CATALOG_PATH)
     direct_runtime = load_direct_runtime_contract(direct_runtime_path)
 
-    bridge_contract = registry["contracts"]["authenticated_session_provider_bridge"]
-    direct_contract = registry["contracts"]["authenticated_chatgpt_direct_runtime"]
+    contracts = registry["contracts"]
+    bridge_contract = contracts["authenticated_session_provider_bridge"]
+    direct_contract = contracts["authenticated_chatgpt_direct_runtime"]
     if int(bridge_catalog.get("version", -1)) != int(bridge_contract["source_version"]):
         raise DirectConnectorRuntimeContractError("bridge catalog version does not match registry")
     if int(direct_runtime.get("version", -1)) != int(direct_contract["source_version"]):
@@ -340,10 +407,6 @@ def reconcile_connector_contracts(
     if bridge_contract["transport"] == direct_contract["transport"]:
         raise DirectConnectorRuntimeContractError("bridge and direct runtime transports must be distinct")
 
-    # Critical non-union proof: the repository bridge intentionally keeps Notion
-    # page.update inactive while the direct authenticated transport has a verified,
-    # approval/readback-gated Notion projection route.  One transport does not grant
-    # capability to the other.
     notion_bridge = bridge_catalog.get("connectors", {}).get("notion", {})
     notion_page_update = notion_bridge.get("write_operations", {}).get("page.update", {})
     if notion_page_update.get("enabled") is not False:
