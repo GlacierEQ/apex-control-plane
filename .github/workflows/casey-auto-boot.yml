@@ -225,25 +225,40 @@ jobs:
           >/tmp/fidelity.out 2>/tmp/fidelity.err
           status=$?
           set -e
-          if [[ "$status" -ne 78 ]]; then
+          if [[ "$status" -ne 0 ]]; then
             cat /tmp/fidelity.out || true
             cat /tmp/fidelity.err || true
-            echo "fidelity preflight failed open; received $status" >&2
+            echo "fidelity preflight returned $status instead of emitting a continuation" >&2
             exit 1
           fi
-          grep -q '"operator_fidelity_status": "blocked"' /tmp/fidelity.err
+          grep -q '"gate": "operator_fidelity_preflight"' /tmp/fidelity.err
+          grep -q '"status": "continuation_required"' /tmp/fidelity.err
+          grep -q '"external_action_authorized": false' /tmp/fidelity.err
           grep -q 'literal_operator_words_preserved' /tmp/fidelity.err
           test ! -s /tmp/fidelity.out
 
       - name: Prove request mode exposes all gates and remains degraded
+        shell: bash
         run: |
+          set +e
           CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
+          status=$?
+          set -e
+          if [[ "$status" -ne 78 ]]; then
+            cat /tmp/control-plane.json || true
+            cat /tmp/boot-request.json || true
+            echo "request mode returned $status instead of the expected degraded exit 78" >&2
+            exit 1
+          fi
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot-request.json
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot-request.json
           grep -q 'glaciereq_operator_fidelity_preflight' /tmp/boot-request.json
           grep -q 'apex_genesis_enforced_startup' /tmp/boot-request.json
-          python -m json.tool /tmp/control-plane.json >/dev/null
+          grep -q '"status": "continuation_required"' /tmp/boot-request.json
+          grep -q '"runtime_authorized": false' /tmp/boot-request.json
+          grep -q '"external_action_authorized": false' /tmp/boot-request.json
+          test ! -s /tmp/control-plane.json
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \
-          python -c 'import os; assert os.environ.get("GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS") == "degraded"; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_OPERATOR_FIDELITY_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_APEX_STARTUP_STATUS") == "degraded"'
+          python -c 'import os; assert os.environ.get("GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS") == "degraded"; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_OPERATOR_FIDELITY_STATUS") == "continuation_required"; assert os.environ.get("GLACIEREQ_APEX_STARTUP_STATUS") == "continuation_required"'

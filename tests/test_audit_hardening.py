@@ -58,8 +58,10 @@ def test_daily_connector_status_requires_live_validation(monkeypatch):
     assert results["github"]["authenticated"] is False
     assert results["github"]["reachable"] is False
     assert results["github"]["action_capable"] is False
-    assert results["notion"]["status"] == "GREEN"
-    assert results["notion"]["action_capable"] is True
+    assert results["notion"]["status"] == "AMBER"
+    assert results["notion"]["receipt_verified"] is False
+    assert results["notion"]["action_authorized"] is False
+    assert results["notion"]["action_capable"] is False
 
 
 def test_daily_secret_scan_excludes_generated_history_and_redacts_value(tmp_path):

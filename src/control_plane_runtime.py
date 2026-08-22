@@ -23,6 +23,8 @@ import time
 from typing import Any, Callable, Mapping, Sequence
 from uuid import uuid4
 
+from connector_receipts import ConnectorReadReceipt, receipt_audit_details, validate_read_receipt
+
 ENVELOPE_VERSION = "1.0.0"
 CASE_EVENT_SCHEMA_ID = "urn:casebrain:schema:case-event:1.0.0"
 
@@ -537,6 +539,8 @@ class CaseBrainOrchestrator:
     idempotency_index: dict[str, str] = field(default_factory=dict)
     dead_letter: list[dict[str, Any]] = field(default_factory=list)
     breakers: dict[str, CircuitBreaker] = field(default_factory=dict)
+    connector_receipts: list[ConnectorReadReceipt] = field(default_factory=list)
+    connector_receipt_index: dict[str, str] = field(default_factory=dict)
 
     def process_event(
         self,
@@ -599,6 +603,49 @@ class CaseBrainOrchestrator:
             )
         )
         return result
+
+    def admit_connector_read_receipt(
+        self,
+        payload: Mapping[str, Any],
+        catalog: Any,
+        *,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Admit a bridge-issued read receipt without authorizing an external action."""
+        receipt = validate_read_receipt(payload, catalog, now=now)
+        input_sha256 = canonical_sha256(payload)
+        prior_hash = self.connector_receipt_index.get(receipt.receipt_id)
+        details = receipt_audit_details(receipt)
+        if prior_hash is not None:
+            if prior_hash != input_sha256:
+                raise ValueError("connector receipt ID collision with different payload")
+            return {
+                "status": "duplicate",
+                "receipt_id": receipt.receipt_id,
+                "external_action_authorized": False,
+            }
+
+        self.connector_receipts.append(receipt)
+        self.connector_receipt_index[receipt.receipt_id] = input_sha256
+        self.receipts.append(
+            AuditReceipt(
+                receipt_id=str(uuid4()),
+                trace_id=str(uuid4()),
+                action="admit_connector_read_receipt",
+                status="accepted",
+                recorded_at=datetime.now(UTC),
+                input_sha256=input_sha256,
+                output_sha256=canonical_sha256(details),
+                details=details,
+            )
+        )
+        return {
+            "status": "accepted",
+            "receipt_id": receipt.receipt_id,
+            "connector": receipt.connector,
+            "operation": receipt.operation,
+            "external_action_authorized": False,
+        }
 
     def call_connector(
         self,

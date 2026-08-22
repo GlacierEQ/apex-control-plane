@@ -47,14 +47,17 @@ def log(msg: str) -> None:
 
 
 def _connector_status(result: dict) -> dict:
+    """Report health without converting a probe into external-action authority."""
     state = str(result.get("state") or "unknown")
-    operational = state == "action_capable"
+    reachable = state == "action_capable"
     return {
         "declared": True,
-        "authenticated": operational,
-        "reachable": operational,
-        "action_capable": operational,
-        "status": "GREEN" if operational else "RED",
+        "authenticated": reachable,
+        "reachable": reachable,
+        "receipt_verified": False,
+        "action_authorized": False,
+        "action_capable": False,
+        "status": "AMBER" if reachable else "RED",
         "state": state,
         "detail": result,
     }

@@ -95,6 +95,7 @@ See:
 
 - [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STARTUP.md)
 - [`docs/CASEY_AUTO_BOOT.md`](docs/CASEY_AUTO_BOOT.md)
+- [`docs/APEX_CONNECTOR_BRIDGE.md`](docs/APEX_CONNECTOR_BRIDGE.md)
 - [`config/apex_enforced_startup_policy.json`](config/apex_enforced_startup_policy.json)
 - [`config/casey_auto_boot_manifest.json`](config/casey_auto_boot_manifest.json)
 - [`config/notion_continuity_policy.json`](config/notion_continuity_policy.json)
