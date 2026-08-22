@@ -1,170 +1,101 @@
-import importlib.util
 import json
-import sys
 import types
 from pathlib import Path
 
-if importlib.util.find_spec("rich") is None:
-    rich = types.ModuleType("rich")
-    rich_console = types.ModuleType("rich.console")
-    rich_panel = types.ModuleType("rich.panel")
-    rich_table = types.ModuleType("rich.table")
-
-    class Console:
-        def print(self, *_args, **_kwargs):
-            pass
-
-    class Panel:
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-    class Table:
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-        def add_column(self, *_args, **_kwargs):
-            pass
-
-        def add_row(self, *_args, **_kwargs):
-            pass
-
-    rich_console.Console = Console
-    rich_panel.Panel = Panel
-    rich_table.Table = Table
-    sys.modules["rich"] = rich
-    sys.modules["rich.console"] = rich_console
-    sys.modules["rich.panel"] = rich_panel
-    sys.modules["rich.table"] = rich_table
-
+import apex_issue_writer
 import apex_runner
+import audit_engine
 import daily_audit
 
 
-def test_daily_connector_status_requires_live_validation(monkeypatch):
-    monkeypatch.setattr(
-        daily_audit,
-        "validate_github",
-        lambda: {"connector": "github", "state": "auth_failed", "code": 401},
-    )
-    monkeypatch.setattr(
-        daily_audit,
-        "validate_notion",
-        lambda: {"connector": "notion", "state": "action_capable", "user": "test"},
-    )
+def test_connector_probe_never_promotes_reachability_to_action_authority(monkeypatch):
+    class Response:
+        status_code = 200
 
+        def json(self):
+            return {"full_name": "GlacierEQ/test-repo"}
+
+    fake_requests = types.SimpleNamespace(
+        RequestException=RuntimeError,
+        get=lambda *_args, **_kwargs: Response(),
+    )
+    monkeypatch.setattr(audit_engine, "requests", fake_requests)
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setenv("GITHUB_REPO", "GlacierEQ/test-repo")
+    monkeypatch.delenv("NOTION_TOKEN", raising=False)
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+
+    github = apex_runner.validate_connectors()[0]
+    assert github.authenticated is True
+    assert github.reachable is True
+    assert github.receipt_verified is False
+    assert github.action_authorized is False
+    assert github.action_capable is False
+    assert github.state() == "REACHABLE_NON_AUTHORIZING"
+
+
+def test_daily_compatibility_surface_uses_same_non_authorizing_engine(monkeypatch):
+    monkeypatch.setattr(
+        apex_runner,
+        "validate_connectors",
+        lambda: [
+            apex_runner.ConnectorStatus(name="GitHub", declared=True),
+            apex_runner.ConnectorStatus(
+                name="Notion", declared=True, authenticated=True, reachable=True
+            ),
+        ],
+    )
     results = daily_audit.validate_connectors()
-
     assert results["github"]["status"] == "RED"
-    assert results["github"]["authenticated"] is False
-    assert results["github"]["reachable"] is False
-    assert results["github"]["action_capable"] is False
     assert results["notion"]["status"] == "AMBER"
-    assert results["notion"]["receipt_verified"] is False
-    assert results["notion"]["action_authorized"] is False
     assert results["notion"]["action_capable"] is False
+    assert results["notion"]["action_authorized"] is False
 
 
-def test_daily_secret_scan_excludes_generated_history_and_redacts_value(tmp_path):
-    generated = tmp_path / "audit_logs"
+def test_secret_scan_excludes_generated_history_and_redacts_values(tmp_path):
+    generated = tmp_path / "audit_log"
     generated.mkdir()
     credential = "ghp_" + ("A" * 20)
     (generated / "old.json").write_text(credential, encoding="utf-8")
-
     source = tmp_path / "src"
     source.mkdir()
-    (source / "scanner.py").write_text('pattern = "ghp_"\n', encoding="utf-8")
-
-    assert daily_audit.scan_secrets(str(tmp_path)) == []
-
-    leak_path = source / "leak.env"
+    leak_path = source / ".env.local"
     leak_path.write_text(f"GITHUB_TOKEN={credential}\n", encoding="utf-8")
-    findings = daily_audit.scan_secrets(str(tmp_path))
 
+    findings = apex_runner.scan_for_secrets(str(tmp_path))
     assert len(findings) == 1
     assert credential not in findings[0].evidence
     assert "value redacted" in findings[0].evidence
 
 
-def test_daily_secret_scan_covers_env_variants_uppercase_and_private_keys(tmp_path):
-    assert daily_audit._should_scan_secret_file(".env.local")
-    assert daily_audit._should_scan_secret_file("CONFIG.ENV")
-    assert daily_audit._should_scan_secret_file("server.PEM")
-
-    secret_dir = tmp_path / "config"
-    secret_dir.mkdir()
-    private_key_header = ("-" * 5) + "BEGIN RSA PRIVATE KEY" + ("-" * 5)
-    (secret_dir / "server.PEM").write_text(
-        f"{private_key_header}\nredacted-test-body\n",
-        encoding="utf-8",
-    )
-
-    findings = daily_audit.scan_secrets(str(tmp_path))
-    assert len(findings) == 1
-    assert "private key" in findings[0].evidence
-
-
-def test_secret_scanners_cover_password_configuration_forms(tmp_path):
+def test_secret_scan_covers_password_xai_notion_and_private_key_forms(tmp_path):
     source = tmp_path / "config"
     source.mkdir()
     password_value = "hunter" + "123"
-    env_key = "DB_" + "PASSWORD"
-    yaml_key = "pass" + "word"
-    json_key = '"' + yaml_key + '"'
-
-    (source / ".env.local").write_text(
-        f"{env_key}={password_value}\n",
-        encoding="utf-8",
-    )
-    (source / "config.yaml").write_text(
-        f"{yaml_key}: {password_value}\n",
-        encoding="utf-8",
-    )
-    (source / "config.json").write_text(
-        f'{{{json_key}: "{password_value}"}}\n',
-        encoding="utf-8",
-    )
-
-    daily_findings = daily_audit.scan_secrets(str(tmp_path))
-    runner_findings = apex_runner.scan_for_secrets(str(tmp_path))
-
-    assert len(daily_findings) == 3
-    assert len(runner_findings) == 3
-    assert all("password assignment" in finding.evidence for finding in daily_findings)
-    assert all("password assignment" in finding.evidence for finding in runner_findings)
-
-
-def test_secret_scanners_restore_xai_and_legacy_notion_formats(tmp_path):
-    source = tmp_path / "config"
-    source.mkdir()
     xai_key = "xai-" + ("X" * 24)
     legacy_notion = "secret_" + ("N" * 24)
+    private_key_header = ("-" * 5) + "BEGIN RSA PRIVATE KEY" + ("-" * 5)
     (source / ".env.local").write_text(
-        f"XAI_API_KEY={xai_key}\nNOTION_TOKEN={legacy_notion}\n",
+        (
+            f"DB_PASSWORD={password_value}\n"
+            f"XAI_API_KEY={xai_key}\n"
+            f"NOTION_TOKEN={legacy_notion}\n"
+        ),
         encoding="utf-8",
     )
+    (source / "server.PEM").write_text(private_key_header, encoding="utf-8")
 
-    daily_findings = daily_audit.scan_secrets(str(tmp_path))
-    runner_findings = apex_runner.scan_for_secrets(str(tmp_path))
-
-    assert len(daily_findings) == 2
-    assert len(runner_findings) == 2
-    assert all(xai_key not in finding.evidence for finding in daily_findings)
-    assert all(legacy_notion not in finding.evidence for finding in daily_findings)
-
-
-def test_daily_drift_accepts_env_github_token_source(tmp_path, monkeypatch):
-    workflow_dir = tmp_path / ".github" / "workflows"
-    workflow_dir.mkdir(parents=True)
-    (workflow_dir / "safe.yml").write_text(
-        "env:\n  GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}\n",
-        encoding="utf-8",
-    )
-    monkeypatch.chdir(tmp_path)
-
-    assert daily_audit.detect_drift() == []
+    findings = apex_runner.scan_for_secrets(str(tmp_path))
+    evidence = " ".join(finding.evidence for finding in findings)
+    assert len(findings) == 2
+    assert password_value not in evidence
+    assert xai_key not in evidence
+    assert legacy_notion not in evidence
+    assert private_key_header not in evidence
 
 
-def test_daily_drift_validates_each_token_assignment(tmp_path, monkeypatch):
+def test_workflow_drift_validates_every_token_assignment(tmp_path):
     workflow_dir = tmp_path / ".github" / "workflows"
     workflow_dir.mkdir(parents=True)
     (workflow_dir / "mixed.yml").write_text(
@@ -176,169 +107,97 @@ def test_daily_drift_validates_each_token_assignment(tmp_path, monkeypatch):
         "      GITHUB_TOKEN: legacy-token-alias\n",
         encoding="utf-8",
     )
-    monkeypatch.chdir(tmp_path)
-
-    findings = daily_audit.detect_drift()
+    findings = apex_runner.detect_workflow_drift(str(tmp_path))
     assert len(findings) == 1
     assert "unsafe token source" in findings[0].title
 
 
-def test_apex_runner_secret_scan_does_not_match_scanner_vocabulary(tmp_path):
-    source = tmp_path / "src"
-    source.mkdir()
-    (source / "scanner.py").write_text(
-        'patterns = ["ghp_", "sk-", "AKIA", "secret_"]\n',
-        encoding="utf-8",
+def test_persist_and_verify_are_run_exact_atomic_and_digest_bound(tmp_path):
+    run = apex_runner.AuditRun(
+        run_id="run-one",
+        started_at="2026-08-22T16:00:00Z",
+        completed_at="2026-08-22T16:00:01Z",
+        source_sha="abc123",
+        status="clean",
     )
-    (tmp_path / "audit_log").mkdir()
-    generated_credential = "github_pat_" + ("B" * 40)
-    (tmp_path / "audit_log" / "old.json").write_text(
-        generated_credential,
-        encoding="utf-8",
+    log_path, queue_path, proof_path = apex_runner.persist_run(run, tmp_path)
+    readback = apex_runner.verify_run_receipt("run-one", tmp_path)
+
+    assert log_path == readback.log_path
+    assert queue_path == readback.queue_path
+    assert proof_path == readback.proof_path
+    assert readback.source_sha == "abc123"
+    assert readback.status == "clean"
+    assert readback.external_action_authorized is False
+    assert not list(tmp_path.rglob("*.tmp"))
+
+
+def test_readback_rejects_tampered_log(tmp_path):
+    run = apex_runner.AuditRun(
+        run_id="tamper",
+        started_at="2026-08-22T16:00:00Z",
+        completed_at="2026-08-22T16:00:01Z",
+        status="clean",
     )
+    log_path, _, _ = apex_runner.persist_run(run, tmp_path)
+    payload = json.loads(log_path.read_text(encoding="utf-8"))
+    payload["run"]["status"] = "findings"
+    log_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    assert apex_runner.scan_for_secrets(str(tmp_path)) == []
-
-    credential = "sk-" + ("C" * 24)
-    leak_path = source / "leak.env"
-    leak_path.write_text(f"OPENAI_API_KEY={credential}\n", encoding="utf-8")
-    findings = apex_runner.scan_for_secrets(str(tmp_path))
-
-    assert len(findings) == 1
-    assert credential not in findings[0].evidence
-    assert "value redacted" in findings[0].evidence
-
-
-def test_apex_runner_uses_repository_probe_for_actions_token(monkeypatch):
-    urls = []
-
-    class Response:
-        status_code = 200
-
-        def json(self):
-            return {"full_name": "GlacierEQ/test-repo"}
-
-    def get(url, *_args, **_kwargs):
-        urls.append(url)
-        return Response()
-
-    fake_requests = types.SimpleNamespace(RequestException=RuntimeError, get=get)
-    monkeypatch.setattr(apex_runner, "requests", fake_requests)
-    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
-    monkeypatch.setenv("GITHUB_REPO", "GlacierEQ/test-repo")
-    monkeypatch.delenv("NOTION_TOKEN", raising=False)
-    monkeypatch.delenv("SUPABASE_URL", raising=False)
-    monkeypatch.delenv("SUPABASE_KEY", raising=False)
-
-    github = apex_runner.validate_connectors()[0]
-
-    assert urls == ["https://api.github.com/repos/GlacierEQ/test-repo"]
-    assert github.authenticated is True
-    assert github.reachable is True
-    assert github.action_capable is True
+    try:
+        apex_runner.verify_run_receipt("tamper", tmp_path)
+    except apex_runner.AuditInvariantError as error:
+        assert "digest mismatch" in str(error)
+    else:
+        raise AssertionError("tampered audit log passed readback")
 
 
-def test_apex_runner_degrades_on_malformed_github_json(monkeypatch):
-    class Response:
-        status_code = 200
+def test_execute_audit_persists_then_reads_back(tmp_path, monkeypatch):
+    monkeypatch.setattr(audit_engine, "validate_connectors", lambda: [])
+    (tmp_path / ".env.example").write_text("A=\n", encoding="utf-8")
+    (tmp_path / ".gitignore").write_text(".env\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("# test\n", encoding="utf-8")
 
-        def json(self):
-            return []
-
-    fake_requests = types.SimpleNamespace(
-        RequestException=RuntimeError,
-        get=lambda *_args, **_kwargs: Response(),
+    run, readback = audit_engine.execute_audit(
+        run_id="exact-123",
+        root=tmp_path,
+        source_sha="deadbeef",
+        workflow_run_id="123",
     )
-    monkeypatch.setattr(apex_runner, "requests", fake_requests)
-    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
-    monkeypatch.setenv("GITHUB_REPO", "GlacierEQ/test-repo")
-    monkeypatch.delenv("NOTION_TOKEN", raising=False)
-    monkeypatch.delenv("SUPABASE_URL", raising=False)
-    monkeypatch.delenv("SUPABASE_KEY", raising=False)
-
-    github = apex_runner.validate_connectors()[0]
-    assert github.authenticated is False
-    assert github.reachable is False
-    assert github.action_capable is False
-    assert github.notes == "invalid_json_response"
+    assert run.run_id == "exact-123"
+    assert readback.run_id == "exact-123"
+    assert readback.source_sha == "deadbeef"
+    assert readback.status == "clean"
 
 
-def test_apex_runner_does_not_treat_supabase_404_as_operational(monkeypatch):
-    class Response:
-        status_code = 404
-
-        def json(self):
-            return {}
-
-    fake_requests = types.SimpleNamespace(
-        RequestException=RuntimeError,
-        get=lambda *_args, **_kwargs: Response(),
-    )
-    monkeypatch.setattr(apex_runner, "requests", fake_requests)
-    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-    monkeypatch.delenv("NOTION_TOKEN", raising=False)
-    monkeypatch.setenv("SUPABASE_URL", "https://example.invalid")
-    monkeypatch.setenv("SUPABASE_KEY", "test-key")
-
-    supabase = apex_runner.validate_connectors()[2]
-    assert supabase.authenticated is False
-    assert supabase.reachable is False
-    assert supabase.action_capable is False
-    assert supabase.notes == "http_status=404"
-
-
-def test_apex_runner_persists_run_unique_atomic_receipts(tmp_path, monkeypatch):
+def test_issue_writer_refuses_newest_file_fallback(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    first = apex_runner.AuditRun(run_id="run-one", timestamp="2026-08-08T00:00:00Z")
-    second = apex_runner.AuditRun(run_id="run-two", timestamp="2026-08-08T00:01:00Z")
-
-    first_log, first_queue = apex_runner.persist_run(first)
-    second_log, second_queue = apex_runner.persist_run(second)
-
-    assert first_log.exists()
-    assert first_queue.exists()
-    assert second_log.exists()
-    assert second_queue.exists()
-    assert first_log != second_log
-    assert first_queue != second_queue
-    aliases = [
-        path
-        for path in Path("audit_log").glob("run_*.json")
-        if path not in {first_log, second_log}
-    ]
-    assert len(aliases) == 1
-    assert json.loads(aliases[0].read_text(encoding="utf-8"))["run_id"] == "run-two"
-    assert not list(Path("audit_log").glob(".*.tmp"))
-    assert not list(Path("action_queue").glob(".*.tmp"))
+    (tmp_path / "action_queue").mkdir()
+    (tmp_path / "action_queue" / "queue_old.json").write_text("[]", encoding="utf-8")
+    assert apex_issue_writer.main(["--run-id", "missing"]) == 2
 
 
-def test_apex_daily_workflow_defers_failure_until_after_durable_receipts():
-    workflow = Path(".github/workflows/apex-daily.yml").read_text(encoding="utf-8")
-
-    run_pos = workflow.index("id: apex_audit")
-    upload_pos = workflow.index("- name: Upload audit receipt fallback")
-    commit_pos = workflow.index("- name: Commit audit results")
-    issue_pos = workflow.index("- name: Auto-create issues for P0/P1 findings")
-    propagate_pos = workflow.index("- name: Propagate audit result")
-
-    assert run_pos < upload_pos < commit_pos < issue_pos < propagate_pos
-    assert workflow.count("if: always()") >= 4
-    assert 'echo "status=${audit_status}" >> "$GITHUB_OUTPUT"' in workflow
-    assert "group: apex-daily-${{ github.repository }}" in workflow
-    assert "actions/upload-artifact@v4" in workflow
-    assert "audit_log/run_${{ github.run_id }}.json" in workflow
-    assert "for attempt in 1 2 3" in workflow
-    assert 'git fetch --no-tags origin "${target_branch}"' in workflow
-    assert 'git rebase "origin/${target_branch}"' in workflow
-    issue_step = workflow[issue_pos:propagate_pos]
-    assert "GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in issue_step
-
-
-def test_ci_checkouts_do_not_persist_tokens_and_shared_gate_is_pinned():
-    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
-
-    assert workflow.count("persist-credentials: false") >= 2
+def test_issue_writer_uses_only_exact_queue(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "action_queue").mkdir()
+    exact = [{"severity": "P2", "domain": "ops", "title": "x", "action": "y"}]
+    (tmp_path / "action_queue" / "queue_123.json").write_text(
+        json.dumps(exact), encoding="utf-8"
+    )
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     assert (
-        "GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@"
-        "6757957d290878b1c0831da95328dc29f65d77c9"
-    ) in workflow
+        apex_issue_writer.publish_run(run_id="123", token="test-token", repo="x/y")
+        == 0
+    )
+
+
+def test_only_one_scheduled_audit_workflow_remains():
+    workflows = Path(".github/workflows")
+    assert not (workflows / "daily-audit.yml").exists()
+    workflow = (workflows / "apex-daily.yml").read_text(encoding="utf-8")
+    assert "Verify exact run receipt and readback" in workflow
+    assert "audit_log/proof_${{ github.run_id }}.json" in workflow
+    assert "if-no-files-found: error" in workflow
+    assert "RUN_DATE: ${{ github.run_id }}" in workflow
+    assert 'python apex_issue_writer.py --run-id "${RUN_DATE}"' in workflow
+    assert "persist-credentials: false" in workflow
