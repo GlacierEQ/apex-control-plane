@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
+import sys
 from copy import deepcopy
 from hashlib import sha256
-import json
 from pathlib import Path
-import sys
 
 import pytest
 
