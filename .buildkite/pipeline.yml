@@ -104,7 +104,7 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
-      sha256sum \
+      shasum -a 256 \
         artifacts/buildkite/operator-fidelity.xml \
         artifacts/buildkite/registry-audit.xml \
         > artifacts/buildkite/SHA256SUMS
