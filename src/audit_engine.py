@@ -162,7 +162,9 @@ def validate_connectors() -> list[ConnectorStatus]:
                 headers={"Authorization": f"Bearer {github_token}"},
                 timeout=10,
             )
-            payload = _response_json_object(response) if response.status_code == 200 else None
+            payload = (
+                _response_json_object(response) if response.status_code == 200 else None
+            )
             if response.status_code == 200 and payload is not None:
                 github = ConnectorStatus(
                     name="GitHub",
@@ -177,7 +179,9 @@ def validate_connectors() -> list[ConnectorStatus]:
                 )
             else:
                 github = ConnectorStatus(
-                    name="GitHub", declared=True, notes=f"http_status={response.status_code}"
+                    name="GitHub",
+                    declared=True,
+                    notes=f"http_status={response.status_code}",
                 )
         except requests.RequestException as error:
             github = ConnectorStatus(name="GitHub", declared=True, notes=str(error))
@@ -205,7 +209,9 @@ def validate_connectors() -> list[ConnectorStatus]:
                 )
             else:
                 notion = ConnectorStatus(
-                    name="Notion", declared=True, notes=f"http_status={response.status_code}"
+                    name="Notion",
+                    declared=True,
+                    notes=f"http_status={response.status_code}",
                 )
         except requests.RequestException as error:
             notion = ConnectorStatus(name="Notion", declared=True, notes=str(error))
@@ -224,7 +230,10 @@ def validate_connectors() -> list[ConnectorStatus]:
         try:
             response = requests.get(
                 f"{supabase_url.rstrip('/')}/rest/v1/",
-                headers={"apikey": supabase_key, "Authorization": f"Bearer {supabase_key}"},
+                headers={
+                    "apikey": supabase_key,
+                    "Authorization": f"Bearer {supabase_key}",
+                },
                 timeout=10,
             )
             if response.status_code == 200:
@@ -233,7 +242,9 @@ def validate_connectors() -> list[ConnectorStatus]:
                 )
             else:
                 supabase = ConnectorStatus(
-                    name="Supabase", declared=True, notes=f"http_status={response.status_code}"
+                    name="Supabase",
+                    declared=True,
+                    notes=f"http_status={response.status_code}",
                 )
         except requests.RequestException as error:
             supabase = ConnectorStatus(name="Supabase", declared=True, notes=str(error))
@@ -313,7 +324,11 @@ APPROVED_TOKEN_EXPRESSION = re.compile(
 
 def _is_approved_token_source(value: str) -> bool:
     candidate = value.strip()
-    if len(candidate) >= 2 and candidate[0] == candidate[-1] and candidate[0] in {"'", '"'}:
+    if (
+        len(candidate) >= 2
+        and candidate[0] == candidate[-1]
+        and candidate[0] in {"'", '"'}
+    ):
         candidate = candidate[1:-1].strip()
     return APPROVED_TOKEN_EXPRESSION.fullmatch(candidate) is not None
 
@@ -498,7 +513,10 @@ def verify_run_receipt(run_id: str, root: str | Path = ".") -> AuditReadback:
         raise AuditInvariantError("audit proof source_sha mismatch")
     expected_log_ref = str(log_path.relative_to(Path(root)))
     expected_queue_ref = str(queue_path.relative_to(Path(root)))
-    if proof.get("log_path") != expected_log_ref or proof.get("queue_path") != expected_queue_ref:
+    if (
+        proof.get("log_path") != expected_log_ref
+        or proof.get("queue_path") != expected_queue_ref
+    ):
         raise AuditInvariantError("audit proof path binding mismatch")
     if not isinstance(queue_payload, list) or not all(
         isinstance(item, dict) for item in queue_payload
