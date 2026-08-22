@@ -149,7 +149,9 @@ def _find_or_create_ledger(*, base: str, token: str) -> int:
             params={"state": "open", "per_page": 100, "page": page},
         )
         if response.status_code != 200:
-            raise RuntimeError(f"ledger lookup failed: http_status={response.status_code}")
+            raise RuntimeError(
+                f"ledger lookup failed: http_status={response.status_code}"
+            )
         payload = response.json()
         if not isinstance(payload, list):
             raise TypeError("ledger lookup returned invalid JSON shape")
@@ -196,12 +198,19 @@ def _find_run_comment(
             params={"per_page": 100, "page": page},
         )
         if response.status_code != 200:
-            raise RuntimeError(f"ledger comment lookup failed: http_status={response.status_code}")
+            raise RuntimeError(
+                f"ledger comment lookup failed: http_status={response.status_code}"
+            )
         payload = response.json()
         if not isinstance(payload, list):
             raise TypeError("ledger comment lookup returned invalid JSON shape")
         existing = next(
-            (comment for comment in payload if marker in str(comment.get("body") or "")), None
+            (
+                comment
+                for comment in payload
+                if marker in str(comment.get("body") or "")
+            ),
+            None,
         )
         if existing is not None:
             return existing
@@ -257,10 +266,14 @@ def _write_and_readback_comment(
         token=token,
     )
     if readback.status_code != 200:
-        raise RuntimeError(f"ledger readback failed: http_status={readback.status_code}")
+        raise RuntimeError(
+            f"ledger readback failed: http_status={readback.status_code}"
+        )
     observed = _json_object(readback, operation="ledger readback")
     if observed.get("body") != body or marker not in str(observed.get("body") or ""):
-        raise RuntimeError("ledger readback did not match the exact published run entry")
+        raise RuntimeError(
+            "ledger readback did not match the exact published run entry"
+        )
     return comment_id
 
 
@@ -280,10 +293,14 @@ def _update_latest_pointer(
         json={"body": latest_body},
     )
     if update.status_code != 200:
-        raise RuntimeError(f"ledger pointer update failed: http_status={update.status_code}")
+        raise RuntimeError(
+            f"ledger pointer update failed: http_status={update.status_code}"
+        )
     readback = _request("GET", f"{base}/issues/{issue_number}", token=token)
     if readback.status_code != 200:
-        raise RuntimeError(f"ledger pointer readback failed: http_status={readback.status_code}")
+        raise RuntimeError(
+            f"ledger pointer readback failed: http_status={readback.status_code}"
+        )
     observed = _json_object(readback, operation="ledger pointer readback")
     if observed.get("body") != latest_body or _marker(run_id) not in latest_body:
         raise RuntimeError("ledger latest pointer did not read back exactly")
