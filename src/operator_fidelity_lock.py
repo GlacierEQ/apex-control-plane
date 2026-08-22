@@ -125,7 +125,7 @@ def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
 
 
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    """Issue the sealed runtime proof, diagnostic degradation, or terminate."""
+    """Issue the sealed runtime proof, diagnostic continuation, or terminate fail-closed."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
         return _IN_PROCESS
@@ -134,13 +134,19 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     if mode not in {"strict", "request", "off"}:
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
-    # Fidelity itself is not caller-disableable in a real runtime. This closes
-    # the old escape hatch where an env var could turn the protection into prose.
+    # These two values are explicit attempts to disable the hard lock itself.
+    # Persist a continuation receipt so recovery remains inspectable, then abort
+    # the process. Merely returning a non-authorizing object here is insufficient:
+    # callers that ignore the return value would otherwise continue execution.
     if not _testing():
         if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            return _continue_lock(("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",))
+            _reject_runtime_bypass(
+                ("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",)
+            )
         if mode == "off":
-            return _continue_lock(("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",))
+            _reject_runtime_bypass(
+                ("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",)
+            )
 
     receipt = receipt_from_environment()
     if receipt is None:
@@ -154,6 +160,12 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     _IN_PROCESS = validation
     os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "complete"
     return validation
+
+
+def _reject_runtime_bypass(errors: Sequence[str]) -> None:
+    """Record the recovery path, then terminate explicit hard-lock bypass attempts."""
+    _continue_lock(errors)
+    raise SystemExit(EXIT_BOOT_BLOCKED)
 
 
 def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:

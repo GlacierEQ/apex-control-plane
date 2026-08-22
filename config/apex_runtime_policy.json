@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "name": "APEX Verified Runtime Kernel",
+  "fail_closed": true,
+  "objective": "maximum_coherent_advance",
+  "required_startup_gates": [
+    "notion_continuity",
+    "prime_directive",
+    "operator_fidelity_lock",
+    "operator_fidelity",
+    "apex_startup"
+  ],
+  "action_scopes": [
+    "none",
+    "internal",
+    "external"
+  ],
+  "receipt_requirements": {
+    "observation": [
+      "observation",
+      "verification",
+      "readback"
+    ],
+    "mutation": [
+      "execution",
+      "test",
+      "adversarial_test",
+      "verification",
+      "persistence",
+      "readback"
+    ]
+  },
+  "mutation_lifecycle": [
+    "ready",
+    "executing",
+    "testing",
+    "adversarial_testing",
+    "repairing_when_needed",
+    "verifying",
+    "verified",
+    "persisting",
+    "readback",
+    "complete"
+  ],
+  "observation_lifecycle": [
+    "ready",
+    "observing",
+    "verifying",
+    "readback",
+    "complete"
+  ],
+  "completion_invariants": {
+    "unresolved_blockers_must_be_empty": true,
+    "mutation_requires_verified_gain_reference": true,
+    "readback_must_match_expected_state": true,
+    "target_must_be_reached": true,
+    "failed_test_routes_to_repair": true,
+    "failed_adversarial_test_routes_to_repair": true,
+    "failed_mutation_verification_routes_to_repair": true
+  },
+  "fidelity": {
+    "literal_instruction_bound_in_memory": true,
+    "instruction_drift_is_runtime_violation": true,
+    "operation_class_bound_before_action": true,
+    "target_state_bound_before_action": true,
+    "mutation_requires_operator_authorization_reference": true
+  },
+  "privacy": {
+    "audit_literal_instruction": false,
+    "audit_tool_payloads": false,
+    "public_snapshot_uses_instruction_sha256": true,
+    "receipt_details_are_digest_only": true
+  }
+}
