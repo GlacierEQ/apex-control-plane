@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "registry_id": "apex-connector-contract-registry",
+  "version": 1,
+  "contracts": {
+    "authenticated_session_provider_bridge": {
+      "path": "config/apex_connector_catalog.json",
+      "source_version": 2,
+      "transport": "authenticated_session_provider_bridge",
+      "authority": "repository_contract",
+      "purpose": "Catalogues repository-side provider bridge reads and exact-approved host operation mappings."
+    },
+    "authenticated_chatgpt_direct_runtime": {
+      "path": "config/apex_direct_connector_runtime.json",
+      "source_version": 1,
+      "transport": "authenticated_chatgpt_connectors",
+      "authority": "supabase_route_policy_projection",
+      "purpose": "Source projection of the verified direct connector pipeline runtime installed in supabase-backend-ops."
+    }
+  },
+  "resolution": {
+    "permission_union_allowed": false,
+    "transport_must_be_selected_before_capability_resolution": true,
+    "bridge_catalog_cannot_disable_a_verified_direct_runtime_route": true,
+    "direct_runtime_cannot_enable_a_bridge_host_mapping": true,
+    "writes_require_transport_local_approval_and_terminal_readback": true,
+    "ambiguous_external_outcome_can_never_promote_to_verified": true
+  }
+}
