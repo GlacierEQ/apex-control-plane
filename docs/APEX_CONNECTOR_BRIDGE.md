@@ -49,3 +49,22 @@ python -m pytest -q tests/test_audit_hardening.py
 ```
 
 The tests prove that catalogued reads can be admitted as non-authorizing evidence; unknown operations, stale receipts, malformed input, and write operations without active rules and exact approval are refused.
+
+## Authenticated-session operation path
+
+The repository now provides two helpers for live read evidence. `src/session_connector_dispatch.py` maps a validated APEX request to one documented, catalogued provider read plan. It does **not** invoke a provider, load a credential, or authorize an external action. The authenticated task host performs the planned provider read directly through its configured session integration. This separation keeps the host-specific connection boundary outside repository source and prevents a repository process from inheriting the host’s provider credentials.
+
+After the host preserves its provider observation outside the repository, `scripts/admit_session_connector_receipts.py` receives an observation manifest and creates the corresponding read receipts. It reads each observation only to calculate a SHA-256 digest. The receipt ledger stores the connector, operation, profile, target digest, observation time, source-reference count, and content digest; it does not store the provider material. The command then admits each receipt to `CaseBrainOrchestrator` and reports `external_action_authorized: false` for every accepted item.
+
+> The operation plan is evidence-retrieval plumbing, not standing access to act. A host must perform each provider read through its own authenticated connector, and every result remains non-authorizing when APEX admits it.
+
+A host-run admission sequence has this form:
+
+```bash
+python scripts/admit_session_connector_receipts.py \
+  --manifest /operator-controlled-path/observations.json \
+  --receipt-ledger /operator-controlled-path/apex-read-receipts.jsonl \
+  --commit-sha <current-protected-main-commit>
+```
+
+The manifest is operator-controlled, remains outside Git history, and points to local observation files created by direct authenticated reads. It must name a catalogued connector, read operation, profile, target, RFC3339 observation time, source reference, and the local observation path. Any malformed, stale, unlisted, or action-claiming item is refused.
