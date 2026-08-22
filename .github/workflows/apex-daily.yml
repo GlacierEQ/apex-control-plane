@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   issues: write
 
 concurrency:
@@ -53,13 +53,13 @@ jobs:
           set -e
           echo "status=${audit_status}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify exact run receipt and readback
+      - name: Verify exact run receipt and local readback
         if: always()
         env:
           RUN_DATE: ${{ github.run_id }}
         run: python apex_runner.py --verify-run "${RUN_DATE}"
 
-      - name: Upload immutable receipt fallback
+      - name: Upload immutable receipt bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -68,39 +68,10 @@ jobs:
             audit_log/run_${{ github.run_id }}.json
             audit_log/proof_${{ github.run_id }}.json
             action_queue/queue_${{ github.run_id }}.json
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: error
 
-      - name: Persist exact audit receipts
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "APEX Audit Engine"
-          git config user.email "apex-bot@glaciereq.system"
-          git add --ignore-errors \
-            "audit_log/run_${{ github.run_id }}.json" \
-            "audit_log/proof_${{ github.run_id }}.json" \
-            "action_queue/queue_${{ github.run_id }}.json"
-          if git diff --staged --quiet; then
-            echo "Exact run receipts were not staged; refusing silent success." >&2
-            exit 1
-          fi
-          git commit -m "audit: verified run ${{ github.run_id }} [auto]"
-          target_branch="${GITHUB_REF_NAME:-main}"
-          for attempt in 1 2 3; do
-            if git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "HEAD:${target_branch}"; then
-              exit 0
-            fi
-            if [[ "$attempt" -eq 3 ]]; then
-              echo "Audit receipt push failed after ${attempt} attempts; artifact fallback remains available." >&2
-              exit 1
-            fi
-            git fetch --no-tags origin "${target_branch}"
-            git rebase "origin/${target_branch}"
-          done
-
-      - name: Update rolling P0/P1 audit issue from exact run
+      - name: Publish and read back durable audit ledger
         if: always()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -121,6 +92,6 @@ jobs:
             exit 2
           fi
           if [[ "$status" -ne 0 ]]; then
-            echo "Audit completed with status ${status}; exact receipts and readback were attempted before propagation." >&2
+            echo "Audit completed with status ${status}; exact receipts, artifact persistence, and ledger readback were attempted before propagation." >&2
             exit "$status"
           fi
