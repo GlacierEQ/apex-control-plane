@@ -112,6 +112,26 @@ def test_workflow_drift_validates_every_token_assignment(tmp_path):
     assert "unsafe token source" in findings[0].title
 
 
+def test_workflow_drift_rejects_approved_substrings_inside_unsafe_values(tmp_path):
+    workflow_dir = tmp_path / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "adversarial.yml").write_text(
+        "env:\n"
+        "  GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'\n"
+        "jobs:\n"
+        "  comment-bypass:\n"
+        "    env:\n"
+        "      GITHUB_TOKEN: legacy-token # ${{ secrets.GITHUB_TOKEN }}\n"
+        "  literal-bypass:\n"
+        "    env:\n"
+        "      GITHUB_TOKEN: 'literal github.token'\n",
+        encoding="utf-8",
+    )
+    findings = apex_runner.detect_workflow_drift(str(tmp_path))
+    assert len(findings) == 2
+    assert all("unsafe token source" in finding.title for finding in findings)
+
+
 def test_persist_and_verify_are_run_exact_atomic_and_digest_bound(tmp_path):
     run = apex_runner.AuditRun(
         run_id="run-one",
