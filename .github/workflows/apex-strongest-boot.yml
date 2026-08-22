@@ -7,6 +7,8 @@ on:
       - "src/apex_strong_boot.py"
       - "src/apex_runtime_kernel.py"
       - "src/verified_runtime_entrypoint.py"
+      - "src/runtime_execution_guard.py"
+      - "src/epistemic_risk_gate.py"
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
@@ -18,6 +20,7 @@ on:
       - "tests/test_apex_strong_boot.py"
       - "tests/test_apex_runtime_kernel.py"
       - "tests/test_verified_runtime_entrypoint.py"
+      - "tests/test_runtime_execution_guard.py"
       - "tests/test_control_plane.py"
       - ".github/workflows/apex-strongest-boot.yml"
   pull_request:
@@ -26,6 +29,8 @@ on:
       - "src/apex_strong_boot.py"
       - "src/apex_runtime_kernel.py"
       - "src/verified_runtime_entrypoint.py"
+      - "src/runtime_execution_guard.py"
+      - "src/epistemic_risk_gate.py"
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
@@ -37,6 +42,7 @@ on:
       - "tests/test_apex_strong_boot.py"
       - "tests/test_apex_runtime_kernel.py"
       - "tests/test_verified_runtime_entrypoint.py"
+      - "tests/test_runtime_execution_guard.py"
       - "tests/test_control_plane.py"
       - ".github/workflows/apex-strongest-boot.yml"
 
@@ -72,6 +78,8 @@ jobs:
             src/apex_strong_boot.py \
             src/apex_runtime_kernel.py \
             src/verified_runtime_entrypoint.py \
+            src/runtime_execution_guard.py \
+            src/epistemic_risk_gate.py \
             src/apex_enforced_startup.py \
             src/notion_continuity_gate.py \
             src/prime_directive_boot.py \
@@ -87,6 +95,7 @@ jobs:
             tests/test_apex_strong_boot.py \
             tests/test_apex_runtime_kernel.py \
             tests/test_verified_runtime_entrypoint.py \
+            tests/test_runtime_execution_guard.py \
             tests/test_control_plane.py
 
       - name: Prove runtime entrypoint fails closed without receipts
