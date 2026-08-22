@@ -20,6 +20,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 
+from runtime_execution_guard import enforce_verified_runtime_boundary
+
+
+# `control_plane_runtime` imports this execution gate before it can process work.
+# Rejecting direct legacy-runtime execution here gives the verified entrypoint an
+# independent interlock even when interpreter startup hooks are unavailable.
+enforce_verified_runtime_boundary()
+
 
 class EpistemicState(StrEnum):
     OBSERVED = "observed"
