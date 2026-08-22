@@ -22,7 +22,7 @@ try:
 except ImportError:  # pragma: no cover - exercised through dependency-degraded behavior
     requests = None
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 
 
 class AuditInvariantError(RuntimeError):
@@ -36,6 +36,10 @@ class Finding:
     title: str
     evidence: str
     action: str
+    evidence_state: str = "OBSERVED"
+    evidence_source_class: str = "EVIDENCE"
+    action_state: str = "PROPOSED"
+    action_source_class: str = "AGENT"
     auto_execute: bool = False
     status: str = "open"
     resolved: bool = False
@@ -442,7 +446,12 @@ def persist_run(run: AuditRun, root: str | Path = ".") -> tuple[Path, Path, Path
             "severity": finding.severity,
             "domain": finding.domain,
             "title": finding.title,
+            "evidence": finding.evidence,
+            "evidence_state": finding.evidence_state,
+            "evidence_source_class": finding.evidence_source_class,
             "action": finding.action,
+            "action_state": finding.action_state,
+            "action_source_class": finding.action_source_class,
             "auto_execute": finding.auto_execute,
         }
         for finding in run.findings
@@ -475,12 +484,26 @@ def verify_run_receipt(run_id: str, root: str | Path = ".") -> AuditReadback:
     queue_payload = json.loads(queue_path.read_text(encoding="utf-8"))
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     run_payload = log_payload.get("run") if isinstance(log_payload, dict) else None
+    if not isinstance(log_payload, dict) or not isinstance(proof, dict):
+        raise AuditInvariantError("audit receipt envelopes must be JSON objects")
+    if log_payload.get("schema_version") != SCHEMA_VERSION:
+        raise AuditInvariantError("audit log schema version mismatch")
+    if proof.get("schema_version") != SCHEMA_VERSION:
+        raise AuditInvariantError("audit proof schema version mismatch")
     if not isinstance(run_payload, dict):
         raise AuditInvariantError("audit log is missing run object")
     if run_payload.get("run_id") != run_id or proof.get("run_id") != run_id:
         raise AuditInvariantError("audit receipt run_id mismatch")
-    if not isinstance(queue_payload, list):
-        raise AuditInvariantError("audit action queue must be a list")
+    if proof.get("source_sha") != run_payload.get("source_sha"):
+        raise AuditInvariantError("audit proof source_sha mismatch")
+    expected_log_ref = str(log_path.relative_to(Path(root)))
+    expected_queue_ref = str(queue_path.relative_to(Path(root)))
+    if proof.get("log_path") != expected_log_ref or proof.get("queue_path") != expected_queue_ref:
+        raise AuditInvariantError("audit proof path binding mismatch")
+    if not isinstance(queue_payload, list) or not all(
+        isinstance(item, dict) for item in queue_payload
+    ):
+        raise AuditInvariantError("audit action queue must be a list of objects")
     if proof.get("log_sha256") != _sha256_file(log_path):
         raise AuditInvariantError("audit log digest mismatch")
     if proof.get("queue_sha256") != _sha256_file(queue_path):
