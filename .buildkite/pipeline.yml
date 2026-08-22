@@ -12,7 +12,7 @@ steps:
     timeout_in_minutes: 20
     agents:
       queue: macos-self
-      os: linux
+      os: macos
     retry:
       automatic:
         - exit_status: -1
@@ -49,7 +49,7 @@ steps:
     timeout_in_minutes: 25
     agents:
       queue: macos-self
-      os: linux
+      os: macos
     retry:
       automatic:
         - exit_status: -1
@@ -96,7 +96,7 @@ steps:
     timeout_in_minutes: 5
     agents:
       queue: macos-self
-      os: linux
+      os: macos
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
