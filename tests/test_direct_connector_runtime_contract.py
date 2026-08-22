@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from hashlib import sha256
 import json
 from pathlib import Path
 import sys
@@ -30,6 +31,20 @@ def _write_json(path: Path, payload: dict) -> Path:
     return path
 
 
+def _resign_pipeline(payload: dict, pipeline_key: str) -> None:
+    pipeline = payload["pipelines"][pipeline_key]
+    definition = json.loads(pipeline["definition_text"])
+    definition["invariants"] = pipeline["invariants"]
+    definition["steps"] = pipeline["steps"]
+    definition_text = json.dumps(definition, sort_keys=True, separators=(",", ":"))
+    definition_hash = sha256(definition_text.encode("utf-8")).hexdigest()
+    pipeline["definition_text"] = definition_text
+    pipeline["definition_hash"] = definition_hash
+    for receipt in payload["verified_receipts"]:
+        if receipt["pipeline_key"] == pipeline_key:
+            receipt["pipeline_hash"] = definition_hash
+
+
 def test_contract_registry_forbids_permission_union():
     registry = load_contract_registry(REGISTRY_PATH)
 
@@ -49,6 +64,8 @@ def test_verified_direct_runtime_contract_loads():
     assert contract["runtime_id"] == "apex-direct-connector-runtime"
     assert contract["authority"]["project_id"] == "dyhprklicgewmrimecey"
     assert contract["transport"]["name"] == "authenticated_chatgpt_connectors"
+    assert contract["security"]["definition_hash_binds_stored_behavior"] is True
+    assert contract["security"]["dependency_graph_must_be_acyclic"] is True
     assert len(contract["routes"]) == 5
     assert len(contract["pipelines"]) == 2
     assert len(contract["verified_receipts"]) == 2
@@ -77,11 +94,31 @@ def test_reconciliation_preserves_transport_specific_notion_authority():
     assert summary.verified_receipt_count == 2
 
 
+def test_projected_behavior_tamper_with_stale_definition_is_rejected(tmp_path):
+    payload = deepcopy(json.loads(DIRECT_RUNTIME_PATH.read_text(encoding="utf-8")))
+    pipeline = payload["pipelines"]["apex.direct_control_plane_checkpoint"]
+    pipeline["steps"][0]["target"]["path"] = "config/TAMPERED.json"
+    path = _write_json(tmp_path / "runtime.json", payload)
+
+    with pytest.raises(DirectConnectorRuntimeContractError, match="projected pipeline behavior"):
+        load_direct_runtime_contract(path)
+
+
+def test_stored_definition_text_tamper_with_stale_hash_is_rejected(tmp_path):
+    payload = deepcopy(json.loads(DIRECT_RUNTIME_PATH.read_text(encoding="utf-8")))
+    pipeline = payload["pipelines"]["apex.direct_control_plane_checkpoint"]
+    pipeline["definition_text"] += " "
+    path = _write_json(tmp_path / "runtime.json", payload)
+
+    with pytest.raises(DirectConnectorRuntimeContractError, match="does not match stored definition"):
+        load_direct_runtime_contract(path)
+
+
 def test_write_without_terminal_readback_is_rejected(tmp_path):
     payload = deepcopy(json.loads(DIRECT_RUNTIME_PATH.read_text(encoding="utf-8")))
-    del payload["pipelines"]["apex.direct_control_plane_checkpoint"]["steps"][1][
-        "readback_step_id"
-    ]
+    pipeline_key = "apex.direct_control_plane_checkpoint"
+    del payload["pipelines"][pipeline_key]["steps"][1]["readback_step_id"]
+    _resign_pipeline(payload, pipeline_key)
     path = _write_json(tmp_path / "runtime.json", payload)
 
     with pytest.raises(DirectConnectorRuntimeContractError, match="readback_step_id"):
@@ -90,8 +127,10 @@ def test_write_without_terminal_readback_is_rejected(tmp_path):
 
 def test_cross_connector_readback_is_rejected(tmp_path):
     payload = deepcopy(json.loads(DIRECT_RUNTIME_PATH.read_text(encoding="utf-8")))
-    readback = payload["pipelines"]["apex.direct_control_plane_checkpoint"]["steps"][2]
+    pipeline_key = "apex.direct_control_plane_checkpoint"
+    readback = payload["pipelines"][pipeline_key]["steps"][2]
     readback["route_key"] = "notion:fetch:workspace_page_read:v1"
+    _resign_pipeline(payload, pipeline_key)
     path = _write_json(tmp_path / "runtime.json", payload)
 
     with pytest.raises(DirectConnectorRuntimeContractError, match="connector mismatch"):
@@ -100,11 +139,26 @@ def test_cross_connector_readback_is_rejected(tmp_path):
 
 def test_same_connector_different_target_readback_is_rejected(tmp_path):
     payload = deepcopy(json.loads(DIRECT_RUNTIME_PATH.read_text(encoding="utf-8")))
-    readback = payload["pipelines"]["apex.direct_control_plane_checkpoint"]["steps"][2]
+    pipeline_key = "apex.direct_control_plane_checkpoint"
+    readback = payload["pipelines"][pipeline_key]["steps"][2]
     readback["target"]["receipt_key"] = "different-object"
+    _resign_pipeline(payload, pipeline_key)
     path = _write_json(tmp_path / "runtime.json", payload)
 
     with pytest.raises(DirectConnectorRuntimeContractError, match="target mismatch"):
+        load_direct_runtime_contract(path)
+
+
+def test_dependency_cycle_is_rejected_even_when_hash_is_consistent(tmp_path):
+    payload = deepcopy(json.loads(DIRECT_RUNTIME_PATH.read_text(encoding="utf-8")))
+    pipeline_key = "apex.connector_mesh_health_sweep"
+    steps = payload["pipelines"][pipeline_key]["steps"]
+    steps[0]["depends_on"] = [steps[1]["step_id"]]
+    steps[1]["depends_on"] = [steps[0]["step_id"]]
+    _resign_pipeline(payload, pipeline_key)
+    path = _write_json(tmp_path / "runtime.json", payload)
+
+    with pytest.raises(DirectConnectorRuntimeContractError, match="dependency cycle"):
         load_direct_runtime_contract(path)
 
 
