@@ -12,6 +12,31 @@ import json
 from pathlib import Path
 import runpy
 import sys
+from typing import Any
+
+
+def _require_completed_startup_validations(
+    validations: tuple[tuple[str, Any | None], ...],
+) -> None:
+    """Compatibility validator for callers that already hold startup proofs.
+
+    This helper does not run boot stages or authorize runtime loading. The real
+    executable startup path is `apply_strongest_boot()` below.
+    """
+    incomplete: list[str] = []
+    for gate_name, validation in validations:
+        if validation is None:
+            incomplete.append(f"{gate_name}: validation missing")
+            continue
+        if validation.ok is not True or validation.status != "complete":
+            incomplete.append(
+                f"{gate_name}: status={validation.status!r}, ok={validation.ok!r}"
+            )
+    if incomplete:
+        raise RuntimeError(
+            "runtime authorization denied; mandatory startup gates incomplete: "
+            + "; ".join(incomplete)
+        )
 
 
 if __name__ == "__main__":
