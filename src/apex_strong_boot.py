@@ -40,7 +40,6 @@ from prime_directive_boot import (
 )
 
 
-EXIT_BOOT_BLOCKED = 78
 EXPECTED_GATES = (
     "notion_continuity",
     "prime_directive",
@@ -90,9 +89,10 @@ def apply_strongest_boot() -> StrongBootSession:
     """Run or recover the one complete APEX boot path and return its sealed session.
 
     The function is idempotent inside a process. No caller-controlled environment
-    status can satisfy a stage. Each stage must expose a complete in-process
-    validation object, and the runtime kernel factory independently checks those
-    same gate objects again before it can construct the kernel.
+    status can satisfy a stage. Every diagnostic gate is allowed to emit its own
+    recovery request before the aggregate boot blocks, so stronger composition
+    does not erase the complete repair surface that existed before this module.
+    The runtime kernel is created only if every gate is complete.
     """
     global _IN_PROCESS
     if _IN_PROCESS is not None:
@@ -100,23 +100,43 @@ def apply_strongest_boot() -> StrongBootSession:
         return _IN_PROCESS
 
     completed: list[str] = []
+    failures: list[str] = []
+
     for name, automatic, getter in _gate_sequence():
-        validation = getter()
-        if validation is None:
-            validation = automatic()
+        try:
+            validation = getter()
+            if validation is None:
+                validation = automatic()
+        except SystemExit:
+            # An explicit hard-lock bypass is intentionally terminal and must not
+            # be normalized into an aggregate diagnostic continuation.
+            raise
+        except Exception as exc:
+            failures.append(f"{name}: {type(exc).__name__}: {exc}")
+            continue
+
         current = getter()
         if current is None:
-            raise StrongBootViolation(f"{name}: in-process validation missing after boot")
+            failures.append(f"{name}: in-process validation missing after boot")
+            continue
         if validation is not None and current is not validation:
-            raise StrongBootViolation(f"{name}: boot validation identity changed in-process")
-        _require_complete_validation(name, current)
+            failures.append(f"{name}: boot validation identity changed in-process")
+            continue
+
+        error = _validation_error(name, current)
+        if error is not None:
+            failures.append(error)
+            continue
         completed.append(name)
 
     gates = tuple(completed)
-    if gates != EXPECTED_GATES:
-        raise StrongBootViolation(
-            "strong boot gate sequence mismatch: " + ", ".join(gates)
-        )
+    if failures or gates != EXPECTED_GATES:
+        os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] = "blocked"
+        if not failures:
+            failures.append(
+                "strong boot gate sequence mismatch: " + ", ".join(gates)
+            )
+        raise StrongBootViolation("; ".join(failures))
 
     runtime_kernel = create_verified_runtime_kernel()
     snapshot = runtime_kernel.snapshot()
@@ -161,13 +181,12 @@ def _validate_existing_session(session: StrongBootSession) -> None:
         raise StrongBootViolation("strong boot runtime kernel lost startup-gate binding")
 
 
-def _require_complete_validation(name: str, validation: Any) -> None:
+def _validation_error(name: str, validation: Any) -> str | None:
     if getattr(validation, "ok", None) is not True:
-        raise StrongBootViolation(f"{name}: validation ok is not true")
+        return f"{name}: validation ok is not true"
     if getattr(validation, "status", None) != "complete":
-        raise StrongBootViolation(
-            f"{name}: validation status is {getattr(validation, 'status', None)!r}"
-        )
+        return f"{name}: validation status is {getattr(validation, 'status', None)!r}"
+    return None
 
 
 def _gate_sequence() -> tuple[
