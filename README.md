@@ -38,7 +38,12 @@ The enforced startup contract is [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STAR
 2. **Prime Directive proof** — memory search, hash-bound ground-truth reads, tool inventory, current-source proof, and provider-backed receipt validation.
 3. **APEX Genesis proof** — bind Operator intent, continuation, target state, prior valid gains, contradiction status, execution-state model, maximum coherent path, and verification plan.
 
-Strict mode is the default. Without a complete provider-backed receipt, startup exits with status `78` rather than pretending context or execution state exists.
+APEX uses two explicit lanes:
+
+- **Operational lane (default):** internal, non-destructive runtime work continues when provider proof is unavailable. Startup reports degraded proof state, while external action remains unauthorized.
+- **Strict lane (opt-in):** deployments and proof-sensitive execution can set `CASEY_AUTO_BOOT_MODE=strict`; incomplete provider proof exits with status `78`.
+
+This keeps evidence honest without turning missing metadata into an innovation kill switch.
 
 ### State integrity
 
@@ -74,6 +79,12 @@ python src/auto_boot.py --profile legal_case --verify-receipt /path/to/receipt.j
 ### Run the control plane
 
 ```bash
+CASEY_BOOT_PROFILE=legal_case \
+CASEY_BOOT_RECEIPT_PATH=/path/to/receipt.json \
+python src/control_plane.py
+
+# Proof-sensitive deployment lane
+CASEY_AUTO_BOOT_MODE=strict \
 CASEY_BOOT_PROFILE=legal_case \
 CASEY_BOOT_RECEIPT_PATH=/path/to/receipt.json \
 python src/control_plane.py
