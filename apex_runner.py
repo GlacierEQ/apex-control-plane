@@ -1,4 +1,5 @@
 """CLI for the evidence-led APEX audit engine."""
+
 from __future__ import annotations
 
 import argparse
