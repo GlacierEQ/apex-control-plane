@@ -27,6 +27,8 @@
     "successful_stages_require_result_hash": true,
     "successful_stages_require_invocation_reference": true,
     "successful_stages_require_source_references": true,
+    "definition_hash_binds_stored_behavior": true,
+    "dependency_graph_must_be_acyclic": true,
     "anon_execution_allowed": false,
     "authenticated_execution_allowed": false,
     "service_role_execution_allowed": true
@@ -77,6 +79,14 @@
     "apex.direct_control_plane_checkpoint": {
       "version": 1,
       "definition_hash": "40691dea85db8d3ca0113d691973a9f0b82cf98ba642e76bea750a1f25fb9aaa",
+      "definition_text": "{\"steps\": [{\"target\": {\"path\": \"config/apex_connector_catalog.json\", \"repository\": \"GlacierEQ/apex-control-plane\"}, \"step_id\": \"observe_repo_policy\", \"route_key\": \"github:fetch_file:repository_file_read:v1\", \"depends_on\": []}, {\"target\": {\"table\": \"public.connector_upgrade_changelog_v2\", \"project_id\": \"dyhprklicgewmrimecey\", \"receipt_key\": \"apex.direct_control_plane_checkpoint.v1\"}, \"step_id\": \"append_backend_receipt\", \"route_key\": \"foundation:supabase.backend_ops:execute_sql:registry_write:v1\", \"depends_on\": [\"observe_repo_policy\"], \"readback_step_id\": \"verify_backend_receipt\"}, {\"target\": {\"table\": \"public.connector_upgrade_changelog_v2\", \"project_id\": \"dyhprklicgewmrimecey\", \"receipt_key\": \"apex.direct_control_plane_checkpoint.v1\"}, \"step_id\": \"verify_backend_receipt\", \"route_key\": \"foundation:supabase.backend_ops:execute_sql:registry_read:v1\", \"depends_on\": [\"append_backend_receipt\"]}, {\"target\": {\"page_id\": \"355b1e4f-3223-81de-b8a6-f783a875df5b\"}, \"step_id\": \"publish_notion_projection\", \"route_key\": \"notion:notion-update-page:control_projection_write:v1\", \"depends_on\": [\"verify_backend_receipt\"], \"readback_step_id\": \"verify_notion_projection\"}, {\"target\": {\"page_id\": \"355b1e4f-3223-81de-b8a6-f783a875df5b\"}, \"step_id\": \"verify_notion_projection\", \"route_key\": \"notion:fetch:workspace_page_read:v1\", \"depends_on\": [\"publish_notion_projection\"]}], \"version\": 1, \"transport\": \"authenticated_chatgpt_connectors\", \"invariants\": [\"route_policy_v3_is_binding\", \"writes_require_bound_operator_approval\", \"writes_cannot_self_certify\", \"every_write_requires_same_connector_terminal_readback\", \"ambiguous_external_outcome_never_promotes_to_verified\"], \"pipeline_key\": \"apex.direct_control_plane_checkpoint\", \"schema_version\": 1}",
+      "invariants": [
+        "route_policy_v3_is_binding",
+        "writes_require_bound_operator_approval",
+        "writes_cannot_self_certify",
+        "every_write_requires_same_connector_terminal_readback",
+        "ambiguous_external_outcome_never_promotes_to_verified"
+      ],
       "steps": [
         {
           "step_id": "observe_repo_policy",
@@ -138,6 +148,13 @@
     "apex.connector_mesh_health_sweep": {
       "version": 1,
       "definition_hash": "d0a9b1d0e043501e29d56771ae29ecaa1e29ddc8a2a6b7168b636fe41fe0c8b5",
+      "definition_text": "{\"steps\": [{\"target\": {\"tables\": [\"public.connector_registry_v2\", \"public.connector_route_runtime_v3\"], \"project_id\": \"dyhprklicgewmrimecey\"}, \"step_id\": \"read_backend_route_state\", \"route_key\": \"foundation:supabase.backend_ops:execute_sql:registry_read:v1\", \"depends_on\": []}, {\"target\": {\"path\": \"config/apex_connector_catalog.json\", \"repository\": \"GlacierEQ/apex-control-plane\"}, \"step_id\": \"read_repo_connector_contract\", \"route_key\": \"github:fetch_file:repository_file_read:v1\", \"depends_on\": []}, {\"target\": {\"page_id\": \"355b1e4f-3223-81de-b8a6-f783a875df5b\"}, \"step_id\": \"read_notion_connector_plane\", \"route_key\": \"notion:fetch:workspace_page_read:v1\", \"depends_on\": []}], \"version\": 1, \"transport\": \"authenticated_chatgpt_connectors\", \"invariants\": [\"read_only\", \"route_policy_v3_is_binding\", \"every_observation_requires_request_and_result_hashes\", \"no_projection_or_mutation\"], \"pipeline_key\": \"apex.connector_mesh_health_sweep\", \"schema_version\": 1}",
+      "invariants": [
+        "read_only",
+        "route_policy_v3_is_binding",
+        "every_observation_requires_request_and_result_hashes",
+        "no_projection_or_mutation"
+      ],
       "steps": [
         {
           "step_id": "read_backend_route_state",
