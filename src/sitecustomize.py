@@ -83,6 +83,20 @@ def _record_blocked_startup(exc: BaseException) -> None:
     emit_startup_continuation(continuation)
 
 
+def _terminate_blocked(code: int = _BOOT_BLOCKED_EXIT) -> None:
+    """Exit from interpreter startup without CPython rewriting the status to 1.
+
+    Raising SystemExit from `sitecustomize` can be treated as a fatal site-import
+    error by the interpreter. Diagnostics are flushed first, then `_exit` preserves
+    the fail-closed status code exactly.
+    """
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    finally:
+        os._exit(code)
+
+
 APEX_STRONG_BOOT_SESSION = None
 APEX_RUNTIME_KERNEL = None
 
@@ -95,7 +109,7 @@ if _entrypoint_name() == "control_plane_runtime.py" and not _is_pytest_startup()
             "direct control_plane_runtime execution is disabled; use control_plane.py"
         )
     )
-    raise SystemExit(_BOOT_BLOCKED_EXIT)
+    _terminate_blocked()
 
 if _should_boot():
     try:
@@ -103,10 +117,11 @@ if _should_boot():
 
         APEX_STRONG_BOOT_SESSION = apply_strongest_boot()
         APEX_RUNTIME_KERNEL = APEX_STRONG_BOOT_SESSION.runtime_kernel
-    except SystemExit:
+    except SystemExit as exc:
         # Explicit hard-lock bypass attempts remain terminal even in diagnostic mode.
-        raise
+        code = exc.code if isinstance(exc.code, int) and exc.code else _BOOT_BLOCKED_EXIT
+        _terminate_blocked(code)
     except Exception as exc:
         _record_blocked_startup(exc)
         if not _request_mode():
-            raise SystemExit(_BOOT_BLOCKED_EXIT) from None
+            _terminate_blocked()
