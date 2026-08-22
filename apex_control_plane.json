@@ -1,31 +1,32 @@
 {
-  "version": "2.0.0",
+  "version": "3.0.0",
   "owner": "GlacierEQ",
   "created": "2026-05-27T21:33:00Z",
   "run_count": 0,
   "last_run": null,
   "last_summary": null,
-  "connectors": {
-    "github": {
-      "status": "declared",
-      "owner": "GlacierEQ",
-      "auth_method": "PAT_ENV",
-      "env_key": "APEX_GITHUB_TOKEN",
-      "verified": false
-    },
-    "notion": {
-      "status": "declared",
-      "auth_method": "INTEGRATION_TOKEN_ENV",
-      "env_key": "APEX_NOTION_TOKEN",
-      "verified": false
-    }
+  "connector_catalog": {
+    "path": "config/apex_connector_catalog.json",
+    "schema_version": 1,
+    "version": 1
+  },
+  "integration_profiles": {
+    "repository_integrity": "declared",
+    "evidence_intake": "declared",
+    "current_source_review": "declared",
+    "knowledge_continuity": "declared",
+    "structured_state_review": "declared",
+    "api_verification": "declared"
   },
   "reality_firewall": {
     "rules": [
-      "connector must be authenticated before marked active",
-      "no secrets in source files — env vars only",
-      "all findings must have evidence and action",
-      "P0 findings auto-create GitHub issues"
+      "connector presence is not runtime proof",
+      "a bridge receipt is required before a connector result is admitted",
+      "no secrets in source files — session credentials remain outside the repository",
+      "all findings require evidence and a stated action",
+      "a successful health check or read receipt does not authorize an external write",
+      "every external write requires an active catalog operation and an exact user approval record",
+      "scheduled connector writes are disabled"
     ]
   },
   "audit_log": []
