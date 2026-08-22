@@ -113,7 +113,21 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
         try:
             validation = getter()
             if validation is None:
-                validation = automatic()
+                issued = automatic()
+                current = getter()
+                if current is None:
+                    failures.append(f"{name}: in-process validation missing after boot")
+                    continue
+                # Automatic gate functions issue sealed process-owned validation
+                # objects. Identity here proves the value returned to the caller
+                # is the exact proof published into process state, not a merely
+                # equal projection or reconstructed object.
+                if issued is not None and current is not issued:
+                    failures.append(
+                        f"{name}: boot validation identity changed in-process"
+                    )
+                    continue
+                validation = current
         except SystemExit:
             # An explicit hard-lock bypass is intentionally terminal and must not
             # be normalized into an aggregate diagnostic continuation.
@@ -122,15 +136,7 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
             failures.append(f"{name}: {type(exc).__name__}: {exc}")
             continue
 
-        current = getter()
-        if current is None:
-            failures.append(f"{name}: in-process validation missing after boot")
-            continue
-        if validation is not None and current is not validation:
-            failures.append(f"{name}: boot validation identity changed in-process")
-            continue
-
-        error = _validation_error(name, current)
+        error = _validation_error(name, validation)
         if error is not None:
             failures.append(error)
             continue
