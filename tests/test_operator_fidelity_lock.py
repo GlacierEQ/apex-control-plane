@@ -92,6 +92,48 @@ def test_strict_compatibility_mode_without_receipt_yields_continuation(monkeypat
     assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
 
 
+def test_disable_flag_records_continuation_then_terminates_fail_closed(
+    monkeypatch, tmp_path, capsys
+) -> None:
+    monkeypatch.setattr(lock, "_testing", lambda: False)
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.setenv("CASEY_AUTO_BOOT_DISABLE", "1")
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    lock._IN_PROCESS = None
+
+    with pytest.raises(SystemExit) as exc_info:
+        lock.automatic_operator_fidelity_lock()
+
+    assert exc_info.value.code == lock.EXIT_BOOT_BLOCKED
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity" in captured.err
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
+    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
+
+
+def test_off_mode_records_continuation_then_terminates_fail_closed(
+    monkeypatch, tmp_path, capsys
+) -> None:
+    monkeypatch.setattr(lock, "_testing", lambda: False)
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "off")
+    monkeypatch.delenv("CASEY_AUTO_BOOT_DISABLE", raising=False)
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    lock._IN_PROCESS = None
+
+    with pytest.raises(SystemExit) as exc_info:
+        lock.automatic_operator_fidelity_lock()
+
+    assert exc_info.value.code == lock.EXIT_BOOT_BLOCKED
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity" in captured.err
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
+    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
+
+
 def test_digest_is_cryptographically_bound_to_literal_constraints() -> None:
     receipt = _receipt()
     receipt["operator_fidelity"]["literal_constraints"][1] = "look sideways"
