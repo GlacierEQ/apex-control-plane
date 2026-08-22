@@ -1,19 +1,13 @@
-name: APEX Daily Autonomous Loop
+name: APEX Daily Evidence Loop
 
 on:
   schedule:
-    - cron: '0 8 * * *'   # 08:00 UTC = 10:00 PM HST
+    - cron: '0 18 * * *' # 08:00 HST
   workflow_dispatch:
-    inputs:
-      force_run:
-        description: 'Force full audit regardless of cache'
-        required: false
-        default: 'false'
 
 permissions:
   contents: write
   issues: write
-  pull-requests: write
 
 concurrency:
   group: apex-daily-${{ github.repository }}
@@ -24,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
+      - name: Checkout exact source
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Set up Python
@@ -37,94 +31,96 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt --quiet
+        run: pip install -r requirements.txt --quiet
 
-      - name: Run APEX Autonomous Audit
+      - name: Run APEX evidence-led audit
         id: apex_audit
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_REPO: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           RUN_DATE: ${{ github.run_id }}
         shell: bash
         run: |
           set +e
-          python apex_runner.py --auto-approve --full-audit
+          python apex_runner.py --full-audit
           audit_status=$?
           set -e
           echo "status=${audit_status}" >> "$GITHUB_OUTPUT"
-          echo "APEX audit exit status captured: ${audit_status}; persistence and notification will run before final status propagation."
 
-      - name: Upload audit receipt fallback
+      - name: Verify exact run receipt and readback
+        if: always()
+        env:
+          RUN_DATE: ${{ github.run_id }}
+        run: python apex_runner.py --verify-run "${RUN_DATE}"
+
+      - name: Upload immutable receipt fallback
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: apex-audit-receipt-${{ github.run_id }}
           path: |
             audit_log/run_${{ github.run_id }}.json
+            audit_log/proof_${{ github.run_id }}.json
             action_queue/queue_${{ github.run_id }}.json
-          retention-days: 7
+          retention-days: 14
           if-no-files-found: error
 
-      - name: Commit audit results
+      - name: Persist exact audit receipts
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name  "APEX Autonomous Agent"
+          git config user.name "APEX Audit Engine"
           git config user.email "apex-bot@glaciereq.system"
-          git add --ignore-errors audit_log/ findings/ action_queue/ connector_registry.json
+          git add --ignore-errors \
+            "audit_log/run_${{ github.run_id }}.json" \
+            "audit_log/proof_${{ github.run_id }}.json" \
+            "action_queue/queue_${{ github.run_id }}.json"
           if git diff --staged --quiet; then
-            echo "No audit receipt changes to persist."
-            exit 0
+            echo "Exact run receipts were not staged; refusing silent success." >&2
+            exit 1
           fi
-          git commit -m "audit: daily run $(date -u +%Y-%m-%dT%H:%M:%SZ) [auto]"
-
+          git commit -m "audit: verified run ${{ github.run_id }} [auto]"
           target_branch="${GITHUB_REF_NAME:-main}"
           for attempt in 1 2 3; do
-            if git push origin "HEAD:${target_branch}"; then
-              echo "Audit receipts persisted to ${target_branch}."
+            if git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "HEAD:${target_branch}"; then
               exit 0
             fi
             if [[ "$attempt" -eq 3 ]]; then
-              echo "Audit receipt push failed after ${attempt} attempts; artifact fallback remains durable." >&2
+              echo "Audit receipt push failed after ${attempt} attempts; artifact fallback remains available." >&2
               exit 1
             fi
-            echo "Remote advanced; synchronizing before retry ${attempt}/3."
             git fetch --no-tags origin "${target_branch}"
-            if ! git rebase "origin/${target_branch}"; then
-              git rebase --abort || true
-              echo "Audit receipt rebase failed; artifact fallback remains durable." >&2
-              exit 1
-            fi
+            git rebase "origin/${target_branch}"
           done
 
-      - name: Auto-create issues for P0/P1 findings
+      - name: Update rolling P0/P1 audit issue from exact run
         if: always()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
-        run: |
-          python apex_issue_writer.py --auto-approve
+          RUN_DATE: ${{ github.run_id }}
+        run: python apex_issue_writer.py --run-id "${RUN_DATE}"
 
-      - name: Propagate audit result
+      - name: Propagate audit finding status
         if: always()
         env:
           AUDIT_STATUS: ${{ steps.apex_audit.outputs.status }}
         shell: bash
         run: |
           set -euo pipefail
-          status="${AUDIT_STATUS:-1}"
+          status="${AUDIT_STATUS:-2}"
           if ! [[ "$status" =~ ^[0-9]+$ ]]; then
             echo "Invalid captured audit status: $status" >&2
-            exit 1
+            exit 2
           fi
           if [[ "$status" -ne 0 ]]; then
-            echo "APEX audit reported nonzero status ${status} after receipts and issue creation were attempted." >&2
+            echo "Audit completed with status ${status}; exact receipts and readback were attempted before propagation." >&2
             exit "$status"
           fi
