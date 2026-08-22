@@ -118,17 +118,51 @@ jobs:
             tests/test_operator_fidelity_lock.py \
             tests/test_operator_fidelity_preflight.py
 
+      - name: Validate connector runtime source contracts
+        run: |
+          python -m json.tool config/apex_connector_contract_registry.json >/dev/null
+          python -m json.tool config/apex_direct_connector_runtime.json >/dev/null
+          python -m py_compile \
+            src/direct_connector_runtime_contract.py \
+            scripts/admit_session_connector_receipts.py \
+            scripts/prepare_approved_connector_action.py \
+            scripts/admit_session_connector_execution_receipts.py
+
       - name: Ruff lint
-        run: ruff check scripts/scan_repos.py tests/test_scan_repos.py --output-format=github
+        run: |
+          ruff check \
+            scripts/scan_repos.py \
+            scripts/admit_session_connector_receipts.py \
+            scripts/prepare_approved_connector_action.py \
+            scripts/admit_session_connector_execution_receipts.py \
+            src/direct_connector_runtime_contract.py \
+            tests/test_scan_repos.py \
+            tests/test_direct_connector_runtime_contract.py \
+            --output-format=github
 
       - name: Ruff format check
-        run: ruff format --check scripts/scan_repos.py tests/test_scan_repos.py
+        run: |
+          ruff format --check \
+            scripts/scan_repos.py \
+            scripts/admit_session_connector_receipts.py \
+            scripts/prepare_approved_connector_action.py \
+            scripts/admit_session_connector_execution_receipts.py \
+            src/direct_connector_runtime_contract.py \
+            tests/test_scan_repos.py \
+            tests/test_direct_connector_runtime_contract.py
 
       - name: Mypy
-        run: mypy scripts/scan_repos.py --ignore-missing-imports
+        run: |
+          mypy \
+            scripts/scan_repos.py \
+            src/direct_connector_runtime_contract.py \
+            --ignore-missing-imports
 
       - name: Tests
-        run: python -m pytest -q tests/test_scan_repos.py
+        run: |
+          PYTHONPATH=src:. python -m pytest -q \
+            tests/test_scan_repos.py \
+            tests/test_direct_connector_runtime_contract.py
 
   audit-hardening:
     name: Audit hardening quality

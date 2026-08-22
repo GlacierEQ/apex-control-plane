@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "runtime_id": "apex-direct-connector-runtime",
+  "version": 1,
+  "authority": {
+    "system": "supabase-backend-ops",
+    "project_id": "dyhprklicgewmrimecey",
+    "route_policy_table": "public.connector_route_policy_v3",
+    "route_runtime_table": "public.connector_route_runtime_v3",
+    "pipeline_definition_table": "public.connector_pipeline_definitions_v1",
+    "pipeline_run_table": "public.connector_pipeline_runs_v1",
+    "pipeline_stage_table": "public.connector_pipeline_stage_runs_v1"
+  },
+  "transport": {
+    "name": "authenticated_chatgpt_connectors",
+    "credential_material_in_repository": false,
+    "scheduled_execution": false,
+    "persistent_worker_claimed": false
+  },
+  "security": {
+    "route_policy_v3_is_binding": true,
+    "writes_require_bound_OPERATOR_approval": true,
+    "writes_cannot_self_certify": true,
+    "writes_require_same_connector_same_target_terminal_readback": true,
+    "ambiguous_external_outcome_can_never_promote_to_verified": true,
+    "successful_stages_require_request_hash": true,
+    "successful_stages_require_result_hash": true,
+    "successful_stages_require_invocation_reference": true,
+    "successful_stages_require_source_references": true,
+    "definition_hash_binds_stored_behavior": true,
+    "dependency_graph_must_be_acyclic": true,
+    "anon_execution_allowed": false,
+    "authenticated_execution_allowed": false,
+    "service_role_execution_allowed": true
+  },
+  "routes": {
+    "github:fetch_file:repository_file_read:v1": {
+      "connector_key": "github",
+      "tool_name": "fetch_file",
+      "capability": "repository_file_read",
+      "mutation_class": "read",
+      "policy_version": "v1",
+      "approval_required": false
+    },
+    "foundation:supabase.backend_ops:execute_sql:registry_write:v1": {
+      "connector_key": "supabase.backend_ops",
+      "tool_name": "execute_sql",
+      "capability": "registry_write",
+      "mutation_class": "write",
+      "policy_version": "v1",
+      "approval_required": true
+    },
+    "foundation:supabase.backend_ops:execute_sql:registry_read:v1": {
+      "connector_key": "supabase.backend_ops",
+      "tool_name": "execute_sql",
+      "capability": "registry_read",
+      "mutation_class": "read",
+      "policy_version": "v1",
+      "approval_required": false
+    },
+    "notion:notion-update-page:control_projection_write:v1": {
+      "connector_key": "notion",
+      "tool_name": "notion-update-page",
+      "capability": "control_projection_write",
+      "mutation_class": "write",
+      "policy_version": "v1",
+      "approval_required": true
+    },
+    "notion:fetch:workspace_page_read:v1": {
+      "connector_key": "notion",
+      "tool_name": "fetch",
+      "capability": "workspace_page_read",
+      "mutation_class": "read",
+      "policy_version": "v1",
+      "approval_required": false
+    }
+  },
+  "pipelines": {
+    "apex.direct_control_plane_checkpoint": {
+      "version": 1,
+      "definition_hash": "40691dea85db8d3ca0113d691973a9f0b82cf98ba642e76bea750a1f25fb9aaa",
+      "definition_text": "{\"steps\": [{\"target\": {\"path\": \"config/apex_connector_catalog.json\", \"repository\": \"GlacierEQ/apex-control-plane\"}, \"step_id\": \"observe_repo_policy\", \"route_key\": \"github:fetch_file:repository_file_read:v1\", \"depends_on\": []}, {\"target\": {\"table\": \"public.connector_upgrade_changelog_v2\", \"project_id\": \"dyhprklicgewmrimecey\", \"receipt_key\": \"apex.direct_control_plane_checkpoint.v1\"}, \"step_id\": \"append_backend_receipt\", \"route_key\": \"foundation:supabase.backend_ops:execute_sql:registry_write:v1\", \"depends_on\": [\"observe_repo_policy\"], \"readback_step_id\": \"verify_backend_receipt\"}, {\"target\": {\"table\": \"public.connector_upgrade_changelog_v2\", \"project_id\": \"dyhprklicgewmrimecey\", \"receipt_key\": \"apex.direct_control_plane_checkpoint.v1\"}, \"step_id\": \"verify_backend_receipt\", \"route_key\": \"foundation:supabase.backend_ops:execute_sql:registry_read:v1\", \"depends_on\": [\"append_backend_receipt\"]}, {\"target\": {\"page_id\": \"355b1e4f-3223-81de-b8a6-f783a875df5b\"}, \"step_id\": \"publish_notion_projection\", \"route_key\": \"notion:notion-update-page:control_projection_write:v1\", \"depends_on\": [\"verify_backend_receipt\"], \"readback_step_id\": \"verify_notion_projection\"}, {\"target\": {\"page_id\": \"355b1e4f-3223-81de-b8a6-f783a875df5b\"}, \"step_id\": \"verify_notion_projection\", \"route_key\": \"notion:fetch:workspace_page_read:v1\", \"depends_on\": [\"publish_notion_projection\"]}], \"version\": 1, \"transport\": \"authenticated_chatgpt_connectors\", \"invariants\": [\"route_policy_v3_is_binding\", \"writes_require_bound_operator_approval\", \"writes_cannot_self_certify\", \"every_write_requires_same_connector_terminal_readback\", \"ambiguous_external_outcome_never_promotes_to_verified\"], \"pipeline_key\": \"apex.direct_control_plane_checkpoint\", \"schema_version\": 1}",
+      "invariants": [
+        "route_policy_v3_is_binding",
+        "writes_require_bound_operator_approval",
+        "writes_cannot_self_certify",
+        "every_write_requires_same_connector_terminal_readback",
+        "ambiguous_external_outcome_never_promotes_to_verified"
+      ],
+      "steps": [
+        {
+          "step_id": "observe_repo_policy",
+          "route_key": "github:fetch_file:repository_file_read:v1",
+          "target": {
+            "repository": "GlacierEQ/apex-control-plane",
+            "path": "config/apex_connector_catalog.json"
+          },
+          "depends_on": []
+        },
+        {
+          "step_id": "append_backend_receipt",
+          "route_key": "foundation:supabase.backend_ops:execute_sql:registry_write:v1",
+          "target": {
+            "project_id": "dyhprklicgewmrimecey",
+            "table": "public.connector_upgrade_changelog_v2",
+            "receipt_key": "apex.direct_control_plane_checkpoint.v1"
+          },
+          "depends_on": [
+            "observe_repo_policy"
+          ],
+          "readback_step_id": "verify_backend_receipt"
+        },
+        {
+          "step_id": "verify_backend_receipt",
+          "route_key": "foundation:supabase.backend_ops:execute_sql:registry_read:v1",
+          "target": {
+            "project_id": "dyhprklicgewmrimecey",
+            "table": "public.connector_upgrade_changelog_v2",
+            "receipt_key": "apex.direct_control_plane_checkpoint.v1"
+          },
+          "depends_on": [
+            "append_backend_receipt"
+          ]
+        },
+        {
+          "step_id": "publish_notion_projection",
+          "route_key": "notion:notion-update-page:control_projection_write:v1",
+          "target": {
+            "page_id": "355b1e4f-3223-81de-b8a6-f783a875df5b"
+          },
+          "depends_on": [
+            "verify_backend_receipt"
+          ],
+          "readback_step_id": "verify_notion_projection"
+        },
+        {
+          "step_id": "verify_notion_projection",
+          "route_key": "notion:fetch:workspace_page_read:v1",
+          "target": {
+            "page_id": "355b1e4f-3223-81de-b8a6-f783a875df5b"
+          },
+          "depends_on": [
+            "publish_notion_projection"
+          ]
+        }
+      ]
+    },
+    "apex.connector_mesh_health_sweep": {
+      "version": 1,
+      "definition_hash": "d0a9b1d0e043501e29d56771ae29ecaa1e29ddc8a2a6b7168b636fe41fe0c8b5",
+      "definition_text": "{\"steps\": [{\"target\": {\"tables\": [\"public.connector_registry_v2\", \"public.connector_route_runtime_v3\"], \"project_id\": \"dyhprklicgewmrimecey\"}, \"step_id\": \"read_backend_route_state\", \"route_key\": \"foundation:supabase.backend_ops:execute_sql:registry_read:v1\", \"depends_on\": []}, {\"target\": {\"path\": \"config/apex_connector_catalog.json\", \"repository\": \"GlacierEQ/apex-control-plane\"}, \"step_id\": \"read_repo_connector_contract\", \"route_key\": \"github:fetch_file:repository_file_read:v1\", \"depends_on\": []}, {\"target\": {\"page_id\": \"355b1e4f-3223-81de-b8a6-f783a875df5b\"}, \"step_id\": \"read_notion_connector_plane\", \"route_key\": \"notion:fetch:workspace_page_read:v1\", \"depends_on\": []}], \"version\": 1, \"transport\": \"authenticated_chatgpt_connectors\", \"invariants\": [\"read_only\", \"route_policy_v3_is_binding\", \"every_observation_requires_request_and_result_hashes\", \"no_projection_or_mutation\"], \"pipeline_key\": \"apex.connector_mesh_health_sweep\", \"schema_version\": 1}",
+      "invariants": [
+        "read_only",
+        "route_policy_v3_is_binding",
+        "every_observation_requires_request_and_result_hashes",
+        "no_projection_or_mutation"
+      ],
+      "steps": [
+        {
+          "step_id": "read_backend_route_state",
+          "route_key": "foundation:supabase.backend_ops:execute_sql:registry_read:v1",
+          "target": {
+            "project_id": "dyhprklicgewmrimecey",
+            "tables": [
+              "public.connector_registry_v2",
+              "public.connector_route_runtime_v3"
+            ]
+          },
+          "depends_on": []
+        },
+        {
+          "step_id": "read_repo_connector_contract",
+          "route_key": "github:fetch_file:repository_file_read:v1",
+          "target": {
+            "repository": "GlacierEQ/apex-control-plane",
+            "path": "config/apex_connector_catalog.json"
+          },
+          "depends_on": []
+        },
+        {
+          "step_id": "read_notion_connector_plane",
+          "route_key": "notion:fetch:workspace_page_read:v1",
+          "target": {
+            "page_id": "355b1e4f-3223-81de-b8a6-f783a875df5b"
+          },
+          "depends_on": []
+        }
+      ]
+    }
+  },
+  "verified_receipts": [
+    {
+      "pipeline_key": "apex.direct_control_plane_checkpoint",
+      "pipeline_version": 1,
+      "pipeline_hash": "40691dea85db8d3ca0113d691973a9f0b82cf98ba642e76bea750a1f25fb9aaa",
+      "run_id": "b1764a8d-dddd-4c16-a2bc-7e75f9f24f98",
+      "correlation_id": "af0c31b1-ed45-4b41-a86e-c63e24b3304e",
+      "status": "verified",
+      "stage_count": 5,
+      "verified_reads": 3,
+      "succeeded_writes": 2,
+      "bad_terminal": 0,
+      "approval_source": "OPERATOR",
+      "approval_reference": "conversation:2026-08-22:orchestrate-pipelines",
+      "write_approvals": [
+        {
+          "step_id": "append_backend_receipt",
+          "connector_key": "supabase.backend_ops",
+          "target_text": "{\"table\": \"public.connector_upgrade_changelog_v2\", \"project_id\": \"dyhprklicgewmrimecey\", \"receipt_key\": \"apex.direct_control_plane_checkpoint.v1\"}",
+          "target_hash": "31861bceb5a38e75f39887448df141c66c26e7e9686ace3ec04616b71a5473b8",
+          "approval_source": "OPERATOR",
+          "approval_reference": "conversation:2026-08-22:orchestrate-pipelines"
+        },
+        {
+          "step_id": "publish_notion_projection",
+          "connector_key": "notion",
+          "target_text": "{\"page_id\": \"355b1e4f-3223-81de-b8a6-f783a875df5b\"}",
+          "target_hash": "d1565fa0b2c5c12c57965fb6a61d995a043c588f51287f27376946adbd1c0f5a",
+          "approval_source": "OPERATOR",
+          "approval_reference": "conversation:2026-08-22:orchestrate-pipelines"
+        }
+      ],
+      "completed_at": "2026-08-22T17:07:06.007338Z"
+    },
+    {
+      "pipeline_key": "apex.connector_mesh_health_sweep",
+      "pipeline_version": 1,
+      "pipeline_hash": "d0a9b1d0e043501e29d56771ae29ecaa1e29ddc8a2a6b7168b636fe41fe0c8b5",
+      "run_id": "8998607d-e878-4366-b459-cc27426a0a82",
+      "correlation_id": "71948647-9112-4df8-8fc7-ff0b08cfc8f4",
+      "status": "verified",
+      "stage_count": 3,
+      "verified_reads": 3,
+      "succeeded_writes": 0,
+      "bad_terminal": 0,
+      "write_approvals": [],
+      "completed_at": "2026-08-22T17:09:07.783751Z"
+    }
+  ],
+  "known_boundaries": {
+    "github_main_direct_write": "blocked_by_required_status_checks",
+    "github_branch_protection_bypassed": false,
+    "cloudflare_queue_consumer_deployed": false,
+    "smithery_scoped_executor_deployed": false,
+    "automatic_supabase_to_notion_publisher_deployed": false
+  }
+}

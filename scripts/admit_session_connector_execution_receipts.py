@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Admit host-side exact-approved provider execution observations into APEX.
 
 The manifest points to local action-result and terminal-readback files created by a direct
@@ -9,11 +8,12 @@ provider material to the JSONL receipt ledger.
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime
 import json
-from pathlib import Path
 import sys
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -28,6 +28,7 @@ from approved_operation_bridge import (
 )
 from connector_receipts import ConnectorReceiptError, load_connector_catalog
 from control_plane_runtime import CaseBrainOrchestrator, Producer, to_jsonable
+from direct_connector_runtime_contract import validate_connector_transport_admission
 
 
 class ExecutionAdmissionInputError(ValueError):
@@ -98,6 +99,7 @@ def admit_execution_manifest(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Validate and admit one host-completed exact-approved provider operation."""
+    validate_connector_transport_admission("authenticated_session_provider_bridge")
     catalog = load_connector_catalog(ROOT / "config" / "apex_connector_catalog.json")
     current = (now or datetime.now(UTC)).astimezone(UTC)
     action_request = load_json(action_request_path, "action request")
@@ -112,14 +114,22 @@ def admit_execution_manifest(
 
     execution = ProviderExecutionObservation(
         source_refs=_refs(manifest.get("execution_source_refs"), "execution_source_refs"),
-        material=_read_material(manifest.get("execution_observation_path"), "execution_observation_path", required=True),
+        material=_read_material(
+            manifest.get("execution_observation_path"),
+            "execution_observation_path",
+            required=True,
+        ),
         observed_at=_parse_time(manifest.get("executed_at"), "executed_at"),
     )
     readback: ProviderExecutionObservation | None = None
     if result_state == "success":
         readback = ProviderExecutionObservation(
             source_refs=_refs(manifest.get("readback_source_refs"), "readback_source_refs"),
-            material=_read_material(manifest.get("readback_observation_path"), "readback_observation_path", required=True),
+            material=_read_material(
+                manifest.get("readback_observation_path"),
+                "readback_observation_path",
+                required=True,
+            ),
             observed_at=_parse_time(manifest.get("readback_at"), "readback_at"),
         )
 
