@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Admit authenticated-session read observations into the APEX audit ledger.
 
 The input manifest names catalogued read requests and local observation files produced
@@ -9,11 +8,12 @@ cannot invoke providers and cannot execute an external action.
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime
 import json
-from pathlib import Path
 import sys
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
