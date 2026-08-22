@@ -177,26 +177,91 @@ def test_issue_writer_refuses_newest_file_fallback(tmp_path, monkeypatch):
     assert apex_issue_writer.main(["--run-id", "missing"]) == 2
 
 
-def test_issue_writer_uses_only_exact_queue(tmp_path, monkeypatch):
+class _FakeResponse:
+    def __init__(self, status_code, payload):
+        self.status_code = status_code
+        self._payload = payload
+
+    def json(self):
+        return self._payload
+
+
+class _FakeGitHubRequests:
+    def __init__(self):
+        self.RequestException = RuntimeError
+        self.issues = []
+        self.comments = {}
+        self.next_comment_id = 100
+
+    def request(self, method, url, headers=None, timeout=None, params=None, json=None):
+        del headers, timeout
+        if url.endswith("/issues") and method == "GET":
+            return _FakeResponse(200, list(self.issues))
+        if url.endswith("/issues") and method == "POST":
+            issue = {"number": 7, "title": json["title"], "body": json["body"]}
+            self.issues.append(issue)
+            return _FakeResponse(201, dict(issue))
+        if url.endswith("/issues/7/comments") and method == "GET":
+            return _FakeResponse(200, list(self.comments.values()))
+        if url.endswith("/issues/7/comments") and method == "POST":
+            self.next_comment_id += 1
+            comment = {"id": self.next_comment_id, "body": json["body"]}
+            self.comments[comment["id"]] = comment
+            return _FakeResponse(201, dict(comment))
+        if "/issues/comments/" in url:
+            comment_id = int(url.rsplit("/", 1)[1])
+            if method == "PATCH":
+                self.comments[comment_id]["body"] = json["body"]
+                return _FakeResponse(200, dict(self.comments[comment_id]))
+            if method == "GET":
+                return _FakeResponse(200, dict(self.comments[comment_id]))
+        if url.endswith("/issues/7"):
+            if method == "PATCH":
+                self.issues[0]["body"] = json["body"]
+                return _FakeResponse(200, dict(self.issues[0]))
+            if method == "GET":
+                return _FakeResponse(200, dict(self.issues[0]))
+        raise AssertionError(f"unexpected fake GitHub request: {method} {url} {params}")
+
+
+def test_audit_ledger_is_exact_idempotent_and_read_back(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "action_queue").mkdir()
-    exact = [{"severity": "P2", "domain": "ops", "title": "x", "action": "y"}]
-    (tmp_path / "action_queue" / "queue_123.json").write_text(
-        json.dumps(exact), encoding="utf-8"
+    run = apex_runner.AuditRun(
+        run_id="123",
+        started_at="2026-08-22T16:00:00Z",
+        completed_at="2026-08-22T16:00:01Z",
+        source_sha="deadbeef",
+        status="clean",
     )
-    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
-    assert (
-        apex_issue_writer.publish_run(run_id="123", token="test-token", repo="x/y") == 0
-    )
+    apex_runner.persist_run(run)
+    fake = _FakeGitHubRequests()
+    monkeypatch.setattr(apex_issue_writer, "requests", fake)
+
+    assert apex_issue_writer.publish_run(run_id="123", token="token", repo="x/y") == 0
+    assert len(fake.issues) == 1
+    assert len(fake.comments) == 1
+    only_comment = next(iter(fake.comments.values()))
+    assert "<!-- apex-audit-run:123 -->" in only_comment["body"]
+    assert "deadbeef" in only_comment["body"]
+    assert "External action authorized by audit:** `false`" in only_comment["body"]
+
+    assert apex_issue_writer.publish_run(run_id="123", token="token", repo="x/y") == 0
+    assert len(fake.issues) == 1
+    assert len(fake.comments) == 1
 
 
 def test_only_one_scheduled_audit_workflow_remains():
     workflows = Path(".github/workflows")
     assert not (workflows / "daily-audit.yml").exists()
     workflow = (workflows / "apex-daily.yml").read_text(encoding="utf-8")
-    assert "Verify exact run receipt and readback" in workflow
+    assert "Verify exact run receipt and local readback" in workflow
+    assert "Publish and read back durable audit ledger" in workflow
     assert "audit_log/proof_${{ github.run_id }}.json" in workflow
     assert "if-no-files-found: error" in workflow
+    assert "retention-days: 90" in workflow
     assert "RUN_DATE: ${{ github.run_id }}" in workflow
     assert 'python apex_issue_writer.py --run-id "${RUN_DATE}"' in workflow
     assert "persist-credentials: false" in workflow
+    assert "contents: read" in workflow
+    assert "contents: write" not in workflow
+    assert "git push" not in workflow
