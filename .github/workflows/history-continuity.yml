@@ -1,0 +1,53 @@
+name: Estate History Continuity
+
+on:
+  schedule:
+    # Runs after the Repo Atlas refresh/enrichment window.
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual audit reason'
+        required: false
+        default: 'manual history continuity audit'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: estate-history-continuity-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact observer revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Validate observer client
+        run: |
+          python -m py_compile scripts/repo_history_continuity.py
+          python -m unittest tests.test_repo_history_continuity -v
+
+      - name: Audit successive default-head ancestry
+        env:
+          REPO_HISTORY_CONTINUITY_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-github-oidc-history-continuity
+        run: python scripts/repo_history_continuity.py
+
+      - name: Upload continuity evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repo-history-continuity-${{ github.run_id }}
+          path: repo_history_continuity_result.json
+          retention-days: 30
+          if-no-files-found: error
