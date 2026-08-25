@@ -1,64 +1,50 @@
-# Unified CASEBRAIN Control Plane
+# APEX Interconnected Mesh
 
-## Scope
+## Architecture
 
-This repository hosts the bounded runtime control plane for the CASEBRAIN federation.
-AKOS remains governance canon. Original evidence remains in its source system.
-Supermemory stores distilled routing and provenance pointers, not raw evidence or secrets.
+APEX is an evolving mesh of repositories, agents, connectors, evidence stores, interfaces, operators, and runtimes. It has no canonical center, minimum core, promoted leaf, fixed edge, or permanently frozen target. Every node may contribute capabilities and context; relationships make the whole system more useful.
 
-## Runtime pipeline
+## Mesh invariants
+
+1. **Connectivity over conformity** — nodes interoperate without becoming identical.
+2. **Plural authority** — provenance identifies who asserted what; no repository or projection becomes universal truth. Operator intent governs project direction.
+3. **Additive composition** — new nodes, links, and capabilities can strengthen the mesh without replacing existing value.
+4. **Bidirectional benefit** — integrations should improve more than one participant when practical.
+5. **Evolving topology** — topology is discovered and revised continuously, never frozen as a final architecture.
+6. **Source-grounded claims** — evidence remains attributable to its source while cross-links and projections remain traceable.
+7. **Edge-local safety** — authorization and validation attach to the specific external action edge; they do not impose a global gate on internal computation.
+8. **No minimization doctrine** — implementation is selected by leverage, capability, and mesh contribution, not by smallest-slice ideology.
+
+## Event flow
 
 ```text
-Source Event
-  -> canonical normalization
-  -> SHA-256 + immutable envelope
-  -> claim-class boundary check
-  -> timeline/deadline projection
-  -> analytical threat signals
-  -> deterministic recommendations
-  -> hard human gate
-  -> immutable receipt
-  -> optional reviewed projection adapters
+Source or Peer Event
+  <-> deterministic content envelope
+  <-> provenance and claim typing
+  <-> graph relationship expansion
+  <-> timeline and analytical projections
+  <-> recommendations and worker collaboration
+  <-> reviewed external-action edges
+  <-> receipts returned to the mesh
 ```
 
-## Four brains, one control plane
+This is a graph, not a funnel. Any stage may enrich another through explicit, traceable relationships.
 
-1. **Upload Intelligence** — dedupe by canonical hash, preserve source URI, classify sensitivity, and reject secret-bearing payloads.
-2. **Timeline Brain** — order events, compute deadline distance, preserve whether each deadline is confirmed.
-3. **Threat Intelligence Hub** — produce analytical signals only; retain alternative explanations and deny external action.
-4. **Autonomous Decision Engine** — recommend review steps, evidence checks, sequencing, and preparation; never file, contact, publish, or promote facts autonomously.
+## Four cooperating capability clusters
 
-## Claim boundary
+- **Upload Intelligence** links content digests, source locations, sensitivity, and relationships without declaring one copy authoritative.
+- **Timeline Brain** maintains event and deadline projections while retaining sources and uncertainty.
+- **Threat Intelligence Hub** contributes signals and alternative explanations to the graph; signals alone do not authorize external action.
+- **Autonomous Decision Engine** coordinates analysis, preparation, and worker collaboration. Authorization is checked only where an action crosses into an external system.
 
-Every item is exactly one of:
+## Claim integrity
 
-- `verified_fact`
-- `allegation`
-- `model_inference`
-- `recommendation`
+Claims retain explicit classes such as verified fact, allegation, model inference, and recommendation. Multiple source-grounded claims may coexist. Promotion between classes requires evidence and provenance; it does not require a canonical repository.
 
-No component may silently promote between classes.
+## Resilience
 
-## Self-healing behavior
+Retry, circuit breaking, dead-letter capture, idempotency, hashing, and append-only receipts are local reliability mechanisms. They protect transport and evidence integrity without defining the architecture as bounded.
 
-The control plane includes bounded exponential retry, per-connector circuit breakers,
-dead-letter capture, idempotent event processing, deterministic hashing, and append-only
-receipts. “Self-healing” means recoverable transport behavior—not autonomous changes to
-case facts, evidence, legal strategy, or external systems.
+## Success condition
 
-## Secret handling
-
-The exposed Supermemory credential and tokenized webhook URL must be rotated. This build
-uses only environment-variable names and secret-manager references. No raw secret is
-embedded in code, logs, memory, documentation, or test fixtures.
-
-## First verification slice
-
-1. Rotate exposed credentials.
-2. Select one non-sensitive primary record.
-3. Compute a full SHA-256 locally.
-4. Create one `CaseEvent` with stable source pointers.
-5. Run `CaseBrainOrchestrator.process_event` in read-only mode.
-6. Validate output hashes and append the receipt.
-7. Store only the reviewed distilled summary/provenance pointer in Supermemory.
-8. Promote no connector or worker to `verified_live` until the dated receipt is reviewed.
+APEX succeeds when nodes discover and strengthen one another, useful context travels with provenance, capabilities compose across systems, and safety is enforced at real action edges instead of through global paralysis.

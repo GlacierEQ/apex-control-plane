@@ -18,5 +18,12 @@
     "mode": "none",
     "donors": []
   },
-  "frozen_at": "2026-08-10T04:12Z"
+  "contract_mode": "evolving_mesh",
+  "architecture": {
+    "topology": "interconnected_mesh",
+    "canonical_center": false,
+    "minimum_core": false,
+    "fixed_boundary": false
+  },
+  "evolved_at": "2026-08-25T20:46Z"
 }
