@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "name": "APEX Buildkite Master",
   "role": "verified_execution_fabric",
   "authority_boundary": {
@@ -75,7 +75,17 @@
     "require_receipt_artifacts": true,
     "reject_inline_secret_assignments": true,
     "dynamic_upload_reject_secrets": true,
-    "dynamic_upload_requires_stable_keys": true
+    "dynamic_upload_requires_stable_keys": true,
+    "parallel_fanout_parent": "buildkite-master",
+    "required_parallel_keys": [
+      "source-fidelity",
+      "registry-audit",
+      "automation-safety",
+      "full-regression"
+    ],
+    "receipt_fanin_key": "verified-receipt",
+    "receipt_requires_all_parallel_keys": true,
+    "failure_diagnostics_required": true
   },
   "receipt_contract": {
     "required_identity": [
@@ -88,6 +98,8 @@
     "required_proof": [
       "test_result",
       "artifact_digest",
+      "automation_safety",
+      "full_regression",
       "readback"
     ],
     "completion_rule": "no_verified_delta_no_success"
@@ -99,7 +111,9 @@
     "secret_access_policies": true,
     "pipeline_signing": "target_for_sensitive_self_hosted_lanes",
     "ephemeral_or_reimaged_agents": "preferred_for_untrusted_or_high_risk_workloads",
-    "manual_override_policy": "break_glass_only_with_receipt"
+    "manual_override_policy": "break_glass_only_with_receipt",
+    "scheduled_repository_secrets": "avoid_when_short_lived_or_platform_identity_is_sufficient",
+    "unattended_repository_history_mutation": "forbidden"
   },
   "known_unverified_requirements": [
     "live Buildkite organization and cluster inventory",
@@ -110,7 +124,8 @@
     "current GitHub Buildkite required-check mapping",
     "authenticated active-build inventory for organization casey-1",
     "current live job identity for macos-self and oracle-arm64",
-    "current FILEBOSS Buildkite build state"
+    "current FILEBOSS Buildkite build state",
+    "available concurrent capacity on macos-self"
   ],
   "live_readback_contract": {
     "observation_only": true,
@@ -148,10 +163,11 @@
   },
   "current_reconciled_observations": {
     "apex_control_plane": {
-      "commit": "283bb698526b89125836a0511af86048f943d6bb",
+      "commit": "e5c442eeff6970a674a5e45ea93cb4917d106925",
       "github_context": "buildkite/apex-control-plane",
-      "state": "success",
-      "build_url": "https://buildkite.com/casey-1/apex-control-plane/builds/79"
+      "state": "failure",
+      "build_url": "https://buildkite.com/casey-1/apex-control-plane/builds/82",
+      "meaning": "exact-SHA GitHub projection observed; failure cause requires Buildkite job-log readback"
     },
     "apex_stack_oracle": {
       "commit": "8c0ce52bdbdd5834aa117a3f48fc8466d787c2cf",

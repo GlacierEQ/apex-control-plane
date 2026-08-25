@@ -27,6 +27,8 @@ SECRET_ASSIGNMENT_RE = re.compile(
 STEP_KEY_RE = re.compile(r"(?m)^\s{4}key:\s*[A-Za-z0-9_.:-]+\s*$")
 QUEUE_RE = re.compile(r"(?m)^\s{6}queue:\s*[A-Za-z0-9_.:-]+\s*$")
 TIMEOUT_RE = re.compile(r"(?m)^\s{4}timeout_in_minutes:\s*\d+\s*$")
+STEP_START_RE = re.compile(r"(?m)^  - label:")
+STEP_KEY_VALUE_RE = re.compile(r"(?m)^    key:\s*([A-Za-z0-9_.:-]+)\s*$")
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,18 @@ def load_policy(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("Buildkite master policy must be a JSON object")
     return data
+
+
+def _step_blocks(text: str) -> dict[str, str]:
+    starts = [match.start() for match in STEP_START_RE.finditer(text)]
+    blocks: dict[str, str] = {}
+    for index, start in enumerate(starts):
+        end = starts[index + 1] if index + 1 < len(starts) else len(text)
+        block = text[start:end]
+        key_match = STEP_KEY_VALUE_RE.search(block)
+        if key_match:
+            blocks[key_match.group(1)] = block
+    return blocks
 
 
 def validate_policy(policy: dict[str, Any]) -> list[ValidationResult]:
@@ -121,6 +135,20 @@ def validate_policy(policy: dict[str, Any]) -> list[ValidationResult]:
             "policy.observed_queues",
             {"macos-self", "oracle-arm64"}.issubset(queues),
             f"queues={sorted(queues)}",
+        )
+    )
+
+    contract = policy.get("pipeline_contract", {})
+    required_parallel = contract.get("required_parallel_keys", [])
+    results.append(
+        ValidationResult(
+            "policy.parallel_proof_mesh",
+            isinstance(required_parallel, list)
+            and len(required_parallel) >= 3
+            and contract.get("parallel_fanout_parent") == "buildkite-master"
+            and contract.get("receipt_fanin_key") == "verified-receipt"
+            and contract.get("receipt_requires_all_parallel_keys") is True,
+            f"parallel_keys={required_parallel}",
         )
     )
 
@@ -212,6 +240,50 @@ def validate_pipeline(text: str, policy: dict[str, Any]) -> list[ValidationResul
             ),
         ]
     )
+
+    blocks = _step_blocks(text)
+    fanout_parent = contract.get("parallel_fanout_parent")
+    required_parallel = contract.get("required_parallel_keys", [])
+    if fanout_parent and isinstance(required_parallel, list):
+        missing = [key for key in required_parallel if key not in blocks]
+        wrong_parent = [
+            key
+            for key in required_parallel
+            if key in blocks
+            and f"depends_on: {fanout_parent}" not in blocks[key]
+        ]
+        results.append(
+            ValidationResult(
+                "pipeline.parallel_fanout",
+                not missing and not wrong_parent,
+                f"missing={missing} wrong_parent={wrong_parent}",
+            )
+        )
+
+    receipt_key = contract.get("receipt_fanin_key")
+    if receipt_key and contract.get("receipt_requires_all_parallel_keys"):
+        receipt_block = blocks.get(receipt_key, "")
+        missing_dependencies = [
+            key
+            for key in required_parallel
+            if not re.search(rf"(?m)^\s+-\s+{re.escape(key)}\s*$", receipt_block)
+        ]
+        results.append(
+            ValidationResult(
+                "pipeline.receipt_fanin",
+                bool(receipt_block) and not missing_dependencies,
+                f"receipt={receipt_key} missing_dependencies={missing_dependencies}",
+            )
+        )
+
+    if contract.get("failure_diagnostics_required"):
+        results.append(
+            ValidationResult(
+                "pipeline.failure_diagnostics",
+                "failure-context" in text and "trap capture_failure ERR" in text,
+                "parallel verification lanes emit failure-context artifacts",
+            )
+        )
 
     if "buildkite-agent pipeline upload" in text and contract.get("dynamic_upload_reject_secrets"):
         results.append(

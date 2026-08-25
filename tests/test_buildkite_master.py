@@ -64,3 +64,26 @@ steps:
 """
     results = {item.name: item for item in MODULE.validate_pipeline(text, policy())}
     assert not results["pipeline.steps_have_queues"].passed
+
+
+def test_serializing_required_parallel_lane_is_rejected() -> None:
+    text = (ROOT / ".buildkite" / "pipeline.yml").read_text()
+    text = text.replace(
+        "key: registry-audit\n    depends_on: buildkite-master",
+        "key: registry-audit\n    depends_on: source-fidelity",
+        1,
+    )
+    results = {item.name: item for item in MODULE.validate_pipeline(text, policy())}
+    assert not results["pipeline.parallel_fanout"].passed
+
+
+def test_receipt_must_wait_for_every_parallel_lane() -> None:
+    text = (ROOT / ".buildkite" / "pipeline.yml").read_text()
+    receipt_start = text.index("key: verified-receipt")
+    prefix = text[:receipt_start]
+    receipt = text[receipt_start:].replace("      - automation-safety\n", "", 1)
+    results = {
+        item.name: item
+        for item in MODULE.validate_pipeline(prefix + receipt, policy())
+    }
+    assert not results["pipeline.receipt_fanin"].passed

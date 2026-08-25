@@ -36,14 +36,11 @@ jobs:
       - name: Run APEX evidence-led audit
         id: apex_audit
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_RUN_ID: ${{ github.run_id }}
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           RUN_DATE: ${{ github.run_id }}
         shell: bash
         run: |
@@ -75,7 +72,7 @@ jobs:
       - name: Publish and read back durable audit ledger
         if: always() && steps.verify_receipt.outcome == 'success'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPO: ${{ github.repository }}
           RUN_DATE: ${{ github.run_id }}
         run: python apex_issue_writer.py --run-id "${RUN_DATE}"
