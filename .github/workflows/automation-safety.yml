@@ -1,0 +1,61 @@
+name: Automation Safety
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/audit_automation_surface.py'
+      - 'tests/test_automation_safety.py'
+      - '.buildkite/pipeline.yml'
+      - 'config/buildkite_master_policy.json'
+      - 'scripts/validate_buildkite_master.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/audit_automation_surface.py'
+      - 'tests/test_automation_safety.py'
+      - '.buildkite/pipeline.yml'
+      - 'config/buildkite_master_policy.json'
+      - 'scripts/validate_buildkite_master.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: automation-safety-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile automation safety auditor
+        run: python -m py_compile scripts/audit_automation_surface.py tests/test_automation_safety.py
+
+      - name: Run adversarial safety tests
+        run: python -m unittest -v tests.test_automation_safety
+
+      - name: Audit active workflow surface
+        run: python scripts/audit_automation_surface.py --output automation-safety.json
+
+      - name: Upload safety receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: automation-safety-${{ github.run_id }}
+          path: automation-safety.json
+          if-no-files-found: warn
+          retention-days: 30
