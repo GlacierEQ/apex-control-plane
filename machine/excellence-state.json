@@ -33,8 +33,9 @@
     "PROOF_RECEIPT_BOUND": {
       "status": "PENDING"
     },
-    "AUTHORITY_BOUND": {
-      "status": "PENDING"
+    "PROMOTION_LOCKOUT_REMOVED": {
+      "status": "PASS",
+      "evidence": "secret-bound promotion authority retired; proof receipt remains non-authorizing"
     },
     "CANONICAL_POSITION_RESOLVED": {
       "status": "PENDING"
