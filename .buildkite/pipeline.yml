@@ -1,6 +1,6 @@
 # Source-controlled Buildkite CI for GlacierEQ/apex-control-plane.
-# Mirrors the repository's existing GitHub Actions quality contracts and adds
-# durable Buildkite receipts and artifacts.
+# One contract gate fans out independent proof lanes, then a single receipt
+# step converges only after every required lane succeeds.
 env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PYTHONUNBUFFERED: "1"
@@ -16,6 +16,21 @@ steps:
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
+      failure_file="artifacts/buildkite/failure-context-buildkite-master.txt"
+      capture_failure() {
+        status=$$?
+        {
+          echo "status=$$status"
+          date -u
+          uname -a
+          python3 --version || true
+          git rev-parse HEAD || true
+          git status --short || true
+          df -h . || true
+        } > "$$failure_file"
+        exit "$$status"
+      }
+      trap capture_failure ERR
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
       python3 scripts/validate_buildkite_master.py \
@@ -23,10 +38,13 @@ steps:
       python3 -m py_compile \
         scripts/validate_buildkite_master.py \
         scripts/buildkite_master_inventory.py \
-        scripts/reconcile_buildkite_github_status.py
+        scripts/reconcile_buildkite_github_status.py \
+        scripts/audit_automation_surface.py
       git diff --exit-code
+      printf 'status=PASS\ncommit=%s\n' "$$actual" > "$$failure_file"
     artifact_paths:
       - artifacts/buildkite/buildkite-master-validation.json
+      - artifacts/buildkite/failure-context-buildkite-master.txt
 
   - label: ":shield: Source and operator-fidelity gate"
     key: source-fidelity
@@ -44,6 +62,21 @@ steps:
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
+      failure_file="artifacts/buildkite/failure-context-source-fidelity.txt"
+      capture_failure() {
+        status=$$?
+        {
+          echo "status=$$status"
+          date -u
+          uname -a
+          python3 --version || true
+          git rev-parse HEAD || true
+          git status --short || true
+          df -h . || true
+        } > "$$failure_file"
+        exit "$$status"
+      }
+      trap capture_failure ERR
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
       git diff --exit-code
@@ -66,13 +99,15 @@ steps:
         2>&1 | tee artifacts/buildkite/operator-fidelity.log
       buildkite-agent meta-data set operator-fidelity-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/operator-fidelity.xml | cut -d ' ' -f 1)"
       git diff --exit-code
+      printf 'status=PASS\ncommit=%s\n' "$$actual" > "$$failure_file"
     artifact_paths:
       - artifacts/buildkite/operator-fidelity.xml
       - artifacts/buildkite/operator-fidelity.log
+      - artifacts/buildkite/failure-context-source-fidelity.txt
 
   - label: ":mag: Registry and audit hardening"
     key: registry-audit
-    depends_on: source-fidelity
+    depends_on: buildkite-master
     timeout_in_minutes: 25
     agents:
       queue: macos-self
@@ -86,6 +121,23 @@ steps:
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
+      failure_file="artifacts/buildkite/failure-context-registry-audit.txt"
+      capture_failure() {
+        status=$$?
+        {
+          echo "status=$$status"
+          date -u
+          uname -a
+          python3 --version || true
+          git rev-parse HEAD || true
+          git status --short || true
+          df -h . || true
+        } > "$$failure_file"
+        exit "$$status"
+      }
+      trap capture_failure ERR
+      actual="$(git rev-parse HEAD)"
+      test "$$actual" = "$BUILDKITE_COMMIT"
       python3 -m venv .buildkite-venv
       .buildkite-venv/bin/python -m pip install --upgrade pip
       .buildkite-venv/bin/python -m pip install -r requirements.txt ruff mypy pytest
@@ -113,9 +165,95 @@ steps:
         2>&1 | tee artifacts/buildkite/registry-audit.log
       buildkite-agent meta-data set registry-audit-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/registry-audit.xml | cut -d ' ' -f 1)"
       git diff --exit-code
+      printf 'status=PASS\ncommit=%s\n' "$$actual" > "$$failure_file"
     artifact_paths:
       - artifacts/buildkite/registry-audit.xml
       - artifacts/buildkite/registry-audit.log
+      - artifacts/buildkite/failure-context-registry-audit.txt
+
+  - label: ":lock: Automation safety"
+    key: automation-safety
+    depends_on: buildkite-master
+    timeout_in_minutes: 10
+    agents:
+      queue: macos-self
+      os: macos
+    command: |
+      set -euo pipefail
+      mkdir -p artifacts/buildkite
+      failure_file="artifacts/buildkite/failure-context-automation-safety.txt"
+      capture_failure() {
+        status=$$?
+        {
+          echo "status=$$status"
+          date -u
+          uname -a
+          python3 --version || true
+          git rev-parse HEAD || true
+          git status --short || true
+        } > "$$failure_file"
+        exit "$$status"
+      }
+      trap capture_failure ERR
+      actual="$(git rev-parse HEAD)"
+      test "$$actual" = "$BUILDKITE_COMMIT"
+      python3 -m py_compile scripts/audit_automation_surface.py tests/test_automation_safety.py
+      python3 -m unittest -v tests.test_automation_safety
+      python3 scripts/audit_automation_surface.py \
+        --output artifacts/buildkite/automation-safety.json
+      buildkite-agent meta-data set automation-safety-sha256 "$$(shasum -a 256 artifacts/buildkite/automation-safety.json | cut -d ' ' -f 1)"
+      git diff --exit-code
+      printf 'status=PASS\ncommit=%s\n' "$$actual" > "$$failure_file"
+    artifact_paths:
+      - artifacts/buildkite/automation-safety.json
+      - artifacts/buildkite/failure-context-automation-safety.txt
+
+  - label: ":test_tube: Full regression suite"
+    key: full-regression
+    depends_on: buildkite-master
+    timeout_in_minutes: 35
+    agents:
+      queue: macos-self
+      os: macos
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 1
+        - exit_status: 255
+          limit: 1
+    command: |
+      set -euo pipefail
+      mkdir -p artifacts/buildkite
+      failure_file="artifacts/buildkite/failure-context-full-regression.txt"
+      capture_failure() {
+        status=$$?
+        {
+          echo "status=$$status"
+          date -u
+          uname -a
+          python3 --version || true
+          git rev-parse HEAD || true
+          git status --short || true
+          df -h . || true
+        } > "$$failure_file"
+        exit "$$status"
+      }
+      trap capture_failure ERR
+      actual="$(git rev-parse HEAD)"
+      test "$$actual" = "$BUILDKITE_COMMIT"
+      python3 -m venv .buildkite-venv
+      .buildkite-venv/bin/python -m pip install --upgrade pip
+      .buildkite-venv/bin/python -m pip install -r requirements.txt pytest
+      CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q \
+        --junitxml=artifacts/buildkite/full-regression.xml \
+        2>&1 | tee artifacts/buildkite/full-regression.log
+      buildkite-agent meta-data set full-regression-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/full-regression.xml | cut -d ' ' -f 1)"
+      git diff --exit-code
+      printf 'status=PASS\ncommit=%s\n' "$$actual" > "$$failure_file"
+    artifact_paths:
+      - artifacts/buildkite/full-regression.xml
+      - artifacts/buildkite/full-regression.log
+      - artifacts/buildkite/failure-context-full-regression.txt
 
   - label: ":receipt: Verified control-plane CI receipt"
     key: verified-receipt
@@ -123,6 +261,8 @@ steps:
       - buildkite-master
       - source-fidelity
       - registry-audit
+      - automation-safety
+      - full-regression
     timeout_in_minutes: 5
     agents:
       queue: macos-self
@@ -130,13 +270,31 @@ steps:
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
+      failure_file="artifacts/buildkite/failure-context-verified-receipt.txt"
+      capture_failure() {
+        status=$$?
+        {
+          echo "status=$$status"
+          date -u
+          uname -a
+          python3 --version || true
+          git rev-parse HEAD || true
+          git status --short || true
+        } > "$$failure_file"
+        exit "$$status"
+      }
+      trap capture_failure ERR
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
       operator_fidelity_sha="$$(buildkite-agent meta-data get operator-fidelity-junit-sha256)"
       registry_audit_sha="$$(buildkite-agent meta-data get registry-audit-junit-sha256)"
-      printf '%s  %s\n%s  %s\n' \
+      automation_safety_sha="$$(buildkite-agent meta-data get automation-safety-sha256)"
+      full_regression_sha="$$(buildkite-agent meta-data get full-regression-junit-sha256)"
+      printf '%s  %s\n%s  %s\n%s  %s\n%s  %s\n' \
         "$$operator_fidelity_sha" "operator-fidelity.xml" \
         "$$registry_audit_sha" "registry-audit.xml" \
+        "$$automation_safety_sha" "automation-safety.json" \
+        "$$full_regression_sha" "full-regression.xml" \
         > artifacts/buildkite/SHA256SUMS
       python3 - <<'PY' > artifacts/buildkite/verified-ci-receipt.json
       import datetime
@@ -144,7 +302,7 @@ steps:
       import os
       import subprocess
       receipt = {
-          "schema": "glaciereq.apex-control-plane.buildkite.v1",
+          "schema": "glaciereq.apex-control-plane.buildkite.v2",
           "status": "PASS",
           "commit": subprocess.check_output(
               ["git", "rev-parse", "HEAD"], text=True
@@ -153,6 +311,12 @@ steps:
           "build_id": os.environ.get("BUILDKITE_BUILD_ID"),
           "build_number": os.environ.get("BUILDKITE_BUILD_NUMBER"),
           "pipeline": os.environ.get("BUILDKITE_PIPELINE_SLUG"),
+          "proof_lanes": [
+              "source-fidelity",
+              "registry-audit",
+              "automation-safety",
+              "full-regression",
+          ],
           "generated_at": datetime.datetime.now(datetime.timezone.utc)
           .replace(microsecond=0)
           .isoformat(),
@@ -160,6 +324,8 @@ steps:
       print(json.dumps(receipt, indent=2, sort_keys=True))
       PY
       git diff --exit-code
+      printf 'status=PASS\ncommit=%s\n' "$$actual" > "$$failure_file"
     artifact_paths:
       - artifacts/buildkite/SHA256SUMS
       - artifacts/buildkite/verified-ci-receipt.json
+      - artifacts/buildkite/failure-context-verified-receipt.txt
