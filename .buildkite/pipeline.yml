@@ -7,8 +7,30 @@ env:
   PYTHONDONTWRITEBYTECODE: "1"
 
 steps:
+  - label: ":kite: Buildkite master contract"
+    key: buildkite-master
+    timeout_in_minutes: 5
+    agents:
+      queue: macos-self
+      os: macos
+    command: |
+      set -euo pipefail
+      mkdir -p artifacts/buildkite
+      actual="$(git rev-parse HEAD)"
+      test "$$actual" = "$BUILDKITE_COMMIT"
+      python3 scripts/validate_buildkite_master.py \
+        --emit-receipt artifacts/buildkite/buildkite-master-validation.json
+      python3 -m py_compile \
+        scripts/validate_buildkite_master.py \
+        scripts/buildkite_master_inventory.py \
+        scripts/reconcile_buildkite_github_status.py
+      git diff --exit-code
+    artifact_paths:
+      - artifacts/buildkite/buildkite-master-validation.json
+
   - label: ":shield: Source and operator-fidelity gate"
     key: source-fidelity
+    depends_on: buildkite-master
     timeout_in_minutes: 20
     agents:
       queue: macos-self
@@ -37,6 +59,9 @@ steps:
       CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q \
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \
+        tests/test_buildkite_master.py \
+        tests/test_buildkite_master_inventory.py \
+        tests/test_buildkite_github_status.py \
         --junitxml=artifacts/buildkite/operator-fidelity.xml \
         2>&1 | tee artifacts/buildkite/operator-fidelity.log
       buildkite-agent meta-data set operator-fidelity-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/operator-fidelity.xml | cut -d ' ' -f 1)"
@@ -95,6 +120,7 @@ steps:
   - label: ":receipt: Verified control-plane CI receipt"
     key: verified-receipt
     depends_on:
+      - buildkite-master
       - source-fidelity
       - registry-audit
     timeout_in_minutes: 5
