@@ -23,15 +23,15 @@ WORKFLOW_DISPATCH_RE = re.compile(r"(?m)^\s{2}workflow_dispatch:\s*(?:$|\{)")
 CONTENTS_WRITE_RE = re.compile(r"(?m)^\s{2,}contents:\s*write\s*$")
 PERSIST_CREDENTIALS_RE = re.compile(r"(?m)^\s+persist-credentials:\s*true\s*$")
 STATIC_SECRET_RE = re.compile(r"\$\{\{\s*secrets\.[A-Za-z_][A-Za-z0-9_]*\s*\}\}")
-GIT_PUSH_RE = re.compile(r"(?m)^\s*git\s+push\b")
+GIT_PUSH_RE = re.compile(r"\bgit\s+push\b")
 
 DESTRUCTIVE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("force_push", re.compile(r"(?m)^\s*git\s+push\b[^\n]*(?:--force(?:-with-lease)?|-f(?:\s|$))")),
-    ("hard_reset", re.compile(r"(?m)^\s*git\s+reset\s+--hard\b")),
-    ("aggressive_clean", re.compile(r"(?m)^\s*git\s+clean\s+-[^\n]*f[^\n]*d")),
-    ("forced_branch_delete", re.compile(r"(?m)^\s*git\s+branch\s+-D\b")),
-    ("working_tree_discard", re.compile(r"(?m)^\s*git\s+(?:checkout\s+--\s+\.|restore\s+\.\s*)$")),
-    ("repository_delete", re.compile(r"(?m)^\s*gh\s+repo\s+delete\b")),
+    ("force_push", re.compile(r"\bgit\s+push\b[^\n]*(?:--force(?:-with-lease)?|-f(?:\s|$))")),
+    ("hard_reset", re.compile(r"\bgit\s+reset\s+--hard\b")),
+    ("aggressive_clean", re.compile(r"\bgit\s+clean\s+-[^\n]*f[^\n]*d")),
+    ("forced_branch_delete", re.compile(r"\bgit\s+branch\s+-D\b")),
+    ("working_tree_discard", re.compile(r"\bgit\s+(?:checkout\s+--\s+\.|restore\s+\.)(?:\s|$)")),
+    ("repository_delete", re.compile(r"\bgh\s+repo\s+delete\b")),
 )
 
 
