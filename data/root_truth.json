@@ -1,0 +1,11 @@
+{
+  "filesystem:GlacierEQ/monolith": {
+    "provenance_receipt_id": "rcpt_d76fcb5d0e15",
+    "updated_at_utc": 1787839776.644681,
+    "value": {
+      "path": "state.txt",
+      "status": "UPDATED"
+    },
+    "version": "1787839776.644675"
+  }
+}

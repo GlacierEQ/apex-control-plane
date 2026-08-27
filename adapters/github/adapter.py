@@ -89,6 +89,21 @@ class GitHubAppAdapter:
             "head_sha_before": current_head,
         }
 
+    def revert_operation(self, op: Operation) -> Dict[str, Any]:
+        """
+        compensate(): Reverts a mutation cleanly if a subsequent operation in the ChangeSet fails.
+        """
+        repo_name = op.resource.split("/")[-1]
+        target_file = Path(f"/Users/kcbflux/{repo_name}") / op.desired_after.get("path", "")
+
+        original_content = op.expected_before.get("content")
+        if original_content is not None:
+            target_file.write_text(original_content, encoding="utf-8")
+        elif op.operation == "create_file":
+            target_file.unlink(missing_ok=True)
+
+        return {"status": "REVERTED", "resource": op.resource, "path": op.desired_after.get("path")}
+
     def readback(self, repo: str, file_path: str) -> Dict[str, Any]:
         """readback(): Reads back the mutated state immediately from reality."""
         content, h = self.read_file(repo, file_path)

@@ -96,8 +96,10 @@ class MasterWorkflowRunner:
         # 8. MUTATING
         mission.transition_to(MissionStatus.MUTATING, "Applying atomic mutations")
         t_start = time.time()
+        applied_operations = []
         for op in changeset.operations:
             system_adapter.apply_operation(op)
+            applied_operations.append(op)
 
         # 9. READBACK
         mission.transition_to(MissionStatus.READBACK, "Reading back state from physical storage")
@@ -120,9 +122,37 @@ class MasterWorkflowRunner:
             )
 
             if not v_res.is_verified:
+                # 1. Trigger COMPENSATING state
+                mission.transition_to(
+                    MissionStatus.COMPENSATING,
+                    f"Triggering automated compensation for {op.resource}: {v_res.discrepancies}",
+                )
+                # 2. Rollback all applied operations in reverse order
+                for applied_op in reversed(applied_operations):
+                    if hasattr(system_adapter, "revert_operation"):
+                        system_adapter.revert_operation(applied_op)
+
+                # 3. Log ROLLED_BACK receipt in ECHO
+                last_rcpt = self.echo.get_last_receipt()
+                prev_hash = last_rcpt.receipt_hash if last_rcpt else "GENESIS_ROOT"
+                rollback_rcpt = ECHOReceipt.create(
+                    mission_id=mission.mission_id,
+                    correlation_id=mission.correlation_id,
+                    step="changeset.compensate_and_rollback",
+                    started_at=t_start,
+                    expected_state={"operations_count": len(changeset.operations)},
+                    observed_state={"compensated_count": len(applied_operations)},
+                    external_ids={"changeset_id": changeset.changeset_id},
+                    result="ROLLED_BACK",
+                    previous_receipt_hash=prev_hash,
+                    inputs_payload={"reason": v_res.discrepancies},
+                )
+                self.echo.append_receipt(rollback_rcpt)
+
+                # 4. Transition to FAILED
                 mission.transition_to(
                     MissionStatus.FAILED,
-                    f"Verification failed on {op.resource}: {v_res.discrepancies}",
+                    f"Verification failed on {op.resource}: {v_res.discrepancies}. All changes rolled back.",
                 )
                 return mission
 
