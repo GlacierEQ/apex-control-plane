@@ -19,6 +19,7 @@ if str(BASE_DIR) not in sys.path:
 from contracts.mission import Mission, MissionStatus
 from adapters.echo.store import ECHOStore
 from adapters.roottruth.store import RootTruthStore
+from adapters.supabase.adapter import SupabaseAdapter
 from workflows.master_run import MasterWorkflowRunner
 
 
@@ -128,7 +129,7 @@ def cmd_run_sample(args):
         }
     }
 
-    runner = MasterWorkflowRunner()
+    runner = MasterWorkflowRunner(supabase_adapter=SupabaseAdapter())
     result_mission = runner.run_mission_cycle(
         mission=m,
         raw_agent_findings={},

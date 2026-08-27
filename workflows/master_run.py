@@ -34,9 +34,11 @@ class MasterWorkflowRunner:
         self,
         echo_store: Optional[ECHOStore] = None,
         root_truth: Optional[RootTruthStore] = None,
+        supabase_adapter: Optional[Any] = None,
     ):
         self.echo = echo_store or ECHOStore()
         self.root_truth = root_truth or RootTruthStore()
+        self.supabase = supabase_adapter
 
     def run_mission_cycle(
         self,
@@ -148,6 +150,8 @@ class MasterWorkflowRunner:
                     inputs_payload={"reason": v_res.discrepancies},
                 )
                 self.echo.append_receipt(rollback_rcpt)
+                if self.supabase and hasattr(self.supabase, "push_receipt"):
+                    self.supabase.push_receipt(rollback_rcpt)
 
                 # 4. Transition to FAILED
                 mission.transition_to(
@@ -174,6 +178,8 @@ class MasterWorkflowRunner:
             inputs_payload=changeset.to_dict(),
         )
         self.echo.append_receipt(receipt)
+        if self.supabase and hasattr(self.supabase, "push_receipt"):
+            self.supabase.push_receipt(receipt)
 
         # Update RootTruth
         for op in changeset.operations:
