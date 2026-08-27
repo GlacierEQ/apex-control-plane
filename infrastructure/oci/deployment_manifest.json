@@ -1,0 +1,21 @@
+{
+  "tenancy_id": "ocid1.tenancy.oc1..aaaaaaaa6arela2mprzl3oyfgn7ltrdm2prgezybmfkxp4xjnazeie6vahhq",
+  "user_id": "ocid1.user.oc1..aaaaaaaaedbjzuhigw4rjs7hdczbkolbsa25dvsiq3qlvajdkpf42xrfg5pa",
+  "region": "mx-monterrey-1",
+  "fingerprint": "fc:f9:dd:bd:ae:87:68:03:fb:7d:3d:52:bf:0d:74:75",
+  "shape": "VM.Standard.A1.Flex",
+  "shape_config": {
+    "ocpus": 4,
+    "memory_in_gbs": 24
+  },
+  "display_name": "apex-temporal-sovereign-head",
+  "operating_system": "Canonical Ubuntu 22.04 LTS (aarch64)",
+  "boot_volume_size_gbs": 100,
+  "services": [
+    "Temporal Workflow Engine (gRPC 7233)",
+    "Temporal Web Console (Port 8080)",
+    "PostgreSQL Database Backend (Port 5432)",
+    "Asynchronous Webhook Ingress (Port 443)"
+  ],
+  "cloud_init_script": "/Users/kcbflux/APEX_SYSTEM/INFRASTRUCTURE/apex-control-plane/infrastructure/oci/cloud_init_temporal.sh"
+}
