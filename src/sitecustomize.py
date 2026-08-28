@@ -10,6 +10,7 @@ Strict runtime startup is fail-closed. Request mode remains a diagnostic lane:
 it may continue only without a strong-boot session or runtime kernel, with all
 execution authorization remaining false.
 """
+
 from __future__ import annotations
 
 import os
@@ -44,16 +45,20 @@ def _request_mode() -> bool:
 
 def _should_boot() -> bool:
     entrypoint = _entrypoint_name()
-    if entrypoint in {
-        "auto_boot.py",
-        "apex_enforced_startup.py",
-        "apex_strong_boot.py",
-        "operator_fidelity_lock.py",
-        "operator_fidelity_preflight.py",
-        "notion_continuity_gate.py",
-        "prime_directive_boot.py",
-        "prime_directive_enforcer.py",
-    } or _is_pytest_startup():
+    if (
+        entrypoint
+        in {
+            "auto_boot.py",
+            "apex_enforced_startup.py",
+            "apex_strong_boot.py",
+            "operator_fidelity_lock.py",
+            "operator_fidelity_preflight.py",
+            "notion_continuity_gate.py",
+            "prime_directive_boot.py",
+            "prime_directive_enforcer.py",
+        }
+        or _is_pytest_startup()
+    ):
         return False
 
     if os.getenv("CASEY_AUTO_BOOT", "0") == "1":
@@ -64,7 +69,10 @@ def _should_boot() -> bool:
 
 def _record_blocked_startup(exc: BaseException) -> None:
     """Persist exact recovery evidence without granting execution authority."""
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
+    from startup_continuation import (
+        emit_startup_continuation,
+        record_startup_continuation,
+    )
 
     payload = {
         "boot_status": "blocked",
@@ -119,7 +127,9 @@ if _should_boot():
         APEX_RUNTIME_KERNEL = APEX_STRONG_BOOT_SESSION.runtime_kernel
     except SystemExit as exc:
         # Explicit hard-lock bypass attempts remain terminal even in diagnostic mode.
-        code = exc.code if isinstance(exc.code, int) and exc.code else _BOOT_BLOCKED_EXIT
+        code = (
+            exc.code if isinstance(exc.code, int) and exc.code else _BOOT_BLOCKED_EXIT
+        )
         _terminate_blocked(code)
     except Exception as exc:
         _record_blocked_startup(exc)

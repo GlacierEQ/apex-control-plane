@@ -85,8 +85,10 @@ def validate_policy(policy: dict[str, Any]) -> list[ValidationResult]:
         ValidationResult(
             "policy.knowledge_use_boundary",
             authority.get("akos") == "determines_what_is_known"
-            and authority.get("operator") == "determines_what_is_done_with_what_is_known"
-            and authority.get("buildkite") == "executes_and_reports_operator_directed_work",
+            and authority.get("operator")
+            == "determines_what_is_done_with_what_is_known"
+            and authority.get("buildkite")
+            == "executes_and_reports_operator_directed_work",
             "AKOS/OPERATOR/Buildkite roles are separated",
         )
     )
@@ -136,7 +138,8 @@ def validate_policy(policy: dict[str, Any]) -> list[ValidationResult]:
     results.append(
         ValidationResult(
             "policy.live_readback_is_observation_only",
-            live.get("observation_only") is True and live.get("credential_values_forbidden") is True,
+            live.get("observation_only") is True
+            and live.get("credential_values_forbidden") is True,
             "live inventory cannot mutate or record credential values",
         )
     )
@@ -154,7 +157,8 @@ def validate_policy(policy: dict[str, Any]) -> list[ValidationResult]:
         ValidationResult(
             "policy.terminal_state_separation",
             separation.get("build_passed") == "build_terminal_success_only"
-            and separation.get("domain_completion") == "requires_domain_specific_readback",
+            and separation.get("domain_completion")
+            == "requires_domain_specific_readback",
             "build success and domain completion remain separate",
         )
     )
@@ -174,17 +178,20 @@ def validate_pipeline(text: str, policy: dict[str, Any]) -> list[ValidationResul
         [
             ValidationResult(
                 "pipeline.steps_have_keys",
-                (not contract.get("require_step_keys")) or (step_count > 0 and key_count == step_count),
+                (not contract.get("require_step_keys"))
+                or (step_count > 0 and key_count == step_count),
                 f"steps={step_count} keys={key_count}",
             ),
             ValidationResult(
                 "pipeline.steps_have_queues",
-                (not contract.get("require_explicit_queue")) or (step_count > 0 and queue_count == step_count),
+                (not contract.get("require_explicit_queue"))
+                or (step_count > 0 and queue_count == step_count),
                 f"steps={step_count} queues={queue_count}",
             ),
             ValidationResult(
                 "pipeline.steps_have_timeouts",
-                (not contract.get("require_timeouts")) or (step_count > 0 and timeout_count == step_count),
+                (not contract.get("require_timeouts"))
+                or (step_count > 0 and timeout_count == step_count),
                 f"steps={step_count} timeouts={timeout_count}",
             ),
             ValidationResult(
@@ -195,7 +202,8 @@ def validate_pipeline(text: str, policy: dict[str, Any]) -> list[ValidationResul
             ),
             ValidationResult(
                 "pipeline.fail_closed_shell",
-                (not contract.get("require_fail_closed_shell")) or ("set -euo pipefail" in text),
+                (not contract.get("require_fail_closed_shell"))
+                or ("set -euo pipefail" in text),
                 "fail-closed shell mode present",
             ),
             ValidationResult(
@@ -213,7 +221,9 @@ def validate_pipeline(text: str, policy: dict[str, Any]) -> list[ValidationResul
         ]
     )
 
-    if "buildkite-agent pipeline upload" in text and contract.get("dynamic_upload_reject_secrets"):
+    if "buildkite-agent pipeline upload" in text and contract.get(
+        "dynamic_upload_reject_secrets"
+    ):
         results.append(
             ValidationResult(
                 "pipeline.dynamic_upload_rejects_secrets",
@@ -259,7 +269,9 @@ def main() -> int:
     args = parser.parse_args()
 
     policy_path = args.policy if args.policy.is_absolute() else ROOT / args.policy
-    pipeline_path = args.pipeline if args.pipeline.is_absolute() else ROOT / args.pipeline
+    pipeline_path = (
+        args.pipeline if args.pipeline.is_absolute() else ROOT / args.pipeline
+    )
     policy = load_policy(policy_path)
     pipeline_text = pipeline_path.read_text(encoding="utf-8")
 
@@ -273,7 +285,9 @@ def main() -> int:
             else ROOT / args.emit_receipt
         )
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
-        receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        receipt_path.write_text(
+            json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
 
     for item in results:
         marker = "PASS" if item.passed else "FAIL"

@@ -5,6 +5,7 @@ APEX read request to a documented authenticated-session operation plan. The task
 host performs that one provider read through its direct authenticated integration,
 then supplies the in-memory observation to receipt_from_observation().
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ from typing import Any, Mapping
 
 from authenticated_session_bridge import ProviderObservation, build_read_receipt
 from connector_bridge_contract import build_read_request
-from connector_receipts import ConnectorCatalog, ConnectorReceiptError, canonical_json
+from connector_receipts import ConnectorCatalog, canonical_json
 
 
 class SessionDispatchError(RuntimeError):
@@ -89,7 +90,9 @@ def _validated_request_fields(
     target = _required_mapping(request.get("target"), "request.target")
     _required_text(request.get("request_id"), "request.request_id")
     if request.get("external_action_authorized") is not False:
-        raise SessionDispatchError("session dispatcher accepts only non-authorizing read requests")
+        raise SessionDispatchError(
+            "session dispatcher accepts only non-authorizing read requests"
+        )
     build_read_request(
         connector=connector,
         operation=operation,
@@ -101,16 +104,24 @@ def _validated_request_fields(
 
 
 def _provider_input(target: Mapping[str, Any]) -> Mapping[str, Any]:
-    return _required_mapping(target.get("provider_input"), "request.target.provider_input")
+    return _required_mapping(
+        target.get("provider_input"), "request.target.provider_input"
+    )
 
 
-def _validate_query_read_input(connector: str, operation: str, target: Mapping[str, Any]) -> None:
+def _validate_query_read_input(
+    connector: str, operation: str, target: Mapping[str, Any]
+) -> None:
     if connector != "supabase" or operation != "query.read":
         return
-    query = _required_text(_provider_input(target).get("query"), "query.read provider_input.query")
+    query = _required_text(
+        _provider_input(target).get("query"), "query.read provider_input.query"
+    )
     compact = " ".join(query.split()).lower()
     if not compact.startswith("select ") or ";" in compact:
-        raise SessionDispatchError("supabase query.read accepts one SELECT statement only")
+        raise SessionDispatchError(
+            "supabase query.read accepts one SELECT statement only"
+        )
 
 
 def build_session_operation_plan(
@@ -148,7 +159,9 @@ def build_session_operation_plan(
     try:
         server, tool = _MCP_READ_TOOLS[(connector, operation)]
     except KeyError as exc:
-        raise SessionDispatchError(f"no authenticated-session mapping for {connector}.{operation}") from exc
+        raise SessionDispatchError(
+            f"no authenticated-session mapping for {connector}.{operation}"
+        ) from exc
     return SessionOperationPlan(
         connector=connector,
         operation=operation,

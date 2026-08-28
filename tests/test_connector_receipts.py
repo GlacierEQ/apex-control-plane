@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
@@ -168,7 +167,9 @@ def test_enabled_write_route_requires_exact_approval_and_stated_consequence(tmp_
         validate_action_request(action_request(consequence=""), catalog)
     with pytest.raises(ConnectorReceiptError, match="approval_reference"):
         validate_action_request(
-            action_request(approval={"approved_by": "GlacierEQ", "approved_at": NOW.isoformat()}),
+            action_request(
+                approval={"approved_by": "GlacierEQ", "approved_at": NOW.isoformat()}
+            ),
             catalog,
         )
 

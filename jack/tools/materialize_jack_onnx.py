@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import base64, hashlib
+import base64
+import hashlib
 
 EXPECTED = "5602367fb172d7457c9cc7dc57e87e6aa765e8bc53cfbe8662468c5ad91d338b"
 here = Path(__file__).resolve().parents[1]

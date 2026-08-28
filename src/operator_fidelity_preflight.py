@@ -7,6 +7,7 @@ scope, governance-first behavior, permission loops, capability reduction,
 unsolicited Operator-asset valuation or disposition, inspection-scope
 expansion, or textual minimization hidden behind compliant booleans.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -19,11 +20,13 @@ from pathlib import Path
 from typing import Any
 
 from anti_minimization_compiler import inspect_execution_text, supported_rule_codes
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from auto_boot import BootError
 from prime_directive_boot import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
-    Path(__file__).resolve().parents[1] / "config" / "operator_fidelity_runtime_policy.json"
+    Path(__file__).resolve().parents[1]
+    / "config"
+    / "operator_fidelity_runtime_policy.json"
 )
 _SEAL = object()
 
@@ -37,7 +40,9 @@ class OperatorFidelityValidation:
 
     def __post_init__(self) -> None:
         if self._seal is not _SEAL:
-            raise TypeError("validation must be issued by the operator-fidelity enforcer")
+            raise TypeError(
+                "validation must be issued by the operator-fidelity enforcer"
+            )
 
 
 _IN_PROCESS: OperatorFidelityValidation | None = None
@@ -89,7 +94,9 @@ def load_operator_fidelity_policy(
 
     asset_sovereignty = value.get("operator_asset_sovereignty")
     if not isinstance(asset_sovereignty, Mapping):
-        raise BootError("operator-fidelity operator_asset_sovereignty must be an object")
+        raise BootError(
+            "operator-fidelity operator_asset_sovereignty must be an object"
+        )
     required_asset_flags = {
         "look_inspect_list_inventory_map_are_observation_only": True,
         "asset_value_ranking_requires_explicit_operator_request": True,
@@ -132,9 +139,7 @@ def load_operator_fidelity_policy(
             details.append("policy-only=" + ",".join(missing_in_compiler))
         if missing_in_policy:
             details.append("compiler-only=" + ",".join(missing_in_policy))
-        raise BootError(
-            "operator-fidelity semantic rule drift: " + "; ".join(details)
-        )
+        raise BootError("operator-fidelity semantic rule drift: " + "; ".join(details))
 
     engineering = value.get("pro_code_elite_humanized_engineering")
     if not isinstance(engineering, Mapping) or engineering.get("required") is not True:
@@ -216,9 +221,7 @@ def validate_operator_fidelity_receipt(
             errors.append(f"operator_fidelity.{field_name} must be non-empty")
 
     if not _is_sha256_ref(row.get("operator_words_digest")):
-        errors.append(
-            "operator_fidelity.operator_words_digest must be sha256:<64 hex>"
-        )
+        errors.append("operator_fidelity.operator_words_digest must be sha256:<64 hex>")
 
     literal_constraints = row.get("literal_constraints")
     if not isinstance(literal_constraints, list) or not any(
@@ -370,7 +373,10 @@ def _continue_operator_fidelity(
     *,
     request: Mapping[str, Any],
 ) -> OperatorFidelityValidation:
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
+    from startup_continuation import (
+        emit_startup_continuation,
+        record_startup_continuation,
+    )
 
     continuation = record_startup_continuation(
         "operator_fidelity_preflight",

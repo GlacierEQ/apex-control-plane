@@ -151,8 +151,12 @@ def test_active_ground_truth_bytes_are_verified(tmp_path: Path) -> None:
         repo_root=tmp_path,
     )
 
-    assert any("active ground-truth hash mismatch for STATE.md" in error for error in errors)
-    assert any("receipt is not bound to active bytes for STATE.md" in error for error in errors)
+    assert any(
+        "active ground-truth hash mismatch for STATE.md" in error for error in errors
+    )
+    assert any(
+        "receipt is not bound to active bytes for STATE.md" in error for error in errors
+    )
 
 
 def test_missing_tool_inventory_blocks() -> None:
@@ -218,7 +222,9 @@ def test_policy_requires_all_five_startup_stages() -> None:
     assert policy["apex_binding"]["project_direction_authority"] == "operator_intent"
     assert policy["apex_binding"]["unearned_state_promotion_prohibited"] is True
     assert policy["apex_binding"]["operator_fidelity_required"] is True
-    assert policy["apex_binding"]["instruction_displacement_is_execution_failure"] is True
+    assert (
+        policy["apex_binding"]["instruction_displacement_is_execution_failure"] is True
+    )
     assert policy["apex_binding"]["uncertainty_routes_to_investigation"] is True
     assert policy["apex_binding"]["governance_is_subordinate_to_function"] is True
 

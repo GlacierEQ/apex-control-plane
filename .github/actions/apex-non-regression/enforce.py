@@ -146,7 +146,9 @@ def classify_downward_directive(line: str) -> str | None:
         return None
     if ROLLBACK_EXCEPTION_RE.search(line):
         return None
-    if DIRECTIVE_RE.search(line) or re.search(r"[:=]\s*[\"']?(?:smallest|minimum|least|freeze)", line, re.IGNORECASE):
+    if DIRECTIVE_RE.search(line) or re.search(
+        r"[:=]\s*[\"']?(?:smallest|minimum|least|freeze)", line, re.IGNORECASE
+    ):
         return "DOWNWARD_SCOPE_DIRECTIVE"
     # Policy prose can omit an imperative verb while still declaring a target,
     # e.g. "the smallest useful implementation." Fail closed on that ambiguity.
@@ -248,8 +250,12 @@ def main() -> int:
             if finding["code"] == "MERGE_CONFLICT_MARKER"
         ]
 
-    failures = list({json.dumps(item, sort_keys=True): item for item in failures}.values())
-    warnings = list({json.dumps(item, sort_keys=True): item for item in warnings}.values())
+    failures = list(
+        {json.dumps(item, sort_keys=True): item for item in failures}.values()
+    )
+    warnings = list(
+        {json.dumps(item, sort_keys=True): item for item in warnings}.values()
+    )
 
     payload = {
         "schema": "apex.estate-non-regression.v3",

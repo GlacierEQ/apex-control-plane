@@ -5,6 +5,7 @@ incomplete, this module records the exact recovery path instead of terminating
 the Python process. A continuation is non-authorizing: it enables diagnosis and
 receipt repair, never external mutation.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -19,13 +20,17 @@ SCHEMA = "glaciereq.apex.startup-continuation.v1"
 
 
 def _safe_gate(value: str) -> str:
-    normalized = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in value.strip().lower())
+    normalized = "".join(
+        ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in value.strip().lower()
+    )
     return normalized.strip("_") or "startup"
 
 
 def _json_digest(value: Mapping[str, Any]) -> str:
     return hashlib.sha256(
-        json.dumps(dict(value), sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+        json.dumps(
+            dict(value), sort_keys=True, separators=(",", ":"), default=str
+        ).encode("utf-8")
     ).hexdigest()
 
 
@@ -44,7 +49,9 @@ def record_startup_continuation(
     environment_key: str | None = None,
 ) -> Mapping[str, Any]:
     """Record a non-authorizing startup recovery receipt and expose its identity."""
-    normalized_errors = tuple(str(error) for error in errors if str(error).strip()) or ("startup prerequisite incomplete",)
+    normalized_errors = tuple(str(error) for error in errors if str(error).strip()) or (
+        "startup prerequisite incomplete",
+    )
     gate_id = _safe_gate(gate)
     body: dict[str, Any] = {
         "schema": SCHEMA,
@@ -75,7 +82,10 @@ def record_startup_continuation(
         root.mkdir(parents=True, exist_ok=True)
         target = root / f"{gate_id}-{record_id[:16]}.json"
         temporary = target.with_suffix(".tmp")
-        temporary.write_text(json.dumps(body, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        temporary.write_text(
+            json.dumps(body, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
         temporary.replace(target)
         body["record_path"] = str(target)
         persistence = "durable_local_record"

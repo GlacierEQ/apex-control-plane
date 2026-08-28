@@ -4,13 +4,17 @@ No function in this module loads credentials, invokes a provider tool, or execut
 network request. The host receives one validated plan and performs the named provider
 action directly, then submits digest-only execution and readback observations.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any, Mapping
 
-from approved_operation_bridge import ApprovedConnectorAction, validate_approved_action_request
+from approved_operation_bridge import (
+    ApprovedConnectorAction,
+    validate_approved_action_request,
+)
 from connector_receipts import ConnectorCatalog, ConnectorReceiptError, canonical_json
 
 
@@ -71,14 +75,18 @@ def _required_text(value: Any, name: str) -> str:
 def _validate_supabase_write_input(action: ApprovedConnectorAction) -> None:
     if action.connector != "supabase":
         return
-    query = _required_text(action.provider_input.get("query"), "approved Supabase provider_input.query")
+    query = _required_text(
+        action.provider_input.get("query"), "approved Supabase provider_input.query"
+    )
     compact = " ".join(query.split()).lower()
     if ";" in compact or "--" in compact or "/*" in compact:
         raise ApprovedSessionDispatchError(
             "approved Supabase operations accept one comment-free statement"
         )
     if action.operation == "row.insert" and not compact.startswith("insert into "):
-        raise ApprovedSessionDispatchError("supabase row.insert requires one INSERT INTO statement")
+        raise ApprovedSessionDispatchError(
+            "supabase row.insert requires one INSERT INTO statement"
+        )
     if action.operation == "row.update":
         if not compact.startswith("update ") or " where " not in compact:
             raise ApprovedSessionDispatchError(

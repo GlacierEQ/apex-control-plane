@@ -204,7 +204,9 @@ def test_blocker_is_resumable_without_false_completion(monkeypatch) -> None:
     assert resumed.unresolved_blockers == ()
 
 
-def test_audit_never_contains_literal_instruction_or_receipt_details(monkeypatch) -> None:
+def test_audit_never_contains_literal_instruction_or_receipt_details(
+    monkeypatch,
+) -> None:
     kernel = _arm(monkeypatch)
     secret_phrase = "literal private operator instruction"
     kernel.bind_task(

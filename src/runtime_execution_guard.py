@@ -6,6 +6,7 @@ This guard is deliberately standard-library-only and is imported by an early
 runtime dependency, so it still applies when Python does not discover the local
 `sitecustomize.py` during interpreter startup.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,8 +43,7 @@ def enforce_verified_runtime_boundary(
         "boot_status": "blocked",
         "runtime_binding_status": "blocked",
         "error": (
-            "direct control_plane_runtime execution is disabled; "
-            "use control_plane.py"
+            "direct control_plane_runtime execution is disabled; use control_plane.py"
         ),
         "runtime_authorized": False,
         "external_action_authorized": False,

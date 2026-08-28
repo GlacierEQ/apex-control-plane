@@ -92,9 +92,7 @@ def _valid_receipt(*, existing: bool = True) -> dict:
                 else None
             ),
             "consumers": (
-                [{"system": "APEX", "id": "control-plane-runtime"}]
-                if existing
-                else []
+                [{"system": "APEX", "id": "control-plane-runtime"}] if existing else []
             ),
             "dependencies": [],
             "related_nodes": [],
@@ -132,7 +130,9 @@ def test_valid_existing_work_receipt_passes() -> None:
 
 def test_valid_none_found_mapping_receipt_passes() -> None:
     policy = load_notion_policy()
-    assert validate_notion_continuity_receipt(policy, _valid_receipt(existing=False)) == ()
+    assert (
+        validate_notion_continuity_receipt(policy, _valid_receipt(existing=False)) == ()
+    )
 
 
 def test_missing_continuity_page_blocks() -> None:
@@ -186,7 +186,10 @@ def test_found_work_requires_existing_owner_metadata() -> None:
     receipt["existing_work_discovery"]["decision"] = "integrate"
     errors = validate_notion_continuity_receipt(policy, receipt)
     assert "found existing work requires existing owner metadata" in errors
-    assert "found existing work requires decision=map_existing or operator_override" in errors
+    assert (
+        "found existing work requires decision=map_existing or operator_override"
+        in errors
+    )
 
 
 def test_discovery_owner_rejects_non_mapping_values() -> None:
@@ -233,7 +236,9 @@ def test_related_node_cannot_create_new_root_without_operator_direction() -> Non
     ]
     receipt["integration_map"]["create_new_root"] = True
     errors = validate_notion_continuity_receipt(policy, receipt)
-    assert "integration_map.create_new_root requires explicit Operator direction" in errors
+    assert (
+        "integration_map.create_new_root requires explicit Operator direction" in errors
+    )
 
 
 def test_explicit_operator_override_can_authorize_new_root() -> None:
@@ -310,11 +315,26 @@ def test_request_declares_operator_asset_sovereignty_laws() -> None:
     request = build_notion_preflight_request(policy, task="look at legal repos")
     assert request["request_type"] == "glaciereq_notion_continuity_preflight"
     assert request["requirements"]["notion_before_user_facing_text"] is True
-    assert request["requirements"]["determine_whether_work_already_exists_before_starting"] is True
-    assert request["requirements"]["discover_owner_consumers_dependencies_and_overlap_before_making"] is True
-    assert request["requirements"]["relationship_discovery_produces_map_not_integration_order"] is True
+    assert (
+        request["requirements"]["determine_whether_work_already_exists_before_starting"]
+        is True
+    )
+    assert (
+        request["requirements"][
+            "discover_owner_consumers_dependencies_and_overlap_before_making"
+        ]
+        is True
+    )
+    assert (
+        request["requirements"][
+            "relationship_discovery_produces_map_not_integration_order"
+        ]
+        is True
+    )
     assert request["requirements"]["preserve_literal_operator_operation_scope"] is True
-    assert request["requirements"]["no_unsolicited_operator_asset_value_ranking"] is True
+    assert (
+        request["requirements"]["no_unsolicited_operator_asset_value_ranking"] is True
+    )
     assert request["requirements"]["no_unsolicited_operator_asset_disposition"] is True
     assert request["requirements"]["operator_override_may_authorize_new_root"] is True
 

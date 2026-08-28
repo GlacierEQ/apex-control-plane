@@ -26,7 +26,9 @@ from control_plane import (  # noqa: E402
 FIXED_NOW = datetime(2026, 7, 15, 12, 0, tzinfo=UTC)
 
 
-def _startup_validation(*, ok: bool = True, status: str = "complete") -> SimpleNamespace:
+def _startup_validation(
+    *, ok: bool = True, status: str = "complete"
+) -> SimpleNamespace:
     return SimpleNamespace(ok=ok, status=status)
 
 
@@ -47,7 +49,10 @@ def test_runtime_authorization_requires_every_gate_to_complete() -> None:
             (
                 ("notion_continuity", completed),
                 ("prime_directive", completed),
-                ("operator_fidelity_lock", _startup_validation(ok=False, status="continuation_required")),
+                (
+                    "operator_fidelity_lock",
+                    _startup_validation(ok=False, status="continuation_required"),
+                ),
                 ("operator_fidelity", completed),
                 ("apex_startup", completed),
             )
@@ -106,7 +111,9 @@ def test_dispatch_preserves_compatibility_and_capacity() -> None:
 
 def test_dispatch_skips_unhealthy_or_incompatible_workers() -> None:
     cp = ControlPlane()
-    cp.register(Worker("unhealthy", 5, frozenset({"extract_case_event"}), healthy=False))
+    cp.register(
+        Worker("unhealthy", 5, frozenset({"extract_case_event"}), healthy=False)
+    )
     cp.register(Worker("wrong", 5, frozenset({"timeline"})))
     assert cp.dispatch(1, capability="extract_case_event")["error"] == "no_capacity"
 
@@ -193,7 +200,9 @@ def test_connector_retry_recovers_and_closes_breaker() -> None:
             raise OSError("temporary")
         return "ok"
 
-    assert orchestrator.call_connector("supermemory", flaky, sleep=lambda _: None) == "ok"
+    assert (
+        orchestrator.call_connector("supermemory", flaky, sleep=lambda _: None) == "ok"
+    )
     assert attempts["count"] == 3
     assert orchestrator.breakers["supermemory"].failures == 0
 

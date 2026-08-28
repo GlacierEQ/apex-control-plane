@@ -17,7 +17,16 @@ SHA_MAIN = "1" * 40
 
 
 class FakeGitHub:
-    def __init__(self, *, branches, comparisons, default="main", embedded_head=False, tree=None, tree_complete=True):
+    def __init__(
+        self,
+        *,
+        branches,
+        comparisons,
+        default="main",
+        embedded_head=False,
+        tree=None,
+        tree_complete=True,
+    ):
         self._branches = branches
         self._comparisons = comparisons
         self._default = default
@@ -65,8 +74,12 @@ def test_best_of_worlds_classifies_and_preserves_unique_donors():
             branch("old/already-in-main", "4" * 40),
         ],
         comparisons={
-            "feature/timeline": comparison("ahead", 3, 0, "timeline/engine.py", "tests/test_timeline.py"),
-            "recovery/forensic-execution": comparison("diverged", 5, 12, "evidence/contradiction.py"),
+            "feature/timeline": comparison(
+                "ahead", 3, 0, "timeline/engine.py", "tests/test_timeline.py"
+            ),
+            "recovery/forensic-execution": comparison(
+                "diverged", 5, 12, "evidence/contradiction.py"
+            ),
             "old/already-in-main": comparison("behind", 0, 20, "README.md"),
         },
     )
@@ -74,7 +87,9 @@ def test_best_of_worlds_classifies_and_preserves_unique_donors():
     by_name = {row.name: row for row in inventory.branches}
 
     assert by_name["feature/timeline"].action == "PRESERVE_AND_SYNTHESIZE"
-    assert by_name["recovery/forensic-execution"].action == "PRESERVE_AND_FRESH_SYNTHESIZE"
+    assert (
+        by_name["recovery/forensic-execution"].action == "PRESERVE_AND_FRESH_SYNTHESIZE"
+    )
     assert by_name["old/already-in-main"].action == "RETIRE_AFTER_REACHABILITY_PROOF"
     assert inventory.preservation_set == (
         "feature/timeline",
@@ -85,10 +100,16 @@ def test_best_of_worlds_classifies_and_preserves_unique_donors():
 
 def test_diverged_branch_is_ranked_above_forward_branch_when_capability_rich():
     reader = FakeGitHub(
-        branches=[branch("main", SHA_MAIN), branch("forward", "2" * 40), branch("diverged", "3" * 40)],
+        branches=[
+            branch("main", SHA_MAIN),
+            branch("forward", "2" * 40),
+            branch("diverged", "3" * 40),
+        ],
         comparisons={
             "forward": comparison("ahead", 1, 0, "README.md"),
-            "diverged": comparison("diverged", 1, 30, "evidence/timeline.py", "tests/test_timeline.py"),
+            "diverged": comparison(
+                "diverged", 1, 30, "evidence/timeline.py", "tests/test_timeline.py"
+            ),
         },
     )
     inventory = inventory_repository(reader, "GlacierEQ/legal")
@@ -102,7 +123,10 @@ def test_ambiguous_compare_state_fails_closed_into_preservation():
         branches=[branch("main", SHA_MAIN), branch("mystery", "2" * 40)],
         comparisons={"mystery": comparison("behind", 2, 7, "x.py")},
     )
-    row = {row.name: row for row in inventory_repository(reader, "GlacierEQ/legal").branches}["mystery"]
+    row = {
+        row.name: row
+        for row in inventory_repository(reader, "GlacierEQ/legal").branches
+    }["mystery"]
     assert row.relation == "REVIEW_REQUIRED"
     assert row.action == "PRESERVE_PENDING_REVIEW"
 
@@ -116,9 +140,9 @@ def test_family_key_groups_agent_iteration_suffixes_without_using_them_as_dispos
 
 
 def test_extinct_line_sha_suffixes_group_conservatively():
-    assert branch_family_key("recovery/extinct-line-2026-07-23-711ea3a") == branch_family_key(
-        "recovery/extinct-line-2026-07-23-bbfac4e"
-    )
+    assert branch_family_key(
+        "recovery/extinct-line-2026-07-23-711ea3a"
+    ) == branch_family_key("recovery/extinct-line-2026-07-23-bbfac4e")
 
 
 def test_inventory_digest_is_stable_across_branch_listing_order():
@@ -127,16 +151,25 @@ def test_inventory_digest_is_stable_across_branch_listing_order():
         "b": comparison("behind", 0, 2, "b.py"),
     }
     first = FakeGitHub(
-        branches=[branch("main", SHA_MAIN), branch("a", "2" * 40), branch("b", "3" * 40)],
+        branches=[
+            branch("main", SHA_MAIN),
+            branch("a", "2" * 40),
+            branch("b", "3" * 40),
+        ],
         comparisons=comparisons,
     )
     second = FakeGitHub(
-        branches=[branch("b", "3" * 40), branch("main", SHA_MAIN), branch("a", "2" * 40)],
+        branches=[
+            branch("b", "3" * 40),
+            branch("main", SHA_MAIN),
+            branch("a", "2" * 40),
+        ],
         comparisons=comparisons,
     )
-    assert inventory_repository(first, "GlacierEQ/legal").inventory_sha256 == inventory_repository(
-        second, "GlacierEQ/legal"
-    ).inventory_sha256
+    assert (
+        inventory_repository(first, "GlacierEQ/legal").inventory_sha256
+        == inventory_repository(second, "GlacierEQ/legal").inventory_sha256
+    )
 
 
 def test_default_head_disagreement_is_fatal():
@@ -163,7 +196,9 @@ def test_invalid_branch_sha_is_rejected_before_comparison():
         branches=[branch("main", SHA_MAIN), branch("broken", "not-a-sha")],
         comparisons={"broken": comparison("ahead", 1, 0)},
     )
-    with pytest.raises(BranchSynthesisError, match="invalid GlacierEQ/legal:broken head SHA"):
+    with pytest.raises(
+        BranchSynthesisError, match="invalid GlacierEQ/legal:broken head SHA"
+    ):
         inventory_repository(reader, "GlacierEQ/legal")
 
 
@@ -174,6 +209,7 @@ def test_synthesis_report_emits_metadata_not_patch_or_file_contents():
     )
     report = synthesis_report([inventory_repository(reader, "GlacierEQ/legal")])
     assert report["schema"] == "APEX_BRANCH_SYNTHESIS_V1"
+
     def keys(value):
         if isinstance(value, dict):
             for key, child in value.items():
@@ -182,6 +218,7 @@ def test_synthesis_report_emits_metadata_not_patch_or_file_contents():
         elif isinstance(value, list):
             for child in value:
                 yield from keys(child)
+
     report_keys = set(keys(report))
     assert "patch" not in report_keys
     assert "content" not in report_keys
@@ -209,6 +246,7 @@ def test_repository_identity_must_be_exact_owner_name():
     with pytest.raises(BranchSynthesisError, match="invalid repository identity"):
         inventory_repository(reader, "GlacierEQ/legal/extra")
 
+
 def test_diverged_lineage_can_retire_when_all_file_effects_are_content_equivalent():
     same_blob = "a" * 40
     reader = FakeGitHub(
@@ -219,7 +257,9 @@ def test_diverged_lineage_can_retire_when_all_file_effects_are_content_equivalen
                 "status": "diverged",
                 "ahead_by": 3,
                 "behind_by": 50,
-                "files": [{"filename": "engine.py", "status": "modified", "sha": same_blob}],
+                "files": [
+                    {"filename": "engine.py", "status": "modified", "sha": same_blob}
+                ],
             }
         },
     )
@@ -240,7 +280,9 @@ def test_content_delta_keeps_diverged_branch_in_preservation_set():
                 "status": "diverged",
                 "ahead_by": 2,
                 "behind_by": 10,
-                "files": [{"filename": "engine.py", "status": "modified", "sha": "b" * 40}],
+                "files": [
+                    {"filename": "engine.py", "status": "modified", "sha": "b" * 40}
+                ],
             }
         },
     )
@@ -261,10 +303,15 @@ def test_removed_file_effect_is_equivalent_when_default_also_lacks_path():
                 "status": "ahead",
                 "ahead_by": 1,
                 "behind_by": 0,
-                "files": [{"filename": "obsolete.py", "status": "removed", "sha": "c" * 40}],
+                "files": [
+                    {"filename": "obsolete.py", "status": "removed", "sha": "c" * 40}
+                ],
             }
         },
     )
-    row = {item.name: item for item in inventory_repository(reader, "GlacierEQ/legal").branches}["cleanup"]
+    row = {
+        item.name: item
+        for item in inventory_repository(reader, "GlacierEQ/legal").branches
+    }["cleanup"]
     assert row.content_relation == "CONTENT_EQUIVALENT"
     assert row.action == "RETIRE_AFTER_CONTENT_EQUIVALENCE_PROOF"

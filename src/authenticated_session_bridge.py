@@ -5,6 +5,7 @@ session-specific dispatcher may execute a catalogued read through an authenticat
 provider integration, then use these helpers to construct a receipt that APEX can
 validate and admit to its audit ledger.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -33,9 +34,13 @@ class ProviderObservation:
 
     def __post_init__(self) -> None:
         if not self.source_refs:
-            raise ConnectorReceiptError("provider observation requires a source reference")
+            raise ConnectorReceiptError(
+                "provider observation requires a source reference"
+            )
         if self.observed_at.tzinfo is None or self.observed_at.utcoffset() is None:
-            raise ConnectorReceiptError("provider observation time must include a timezone")
+            raise ConnectorReceiptError(
+                "provider observation time must include a timezone"
+            )
 
 
 def content_sha256(material: str | bytes | None) -> str | None:
@@ -74,10 +79,18 @@ def build_read_receipt(
     receipt_id: str | None = None,
 ) -> dict[str, Any]:
     """Build and validate a non-authorizing receipt from one provider observation."""
-    required_request_fields = ("request_id", "connector", "operation", "profile", "target")
+    required_request_fields = (
+        "request_id",
+        "connector",
+        "operation",
+        "profile",
+        "target",
+    )
     missing = [field for field in required_request_fields if not request.get(field)]
     if missing:
-        raise ConnectorReceiptError(f"read request missing field(s): {', '.join(missing)}")
+        raise ConnectorReceiptError(
+            f"read request missing field(s): {', '.join(missing)}"
+        )
     if request.get("external_action_authorized") is not False:
         raise ConnectorReceiptError("read request must remain non-authorizing")
 
@@ -106,7 +119,10 @@ def receipt_fingerprint(receipt: Mapping[str, Any]) -> str:
 
 
 def validate_built_receipt(
-    receipt: Mapping[str, Any], catalog: ConnectorCatalog, *, now: datetime | None = None
+    receipt: Mapping[str, Any],
+    catalog: ConnectorCatalog,
+    *,
+    now: datetime | None = None,
 ) -> ConnectorReadReceipt:
     """Validate a bridge-produced receipt before runtime admission."""
     return validate_read_receipt(receipt, catalog, now=now)

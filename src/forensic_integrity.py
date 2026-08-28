@@ -54,7 +54,9 @@ def sha256_file(path: str | os.PathLike[str]) -> str:
         return sha256_stream(fh)
 
 
-def stable_evidence_id(source_provider: str, source_file_id: str, source_revision: str | None = None) -> str:
+def stable_evidence_id(
+    source_provider: str, source_file_id: str, source_revision: str | None = None
+) -> str:
     del source_revision
     material = "\x1f".join([source_provider.strip().lower(), source_file_id.strip()])
     return f"EVD-{uuid.uuid5(EVIDENCE_NAMESPACE, material)}"
@@ -65,8 +67,17 @@ def stable_acquisition_id(evidence_id: str, sha256: str, method: str) -> str:
     return f"ACQ-{uuid.uuid5(ACQUISITION_NAMESPACE, material)}"
 
 
-def stable_derivative_id(evidence_id: str, transformation_type: str, recipe_hash_value: str, output_hash: str) -> str:
-    material = "\x1f".join([evidence_id, transformation_type.strip().lower(), recipe_hash_value.lower(), output_hash.lower()])
+def stable_derivative_id(
+    evidence_id: str, transformation_type: str, recipe_hash_value: str, output_hash: str
+) -> str:
+    material = "\x1f".join(
+        [
+            evidence_id,
+            transformation_type.strip().lower(),
+            recipe_hash_value.lower(),
+            output_hash.lower(),
+        ]
+    )
     return f"DRV-{uuid.uuid5(DERIVATIVE_NAMESPACE, material)}"
 
 
@@ -94,7 +105,9 @@ class SourceObservation:
 
     @property
     def evidence_id(self) -> str:
-        return stable_evidence_id(self.source_provider, self.source_file_id, self.source_revision)
+        return stable_evidence_id(
+            self.source_provider, self.source_file_id, self.source_revision
+        )
 
     def to_manifest_record(self) -> dict[str, Any]:
         record = asdict(self)
@@ -119,7 +132,16 @@ class AcquisitionReceipt:
     verified: bool
 
     @classmethod
-    def from_paths(cls, *, evidence_id: str, source_path: str | os.PathLike[str], destination_path: str | os.PathLike[str], method: str, tool_name: str, tool_version: str) -> "AcquisitionReceipt":
+    def from_paths(
+        cls,
+        *,
+        evidence_id: str,
+        source_path: str | os.PathLike[str],
+        destination_path: str | os.PathLike[str],
+        method: str,
+        tool_name: str,
+        tool_version: str,
+    ) -> "AcquisitionReceipt":
         source = Path(source_path)
         destination = Path(destination_path)
         source_hash = sha256_file(source)
@@ -128,7 +150,18 @@ class AcquisitionReceipt:
             raise IntegrityError("acquisition byte-size mismatch")
         if source_hash != destination_hash:
             raise IntegrityError("acquisition SHA-256 mismatch")
-        return cls(evidence_id=evidence_id, acquisition_id=stable_acquisition_id(evidence_id, source_hash, method), method=method, source_hash=source_hash, destination_hash=destination_hash, byte_size=source.stat().st_size, tool_name=tool_name, tool_version=tool_version, acquired_at=utc_now_iso(), verified=True)
+        return cls(
+            evidence_id=evidence_id,
+            acquisition_id=stable_acquisition_id(evidence_id, source_hash, method),
+            method=method,
+            source_hash=source_hash,
+            destination_hash=destination_hash,
+            byte_size=source.stat().st_size,
+            tool_name=tool_name,
+            tool_version=tool_version,
+            acquired_at=utc_now_iso(),
+            verified=True,
+        )
 
 
 @dataclass(frozen=True)
@@ -147,16 +180,59 @@ class DerivativeReceipt:
     label: str = "DERIVATIVE FOR REVIEW"
 
     @classmethod
-    def register(cls, *, evidence_id: str, transformation_type: str, recipe: dict[str, Any], input_path: str | os.PathLike[str], output_path: str | os.PathLike[str], tool_name: str, tool_version: str) -> "DerivativeReceipt":
+    def register(
+        cls,
+        *,
+        evidence_id: str,
+        transformation_type: str,
+        recipe: dict[str, Any],
+        input_path: str | os.PathLike[str],
+        output_path: str | os.PathLike[str],
+        tool_name: str,
+        tool_version: str,
+    ) -> "DerivativeReceipt":
         r_hash = recipe_hash(recipe)
         input_hash = sha256_file(input_path)
         output_hash = sha256_file(output_path)
-        return cls(derivative_id=stable_derivative_id(evidence_id, transformation_type, r_hash, output_hash), evidence_id=evidence_id, transformation_type=transformation_type, recipe=recipe, recipe_hash=r_hash, input_sha256=input_hash, output_sha256=output_hash, tool_name=tool_name, tool_version=tool_version, created_at=utc_now_iso())
+        return cls(
+            derivative_id=stable_derivative_id(
+                evidence_id, transformation_type, r_hash, output_hash
+            ),
+            evidence_id=evidence_id,
+            transformation_type=transformation_type,
+            recipe=recipe,
+            recipe_hash=r_hash,
+            input_sha256=input_hash,
+            output_sha256=output_hash,
+            tool_name=tool_name,
+            tool_version=tool_version,
+            created_at=utc_now_iso(),
+        )
 
 
-def build_observation_manifest(observations: Iterable[SourceObservation], *, matter_id: str, scope: dict[str, Any], generated_at: str | None = None) -> dict[str, Any]:
-    items = sorted((obs.to_manifest_record() for obs in observations), key=lambda item: (item["source_provider"], item["source_file_id"], item["source_revision"] or ""))
-    body = {"schema": "glaciereq.forensic.observation-manifest.v1", "matter_id": matter_id, "generated_at": generated_at or utc_now_iso(), "scope": scope, "items": items, "item_count": len(items)}
+def build_observation_manifest(
+    observations: Iterable[SourceObservation],
+    *,
+    matter_id: str,
+    scope: dict[str, Any],
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    items = sorted(
+        (obs.to_manifest_record() for obs in observations),
+        key=lambda item: (
+            item["source_provider"],
+            item["source_file_id"],
+            item["source_revision"] or "",
+        ),
+    )
+    body = {
+        "schema": "glaciereq.forensic.observation-manifest.v1",
+        "matter_id": matter_id,
+        "generated_at": generated_at or utc_now_iso(),
+        "scope": scope,
+        "items": items,
+        "item_count": len(items),
+    }
     body["manifest_sha256"] = sha256_bytes(canonical_json(body).encode("utf-8"))
     return body
 

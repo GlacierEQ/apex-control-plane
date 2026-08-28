@@ -5,6 +5,7 @@ This command validates a local action-request JSON document against the active c
 and returns the one direct authenticated host operation plan. It does not call a provider,
 load a credential, schedule work, or retain provider content.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,7 +21,10 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from approved_operation_bridge import action_audit_scope, validate_approved_action_request
+from approved_operation_bridge import (
+    action_audit_scope,
+    validate_approved_action_request,
+)
 from approved_session_dispatch import build_approved_session_operation_plan
 from connector_receipts import ConnectorReceiptError, load_connector_catalog
 

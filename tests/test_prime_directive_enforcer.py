@@ -44,8 +44,7 @@ def _valid_combined_validation(*, empty_memory: bool = False):
         "mem_collection_id": manifest["mem_collection"]["id"],
         "boot_profile": list(profiles),
         "notes_loaded": [
-            {"id": note_id, "version": version}
-            for note_id, version in versions.items()
+            {"id": note_id, "version": version} for note_id, version in versions.items()
         ],
         "sources_opened": [
             {"system": "github", "object_id": "source-1", "version": "abc123"}
@@ -354,7 +353,9 @@ def test_pending_calls_are_bounded() -> None:
     enforcer = StartupGateEnforcer()
     for index in range(300):
         enforcer.intercept_llm_response(
-            _tool_call("personal_context.search", {"query": str(index)}, f"call-{index}")
+            _tool_call(
+                "personal_context.search", {"query": str(index)}, f"call-{index}"
+            )
         )
 
     assert len(enforcer._state.pending_calls) == 256

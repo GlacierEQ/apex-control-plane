@@ -5,6 +5,7 @@ deadlines, and repository receipts. This module adds startup behavior proof: a
 memory search was executed, pinned ground-truth files were read and verified
 against active bytes, and the worker enumerated its loaded tools.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -129,11 +130,7 @@ def _stage_aliases(policy: Mapping[str, Any], stage: str) -> set[str]:
 def _matches_alias(tool_name: str, aliases: set[str]) -> bool:
     if tool_name in aliases:
         return True
-    return any(
-        tool_name.endswith(f".{alias}")
-        for alias in aliases
-        if "." not in alias
-    )
+    return any(tool_name.endswith(f".{alias}") for alias in aliases if "." not in alias)
 
 
 def _source_tool_prefix(value: str) -> str:
@@ -182,7 +179,9 @@ def validate_prime_directive_receipt(
                 if str(value).strip()
             }
             if not loaded_tool_names:
-                errors.append("tool_inventory.loaded_tools must contain at least one tool")
+                errors.append(
+                    "tool_inventory.loaded_tools must contain at least one tool"
+                )
         if inventory_tool and inventory_tool not in loaded_tool_names:
             errors.append("tool_inventory.tool must appear in loaded_tools")
 
@@ -251,7 +250,11 @@ def validate_prime_directive_receipt(
                 errors.append(
                     f"ground_truth_files_loaded[{index}].source tool must appear in loaded_tools"
                 )
-            if path and source_locator and not source_locator.lower().endswith(path.lower()):
+            if (
+                path
+                and source_locator
+                and not source_locator.lower().endswith(path.lower())
+            ):
                 errors.append(
                     f"ground_truth_files_loaded[{index}].source locator does not match {path}"
                 )
@@ -406,11 +409,7 @@ def automatic_prime_directive_boot() -> PrimeDirectiveBootValidation | None:
 
     manifest = load_manifest()
     policy_path = Path(
-        str(
-            manifest.get("prime_directive", {}).get(
-                "policy_path", DEFAULT_POLICY_PATH
-            )
-        )
+        str(manifest.get("prime_directive", {}).get("policy_path", DEFAULT_POLICY_PATH))
     )
     if not policy_path.is_absolute():
         policy_path = Path(__file__).resolve().parents[1] / policy_path
@@ -420,9 +419,7 @@ def automatic_prime_directive_boot() -> PrimeDirectiveBootValidation | None:
         manifest,
         [os.getenv("CASEY_BOOT_PROFILE", "systems")],
     )
-    restricted_authorized = (
-        os.getenv("CASEY_RESTRICTED_CONTEXT_AUTHORIZED", "0") == "1"
-    )
+    restricted_authorized = os.getenv("CASEY_RESTRICTED_CONTEXT_AUTHORIZED", "0") == "1"
     task = os.getenv(
         "CASEY_BOOT_TASK",
         "resume Operator-directed unfinished material action",

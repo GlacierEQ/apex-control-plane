@@ -37,7 +37,10 @@ def approved_action(**overrides):
         "connector": "github",
         "operation": "issue.create",
         "target": {"repository": "GlacierEQ/apex-control-plane"},
-        "provider_input": {"title": "Approval-gated issue", "body": "Safe test fixture."},
+        "provider_input": {
+            "title": "Approval-gated issue",
+            "body": "Safe test fixture.",
+        },
         "consequence": "Creates one named issue visible to repository collaborators.",
         "evidence_refs": ["receipt-github-001"],
         "idempotency_key": "apex-approved-action-001",
@@ -97,7 +100,10 @@ def test_exact_approval_scope_builds_one_github_session_plan():
 def test_scope_cannot_be_reused_for_a_different_provider_payload():
     catalog = load_connector_catalog(CATALOG_PATH)
     request = approved_action()
-    request["provider_input"] = {"title": "Different issue", "body": "Different payload."}
+    request["provider_input"] = {
+        "title": "Different issue",
+        "body": "Different payload.",
+    }
 
     with pytest.raises(ApprovedOperationError, match="approval scope"):
         validate_approved_action_request(request, catalog, now=NOW)
@@ -119,7 +125,9 @@ def test_inactive_provider_route_is_not_activated_by_an_approval_record():
     )
 
     with pytest.raises(ApprovedSessionDispatchError, match="inactive"):
-        build_approved_session_operation_plan(action_request=request, catalog=catalog, now=NOW)
+        build_approved_session_operation_plan(
+            action_request=request, catalog=catalog, now=NOW
+        )
 
 
 def test_supabase_update_requires_one_constrained_statement_with_where():
@@ -139,7 +147,9 @@ def test_supabase_update_requires_one_constrained_statement_with_where():
     )
 
     with pytest.raises(ApprovedSessionDispatchError, match="WHERE"):
-        build_approved_session_operation_plan(action_request=request, catalog=catalog, now=NOW)
+        build_approved_session_operation_plan(
+            action_request=request, catalog=catalog, now=NOW
+        )
 
 
 def test_runtime_admits_execution_receipt_without_provider_content_and_deduplicates():
@@ -153,7 +163,10 @@ def test_runtime_admits_execution_receipt_without_provider_content_and_deduplica
             material=b'{"id": 123, "title": "Approval-gated issue"}',
             observed_at=NOW,
         ),
-        result_target={"repository": "GlacierEQ/apex-control-plane", "issue_number": 123},
+        result_target={
+            "repository": "GlacierEQ/apex-control-plane",
+            "issue_number": 123,
+        },
         readback=ProviderExecutionObservation(
             source_refs=("github://issue/123",),
             material=b'{"number": 123, "state": "open"}',
@@ -207,7 +220,10 @@ def test_successful_execution_receipt_requires_terminal_readback():
                 material=b"provider result",
                 observed_at=NOW,
             ),
-            result_target={"repository": "GlacierEQ/apex-control-plane", "issue_number": 123},
+            result_target={
+                "repository": "GlacierEQ/apex-control-plane",
+                "issue_number": 123,
+            },
             readback=None,
             verification_passed=True,
         )
@@ -225,7 +241,10 @@ def test_successful_execution_receipt_requires_verified_terminal_readback():
                 material=b"provider result",
                 observed_at=NOW,
             ),
-            result_target={"repository": "GlacierEQ/apex-control-plane", "issue_number": 123},
+            result_target={
+                "repository": "GlacierEQ/apex-control-plane",
+                "issue_number": 123,
+            },
             readback=ProviderExecutionObservation(
                 source_refs=("github://issue/123",),
                 material=b"provider readback",
@@ -236,7 +255,14 @@ def test_successful_execution_receipt_requires_verified_terminal_readback():
 
 
 @pytest.mark.parametrize(
-    ("connector", "operation", "target", "provider_input", "provider_kind", "provider_operation"),
+    (
+        "connector",
+        "operation",
+        "target",
+        "provider_input",
+        "provider_kind",
+        "provider_operation",
+    ),
     [
         (
             "google_workspace",
@@ -287,7 +313,9 @@ def test_active_provider_families_map_only_after_exact_approval(
         },
     )
 
-    plan = build_approved_session_operation_plan(action_request=request, catalog=catalog, now=NOW)
+    plan = build_approved_session_operation_plan(
+        action_request=request, catalog=catalog, now=NOW
+    )
 
     assert plan.provider_kind == provider_kind
     assert plan.provider_operation == provider_operation
@@ -310,7 +338,9 @@ def test_supabase_insert_maps_after_exact_approval_and_single_statement_guard():
         },
     )
 
-    plan = build_approved_session_operation_plan(action_request=request, catalog=catalog, now=NOW)
+    plan = build_approved_session_operation_plan(
+        action_request=request, catalog=catalog, now=NOW
+    )
 
     assert plan.provider_kind == "mcp"
     assert plan.provider_name == "supabase"

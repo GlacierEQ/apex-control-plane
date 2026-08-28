@@ -133,7 +133,9 @@ def test_operator_asset_sovereignty_is_machine_bound() -> None:
 def test_unsolicited_operator_asset_ranking_blocks() -> None:
     policy = load_operator_fidelity_policy()
     receipt = _receipt()
-    receipt["operator_fidelity"]["selected_path"]["unsolicited_operator_asset_value_ranking"] = True
+    receipt["operator_fidelity"]["selected_path"][
+        "unsolicited_operator_asset_value_ranking"
+    ] = True
     errors = validate_operator_fidelity_receipt(policy, receipt)
     assert any("unsolicited_operator_asset_value_ranking" in error for error in errors)
 
@@ -141,7 +143,9 @@ def test_unsolicited_operator_asset_ranking_blocks() -> None:
 def test_operator_asset_disposition_without_scope_blocks() -> None:
     policy = load_operator_fidelity_policy()
     receipt = _receipt()
-    receipt["operator_fidelity"]["selected_path"]["unsolicited_operator_asset_disposition"] = True
+    receipt["operator_fidelity"]["selected_path"][
+        "unsolicited_operator_asset_disposition"
+    ] = True
     errors = validate_operator_fidelity_receipt(policy, receipt)
     assert any("unsolicited_operator_asset_disposition" in error for error in errors)
 

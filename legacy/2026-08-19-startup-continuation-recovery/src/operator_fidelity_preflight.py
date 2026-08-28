@@ -6,6 +6,7 @@ that the selected execution vector did not silently collapse into minimum
 scope, governance-first behavior, permission loops, capability reduction, or
 textual minimization hidden behind compliant booleans.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -22,7 +23,9 @@ from auto_boot import EXIT_BOOT_BLOCKED, BootError
 from prime_directive_boot import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
-    Path(__file__).resolve().parents[1] / "config" / "operator_fidelity_runtime_policy.json"
+    Path(__file__).resolve().parents[1]
+    / "config"
+    / "operator_fidelity_runtime_policy.json"
 )
 _SEAL = object()
 
@@ -36,7 +39,9 @@ class OperatorFidelityValidation:
 
     def __post_init__(self) -> None:
         if self._seal is not _SEAL:
-            raise TypeError("validation must be issued by the operator-fidelity enforcer")
+            raise TypeError(
+                "validation must be issued by the operator-fidelity enforcer"
+            )
 
 
 _IN_PROCESS: OperatorFidelityValidation | None = None
@@ -112,9 +117,7 @@ def load_operator_fidelity_policy(
             details.append("policy-only=" + ",".join(missing_in_compiler))
         if missing_in_policy:
             details.append("compiler-only=" + ",".join(missing_in_policy))
-        raise BootError(
-            "operator-fidelity semantic rule drift: " + "; ".join(details)
-        )
+        raise BootError("operator-fidelity semantic rule drift: " + "; ".join(details))
 
     engineering = value.get("pro_code_elite_humanized_engineering")
     if not isinstance(engineering, Mapping) or engineering.get("required") is not True:
@@ -196,9 +199,7 @@ def validate_operator_fidelity_receipt(
             errors.append(f"operator_fidelity.{field_name} must be non-empty")
 
     if not _is_sha256_ref(row.get("operator_words_digest")):
-        errors.append(
-            "operator_fidelity.operator_words_digest must be sha256:<64 hex>"
-        )
+        errors.append("operator_fidelity.operator_words_digest must be sha256:<64 hex>")
 
     literal_constraints = row.get("literal_constraints")
     if not isinstance(literal_constraints, list) or not any(

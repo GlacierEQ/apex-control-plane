@@ -103,7 +103,9 @@ def continuity_match(previous: LocatorObservation, current: LocatorObservation) 
     return "unresolved_continuity"
 
 
-def classify_transition(previous: LocatorObservation, current: LocatorObservation) -> str:
+def classify_transition(
+    previous: LocatorObservation, current: LocatorObservation
+) -> str:
     """Classify a locator change without making path stability an integrity requirement."""
     if previous.evidence_id != current.evidence_id:
         raise LocationContinuityError("transition requires the same Evidence ID")

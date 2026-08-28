@@ -7,6 +7,7 @@ until it is bound to the sealed strong-boot session and that session's exact
 verified runtime kernel. The smoke action then traverses the kernel's observation
 lifecycle through verification and readback before output is emitted.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -69,7 +70,9 @@ def require_runtime_context(
     if snapshot.task_id is not None:
         raise RuntimeBindingViolation("runtime kernel already contains a bound task")
     if snapshot.startup_gates != session.gates:
-        raise RuntimeBindingViolation("runtime kernel gate proof differs from strong-boot session")
+        raise RuntimeBindingViolation(
+            "runtime kernel gate proof differs from strong-boot session"
+        )
     return session, kernel
 
 

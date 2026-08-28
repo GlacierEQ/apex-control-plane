@@ -64,7 +64,9 @@ def main() -> None:
     }
     unexpected = sorted(set(result) - allowed)
     if unexpected:
-        raise SystemExit(f"Repo Atlas enrichment returned unexpected fields: {unexpected}")
+        raise SystemExit(
+            f"Repo Atlas enrichment returned unexpected fields: {unexpected}"
+        )
     if result.get("ok") is not True or result.get("status") not in {
         "enriched",
         "already_enriched",
@@ -75,7 +77,9 @@ def main() -> None:
     if result.get("token_persisted") is not False:
         raise SystemExit("Repo Atlas enrichment reported credential persistence")
 
-    refresh = json.loads(Path("repo_atlas_refresh_result.json").read_text(encoding="utf-8"))
+    refresh = json.loads(
+        Path("repo_atlas_refresh_result.json").read_text(encoding="utf-8")
+    )
     repository_count = result.get("repository_count")
     enriched_count = result.get("enriched_count")
     default_head_count = result.get("default_head_count")

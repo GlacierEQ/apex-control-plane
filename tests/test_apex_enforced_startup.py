@@ -64,7 +64,12 @@ def test_operator_project_direction_authority_is_absolute() -> None:
     authority = policy["operator_authority"]
     assert authority["mode"] == "absolute_project_direction"
     assert authority["sole_human_project_authority"] is True
-    assert authority["current_explicit_instruction_is_sufficient_authorization_for_its_scope"] is True
+    assert (
+        authority[
+            "current_explicit_instruction_is_sufficient_authorization_for_its_scope"
+        ]
+        is True
+    )
     assert authority["secondary_human_approval_authority"] is False
     assert authority["lower_level_policy_veto"] is False
     assert authority["assistant_or_automation_override"] is False
@@ -76,8 +81,18 @@ def test_operator_project_direction_authority_is_absolute() -> None:
     interlock = policy["mutation_interlock"]
     assert interlock["external_action_requires_operator_authorization_receipt"] is True
     assert interlock["external_action_requires_secondary_human_approval"] is False
-    assert interlock["operator_owned_asset_disposition_requires_explicit_operator_direction"] is True
-    assert interlock["operator_owned_asset_value_ranking_requires_explicit_operator_direction"] is True
+    assert (
+        interlock[
+            "operator_owned_asset_disposition_requires_explicit_operator_direction"
+        ]
+        is True
+    )
+    assert (
+        interlock[
+            "operator_owned_asset_value_ranking_requires_explicit_operator_direction"
+        ]
+        is True
+    )
 
 
 def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> None:
@@ -85,9 +100,16 @@ def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> No
     request = build_apex_startup_request(policy, task="execute operator target")
     requirements = request["requirements"]
     assert requirements["operator_project_direction_authority_is_absolute"] is True
-    assert requirements["current_explicit_operator_instruction_is_authorization_for_its_scope"] is True
+    assert (
+        requirements[
+            "current_explicit_operator_instruction_is_authorization_for_its_scope"
+        ]
+        is True
+    )
     assert requirements["secondary_human_approval_authority"] is False
-    assert requirements["external_actions_require_operator_authorization_receipt"] is True
+    assert (
+        requirements["external_actions_require_operator_authorization_receipt"] is True
+    )
     serialized = json.dumps(request, sort_keys=True)
     assert "named_human_approval" not in serialized
 
@@ -109,7 +131,9 @@ def test_operator_asset_sovereignty_is_in_every_selected_path() -> None:
 def test_unsolicited_asset_ranking_fails_closed() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
-    receipt["apex_startup"]["selected_path"]["unsolicited_operator_asset_value_ranking"] = True
+    receipt["apex_startup"]["selected_path"][
+        "unsolicited_operator_asset_value_ranking"
+    ] = True
     errors = validate_apex_startup_receipt(policy, receipt)
     assert any("unsolicited_operator_asset_value_ranking" in error for error in errors)
 
@@ -165,7 +189,9 @@ def test_material_claim_requires_string_provenance() -> None:
         {"claim": "source exists", "state": "OBSERVED", "provenance": {}}
     ]
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert any("provenance is required for material claims" in error for error in errors)
+    assert any(
+        "provenance is required for material claims" in error for error in errors
+    )
 
 
 def test_advanced_material_claim_requires_transition_receipt() -> None:
@@ -181,7 +207,9 @@ def test_advanced_material_claim_requires_transition_receipt() -> None:
         }
     ]
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert any("requires receipt reference: verification_receipt" in error for error in errors)
+    assert any(
+        "requires receipt reference: verification_receipt" in error for error in errors
+    )
 
     receipt["apex_startup"]["material_claims"] = [
         {
@@ -193,7 +221,9 @@ def test_advanced_material_claim_requires_transition_receipt() -> None:
         }
     ]
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert any("requires receipt reference: deployment_receipt" in error for error in errors)
+    assert any(
+        "requires receipt reference: deployment_receipt" in error for error in errors
+    )
 
 
 def test_advanced_material_claim_accepts_exact_transition_receipt() -> None:
@@ -248,7 +278,9 @@ def test_malformed_operator_authorization_is_rejected() -> None:
     }
     errors = validate_apex_startup_receipt(policy, receipt)
     assert "operator_authorization.authorized must be true" in errors
-    assert "operator_authorization.authorization_ref must be a receipt reference" in errors
+    assert (
+        "operator_authorization.authorization_ref must be a receipt reference" in errors
+    )
 
 
 def test_state_transition_requires_exact_evidence() -> None:
@@ -262,12 +294,15 @@ def test_state_transition_requires_exact_evidence() -> None:
     assert errors == (
         "state transition ATTEMPTED->EXECUTED requires receipt reference: execution_receipt",
     )
-    assert validate_state_transition(
-        policy,
-        "ATTEMPTED",
-        "EXECUTED",
-        evidence={"execution_receipt": "sha256:abc"},
-    ) == ()
+    assert (
+        validate_state_transition(
+            policy,
+            "ATTEMPTED",
+            "EXECUTED",
+            evidence={"execution_receipt": "sha256:abc"},
+        )
+        == ()
+    )
 
 
 def test_truthy_non_receipt_evidence_is_rejected() -> None:

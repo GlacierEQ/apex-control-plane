@@ -29,7 +29,9 @@ class ConnectorRegistry:
             self._conn.autocommit = False
         return self._conn
 
-    def register(self, name: str, kind: str, config: dict, enabled: bool = True) -> dict:
+    def register(
+        self, name: str, kind: str, config: dict, enabled: bool = True
+    ) -> dict:
         """Register a new connector or update existing by name."""
         sql = """
             INSERT INTO connectors (id, name, kind, config, enabled)
@@ -42,13 +44,16 @@ class ConnectorRegistry:
             RETURNING *;
         """
         with self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(sql, {
-                "id": uuid.uuid4(),
-                "name": name,
-                "kind": kind,
-                "config": json.dumps(config),
-                "enabled": enabled,
-            })
+            cur.execute(
+                sql,
+                {
+                    "id": uuid.uuid4(),
+                    "name": name,
+                    "kind": kind,
+                    "config": json.dumps(config),
+                    "enabled": enabled,
+                },
+            )
             row = dict(cur.fetchone())
             self.conn.commit()
             return row
@@ -69,12 +74,15 @@ class ConnectorRegistry:
         """
         log_id = str(uuid.uuid4())
         with self.conn.cursor() as cur:
-            cur.execute(sql, {
-                "id": log_id,
-                "connector_id": connector_id,
-                "status": status,
-                "details": json.dumps(details),
-            })
+            cur.execute(
+                sql,
+                {
+                    "id": log_id,
+                    "connector_id": connector_id,
+                    "status": status,
+                    "details": json.dumps(details),
+                },
+            )
         sql_update = """
             UPDATE connectors
             SET last_health_at = now(), last_health_status = %(status)s

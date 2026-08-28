@@ -6,6 +6,7 @@ authenticated host operation. This command reads those files only to calculate S
 digests. It never invokes a provider, loads credentials, schedules a write, or copies
 provider material to the JSONL receipt ledger.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -103,23 +104,41 @@ def admit_execution_manifest(
     action_request = load_json(action_request_path, "action request")
     action = validate_approved_action_request(action_request, catalog, now=current)
     manifest = load_json(execution_manifest_path, "execution manifest")
-    result_state = _text(manifest.get("result_state"), "execution manifest result_state")
+    result_state = _text(
+        manifest.get("result_state"), "execution manifest result_state"
+    )
     if result_state not in {"success", "failure"}:
-        raise ExecutionAdmissionInputError("execution manifest result_state must be success or failure")
+        raise ExecutionAdmissionInputError(
+            "execution manifest result_state must be success or failure"
+        )
     verification_passed = manifest.get("verification_passed")
     if not isinstance(verification_passed, bool):
-        raise ExecutionAdmissionInputError("execution manifest verification_passed must be boolean")
+        raise ExecutionAdmissionInputError(
+            "execution manifest verification_passed must be boolean"
+        )
 
     execution = ProviderExecutionObservation(
-        source_refs=_refs(manifest.get("execution_source_refs"), "execution_source_refs"),
-        material=_read_material(manifest.get("execution_observation_path"), "execution_observation_path", required=True),
+        source_refs=_refs(
+            manifest.get("execution_source_refs"), "execution_source_refs"
+        ),
+        material=_read_material(
+            manifest.get("execution_observation_path"),
+            "execution_observation_path",
+            required=True,
+        ),
         observed_at=_parse_time(manifest.get("executed_at"), "executed_at"),
     )
     readback: ProviderExecutionObservation | None = None
     if result_state == "success":
         readback = ProviderExecutionObservation(
-            source_refs=_refs(manifest.get("readback_source_refs"), "readback_source_refs"),
-            material=_read_material(manifest.get("readback_observation_path"), "readback_observation_path", required=True),
+            source_refs=_refs(
+                manifest.get("readback_source_refs"), "readback_source_refs"
+            ),
+            material=_read_material(
+                manifest.get("readback_observation_path"),
+                "readback_observation_path",
+                required=True,
+            ),
             observed_at=_parse_time(manifest.get("readback_at"), "readback_at"),
         )
 
@@ -145,7 +164,9 @@ def admit_execution_manifest(
         now=current,
     )
     receipt_ledger_path.parent.mkdir(parents=True, exist_ok=True)
-    receipt_ledger_path.write_text(render_safe_execution_receipt(receipt), encoding="utf-8")
+    receipt_ledger_path.write_text(
+        render_safe_execution_receipt(receipt), encoding="utf-8"
+    )
     return {
         "status": "accepted",
         "accepted": accepted,

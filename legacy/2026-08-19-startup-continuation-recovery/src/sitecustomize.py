@@ -10,6 +10,7 @@ Verifier CLIs and pytest are excluded so tests can exercise the enforcement code
 A real runtime cannot disable Operator fidelity with CASEY_AUTO_BOOT_DISABLE or
 CASEY_AUTO_BOOT_MODE=off; the hard lock rejects those bypass attempts.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,15 +43,19 @@ def _is_pytest_startup() -> bool:
 
 def _should_boot() -> bool:
     entrypoint = _entrypoint_name()
-    if entrypoint in {
-        "auto_boot.py",
-        "apex_enforced_startup.py",
-        "operator_fidelity_lock.py",
-        "operator_fidelity_preflight.py",
-        "notion_continuity_gate.py",
-        "prime_directive_boot.py",
-        "prime_directive_enforcer.py",
-    } or _is_pytest_startup():
+    if (
+        entrypoint
+        in {
+            "auto_boot.py",
+            "apex_enforced_startup.py",
+            "operator_fidelity_lock.py",
+            "operator_fidelity_preflight.py",
+            "notion_continuity_gate.py",
+            "prime_directive_boot.py",
+            "prime_directive_enforcer.py",
+        }
+        or _is_pytest_startup()
+    ):
         return False
 
     if os.getenv("CASEY_AUTO_BOOT", "0") == "1":

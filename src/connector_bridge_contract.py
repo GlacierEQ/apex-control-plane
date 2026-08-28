@@ -1,4 +1,5 @@
 """Non-network request contracts for the APEX authenticated connector bridge."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -21,10 +22,16 @@ def build_read_request(
     if connector not in catalog.connectors:
         raise ConnectorReceiptError(f"connector is not catalogued: {connector}")
     if profile not in catalog.profiles or connector not in catalog.profiles[profile]:
-        raise ConnectorReceiptError(f"connector {connector} is not active in profile {profile}")
+        raise ConnectorReceiptError(
+            f"connector {connector} is not active in profile {profile}"
+        )
     if operation not in catalog.connectors[connector]["read_operations"]:
-        raise ConnectorReceiptError(f"read operation is not allowed: {connector}.{operation}")
-    if not isinstance(target, Mapping) or not any(str(value).strip() for value in target.values()):
+        raise ConnectorReceiptError(
+            f"read operation is not allowed: {connector}.{operation}"
+        )
+    if not isinstance(target, Mapping) or not any(
+        str(value).strip() for value in target.values()
+    ):
         raise ConnectorReceiptError("target requires a provider object reference")
 
     moment = (requested_at or datetime.now(UTC)).astimezone(UTC)
@@ -53,14 +60,20 @@ def build_action_proposal(
     if connector not in catalog.connectors:
         raise ConnectorReceiptError(f"connector is not catalogued: {connector}")
     if operation not in catalog.connectors[connector]["write_operations"]:
-        raise ConnectorReceiptError(f"write operation is not catalogued: {connector}.{operation}")
-    if not isinstance(target, Mapping) or not any(str(value).strip() for value in target.values()):
+        raise ConnectorReceiptError(
+            f"write operation is not catalogued: {connector}.{operation}"
+        )
+    if not isinstance(target, Mapping) or not any(
+        str(value).strip() for value in target.values()
+    ):
         raise ConnectorReceiptError("target requires a provider object reference")
     if not str(consequence).strip():
         raise ConnectorReceiptError("consequence is required")
     refs = [str(value).strip() for value in evidence_refs if str(value).strip()]
     if not refs:
-        raise ConnectorReceiptError("evidence_refs requires at least one receipt reference")
+        raise ConnectorReceiptError(
+            "evidence_refs requires at least one receipt reference"
+        )
 
     rule = catalog.connectors[connector]["write_operations"][operation]
     return {

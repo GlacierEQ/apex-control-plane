@@ -3,6 +3,7 @@
 This module validates data returned by an authenticated external bridge. It does not
 store credentials, invoke provider APIs, or authorize an external action by itself.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -90,7 +91,9 @@ def _parse_timestamp(value: Any, field_name: str) -> datetime:
     try:
         parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise ConnectorReceiptError(f"{field_name} must be an RFC3339 timestamp") from exc
+        raise ConnectorReceiptError(
+            f"{field_name} must be an RFC3339 timestamp"
+        ) from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ConnectorReceiptError(f"{field_name} must include a timezone")
     return parsed.astimezone(UTC)
@@ -104,11 +107,15 @@ def _validate_target(value: Any, field_name: str = "target") -> Mapping[str, Any
     if not isinstance(value, Mapping):
         raise ConnectorReceiptError(f"{field_name} must be an object")
     if not any(str(item).strip() for item in value.values()):
-        raise ConnectorReceiptError(f"{field_name} requires a provider object reference")
+        raise ConnectorReceiptError(
+            f"{field_name} requires a provider object reference"
+        )
     return dict(value)
 
 
-def _string_list(value: Any, field_name: str, *, required: bool = True) -> tuple[str, ...]:
+def _string_list(
+    value: Any, field_name: str, *, required: bool = True
+) -> tuple[str, ...]:
     if not isinstance(value, list):
         raise ConnectorReceiptError(f"{field_name} must be an array")
     output = tuple(str(item).strip() for item in value if str(item).strip())
@@ -125,7 +132,9 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
         schema_version = int(payload.get("schema_version"))
         version = int(payload.get("version"))
     except (TypeError, ValueError) as exc:
-        raise ConnectorReceiptError("catalog schema_version and version must be integers") from exc
+        raise ConnectorReceiptError(
+            "catalog schema_version and version must be integers"
+        ) from exc
     if schema_version != RECEIPT_SCHEMA_VERSION:
         raise ConnectorReceiptError("unsupported connector catalog schema_version")
     if version < 1:
@@ -144,7 +153,9 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
     try:
         maximum_age = int(security.get("maximum_receipt_age_seconds"))
     except (TypeError, ValueError) as exc:
-        raise ConnectorReceiptError("maximum_receipt_age_seconds must be an integer") from exc
+        raise ConnectorReceiptError(
+            "maximum_receipt_age_seconds must be an integer"
+        ) from exc
     if maximum_age < 1:
         raise ConnectorReceiptError("maximum_receipt_age_seconds must be positive")
     if security.get("credentials_in_source") is not False:
@@ -152,13 +163,17 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
     if security.get("bridge_receipt_required") is not True:
         raise ConnectorReceiptError("catalog must require bridge receipts")
     if security.get("external_write_requires_exact_approval") is not True:
-        raise ConnectorReceiptError("catalog must require exact approval for external writes")
+        raise ConnectorReceiptError(
+            "catalog must require exact approval for external writes"
+        )
 
     connectors: dict[str, Mapping[str, Any]] = {}
     for raw_name, raw_definition in raw_connectors.items():
         name = _required_text(raw_name, "connector name")
         if not isinstance(raw_definition, Mapping):
-            raise ConnectorReceiptError(f"connector {name} definition must be an object")
+            raise ConnectorReceiptError(
+                f"connector {name} definition must be an object"
+            )
         _required_text(raw_definition.get("data_class"), f"connector {name}.data_class")
         read_operations = _string_list(
             raw_definition.get("read_operations"),
@@ -167,14 +182,22 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
         )
         write_operations = raw_definition.get("write_operations")
         if not isinstance(write_operations, Mapping):
-            raise ConnectorReceiptError(f"connector {name}.write_operations must be an object")
+            raise ConnectorReceiptError(
+                f"connector {name}.write_operations must be an object"
+            )
         checked_writes: dict[str, Mapping[str, Any]] = {}
         for raw_operation, raw_rule in write_operations.items():
-            operation = _required_text(raw_operation, f"connector {name} write operation")
+            operation = _required_text(
+                raw_operation, f"connector {name} write operation"
+            )
             if not isinstance(raw_rule, Mapping):
-                raise ConnectorReceiptError(f"connector {name}.{operation} must be an object")
+                raise ConnectorReceiptError(
+                    f"connector {name}.{operation} must be an object"
+                )
             if not isinstance(raw_rule.get("enabled"), bool):
-                raise ConnectorReceiptError(f"connector {name}.{operation}.enabled must be boolean")
+                raise ConnectorReceiptError(
+                    f"connector {name}.{operation}.enabled must be boolean"
+                )
             if raw_rule.get("approval_required") is not True:
                 raise ConnectorReceiptError(
                     f"connector {name}.{operation} must require exact approval"
@@ -215,11 +238,15 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
     )
 
 
-def _connector_definition(catalog: ConnectorCatalog, connector: str) -> Mapping[str, Any]:
+def _connector_definition(
+    catalog: ConnectorCatalog, connector: str
+) -> Mapping[str, Any]:
     try:
         return catalog.connectors[connector]
     except KeyError as exc:
-        raise ConnectorReceiptError(f"connector is not catalogued: {connector}") from exc
+        raise ConnectorReceiptError(
+            f"connector is not catalogued: {connector}"
+        ) from exc
 
 
 def validate_read_receipt(
@@ -242,9 +269,13 @@ def validate_read_receipt(
     profile = _required_text(payload.get("profile"), "profile")
     definition = _connector_definition(catalog, connector)
     if operation not in definition["read_operations"]:
-        raise ConnectorReceiptError(f"read operation is not allowed: {connector}.{operation}")
+        raise ConnectorReceiptError(
+            f"read operation is not allowed: {connector}.{operation}"
+        )
     if profile not in catalog.profiles or connector not in catalog.profiles[profile]:
-        raise ConnectorReceiptError(f"connector {connector} is not active in profile {profile}")
+        raise ConnectorReceiptError(
+            f"connector {connector} is not active in profile {profile}"
+        )
 
     observed_at = _parse_timestamp(payload.get("observed_at"), "observed_at")
     current = now or datetime.now(UTC)
@@ -252,7 +283,9 @@ def validate_read_receipt(
         raise ConnectorReceiptError("now must include a timezone")
     age_seconds = (current.astimezone(UTC) - observed_at).total_seconds()
     if age_seconds < -300:
-        raise ConnectorReceiptError("read receipt observed_at is materially in the future")
+        raise ConnectorReceiptError(
+            "read receipt observed_at is materially in the future"
+        )
     if age_seconds > catalog.maximum_receipt_age_seconds:
         raise ConnectorReceiptError("read receipt is stale")
 
@@ -263,7 +296,9 @@ def validate_read_receipt(
     else:
         content_sha256 = _required_text(digest_value, "content_sha256")
         if not _is_sha256(content_sha256):
-            raise ConnectorReceiptError("content_sha256 must be a 64-character lowercase hex digest")
+            raise ConnectorReceiptError(
+                "content_sha256 must be a 64-character lowercase hex digest"
+            )
 
     return ConnectorReadReceipt(
         receipt_id=_required_text(payload.get("receipt_id"), "receipt_id"),
@@ -292,25 +327,35 @@ def validate_action_request(
     definition = _connector_definition(catalog, connector)
     write_rule = definition["write_operations"].get(operation)
     if write_rule is None:
-        raise ConnectorReceiptError(f"write operation is not catalogued: {connector}.{operation}")
+        raise ConnectorReceiptError(
+            f"write operation is not catalogued: {connector}.{operation}"
+        )
     if write_rule.get("enabled") is not True:
-        raise ConnectorReceiptError(f"write operation is inactive: {connector}.{operation}")
+        raise ConnectorReceiptError(
+            f"write operation is inactive: {connector}.{operation}"
+        )
     if write_rule.get("approval_required") is not True:
-        raise ConnectorReceiptError(f"write operation lacks exact approval rule: {connector}.{operation}")
+        raise ConnectorReceiptError(
+            f"write operation lacks exact approval rule: {connector}.{operation}"
+        )
 
     approval = payload.get("approval")
     if not isinstance(approval, Mapping):
         raise ConnectorReceiptError("action request approval must be an object")
 
     return ConnectorActionRequest(
-        action_request_id=_required_text(payload.get("action_request_id"), "action_request_id"),
+        action_request_id=_required_text(
+            payload.get("action_request_id"), "action_request_id"
+        ),
         connector=connector,
         operation=operation,
         target=_validate_target(payload.get("target")),
         consequence=_required_text(payload.get("consequence"), "consequence"),
         evidence_refs=_string_list(payload.get("evidence_refs"), "evidence_refs"),
         approved_by=_required_text(approval.get("approved_by"), "approval.approved_by"),
-        approved_at=_parse_timestamp(approval.get("approved_at"), "approval.approved_at"),
+        approved_at=_parse_timestamp(
+            approval.get("approved_at"), "approval.approved_at"
+        ),
         approval_reference=_required_text(
             approval.get("approval_reference"), "approval.approval_reference"
         ),

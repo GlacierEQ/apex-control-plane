@@ -5,6 +5,7 @@ startup authority surfaces become proof-bound. Older test helpers predated that
 policy expansion and hard-coded two files. This collection hook replaces only
 that stale helper with a policy-driven equivalent; production code is untouched.
 """
+
 from __future__ import annotations
 
 import sys

@@ -36,7 +36,10 @@ def test_admission_writes_safe_receipt_ledger_without_provider_material(tmp_path
                         "profile": "current_source_review",
                         "target": {
                             "query_label": "APEX metadata check",
-                            "provider_input": {"q": "name contains 'APEX'", "pageSize": 1},
+                            "provider_input": {
+                                "q": "name contains 'APEX'",
+                                "pageSize": 1,
+                            },
                         },
                         "observed_at": observed_at.isoformat().replace("+00:00", "Z"),
                         "source_refs": ["gws://drive/files/list/test"],

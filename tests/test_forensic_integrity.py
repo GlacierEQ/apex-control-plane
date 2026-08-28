@@ -26,11 +26,37 @@ def test_stable_evidence_id_survives_provider_revision_changes():
 
 def test_observation_manifest_is_deterministic_given_time():
     obs = [
-        SourceObservation(source_provider="dropbox", source_file_id="id:z", source_revision=None, source_path="ns:1//z.txt", original_filename="z.txt", byte_size=2, observed_at="2026-08-22T23:00:00+00:00"),
-        SourceObservation(source_provider="dropbox", source_file_id="id:a", source_revision="r1", source_path="ns:1//a.txt", original_filename="a.txt", byte_size=1, observed_at="2026-08-22T23:00:00+00:00"),
+        SourceObservation(
+            source_provider="dropbox",
+            source_file_id="id:z",
+            source_revision=None,
+            source_path="ns:1//z.txt",
+            original_filename="z.txt",
+            byte_size=2,
+            observed_at="2026-08-22T23:00:00+00:00",
+        ),
+        SourceObservation(
+            source_provider="dropbox",
+            source_file_id="id:a",
+            source_revision="r1",
+            source_path="ns:1//a.txt",
+            original_filename="a.txt",
+            byte_size=1,
+            observed_at="2026-08-22T23:00:00+00:00",
+        ),
     ]
-    one = build_observation_manifest(obs, matter_id="MAT-1", scope={"path": "/pilot"}, generated_at="2026-08-22T23:00:00+00:00")
-    two = build_observation_manifest(reversed(obs), matter_id="MAT-1", scope={"path": "/pilot"}, generated_at="2026-08-22T23:00:00+00:00")
+    one = build_observation_manifest(
+        obs,
+        matter_id="MAT-1",
+        scope={"path": "/pilot"},
+        generated_at="2026-08-22T23:00:00+00:00",
+    )
+    two = build_observation_manifest(
+        reversed(obs),
+        matter_id="MAT-1",
+        scope={"path": "/pilot"},
+        generated_at="2026-08-22T23:00:00+00:00",
+    )
     assert one == two
     assert verify_manifest(one)
     tampered = json.loads(json.dumps(one))
@@ -44,7 +70,14 @@ def test_acquisition_receipt_rejects_hash_mismatch(tmp_path: Path):
     src.write_bytes(b"original")
     dst.write_bytes(b"changed!")
     with pytest.raises(IntegrityError):
-        AcquisitionReceipt.from_paths(evidence_id="EVD-test", source_path=src, destination_path=dst, method="copy", tool_name="pytest", tool_version="1")
+        AcquisitionReceipt.from_paths(
+            evidence_id="EVD-test",
+            source_path=src,
+            destination_path=dst,
+            method="copy",
+            tool_name="pytest",
+            tool_version="1",
+        )
 
 
 def test_acquisition_receipt_verifies_exact_copy(tmp_path: Path):
@@ -52,7 +85,14 @@ def test_acquisition_receipt_verifies_exact_copy(tmp_path: Path):
     dst = tmp_path / "dst.bin"
     src.write_bytes(b"same bytes")
     shutil.copyfile(src, dst)
-    receipt = AcquisitionReceipt.from_paths(evidence_id="EVD-test", source_path=src, destination_path=dst, method="copy", tool_name="pytest", tool_version="1")
+    receipt = AcquisitionReceipt.from_paths(
+        evidence_id="EVD-test",
+        source_path=src,
+        destination_path=dst,
+        method="copy",
+        tool_name="pytest",
+        tool_version="1",
+    )
     assert receipt.verified is True
     assert receipt.source_hash == receipt.destination_hash
     assert receipt.byte_size == len(b"same bytes")

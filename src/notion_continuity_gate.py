@@ -9,6 +9,7 @@ dependency, and overlap relationships, but it may not convert those observations
 into integration, hierarchy, value ranking, disposition, or a new root without
 explicit Operator direction.
 """
+
 from __future__ import annotations
 
 import json
@@ -74,7 +75,9 @@ def load_notion_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]
     }
     for name, expected in required.items():
         if authority.get(name) is not expected:
-            raise BootError(f"Notion continuity authority_semantics.{name} must be {expected!r}")
+            raise BootError(
+                f"Notion continuity authority_semantics.{name} must be {expected!r}"
+            )
     return value
 
 
@@ -95,7 +98,9 @@ def _matches(tool: Any, aliases: Sequence[str]) -> bool:
 def _inventory(receipt: Mapping[str, Any], errors: list[str]) -> set[str]:
     row = receipt.get("tool_inventory")
     if not isinstance(row, Mapping) or not isinstance(row.get("loaded_tools"), list):
-        errors.append("tool_inventory.loaded_tools must exist before continuity preflight")
+        errors.append(
+            "tool_inventory.loaded_tools must exist before continuity preflight"
+        )
         return set()
     return {
         _norm(value)
@@ -123,7 +128,10 @@ def _tool(
 def _operator_override_authorized(
     discovery: Mapping[str, Any], integration: Mapping[str, Any]
 ) -> bool:
-    candidates = (discovery.get("operator_override"), integration.get("operator_override"))
+    candidates = (
+        discovery.get("operator_override"),
+        integration.get("operator_override"),
+    )
     for row in candidates:
         reason = row.get("reason") if isinstance(row, Mapping) else None
         if (
@@ -268,7 +276,9 @@ def validate_notion_continuity_receipt(
         if not isinstance(systems, list):
             errors.append("existing_work_discovery.systems_searched must be an array")
         if "notion" not in system_set:
-            errors.append("existing_work_discovery.systems_searched must include Notion")
+            errors.append(
+                "existing_work_discovery.systems_searched must include Notion"
+            )
         minimum = int(req.get("minimum_existing_work_systems_searched", 2))
         if len(system_set) < minimum:
             errors.append(
@@ -276,7 +286,9 @@ def validate_notion_continuity_receipt(
             )
         conflicts = discovery.get("canonical_conflicts")
         if not isinstance(conflicts, list):
-            errors.append("existing_work_discovery.canonical_conflicts must be an array")
+            errors.append(
+                "existing_work_discovery.canonical_conflicts must be an array"
+            )
         elif req.get("canonical_conflicts_must_be_empty", True) and conflicts:
             errors.append("existing_work_discovery.canonical_conflicts must be empty")
         candidates = discovery.get("candidates")
@@ -285,12 +297,13 @@ def validate_notion_continuity_receipt(
             errors.append("existing_work_discovery.candidates must be an array")
         owner = discovery.get("canonical_owner")
         if owner is not None and not isinstance(owner, Mapping):
-            errors.append("existing_work_discovery.canonical_owner must be an object or null")
+            errors.append(
+                "existing_work_discovery.canonical_owner must be an object or null"
+            )
         existing_owner = owner if isinstance(owner, Mapping) else None
         decision = _norm(discovery.get("decision"))
         allowed_found_decisions = {
-            _norm(value)
-            for value in req.get("found_work_decisions", ("map_existing",))
+            _norm(value) for value in req.get("found_work_decisions", ("map_existing",))
         }
         if found_status == "found":
             if not candidates:
@@ -339,7 +352,9 @@ def validate_notion_continuity_receipt(
         if not isinstance(link_plan, list) or not any(
             _nonempty_text(value) for value in link_plan
         ):
-            errors.append("integration_map.link_plan must contain at least one observational link")
+            errors.append(
+                "integration_map.link_plan must contain at least one observational link"
+            )
         if integration.get("abandon_existing") is not False:
             errors.append("integration_map.abandon_existing must be false")
 
@@ -358,7 +373,11 @@ def validate_notion_continuity_receipt(
         override = _operator_override_authorized(discovery, integration)
         create_new_root = integration.get("create_new_root") is True
 
-        if found_status == "found" and isinstance(owner, Mapping) and existing_owner is not None:
+        if (
+            found_status == "found"
+            and isinstance(owner, Mapping)
+            and existing_owner is not None
+        ):
             a = (
                 _norm(existing_owner.get("system")),
                 str(existing_owner.get("id", "")).strip(),
@@ -374,7 +393,9 @@ def validate_notion_continuity_receipt(
 
         if override:
             if decision != "operator_override":
-                errors.append("explicit Operator override requires decision=operator_override")
+                errors.append(
+                    "explicit Operator override requires decision=operator_override"
+                )
         else:
             if decision != _norm(req.get("default_relationship_decision", "map_only")):
                 errors.append(
@@ -386,9 +407,13 @@ def validate_notion_continuity_receipt(
                 )
 
         if integration.get("asset_value_ranking_performed") is not False:
-            errors.append("integration_map.asset_value_ranking_performed must be false unless explicitly Operator-directed")
+            errors.append(
+                "integration_map.asset_value_ranking_performed must be false unless explicitly Operator-directed"
+            )
         if integration.get("asset_disposition_performed") is not False:
-            errors.append("integration_map.asset_disposition_performed must be false unless explicitly Operator-directed")
+            errors.append(
+                "integration_map.asset_disposition_performed must be false unless explicitly Operator-directed"
+            )
         if integration.get("inspection_scope_expanded") is not False:
             errors.append("integration_map.inspection_scope_expanded must be false")
 
@@ -433,7 +458,9 @@ def automatic_notion_continuity_preflight() -> NotionContinuityValidation | None
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
     policy = load_notion_policy()
-    task = os.getenv("CASEY_BOOT_TASK", "resume Operator-directed unfinished material action")
+    task = os.getenv(
+        "CASEY_BOOT_TASK", "resume Operator-directed unfinished material action"
+    )
     receipt = receipt_from_environment()
     if receipt is None:
         print(

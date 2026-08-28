@@ -34,8 +34,7 @@ def _valid_receipt(manifest: dict, profiles: tuple[str, ...]) -> dict:
         "mem_collection_id": manifest["mem_collection"]["id"],
         "boot_profile": list(profiles),
         "notes_loaded": [
-            {"id": note_id, "version": version}
-            for note_id, version in versions.items()
+            {"id": note_id, "version": version} for note_id, version in versions.items()
         ],
         "sources_opened": [
             {
@@ -119,7 +118,9 @@ def test_missing_note_blocks_boot() -> None:
     result = validate_receipt(manifest, receipt, profiles)
 
     assert result.ok is False
-    assert any(f"missing loaded note ID: {missing_id}" == error for error in result.errors)
+    assert any(
+        f"missing loaded note ID: {missing_id}" == error for error in result.errors
+    )
 
 
 def test_stale_or_future_note_version_blocks_boot() -> None:
@@ -155,7 +156,9 @@ def test_legal_profile_without_valid_opened_source_blocks_boot() -> None:
     result = validate_receipt(manifest, receipt, profiles)
 
     assert result.ok is False
-    assert any("sources_opened[0].system is required" == error for error in result.errors)
+    assert any(
+        "sources_opened[0].system is required" == error for error in result.errors
+    )
     assert any("requires current sources" in error for error in result.errors)
 
 
@@ -247,4 +250,7 @@ def test_manifest_is_valid_json() -> None:
     manifest_path = ROOT / "config" / "casey_auto_boot_manifest.json"
     parsed = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert parsed["schema_version"] == "1.3.1"
-    assert parsed["compatibility"]["canonical_labels_do_not_confer_project_authority"] is True
+    assert (
+        parsed["compatibility"]["canonical_labels_do_not_confer_project_authority"]
+        is True
+    )

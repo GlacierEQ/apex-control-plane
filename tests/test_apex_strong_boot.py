@@ -28,7 +28,10 @@ _GATE_BINDINGS = (
     ("automatic_notion_continuity_preflight", "get_in_process_notion_validation"),
     ("automatic_prime_directive_boot", "get_in_process_boot_validation"),
     ("automatic_operator_fidelity_lock", "get_in_process_operator_fidelity_lock"),
-    ("automatic_operator_fidelity_preflight", "get_in_process_operator_fidelity_validation"),
+    (
+        "automatic_operator_fidelity_preflight",
+        "get_in_process_operator_fidelity_validation",
+    ),
     ("automatic_apex_enforced_startup", "get_in_process_apex_validation"),
 )
 
@@ -148,8 +151,12 @@ def test_incomplete_gate_preserves_later_diagnostics_before_block(monkeypatch) -
         state["value"] = validation
         return validation
 
-    monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", incomplete_notion)
-    monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
+    monkeypatch.setattr(
+        boot, "automatic_notion_continuity_preflight", incomplete_notion
+    )
+    monkeypatch.setattr(
+        boot, "get_in_process_notion_validation", lambda: state["value"]
+    )
 
     with pytest.raises(StrongBootViolation, match="notion_continuity"):
         apply_strongest_boot()
@@ -181,7 +188,9 @@ def test_incomplete_gate_fails_before_kernel_creation(monkeypatch) -> None:
 
     monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
 
-    with pytest.raises(StrongBootViolation, match="operator_fidelity: validation ok is not true"):
+    with pytest.raises(
+        StrongBootViolation, match="operator_fidelity: validation ok is not true"
+    ):
         apply_strongest_boot()
 
     assert kernel_called["value"] is False
@@ -276,7 +285,9 @@ def test_control_plane_blocks_before_runtime_when_strong_boot_fails(
     namespace = {"__name__": "__main__", "__file__": str(target)}
 
     with pytest.raises(SystemExit) as exc_info:
-        exec(compile(target.read_text(encoding="utf-8"), str(target), "exec"), namespace)
+        exec(
+            compile(target.read_text(encoding="utf-8"), str(target), "exec"), namespace
+        )
 
     assert exc_info.value.code == 78
     assert called["runtime"] is False

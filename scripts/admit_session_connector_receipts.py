@@ -6,6 +6,7 @@ by direct authenticated provider calls. Provider material is read only to calcul
 SHA-256 digest; it is never copied to the generated receipt ledger. This command
 cannot invoke providers and cannot execute an external action.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,7 +23,11 @@ if str(SRC) not in sys.path:
 
 from authenticated_session_bridge import ProviderObservation, build_read_receipt
 from connector_bridge_contract import build_read_request
-from connector_receipts import ConnectorReceiptError, canonical_json, load_connector_catalog
+from connector_receipts import (
+    ConnectorReceiptError,
+    canonical_json,
+    load_connector_catalog,
+)
 from control_plane_runtime import CaseBrainOrchestrator, Producer, to_jsonable
 
 

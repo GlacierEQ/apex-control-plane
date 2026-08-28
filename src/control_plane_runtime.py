@@ -12,6 +12,7 @@ Design constraints:
 - Connector presence is not runtime proof.
 - Secrets are referenced by environment-variable name, never embedded.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -31,7 +32,11 @@ from approved_operation_bridge import (
     validate_approved_action_request,
     validate_execution_receipt,
 )
-from connector_receipts import ConnectorReadReceipt, receipt_audit_details, validate_read_receipt
+from connector_receipts import (
+    ConnectorReadReceipt,
+    receipt_audit_details,
+    validate_read_receipt,
+)
 
 ENVELOPE_VERSION = "1.0.0"
 CASE_EVENT_SCHEMA_ID = "urn:casebrain:schema:case-event:1.0.0"
@@ -81,7 +86,9 @@ class SourcePointer:
         if not self.canonical_uri.strip():
             raise ValueError("source.canonical_uri is required")
         if self.sha256 is not None and not _is_sha256(self.sha256):
-            raise ValueError("source.sha256 must be a 64-character lowercase hex digest")
+            raise ValueError(
+                "source.sha256 must be a 64-character lowercase hex digest"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,9 +163,13 @@ class ThreatSignal:
         if self.external_action_authorized:
             raise ValueError("threat signals may never authorize external action")
         if self.claim_class is ClaimClass.VERIFIED_FACT:
-            raise ValueError("threat signals are analytical outputs, not verified facts")
+            raise ValueError(
+                "threat signals are analytical outputs, not verified facts"
+            )
         if not self.alternative_explanations:
-            raise ValueError("threat signals must preserve at least one alternative explanation")
+            raise ValueError(
+                "threat signals must preserve at least one alternative explanation"
+            )
 
     @property
     def level(self) -> ThreatLevel:
@@ -205,8 +216,12 @@ class Producer:
     def __post_init__(self) -> None:
         if not self.repo.strip() or "/" not in self.repo:
             raise ValueError("producer.repo must use owner/name form")
-        if len(self.commit_sha) != 40 or any(c not in "0123456789abcdef" for c in self.commit_sha):
-            raise ValueError("producer.commit_sha must be a 40-character lowercase hex SHA")
+        if len(self.commit_sha) != 40 or any(
+            c not in "0123456789abcdef" for c in self.commit_sha
+        ):
+            raise ValueError(
+                "producer.commit_sha must be a 40-character lowercase hex SHA"
+            )
         if not self.component.strip():
             raise ValueError("producer.component is required")
 
@@ -229,7 +244,9 @@ class TransportEnvelope:
         if not self.idempotency_key.strip():
             raise ValueError("idempotency_key is required")
         if not _is_sha256(self.payload_sha256):
-            raise ValueError("payload_sha256 must be a 64-character lowercase hex digest")
+            raise ValueError(
+                "payload_sha256 must be a 64-character lowercase hex digest"
+            )
         actual = canonical_sha256(self.payload)
         if actual != self.payload_sha256:
             raise ValueError("payload hash mismatch")
@@ -319,14 +336,18 @@ class ControlPlane:
     def register(self, worker: Worker) -> None:
         self.workers[worker.id] = worker
 
-    def heartbeat(self, worker_id: str, *, healthy: bool = True, at: datetime | None = None) -> None:
+    def heartbeat(
+        self, worker_id: str, *, healthy: bool = True, at: datetime | None = None
+    ) -> None:
         worker = self.workers[worker_id]
         heartbeat_at = at or datetime.now(UTC)
         _require_aware(heartbeat_at, "heartbeat.at")
         worker.healthy = healthy
         worker.last_heartbeat_at = heartbeat_at
 
-    def dispatch(self, job_cost: int = 1, capability: str | None = None) -> dict[str, Any]:
+    def dispatch(
+        self, job_cost: int = 1, capability: str | None = None
+    ) -> dict[str, Any]:
         if job_cost < 1:
             raise ValueError("job_cost must be >= 1")
         candidates = [
@@ -337,11 +358,7 @@ class ControlPlane:
             and worker.load + job_cost <= worker.capacity
         ]
         if not candidates:
-            return {
-                "ok": False,
-                "error": "no_capacity",
-                "capability": capability
-                }
+            return {"ok": False, "error": "no_capacity", "capability": capability}
         worker = min(
             candidates,
             key=lambda item: (item.load / max(item.capacity, 1), item.id),
@@ -351,8 +368,8 @@ class ControlPlane:
             "ok": True,
             "worker": worker.id,
             "load": worker.load,
-            "capability": capability
-            }
+            "capability": capability,
+        }
 
     def release(self, worker_id: str, job_cost: int = 1) -> None:
         if job_cost < 1:
@@ -369,14 +386,18 @@ class TimelineBrain:
 
     def add(self, event: CaseEvent) -> None:
         existing = self.events.get(event.event_id)
-        if existing is not None and canonical_sha256(event_to_payload(existing)) != canonical_sha256(
-            event_to_payload(event)
-        ):
-            raise ValueError(f"event_id collision with different content: {event.event_id}")
+        if existing is not None and canonical_sha256(
+            event_to_payload(existing)
+        ) != canonical_sha256(event_to_payload(event)):
+            raise ValueError(
+                f"event_id collision with different content: {event.event_id}"
+            )
         self.events[event.event_id] = event
 
     def ordered_events(self) -> list[CaseEvent]:
-        return sorted(self.events.values(), key=lambda item: (item.occurred_at, item.event_id))
+        return sorted(
+            self.events.values(), key=lambda item: (item.occurred_at, item.event_id)
+        )
 
     def deadline_snapshot(self, now: datetime | None = None) -> list[dict[str, Any]]:
         current = now or datetime.now(UTC)
@@ -390,7 +411,7 @@ class TimelineBrain:
                         "due_at": deadline.due_at.isoformat(),
                         "days_remaining": deadline.days_remaining(current),
                         "confirmed": deadline.confirmed,
-                        "source_uri": deadline.source.canonical_uri
+                        "source_uri": deadline.source.canonical_uri,
                     }
                 )
         return sorted(output, key=lambda item: (item["due_at"], item["event_id"]))
@@ -408,7 +429,7 @@ class ThreatIntelligenceHub:
             "unexpected_docket_change": 30,
             "law_enforcement_contact": 25,
             "retaliation_indicator": 20,
-            "record_integrity_gap": 30
+            "record_integrity_gap": 30,
         }
     )
 
@@ -425,9 +446,13 @@ class ThreatIntelligenceHub:
         base = self.category_weights.get(category, 10)
         corroboration = min(max(corroboration_count, 0), 5) * 7
         severity = min(100, max(0, base + corroboration + urgency_bonus))
-        alternatives = tuple(item.strip() for item in alternative_explanations if item.strip())
+        alternatives = tuple(
+            item.strip() for item in alternative_explanations if item.strip()
+        )
         if not alternatives:
-            alternatives = ("insufficient information or benign procedural explanation",)
+            alternatives = (
+                "insufficient information or benign procedural explanation",
+            )
         return ThreatSignal(
             signal_id=str(uuid4()),
             category=category,
@@ -453,7 +478,11 @@ class AutonomousDecisionEngine:
         evidence_refs = tuple(source.canonical_uri for source in event.sources)
 
         nearest = min(
-            (item["days_remaining"] for item in deadline_snapshot if item["event_id"] == event.event_id),
+            (
+                item["days_remaining"]
+                for item in deadline_snapshot
+                if item["event_id"] == event.event_id
+            ),
             default=None,
         )
         if nearest is not None and nearest <= 7:
@@ -465,7 +494,10 @@ class AutonomousDecisionEngine:
                         "preparation should precede any filing or external action."
                     ),
                     confidence=0.92,
-                    prerequisites=("confirm deadline from authoritative source", "human review"),
+                    prerequisites=(
+                        "confirm deadline from authoritative source",
+                        "human review",
+                    ),
                     risks=("deadline may be unconfirmed", "source may have changed"),
                     evidence_refs=evidence_refs,
                 )
@@ -477,7 +509,10 @@ class AutonomousDecisionEngine:
                     action="build_corroboration_matrix",
                     rationale="The event is an allegation and must remain separated from verified facts.",
                     confidence=0.98,
-                    prerequisites=("identify independent sources", "preserve contradictory evidence"),
+                    prerequisites=(
+                        "identify independent sources",
+                        "preserve contradictory evidence",
+                    ),
                     risks=("confirmation bias", "premature factual promotion"),
                     evidence_refs=evidence_refs,
                 )
@@ -542,14 +577,18 @@ class CaseBrainOrchestrator:
     producer: Producer
     timeline: TimelineBrain = field(default_factory=TimelineBrain)
     threat_hub: ThreatIntelligenceHub = field(default_factory=ThreatIntelligenceHub)
-    decision_engine: AutonomousDecisionEngine = field(default_factory=AutonomousDecisionEngine)
+    decision_engine: AutonomousDecisionEngine = field(
+        default_factory=AutonomousDecisionEngine
+    )
     receipts: list[AuditReceipt] = field(default_factory=list)
     idempotency_index: dict[str, str] = field(default_factory=dict)
     dead_letter: list[dict[str, Any]] = field(default_factory=list)
     breakers: dict[str, CircuitBreaker] = field(default_factory=dict)
     connector_receipts: list[ConnectorReadReceipt] = field(default_factory=list)
     connector_receipt_index: dict[str, str] = field(default_factory=dict)
-    connector_execution_receipts: list[ConnectorExecutionReceipt] = field(default_factory=list)
+    connector_execution_receipts: list[ConnectorExecutionReceipt] = field(
+        default_factory=list
+    )
     connector_execution_receipt_index: dict[str, str] = field(default_factory=dict)
     connector_action_idempotency_index: dict[str, str] = field(default_factory=dict)
 
@@ -570,7 +609,7 @@ class CaseBrainOrchestrator:
                 "status": "duplicate",
                 "trace_id": envelope.trace_id,
                 "payload_sha256": envelope.payload_sha256,
-                "external_action_authorized": False
+                "external_action_authorized": False,
             }
 
         self.timeline.add(event)
@@ -592,7 +631,7 @@ class CaseBrainOrchestrator:
             "threat_signals": [to_jsonable(item) for item in signals],
             "recommendations": [to_jsonable(item) for item in recommendations],
             "human_review_required": True,
-            "external_action_authorized": False
+            "external_action_authorized": False,
         }
         output_hash = canonical_sha256(result)
         self.idempotency_index[envelope.idempotency_key] = envelope.payload_sha256
@@ -609,7 +648,7 @@ class CaseBrainOrchestrator:
                     "event_id": event.event_id,
                     "recommendation_count": len(recommendations),
                     "threat_signal_count": len(signals),
-                    "external_action_authorized": False
+                    "external_action_authorized": False,
                 },
             )
         )
@@ -629,7 +668,9 @@ class CaseBrainOrchestrator:
         details = receipt_audit_details(receipt)
         if prior_hash is not None:
             if prior_hash != input_sha256:
-                raise ValueError("connector receipt ID collision with different payload")
+                raise ValueError(
+                    "connector receipt ID collision with different payload"
+                )
             return {
                 "status": "duplicate",
                 "receipt_id": receipt.receipt_id,
@@ -677,16 +718,24 @@ class CaseBrainOrchestrator:
             catalog,
             now=now,
         )
-        prior_scope = self.connector_action_idempotency_index.get(action.idempotency_key)
+        prior_scope = self.connector_action_idempotency_index.get(
+            action.idempotency_key
+        )
         if prior_scope is not None and prior_scope != action.approval_scope_sha256:
-            raise ValueError("connector action idempotency key collision with different approval scope")
+            raise ValueError(
+                "connector action idempotency key collision with different approval scope"
+            )
 
         receipt = validate_execution_receipt(receipt_payload, action)
         input_sha256 = canonical_sha256(receipt_payload)
-        prior_receipt = self.connector_execution_receipt_index.get(receipt.execution_receipt_id)
+        prior_receipt = self.connector_execution_receipt_index.get(
+            receipt.execution_receipt_id
+        )
         if prior_receipt is not None:
             if prior_receipt != input_sha256:
-                raise ValueError("connector execution receipt ID collision with different payload")
+                raise ValueError(
+                    "connector execution receipt ID collision with different payload"
+                )
             return {
                 "status": "duplicate",
                 "execution_receipt_id": receipt.execution_receipt_id,
@@ -694,9 +743,13 @@ class CaseBrainOrchestrator:
                 "external_action_authorized": True,
             }
 
-        self.connector_action_idempotency_index[action.idempotency_key] = action.approval_scope_sha256
+        self.connector_action_idempotency_index[action.idempotency_key] = (
+            action.approval_scope_sha256
+        )
         self.connector_execution_receipts.append(receipt)
-        self.connector_execution_receipt_index[receipt.execution_receipt_id] = input_sha256
+        self.connector_execution_receipt_index[receipt.execution_receipt_id] = (
+            input_sha256
+        )
         details = execution_receipt_audit_details(receipt, action)
         self.receipts.append(
             AuditReceipt(
@@ -744,7 +797,9 @@ class CaseBrainOrchestrator:
                 value = operation()
                 breaker.record_success()
                 return value
-            except Exception as exc:  # boundary wrapper intentionally catches connector failures
+            except (
+                Exception
+            ) as exc:  # boundary wrapper intentionally catches connector failures
                 errors.append(f"{type(exc).__name__}: {exc}")
                 breaker.record_failure()
                 if attempt < attempts and breaker.allow_request():
@@ -754,18 +809,24 @@ class CaseBrainOrchestrator:
             "connector": connector_name,
             "errors": tuple(errors),
             "recorded_at": datetime.now(UTC).isoformat(),
-            "external_action_authorized": False
+            "external_action_authorized": False,
         }
         self.dead_letter.append(record)
-        raise RuntimeError(f"connector failed after {attempts} attempt(s): {connector_name}")
+        raise RuntimeError(
+            f"connector failed after {attempts} attempt(s): {connector_name}"
+        )
 
     def export_receipts_jsonl(self) -> str:
-        return "\n".join(canonical_json(to_jsonable(receipt)) for receipt in self.receipts)
+        return "\n".join(
+            canonical_json(to_jsonable(receipt)) for receipt in self.receipts
+        )
 
     def _assess_threat(self, item: Mapping[str, Any]) -> ThreatSignal:
         return self.threat_hub.assess(
             category=str(item.get("category", "unknown")),
-            description=str(item.get("description", "unspecified analytical indicator")),
+            description=str(
+                item.get("description", "unspecified analytical indicator")
+            ),
             evidence_refs=tuple(str(value) for value in item.get("evidence_refs", ())),
             alternative_explanations=tuple(
                 str(value) for value in item.get("alternative_explanations", ())
@@ -775,7 +836,9 @@ class CaseBrainOrchestrator:
         )
 
 
-def create_envelope(*, payload: Mapping[str, Any], producer: Producer) -> TransportEnvelope:
+def create_envelope(
+    *, payload: Mapping[str, Any], producer: Producer
+) -> TransportEnvelope:
     payload_hash = canonical_sha256(payload)
     event_id = str(payload.get("event_id", "unknown"))
     case_id = str(payload.get("case_id", "unknown"))
@@ -834,7 +897,9 @@ def _require_aware(value: datetime, field_name: str) -> None:
 
 if __name__ == "__main__":
     # Local smoke test only. It performs no network or external action.
-    source = SourcePointer(system="local", canonical_uri="file://example/court-record.pdf")
+    source = SourcePointer(
+        system="local", canonical_uri="file://example/court-record.pdf"
+    )
     event = CaseEvent(
         event_id="example-event",
         case_id="1FDV-23-0001009",
