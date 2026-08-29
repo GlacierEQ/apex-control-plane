@@ -428,6 +428,27 @@ def trigger_build(
     return result
 
 
+def verify_returned_build_commit(
+    build: dict[str, Any] | None,
+    requested_commit: str,
+) -> None:
+    """Reject only an explicit conflicting SHA.
+
+    Buildkite may preserve a symbolic ref in some response surfaces even when the
+    requested build resolves to the exact SHA. GitHub commit-status projection is
+    the independent exact-SHA readback. A different 40-character SHA is a hard
+    contradiction and remains fatal.
+    """
+    if not build:
+        return
+    returned = str(build.get("commit") or "")
+    if len(returned) == 40 and returned != requested_commit:
+        raise RuntimeError(
+            "Build commit mismatch: "
+            f"requested={requested_commit} returned={returned}"
+        )
+
+
 def compact_pipeline(pipeline: dict[str, Any]) -> dict[str, Any]:
     provider = (
         pipeline.get("provider") if isinstance(pipeline.get("provider"), dict) else {}
@@ -510,11 +531,7 @@ def main() -> int:
             raise RuntimeError(f"Cluster readback mismatch for {slug}.")
 
         build = trigger_build(api, slug, spec["github_repository"], main_sha)
-        if build and build.get("commit") != main_sha:
-            raise RuntimeError(
-                f"Build commit mismatch for {slug}: "
-                f"requested={main_sha} returned={build.get('commit')}"
-            )
+        verify_returned_build_commit(build, main_sha)
 
         results.append(
             {
