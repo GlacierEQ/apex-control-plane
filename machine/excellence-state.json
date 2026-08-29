@@ -48,7 +48,7 @@
   "history": [],
   "contract_ref": "machine/target-contract.json",
   "scores_ref": "machine/excellence-scores.json",
-  "evolution_cursor": "next:canonical_position_only_if_estate_role_resolved",
+  "evolution_cursor": "continue:inspect+execute_reversible_progress+verify+repair+reconcile",
   "wave": {
     "id": "ELITE-ESTATE-SCHEMA-MIGRATE-2026-08-10",
     "proof_ok": false,
@@ -66,5 +66,34 @@
     "reason": "schema migrate: PROMOTED XOR gap-receipt",
     "blocker": "TESTS_FAIL",
     "rule": "PROMOTED XOR gap-receipt"
-  }
+  },
+  "execution_state": "ACTIVE",
+  "principal_state_semantics": "evidence_maturity_projection_only_not_execution_authority",
+  "gate_semantics": "compatibility_checkpoints_only_not_global_vetoes",
+  "authority_semantics": {
+    "can_block_operator_execution": false,
+    "can_define_project_direction": false,
+    "can_define_project_hierarchy": false,
+    "can_turn_optional_dependency_into_required_dependency": false,
+    "pending_checkpoints_create_repair_work_not_stop_work": true,
+    "verification_constrains_truth_labels_not_all_forward_execution": true
+  },
+  "runtime_policy": {
+    "preserve_verified_success_on_partial_failure": true,
+    "route_around_optional_failure_when_possible": true,
+    "discover_and_repair_in_parallel_with_reversible_progress": true,
+    "blocked_only_when_specific_operation_has_no_valid_route": true
+  },
+  "recovery_loop": [
+    "OBSERVE",
+    "CLASSIFY",
+    "PRESERVE_SUCCESS",
+    "ROUTE",
+    "REPAIR",
+    "REVERIFY",
+    "RECONCILE",
+    "CONTINUE"
+  ],
+  "demotion_semantics": "historical evidence correction only; never a runtime or project-authority veto",
+  "law_ref": "GlacierEQ/AKOS:specs/AKOS-LAW-022_VERIFICATION_NON_SOVEREIGNTY.md"
 }
