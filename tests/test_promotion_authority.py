@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PromotionAuthTests(unittest.TestCase):
-    def test_issue_verify(self):
+    def test_attestation_is_not_execution_authority(self):\n        self.assertEqual(PROMOTION_AUTHORITY_SCOPE, "attestation_only")\n        self.assertFalse(PROMOTION_GRANT_CAN_BLOCK_EXECUTION)\n        self.assertFalse(PROMOTION_GRANT_CAN_OVERRIDE_OPERATOR)\n        self.assertFalse(PROMOTION_GRANT_CAN_DEFINE_PROJECT_HIERARCHY)\n\n    def test_issue_verify(self):
         authority = PromotionAuthority(b"test-secret", ttl_s=60)
         grant = authority.issue("GlacierEQ/x", "abc", "def", now=1000.0)
         ok, _reason = authority.verify(grant, now=1001.0)
