@@ -23,7 +23,8 @@ steps:
       python3 -m py_compile \
         scripts/validate_buildkite_master.py \
         scripts/buildkite_master_inventory.py \
-        scripts/reconcile_buildkite_github_status.py
+        scripts/reconcile_buildkite_github_status.py \
+        scripts/reconcile_genius_buildkite.py
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/buildkite-master-validation.json
@@ -62,6 +63,7 @@ steps:
         tests/test_buildkite_master.py \
         tests/test_buildkite_master_inventory.py \
         tests/test_buildkite_github_status.py \
+        tests/test_reconcile_genius_buildkite.py \
         --junitxml=artifacts/buildkite/operator-fidelity.xml \
         2>&1 | tee artifacts/buildkite/operator-fidelity.log
       buildkite-agent meta-data set operator-fidelity-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/operator-fidelity.xml | cut -d ' ' -f 1)"
