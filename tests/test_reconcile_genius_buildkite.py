@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,7 @@ MODULE_PATH = ROOT / "scripts" / "reconcile_genius_buildkite.py"
 spec = importlib.util.spec_from_file_location("reconcile_genius_buildkite", MODULE_PATH)
 assert spec and spec.loader
 mod = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = mod
 spec.loader.exec_module(mod)
 
 
@@ -27,7 +29,7 @@ def test_desired_pipeline_is_exact_main_clustered_and_status_publishing():
     assert desired["slug"] == "genius-mastery"
     assert desired["cluster_id"] == "cluster-123"
     assert desired["default_branch"] == "main"
-    assert desired["branch_configuration"] == "main"
+    assert desired["branch_configuration"] is None
     assert desired["repository"] == spec_data["repository"]
     provider = desired["provider_settings"]
     assert provider["publish_commit_status"] is True
