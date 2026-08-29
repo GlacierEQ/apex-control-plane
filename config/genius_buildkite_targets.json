@@ -25,7 +25,8 @@
       "repository": "git@github.com:GlacierEQ/Genius-Mastery.git",
       "github_repository": "GlacierEQ/Genius-Mastery",
       "status_context": "buildkite/genius-mastery",
-      "pipeline_file": ".buildkite/pipeline.yml"
+      "pipeline_file": ".buildkite/pipeline.yml",
+      "role": "mastery-kernel"
     },
     {
       "name": "Genius-Code",
@@ -33,7 +34,8 @@
       "repository": "git@github.com:GlacierEQ/Genius-Code.git",
       "github_repository": "GlacierEQ/Genius-Code",
       "status_context": "buildkite/genius-code",
-      "pipeline_file": ".buildkite/pipeline.yml"
+      "pipeline_file": ".buildkite/pipeline.yml",
+      "role": "code-domain"
     },
     {
       "name": "Genius-Verification",
@@ -41,7 +43,31 @@
       "repository": "git@github.com:GlacierEQ/Genius-Verification.git",
       "github_repository": "GlacierEQ/Genius-Verification",
       "status_context": "buildkite/genius-verification",
-      "pipeline_file": ".buildkite/pipeline.yml"
+      "pipeline_file": ".buildkite/pipeline.yml",
+      "role": "verification-domain"
     }
-  ]
+  ],
+  "verification_policy": {
+    "wait_for_terminal_builds": true,
+    "build_timeout_seconds": 600,
+    "projection_timeout_seconds": 120,
+    "poll_interval_seconds": 5,
+    "build_success_states": [
+      "passed"
+    ],
+    "build_failure_states": [
+      "failed",
+      "canceled",
+      "canceling",
+      "skipped",
+      "not_run"
+    ],
+    "projection_success_states": [
+      "success"
+    ],
+    "projection_failure_states": [
+      "failure",
+      "error"
+    ]
+  }
 }
