@@ -23,7 +23,8 @@ steps:
       python3 -m py_compile \
         scripts/validate_buildkite_master.py \
         scripts/buildkite_master_inventory.py \
-        scripts/reconcile_buildkite_github_status.py
+        scripts/reconcile_buildkite_github_status.py \
+        scripts/reconcile_genius_buildkite.py
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/buildkite-master-validation.json
@@ -62,6 +63,7 @@ steps:
         tests/test_buildkite_master.py \
         tests/test_buildkite_master_inventory.py \
         tests/test_buildkite_github_status.py \
+        tests/test_reconcile_genius_buildkite.py \
         --junitxml=artifacts/buildkite/operator-fidelity.xml \
         2>&1 | tee artifacts/buildkite/operator-fidelity.log
       buildkite-agent meta-data set operator-fidelity-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/operator-fidelity.xml | cut -d ' ' -f 1)"
@@ -117,12 +119,33 @@ steps:
       - artifacts/buildkite/registry-audit.xml
       - artifacts/buildkite/registry-audit.log
 
+  - label: ":kite: Reconcile Genius family"
+    key: genius-reconcile
+    depends_on: source-fidelity
+    branches: main
+    timeout_in_minutes: 10
+    agents:
+      queue: macos-self
+      os: macos
+    command: |
+      set -euo pipefail
+      mkdir -p artifacts/buildkite
+      actual="$(git rev-parse HEAD)"
+      test "$actual" = "$BUILDKITE_COMMIT"
+      python3 scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
+      test -s artifacts/buildkite/genius-reconciliation.json
+      git diff --exit-code
+    artifact_paths:
+      - artifacts/buildkite/genius-reconciliation.json
+      - artifacts/buildkite/genius-reconciliation.log
+
   - label: ":receipt: Verified control-plane CI receipt"
     key: verified-receipt
     depends_on:
       - buildkite-master
       - source-fidelity
       - registry-audit
+      - genius-reconcile
     timeout_in_minutes: 5
     agents:
       queue: macos-self

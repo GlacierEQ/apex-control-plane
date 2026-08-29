@@ -53,6 +53,17 @@
       "evidence": "scripts/apex_buildkite_register.py",
       "organization_default": "casey-1",
       "status": "source_observed_live_buildkite_state_unverified"
+    },
+    {
+      "name": "genius-family-api-reconciler",
+      "repository": "GlacierEQ/apex-control-plane",
+      "evidence": "scripts/reconcile_genius_buildkite.py",
+      "target_repositories": [
+        "GlacierEQ/Genius-Mastery",
+        "GlacierEQ/Genius-Code",
+        "GlacierEQ/Genius-Verification"
+      ],
+      "status": "source_observed_live_buildkite_state_unverified"
     }
   ],
   "queue_contracts": {
@@ -110,7 +121,8 @@
     "current GitHub Buildkite required-check mapping",
     "authenticated active-build inventory for organization casey-1",
     "current live job identity for macos-self and oracle-arm64",
-    "current FILEBOSS Buildkite build state"
+    "current FILEBOSS Buildkite build state",
+    "current Genius family Buildkite pipeline and exact-SHA build state"
   ],
   "live_readback_contract": {
     "observation_only": true,
