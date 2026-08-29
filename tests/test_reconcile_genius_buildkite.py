@@ -155,3 +155,21 @@ def test_failed_projection_is_retried(state):
 
 def test_missing_projection_triggers_initial_build():
     assert mod.should_trigger_for_projection(None) is True
+
+
+def test_pipeline_readback_accepts_exact_reconciled_state():
+    spec_data = mod.PIPELINES[0]
+    desired = mod.desired_pipeline(spec_data, "cluster-123")
+    readback = {
+        **desired,
+        "repository": "https://github.com/GlacierEQ/Genius-Mastery.git",
+    }
+    mod.verify_pipeline_readback(readback, spec_data, "cluster-123")
+
+
+def test_pipeline_readback_rejects_stale_build_policy_drift():
+    spec_data = mod.PIPELINES[0]
+    readback = mod.desired_pipeline(spec_data, "cluster-123")
+    readback["cancel_running_branch_builds"] = False
+    with pytest.raises(RuntimeError, match="cancel_running_branch_builds"):
+        mod.verify_pipeline_readback(readback, spec_data, "cluster-123")
