@@ -63,7 +63,7 @@ steps:
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
       if buildkite-agent pipeline upload --help 2>&1 | grep -q -- '--reject-secrets'; then
-        buildkite-agent pipeline upload --reject-secrets .buildkite/pipeline.yml
+        buildkite-agent pipeline upload .buildkite/pipeline.yml --reject-secrets
       else
         buildkite-agent pipeline upload .buildkite/pipeline.yml
       fi
@@ -121,7 +121,7 @@ def resolve_buildkite_token() -> tuple[str, str]:
         ) from exc
     if not value:
         raise RuntimeError(f"Buildkite API token file is empty: {path}")
-    return value, str(path)
+    return value, "config_file"
 
 
 @dataclass
@@ -310,7 +310,7 @@ def desired_pipeline(spec: dict[str, str], cluster_id: str) -> dict[str, Any]:
         "cluster_id": cluster_id,
         "configuration": PIPELINE_UPLOAD_CONFIGURATION,
         "default_branch": DEFAULT_BRANCH,
-        "branch_configuration": DEFAULT_BRANCH,
+        "branch_configuration": None,
         "cancel_running_branch_builds": False,
         "skip_queued_branch_builds": False,
         "visibility": "private",
@@ -358,15 +358,12 @@ def ensure_webhook(api: BuildkiteAPI, slug: str) -> dict[str, Any]:
         f"{urllib.parse.quote(slug)}/webhook"
     )
     try:
-        result = api.request("POST", path)
-        return {"status": "CREATED", "response": result}
+        api.request("POST", path)
+        return {"status": "CREATED"}
     except RuntimeError as exc:
         detail = str(exc)
         if "HTTP 422" in detail:
-            return {
-                "status": "ALREADY_PRESENT_OR_PROVIDER_MANAGED",
-                "detail": detail,
-            }
+            return {"status": "ALREADY_PRESENT_OR_PROVIDER_MANAGED"}
         raise
 
 
