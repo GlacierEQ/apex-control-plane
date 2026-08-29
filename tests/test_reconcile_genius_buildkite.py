@@ -116,3 +116,42 @@ def test_verify_returned_build_commit_accepts_requested_sha():
 def test_verify_returned_build_commit_rejects_conflicting_sha():
     with pytest.raises(RuntimeError, match="Build commit mismatch"):
         mod.verify_returned_build_commit({"commit": "b" * 40}, "a" * 40)
+
+
+def test_target_registry_is_explicit_unique_and_status_addressable():
+    targets = mod.PIPELINES
+    assert {item["slug"] for item in targets} == {
+        "genius-mastery",
+        "genius-code",
+        "genius-verification",
+    }
+    assert len({item["github_repository"] for item in targets}) == len(targets)
+    for item in targets:
+        assert item["status_context"] == f"buildkite/{item['slug']}"
+        assert item["pipeline_file"] == ".buildkite/pipeline.yml"
+
+
+def test_superseded_builds_are_cancelled_and_skipped():
+    desired = mod.desired_pipeline(mod.PIPELINES[0], "cluster-123")
+    assert desired["cancel_running_branch_builds"] is True
+    assert desired["skip_queued_branch_builds"] is True
+
+
+def test_upload_configuration_rejects_parse_warnings_and_dry_runs_first():
+    config = mod.PIPELINE_UPLOAD_CONFIGURATION
+    assert "--reject-parse-warnings" in config
+    assert "--dry-run --format yaml" in config
+
+
+@pytest.mark.parametrize("state", ["pending", "success"])
+def test_existing_healthy_projection_is_reused(state):
+    assert mod.should_trigger_for_projection({"state": state}) is False
+
+
+@pytest.mark.parametrize("state", ["error", "failure"])
+def test_failed_projection_is_retried(state):
+    assert mod.should_trigger_for_projection({"state": state}) is True
+
+
+def test_missing_projection_triggers_initial_build():
+    assert mod.should_trigger_for_projection(None) is True

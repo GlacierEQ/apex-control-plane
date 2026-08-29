@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "organization": "casey-1",
+  "donor_pipeline": "apex-control-plane",
+  "default_branch": "main",
+  "default_queue": "macos-self",
+  "superseded_build_policy": {
+    "cancel_running_branch_builds": true,
+    "skip_queued_branch_builds": true
+  },
+  "trigger_policy": {
+    "reuse_projection_states": [
+      "pending",
+      "success"
+    ],
+    "retry_projection_states": [
+      "error",
+      "failure"
+    ]
+  },
+  "targets": [
+    {
+      "name": "Genius-Mastery",
+      "slug": "genius-mastery",
+      "repository": "git@github.com:GlacierEQ/Genius-Mastery.git",
+      "github_repository": "GlacierEQ/Genius-Mastery",
+      "status_context": "buildkite/genius-mastery",
+      "pipeline_file": ".buildkite/pipeline.yml"
+    },
+    {
+      "name": "Genius-Code",
+      "slug": "genius-code",
+      "repository": "git@github.com:GlacierEQ/Genius-Code.git",
+      "github_repository": "GlacierEQ/Genius-Code",
+      "status_context": "buildkite/genius-code",
+      "pipeline_file": ".buildkite/pipeline.yml"
+    },
+    {
+      "name": "Genius-Verification",
+      "slug": "genius-verification",
+      "repository": "git@github.com:GlacierEQ/Genius-Verification.git",
+      "github_repository": "GlacierEQ/Genius-Verification",
+      "status_context": "buildkite/genius-verification",
+      "pipeline_file": ".buildkite/pipeline.yml"
+    }
+  ]
+}

@@ -63,7 +63,8 @@
         "GlacierEQ/Genius-Code",
         "GlacierEQ/Genius-Verification"
       ],
-      "status": "source_observed_live_buildkite_state_unverified"
+      "status": "live_child_pipelines_observed_and_source_routing_hardened",
+      "routing_registry": "config/genius_buildkite_targets.json"
     }
   ],
   "queue_contracts": {
@@ -86,7 +87,10 @@
     "require_receipt_artifacts": true,
     "reject_inline_secret_assignments": true,
     "dynamic_upload_reject_secrets": true,
-    "dynamic_upload_requires_stable_keys": true
+    "dynamic_upload_requires_stable_keys": true,
+    "dynamic_upload_reject_parse_warnings": true,
+    "superseded_ci_builds_should_be_cancelled": true,
+    "idempotent_exact_head_triggering": true
   },
   "receipt_contract": {
     "required_identity": [
