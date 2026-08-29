@@ -504,6 +504,34 @@ def verify_returned_build_commit(
         )
 
 
+def verify_pipeline_readback(
+    pipeline: dict[str, Any],
+    spec: dict[str, str],
+    cluster_id: str,
+) -> None:
+    desired = desired_pipeline(spec, cluster_id)
+    failures: list[str] = []
+    if normalize_repository(pipeline.get("repository")) != normalize_repository(
+        spec["repository"]
+    ):
+        failures.append("repository")
+    if str(pipeline.get("cluster_id") or "") != cluster_id:
+        failures.append("cluster_id")
+    if pipeline.get("default_branch") != DEFAULT_BRANCH:
+        failures.append("default_branch")
+    for key in ("cancel_running_branch_builds", "skip_queued_branch_builds"):
+        if bool(pipeline.get(key)) != bool(desired[key]):
+            failures.append(key)
+    configuration = str(pipeline.get("configuration") or "")
+    if "buildkite-agent pipeline upload" not in configuration:
+        failures.append("configuration")
+    if failures:
+        raise RuntimeError(
+            f"Buildkite pipeline readback mismatch for {spec['slug']}: "
+            + ", ".join(failures)
+        )
+
+
 def compact_pipeline(pipeline: dict[str, Any]) -> dict[str, Any]:
     provider = (
         pipeline.get("provider") if isinstance(pipeline.get("provider"), dict) else {}
@@ -578,12 +606,7 @@ def main() -> int:
         readback = api.request("GET", f"{org_path}/pipelines/{urllib.parse.quote(slug)}")
         if not isinstance(readback, dict):
             raise RuntimeError(f"Buildkite pipeline readback failed for {slug}.")
-        if normalize_repository(readback.get("repository")) != normalize_repository(
-            spec["repository"]
-        ):
-            raise RuntimeError(f"Repository readback mismatch for {slug}.")
-        if str(readback.get("cluster_id") or "") != cluster_id:
-            raise RuntimeError(f"Cluster readback mismatch for {slug}.")
+        verify_pipeline_readback(readback, spec, cluster_id)
 
         projection = github_buildkite_projection(
             spec["github_repository"],
