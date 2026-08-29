@@ -106,11 +106,13 @@ steps:
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
       help="$(buildkite-agent pipeline upload --help 2>&1)"
-      args=()
-      grep -q -- '--reject-parse-warnings' <<<"$help" && args+=(--reject-parse-warnings)
-      grep -q -- '--reject-secrets' <<<"$help" && args+=(--reject-secrets)
-      buildkite-agent pipeline upload .buildkite/pipeline.yml --dry-run --format yaml "${{args[@]}}" >/dev/null
-      buildkite-agent pipeline upload .buildkite/pipeline.yml "${{args[@]}}"
+      set -- pipeline upload .buildkite/pipeline.yml
+      printf '%s' "$help" | grep -q -- '--reject-parse-warnings' && set -- "$@" --reject-parse-warnings || true
+      printf '%s' "$help" | grep -q -- '--reject-secrets' && set -- "$@" --reject-secrets || true
+      if printf '%s' "$help" | grep -q -- '--dry-run'; then
+        buildkite-agent "$@" --dry-run >/dev/null
+      fi
+      buildkite-agent "$@"
 """
 
 
