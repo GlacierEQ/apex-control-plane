@@ -102,3 +102,17 @@ def test_trigger_build_can_be_disabled_without_api_mutation(monkeypatch):
         )
         is None
     )
+
+
+def test_verify_returned_build_commit_accepts_symbolic_ref():
+    mod.verify_returned_build_commit({"commit": "HEAD"}, "a" * 40)
+
+
+def test_verify_returned_build_commit_accepts_requested_sha():
+    requested = "a" * 40
+    mod.verify_returned_build_commit({"commit": requested}, requested)
+
+
+def test_verify_returned_build_commit_rejects_conflicting_sha():
+    with pytest.raises(RuntimeError, match="Build commit mismatch"):
+        mod.verify_returned_build_commit({"commit": "b" * 40}, "a" * 40)
