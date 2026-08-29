@@ -130,6 +130,7 @@ def test_target_registry_is_explicit_unique_and_status_addressable():
     for item in targets:
         assert item["status_context"] == f"buildkite/{item['slug']}"
         assert item["pipeline_file"] == ".buildkite/pipeline.yml"
+        assert item["role"] in {"mastery-kernel", "code-domain", "verification-domain"}
 
 
 def test_superseded_builds_are_cancelled_and_skipped():
@@ -175,3 +176,62 @@ def test_pipeline_readback_rejects_stale_build_policy_drift():
     readback["cancel_running_branch_builds"] = False
     with pytest.raises(RuntimeError, match="cancel_running_branch_builds"):
         mod.verify_pipeline_readback(readback, spec_data, "cluster-123")
+
+
+def test_terminal_verification_policy_is_fail_closed():
+    policy = mod.REGISTRY["verification_policy"]
+    assert policy["wait_for_terminal_builds"] is True
+    assert policy["build_timeout_seconds"] > 0
+    assert policy["projection_timeout_seconds"] > 0
+    assert "passed" in policy["build_success_states"]
+    assert {"failed", "canceled", "skipped"}.issubset(
+        set(policy["build_failure_states"])
+    )
+    assert "success" in policy["projection_success_states"]
+    assert {"failure", "error"}.issubset(
+        set(policy["projection_failure_states"])
+    )
+
+
+def test_parse_buildkite_build_url_requires_expected_org_and_pipeline():
+    assert (
+        mod.parse_buildkite_build_url(
+            "https://buildkite.com/casey-1/genius-code/builds/42",
+            "genius-code",
+        )
+        == 42
+    )
+    with pytest.raises(RuntimeError, match="organization mismatch"):
+        mod.parse_buildkite_build_url(
+            "https://buildkite.com/not-casey/genius-code/builds/42",
+            "genius-code",
+        )
+    with pytest.raises(RuntimeError, match="pipeline mismatch"):
+        mod.parse_buildkite_build_url(
+            "https://buildkite.com/casey-1/wrong/builds/42",
+            "genius-code",
+        )
+
+
+def test_resolve_build_number_prefers_triggered_build():
+    result = {
+        "build": {"number": 19},
+        "preexisting_projection": {
+            "target_url": "https://buildkite.com/casey-1/genius-code/builds/18"
+        },
+        "pipeline": {"slug": "genius-code"},
+        "repository": "GlacierEQ/Genius-Code",
+    }
+    assert mod.resolve_build_number(result) == 19
+
+
+def test_resolve_build_number_uses_verified_projection_when_reusing():
+    result = {
+        "build": None,
+        "preexisting_projection": {
+            "target_url": "https://buildkite.com/casey-1/genius-verification/builds/7"
+        },
+        "pipeline": {"slug": "genius-verification"},
+        "repository": "GlacierEQ/Genius-Verification",
+    }
+    assert mod.resolve_build_number(result) == 7
