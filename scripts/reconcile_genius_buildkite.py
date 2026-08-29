@@ -109,8 +109,8 @@ steps:
       args=()
       grep -q -- '--reject-parse-warnings' <<<"$help" && args+=(--reject-parse-warnings)
       grep -q -- '--reject-secrets' <<<"$help" && args+=(--reject-secrets)
-      buildkite-agent pipeline upload .buildkite/pipeline.yml --dry-run --format yaml "${args[@]}" >/dev/null
-      buildkite-agent pipeline upload .buildkite/pipeline.yml "${args[@]}"
+      buildkite-agent pipeline upload .buildkite/pipeline.yml --dry-run --format yaml "${{args[@]}}" >/dev/null
+      buildkite-agent pipeline upload .buildkite/pipeline.yml "${{args[@]}}"
 """
 
 
