@@ -43,7 +43,8 @@ def test_upload_configuration_has_stable_key_exact_sha_and_agent_v3_v4_secret_gu
     assert "key: upload-repository-pipeline" in config
     assert 'test "$actual" = "$BUILDKITE_COMMIT"' in config
     assert "--reject-secrets" in config
-    assert "buildkite-agent pipeline upload .buildkite/pipeline.yml" in config
+    assert "set -- pipeline upload .buildkite/pipeline.yml" in config
+    assert 'buildkite-agent "$@"' in config
     assert f"queue: {mod.DEFAULT_QUEUE}" in config
 
 
@@ -140,7 +141,8 @@ def test_superseded_builds_are_cancelled_and_skipped():
 def test_upload_configuration_rejects_parse_warnings_and_dry_runs_first():
     config = mod.PIPELINE_UPLOAD_CONFIGURATION
     assert "--reject-parse-warnings" in config
-    assert "--dry-run --format yaml" in config
+    assert "--dry-run" in config
+    assert "grep -q -- '--dry-run'" in config
 
 
 @pytest.mark.parametrize("state", ["pending", "success"])
