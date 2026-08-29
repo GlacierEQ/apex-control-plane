@@ -22,6 +22,7 @@ Required Buildkite scopes:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -36,10 +37,52 @@ from typing import Any
 API_ROOT = "https://api.buildkite.com/v2"
 GITHUB_API_ROOT = "https://api.github.com"
 ROOT = Path(__file__).resolve().parents[1]
-ORG = os.getenv("BUILDKITE_ORG", "casey-1")
-DONOR_PIPELINE = os.getenv("BUILDKITE_DONOR_PIPELINE", "apex-control-plane")
-DEFAULT_BRANCH = "main"
-DEFAULT_QUEUE = os.getenv("BUILDKITE_GENIUS_QUEUE", "macos-self")
+TARGETS_PATH = ROOT / "config" / "genius_buildkite_targets.json"
+
+
+def load_target_registry(path: Path = TARGETS_PATH) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("schema_version") != 1:
+        raise RuntimeError("Unsupported Genius Buildkite target registry schema.")
+    targets = data.get("targets")
+    if not isinstance(targets, list) or not targets:
+        raise RuntimeError("Genius Buildkite target registry must contain targets.")
+    required = {
+        "name",
+        "slug",
+        "repository",
+        "github_repository",
+        "status_context",
+        "pipeline_file",
+    }
+    seen_slugs: set[str] = set()
+    seen_repos: set[str] = set()
+    for target in targets:
+        if not isinstance(target, dict) or not required.issubset(target):
+            raise RuntimeError(f"Invalid Genius Buildkite target: {target!r}")
+        slug = str(target["slug"])
+        github_repository = str(target["github_repository"]).casefold()
+        if slug in seen_slugs:
+            raise RuntimeError(f"Duplicate Genius Buildkite slug: {slug}")
+        if github_repository in seen_repos:
+            raise RuntimeError(
+                f"Duplicate Genius Buildkite repository: {target['github_repository']}"
+            )
+        seen_slugs.add(slug)
+        seen_repos.add(github_repository)
+    return data
+
+
+REGISTRY = load_target_registry()
+ORG = os.getenv("BUILDKITE_ORG", str(REGISTRY["organization"]))
+DONOR_PIPELINE = os.getenv(
+    "BUILDKITE_DONOR_PIPELINE", str(REGISTRY["donor_pipeline"])
+)
+DEFAULT_BRANCH = str(REGISTRY["default_branch"])
+DEFAULT_QUEUE = os.getenv(
+    "BUILDKITE_GENIUS_QUEUE", str(REGISTRY["default_queue"])
+)
+PIPELINES: tuple[dict[str, str], ...] = tuple(REGISTRY["targets"])
 
 RECEIPT_PATH = Path(
     os.getenv(
@@ -62,33 +105,16 @@ steps:
       set -euo pipefail
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
-      if buildkite-agent pipeline upload --help 2>&1 | grep -q -- '--reject-secrets'; then
-        buildkite-agent pipeline upload .buildkite/pipeline.yml --reject-secrets
-      else
-        buildkite-agent pipeline upload .buildkite/pipeline.yml
+      help="$(buildkite-agent pipeline upload --help 2>&1)"
+      set -- pipeline upload .buildkite/pipeline.yml
+      printf '%s' "$help" | grep -q -- '--reject-parse-warnings' && set -- "$@" --reject-parse-warnings || true
+      printf '%s' "$help" | grep -q -- '--reject-secrets' && set -- "$@" --reject-secrets || true
+      if printf '%s' "$help" | grep -q -- '--dry-run'; then
+        buildkite-agent "$@" --dry-run >/dev/null
       fi
+      buildkite-agent "$@"
 """
 
-PIPELINES: tuple[dict[str, str], ...] = (
-    {
-        "name": "Genius-Mastery",
-        "slug": "genius-mastery",
-        "repository": "git@github.com:GlacierEQ/Genius-Mastery.git",
-        "github_repository": "GlacierEQ/Genius-Mastery",
-    },
-    {
-        "name": "Genius-Code",
-        "slug": "genius-code",
-        "repository": "git@github.com:GlacierEQ/Genius-Code.git",
-        "github_repository": "GlacierEQ/Genius-Code",
-    },
-    {
-        "name": "Genius-Verification",
-        "slug": "genius-verification",
-        "repository": "git@github.com:GlacierEQ/Genius-Verification.git",
-        "github_repository": "GlacierEQ/Genius-Verification",
-    },
-)
 
 
 def utc_now() -> str:
@@ -311,8 +337,12 @@ def desired_pipeline(spec: dict[str, str], cluster_id: str) -> dict[str, Any]:
         "configuration": PIPELINE_UPLOAD_CONFIGURATION,
         "default_branch": DEFAULT_BRANCH,
         "branch_configuration": None,
-        "cancel_running_branch_builds": False,
-        "skip_queued_branch_builds": False,
+        "cancel_running_branch_builds": bool(
+            REGISTRY["superseded_build_policy"]["cancel_running_branch_builds"]
+        ),
+        "skip_queued_branch_builds": bool(
+            REGISTRY["superseded_build_policy"]["skip_queued_branch_builds"]
+        ),
         "visibility": "private",
         "provider_settings": {
             "build_branches": True,
@@ -367,33 +397,58 @@ def ensure_webhook(api: BuildkiteAPI, slug: str) -> dict[str, Any]:
         raise
 
 
-def github_main_sha(repository: str) -> str:
+def github_json(path: str) -> Any:
     token = os.getenv("GITHUB_TOKEN", "").strip()
     headers = {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "GlacierEQ-APEX-Genius-Buildkite/1",
+        "User-Agent": "GlacierEQ-APEX-Genius-Buildkite/2",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    url = f"{GITHUB_API_ROOT}/repos/{repository}/commits/{DEFAULT_BRANCH}"
-    req = urllib.request.Request(url, headers=headers)
+    req = urllib.request.Request(f"{GITHUB_API_ROOT}{path}", headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+            return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(
-            f"GitHub commit read failed for {repository} with HTTP {exc.code}: {raw[:500]}"
+            f"GitHub read failed for {path} with HTTP {exc.code}: {raw[:500]}"
         ) from exc
     except urllib.error.URLError as exc:
-        raise RuntimeError(
-            f"GitHub transport failure for {repository}: {exc.reason}"
-        ) from exc
-    sha = str(payload.get("sha") or "")
+        raise RuntimeError(f"GitHub transport failure for {path}: {exc.reason}") from exc
+
+
+def github_main_sha(repository: str) -> str:
+    payload = github_json(f"/repos/{repository}/commits/{DEFAULT_BRANCH}")
+    sha = str((payload or {}).get("sha") or "")
     if len(sha) != 40:
         raise RuntimeError(f"GitHub returned invalid main SHA for {repository}: {sha!r}")
     return sha
 
+
+def github_buildkite_projection(
+    repository: str,
+    commit: str,
+    context: str,
+) -> dict[str, Any] | None:
+    payload = github_json(f"/repos/{repository}/commits/{commit}/status")
+    for item in (payload or {}).get("statuses") or []:
+        if isinstance(item, dict) and item.get("context") == context:
+            return {
+                "context": context,
+                "state": item.get("state"),
+                "description": item.get("description"),
+                "target_url": item.get("target_url"),
+                "updated_at": item.get("updated_at"),
+            }
+    return None
+
+
+def should_trigger_for_projection(projection: dict[str, Any] | None) -> bool:
+    if projection is None:
+        return True
+    reusable = set(REGISTRY["trigger_policy"]["reuse_projection_states"])
+    return str(projection.get("state") or "") not in reusable
 
 def trigger_build(
     api: BuildkiteAPI,
@@ -446,6 +501,34 @@ def verify_returned_build_commit(
         raise RuntimeError(
             "Build commit mismatch: "
             f"requested={requested_commit} returned={returned}"
+        )
+
+
+def verify_pipeline_readback(
+    pipeline: dict[str, Any],
+    spec: dict[str, str],
+    cluster_id: str,
+) -> None:
+    desired = desired_pipeline(spec, cluster_id)
+    failures: list[str] = []
+    if normalize_repository(pipeline.get("repository")) != normalize_repository(
+        spec["repository"]
+    ):
+        failures.append("repository")
+    if str(pipeline.get("cluster_id") or "") != cluster_id:
+        failures.append("cluster_id")
+    if pipeline.get("default_branch") != DEFAULT_BRANCH:
+        failures.append("default_branch")
+    for key in ("cancel_running_branch_builds", "skip_queued_branch_builds"):
+        if bool(pipeline.get(key)) != bool(desired[key]):
+            failures.append(key)
+    configuration = str(pipeline.get("configuration") or "")
+    if "buildkite-agent pipeline upload" not in configuration:
+        failures.append("configuration")
+    if failures:
+        raise RuntimeError(
+            f"Buildkite pipeline readback mismatch for {spec['slug']}: "
+            + ", ".join(failures)
         )
 
 
@@ -523,15 +606,23 @@ def main() -> int:
         readback = api.request("GET", f"{org_path}/pipelines/{urllib.parse.quote(slug)}")
         if not isinstance(readback, dict):
             raise RuntimeError(f"Buildkite pipeline readback failed for {slug}.")
-        if normalize_repository(readback.get("repository")) != normalize_repository(
-            spec["repository"]
-        ):
-            raise RuntimeError(f"Repository readback mismatch for {slug}.")
-        if str(readback.get("cluster_id") or "") != cluster_id:
-            raise RuntimeError(f"Cluster readback mismatch for {slug}.")
+        verify_pipeline_readback(readback, spec, cluster_id)
 
-        build = trigger_build(api, slug, spec["github_repository"], main_sha)
-        verify_returned_build_commit(build, main_sha)
+        projection = github_buildkite_projection(
+            spec["github_repository"],
+            main_sha,
+            spec["status_context"],
+        )
+        build = None
+        execution_action = "REUSED_GITHUB_PROJECTION"
+        if should_trigger_for_projection(projection):
+            build = trigger_build(api, slug, spec["github_repository"], main_sha)
+            verify_returned_build_commit(build, main_sha)
+            execution_action = (
+                "TRIGGERED"
+                if build is not None
+                else "TRIGGER_DISABLED"
+            )
 
         results.append(
             {
@@ -540,6 +631,8 @@ def main() -> int:
                 "mutation": mutation,
                 "pipeline": compact_pipeline(readback),
                 "webhook": webhook,
+                "execution_action": execution_action,
+                "preexisting_projection": projection,
                 "build": compact_build(build),
             }
         )
@@ -547,12 +640,12 @@ def main() -> int:
     receipt = {
         "schema": "glaciereq.apex.genius-buildkite-reconciliation.v1",
         "generated_at": utc_now(),
-        "status": (
-            "BUILDS_TRIGGERED"
-            if env_truthy("BUILDKITE_TRIGGER_BUILD", default=True)
-            else "PIPELINES_RECONCILED"
-        ),
+        "status": "PIPELINES_RECONCILED_AND_HEADS_ENSURED",
         "organization": ORG,
+        "target_registry": {
+            "path": str(TARGETS_PATH.relative_to(ROOT)),
+            "sha256": hashlib.sha256(TARGETS_PATH.read_bytes()).hexdigest(),
+        },
         "cluster": {"id": cluster_id, "source": cluster_source, "queue": DEFAULT_QUEUE},
         "api_token": {
             "uuid": token_meta.get("uuid"),
