@@ -63,8 +63,9 @@
         "GlacierEQ/Genius-Code",
         "GlacierEQ/Genius-Verification"
       ],
-      "status": "live_child_pipelines_observed_and_source_routing_hardened",
-      "routing_registry": "config/genius_buildkite_targets.json"
+      "status": "source_hardened_terminal_verification_pending_live_main_proof",
+      "routing_registry": "config/genius_buildkite_targets.json",
+      "terminal_verification": "Buildkite child readback + exact-head GitHub projection"
     }
   ],
   "queue_contracts": {
@@ -90,7 +91,9 @@
     "dynamic_upload_requires_stable_keys": true,
     "dynamic_upload_reject_parse_warnings": true,
     "superseded_ci_builds_should_be_cancelled": true,
-    "idempotent_exact_head_triggering": true
+    "idempotent_exact_head_triggering": true,
+    "terminal_child_build_verification": true,
+    "terminal_github_projection_verification": true
   },
   "receipt_contract": {
     "required_identity": [
@@ -103,6 +106,8 @@
     "required_proof": [
       "test_result",
       "artifact_digest",
+      "child_terminal_build",
+      "child_github_projection",
       "readback"
     ],
     "completion_rule": "no_verified_delta_no_success"

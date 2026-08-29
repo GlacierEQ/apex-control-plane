@@ -25,7 +25,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -38,6 +40,9 @@ API_ROOT = "https://api.buildkite.com/v2"
 GITHUB_API_ROOT = "https://api.github.com"
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS_PATH = ROOT / "config" / "genius_buildkite_targets.json"
+BUILD_URL_RE = re.compile(
+    r"^https://buildkite\.com/(?P<org>[^/]+)/(?P<slug>[^/]+)/builds/(?P<number>\d+)(?:/.*)?$"
+)
 
 
 def load_target_registry(path: Path = TARGETS_PATH) -> dict[str, Any]:
@@ -54,6 +59,7 @@ def load_target_registry(path: Path = TARGETS_PATH) -> dict[str, Any]:
         "github_repository",
         "status_context",
         "pipeline_file",
+        "role",
     }
     seen_slugs: set[str] = set()
     seen_repos: set[str] = set()
@@ -432,16 +438,21 @@ def github_buildkite_projection(
     context: str,
 ) -> dict[str, Any] | None:
     payload = github_json(f"/repos/{repository}/commits/{commit}/status")
-    for item in (payload or {}).get("statuses") or []:
-        if isinstance(item, dict) and item.get("context") == context:
-            return {
-                "context": context,
-                "state": item.get("state"),
-                "description": item.get("description"),
-                "target_url": item.get("target_url"),
-                "updated_at": item.get("updated_at"),
-            }
-    return None
+    matches = [
+        item
+        for item in (payload or {}).get("statuses") or []
+        if isinstance(item, dict) and item.get("context") == context
+    ]
+    if not matches:
+        return None
+    item = max(matches, key=lambda value: str(value.get("updated_at") or ""))
+    return {
+        "context": context,
+        "state": item.get("state"),
+        "description": item.get("description"),
+        "target_url": item.get("target_url"),
+        "updated_at": item.get("updated_at"),
+    }
 
 
 def should_trigger_for_projection(projection: dict[str, Any] | None) -> bool:
@@ -502,6 +513,134 @@ def verify_returned_build_commit(
             "Build commit mismatch: "
             f"requested={requested_commit} returned={returned}"
         )
+
+
+def parse_buildkite_build_url(value: str, expected_slug: str) -> int:
+    match = BUILD_URL_RE.fullmatch(value)
+    if not match:
+        raise RuntimeError(f"Invalid Buildkite build URL: {value!r}")
+    if match.group("org") != ORG:
+        raise RuntimeError(
+            f"Buildkite organization mismatch in URL: {match.group('org')!r}"
+        )
+    if match.group("slug") != expected_slug:
+        raise RuntimeError(
+            f"Buildkite pipeline mismatch in URL: {match.group('slug')!r}"
+        )
+    return int(match.group("number"))
+
+
+def resolve_build_number(result: dict[str, Any]) -> int:
+    build = result.get("build")
+    if isinstance(build, dict) and build.get("number") is not None:
+        return int(build["number"])
+    projection = result.get("preexisting_projection")
+    if not isinstance(projection, dict):
+        raise RuntimeError(
+            f"No Buildkite build reference for {result.get('repository')}"
+        )
+    target_url = str(projection.get("target_url") or "")
+    slug = str((result.get("pipeline") or {}).get("slug") or "")
+    return parse_buildkite_build_url(target_url, slug)
+
+
+def await_terminal_child_builds(
+    api: BuildkiteAPI,
+    results: list[dict[str, Any]],
+) -> None:
+    policy = REGISTRY["verification_policy"]
+    if not bool(policy.get("wait_for_terminal_builds", True)):
+        return
+
+    interval = max(1.0, float(policy["poll_interval_seconds"]))
+    success_states = {str(value) for value in policy["build_success_states"]}
+    failure_states = {str(value) for value in policy["build_failure_states"]}
+
+    for result in results:
+        result["build_number"] = resolve_build_number(result)
+
+    pending = set(range(len(results)))
+    deadline = time.monotonic() + float(policy["build_timeout_seconds"])
+    while pending:
+        for index in list(pending):
+            result = results[index]
+            slug = str(result["pipeline"]["slug"])
+            number = int(result["build_number"])
+            path = (
+                f"/organizations/{urllib.parse.quote(ORG)}/pipelines/"
+                f"{urllib.parse.quote(slug)}/builds/{number}"
+            )
+            build = api.request("GET", path)
+            if not isinstance(build, dict):
+                raise RuntimeError(f"Invalid Buildkite build readback for {slug} #{number}")
+            state = str(build.get("state") or "")
+            result["terminal_build"] = compact_build(build)
+            if state in success_states:
+                verify_returned_build_commit(build, str(result["source_commit"]))
+                if str(build.get("branch") or "") != DEFAULT_BRANCH:
+                    raise RuntimeError(
+                        f"Buildkite branch mismatch for {slug} #{number}: "
+                        f"{build.get('branch')!r}"
+                    )
+                pending.remove(index)
+            elif state in failure_states:
+                raise RuntimeError(
+                    f"Buildkite child failed: {slug} #{number} state={state}"
+                )
+        if pending:
+            if time.monotonic() >= deadline:
+                names = [str(results[index]["pipeline"]["slug"]) for index in pending]
+                raise RuntimeError(
+                    "Timed out waiting for Buildkite child builds: " + ", ".join(names)
+                )
+            time.sleep(interval)
+
+    projection_success = {
+        str(value) for value in policy["projection_success_states"]
+    }
+    projection_failure = {
+        str(value) for value in policy["projection_failure_states"]
+    }
+    pending = set(range(len(results)))
+    deadline = time.monotonic() + float(policy["projection_timeout_seconds"])
+    while pending:
+        for index in list(pending):
+            result = results[index]
+            projection = github_buildkite_projection(
+                str(result["repository"]),
+                str(result["source_commit"]),
+                str(result["status_context"]),
+            )
+            result["terminal_projection"] = projection
+            if projection is None:
+                continue
+            state = str(projection.get("state") or "")
+            if state in projection_failure:
+                raise RuntimeError(
+                    f"GitHub Buildkite projection failed for {result['repository']}: "
+                    f"state={state}"
+                )
+            if state in projection_success:
+                slug = str(result["pipeline"]["slug"])
+                projected_number = parse_buildkite_build_url(
+                    str(projection.get("target_url") or ""),
+                    slug,
+                )
+                if projected_number != int(result["build_number"]):
+                    raise RuntimeError(
+                        f"GitHub projection points to wrong Buildkite build for {slug}: "
+                        f"expected={result['build_number']} actual={projected_number}"
+                    )
+                result["verification_status"] = "VERIFIED_TERMINAL_SUCCESS"
+                pending.remove(index)
+        if pending:
+            if time.monotonic() >= deadline:
+                names = [str(results[index]["repository"]) for index in pending]
+                raise RuntimeError(
+                    "Timed out waiting for GitHub Buildkite success projection: "
+                    + ", ".join(names)
+                )
+            time.sleep(interval)
 
 
 def verify_pipeline_readback(
@@ -627,6 +766,8 @@ def main() -> int:
         results.append(
             {
                 "repository": spec["github_repository"],
+                "role": spec["role"],
+                "status_context": spec["status_context"],
                 "source_commit": main_sha,
                 "mutation": mutation,
                 "pipeline": compact_pipeline(readback),
@@ -637,10 +778,12 @@ def main() -> int:
             }
         )
 
+    await_terminal_child_builds(api, results)
+
     receipt = {
         "schema": "glaciereq.apex.genius-buildkite-reconciliation.v1",
         "generated_at": utc_now(),
-        "status": "PIPELINES_RECONCILED_AND_HEADS_ENSURED",
+        "status": "PIPELINES_RECONCILED_AND_HEADS_VERIFIED",
         "organization": ORG,
         "target_registry": {
             "path": str(TARGETS_PATH.relative_to(ROOT)),
