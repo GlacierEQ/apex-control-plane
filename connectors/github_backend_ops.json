@@ -1,0 +1,118 @@
+{
+  "id": "github.backend_ops",
+  "name": "GitHub Backend Ops",
+  "authority": {
+    "source_system": "GitHub",
+    "source_scope": "GlacierEQ",
+    "gateway_is_authority": false,
+    "role": "implementation_gateway"
+  },
+  "runtime": {
+    "plane": "supabase-backend-ops",
+    "execution_entrypoint": "apex-github-router",
+    "router_contract_version": 2,
+    "router_deploy_version": 1,
+    "router_sha256": "c43eea0c9f9c3462fbba7bc28a65d74aea7774496b7f28e604386834b40b6196",
+    "internal_gateway": "apex-github-connector",
+    "gateway_deploy_version": 2,
+    "gateway_sha256": "d0293fc170ebb186939308948727ed6cc19e911482b2b4e77b39d7609532520c",
+    "webhook_ingress": "apex-github-webhook",
+    "webhook_deploy_version": 1,
+    "webhook_sha256": "3bdce070f1f6866a7632d939483969b2bc61895c4afc8038f03d13764ec3a303",
+    "webhook_worker": "apex-github-webhook-worker",
+    "webhook_worker_deploy_version": 1,
+    "webhook_worker_sha256": "47438064591a41d657134334874d2e2c09caad21df8f26de37e819041c28aba2",
+    "auth_model": "GitHub App + Keymaster + short-lived single-repository installation tokens",
+    "token_persisted": false,
+    "mode": "pr_first"
+  },
+  "invariants": {
+    "destructive_actions_allowed": false,
+    "default_branch_writes_allowed": false,
+    "code_write_readback_required": true,
+    "compare_before_write_required_by_router": true,
+    "atomic_resource_lease_required_for_router_writes": true,
+    "successful_write_idempotency": true,
+    "append_only_execution_receipts": true,
+    "append_only_route_decisions": true,
+    "append_only_webhook_results": true,
+    "raw_webhook_payload_persisted": false
+  },
+  "app_permissions_observed": {
+    "metadata": "read",
+    "contents": "write",
+    "issues": "write",
+    "actions": "write",
+    "workflows": "write",
+    "pull_requests": "not_granted"
+  },
+  "routing": {
+    "permission_aware": true,
+    "circuit_breaker": {
+      "enabled": true,
+      "failure_threshold": 3,
+      "open_seconds": 60
+    },
+    "read_retry": {
+      "enabled": true,
+      "retryable_statuses": [429, 502, 503, 504],
+      "max_attempts": 3
+    },
+    "write_retry": {
+      "automatic": false,
+      "reason": "avoid duplicate external mutation after ambiguous outcomes"
+    },
+    "full_pull_read": "github.native:get_pr_info/search_prs",
+    "pull_create": "github.native:create_pull_request",
+    "pull_review": "github.native:add_review_to_pr"
+  },
+  "concurrency": {
+    "lease_table": "github_connector_operation_leases_v2",
+    "lease_rpc": "acquire_github_connector_lease_v2",
+    "release_rpc": "release_github_connector_lease_v2",
+    "contents_put_precondition": "expected_before_sha",
+    "stale_precondition_status": 409
+  },
+  "webhooks": {
+    "delivery_table": "github_webhook_deliveries_v1",
+    "queue_table": "github_webhook_event_queue_v1",
+    "result_table": "github_webhook_event_results_v1",
+    "queue_claim_rpc": "claim_github_webhook_events_v1",
+    "queue_finish_rpc": "finish_github_webhook_event_v1",
+    "verified_delivery_trigger": "github_webhook_delivery_enqueue_v1",
+    "worker_refreshes": ["repo.get", "actions.runs", "issue.get", "pull.get(issue_projection)"],
+    "signed_delivery_state": "pending shared-secret binding"
+  },
+  "receipts": {
+    "execution": "github_connector_receipts_v1",
+    "routing": "github_connector_route_decisions_v2",
+    "webhook_delivery": "github_webhook_deliveries_v1",
+    "webhook_result": "github_webhook_event_results_v1",
+    "request_hash": "sha256",
+    "response_hash": "sha256",
+    "github_request_id": true,
+    "before_after_sha": true
+  },
+  "verification": {
+    "health": "passed",
+    "repositories_accessible": 1184,
+    "read_suite": "passed",
+    "gateway_write_readback": "passed",
+    "router_native_pull_fallback": "passed",
+    "router_compare_before_write": "passed",
+    "router_stale_write_rejection": "passed",
+    "atomic_resource_lease": "passed",
+    "webhook_queue_trigger": "passed with retained synthetic probe",
+    "webhook_worker": "passed repo.get + actions.runs",
+    "webhook_fail_closed": "passed: 503 webhook_secret_not_bound",
+    "webhook_signed_delivery": "pending shared-secret binding"
+  },
+  "migrations": [
+    "20260831154923 github_backend_ops_connector_v1",
+    "20260831160850 github_backend_ops_routing_v1",
+    "20260831170616 github_backend_ops_router_v2",
+    "20260831170915 github_webhook_worker_v1",
+    "20260831171646 github_backend_ops_router_registry_v2"
+  ],
+  "status": "runtime_verified_router_v2"
+}
