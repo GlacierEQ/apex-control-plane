@@ -193,6 +193,45 @@ def test_control_receipt_is_deterministic_and_source_bound() -> None:
     assert first["job_count"] > 0
 
 
+
+def test_live_legal_graph_vocabulary_is_lossless_and_actionable() -> None:
+    expanded = graph()
+    legacy_nodes = [
+        {"id": "DKT-10", "type": "DOCKET", "label": "Docket 10"},
+        {
+            "id": "EVD-1",
+            "type": "EVIDENCE",
+            "label": "Derivative evidence",
+            "fact_state": "SOURCE_BOUND_DERIVATIVE",
+        },
+        {"id": "AUTH-1", "type": "AUTHORITY", "label": "Controlling authority"},
+        {"id": "ATK-1", "type": "ATTACK", "label": "Attack lane"},
+        {"id": "DEF-1", "type": "DEFENSE", "label": "Best defense"},
+        {"id": "REB-1", "type": "REBUTTAL", "label": "Rebuttal"},
+        {"id": "CAU-1", "type": "CAUSATION", "label": "Causation chain"},
+        {"id": "REM-1", "type": "REMEDY", "label": "Relief path"},
+        {"id": "COM-1", "type": "COMMUNICATION", "label": "Notice communication"},
+    ]
+    expanded["nodes"].extend(legacy_nodes)
+    for node in legacy_nodes:
+        expanded["edges"].append(
+            {"from": "CASE-001", "to": node["id"], "type": "PRESERVES"}
+        )
+
+    validate_case_graph(expanded)
+    jobs = compile_jack_execution_queue(expanded)
+    capabilities = {job.capability for job in jobs}
+
+    assert {
+        "evidence_integrity",
+        "legal_authority_mapping",
+        "legal_attack_development",
+        "defense_testing",
+        "rebuttal_hardening",
+        "causation_development",
+        "remedy_projection",
+    } <= capabilities
+
 def test_execution_queue_has_no_fixed_case_object_ceiling() -> None:
     expanded = graph()
     for index in range(120):
