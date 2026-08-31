@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
 
 CASE_GRAPH_SCHEMA = "casebuilder4000.case-graph.v2"
@@ -477,3 +479,88 @@ def build_control_plane_receipt(
         **body,
         "receipt_sha256": _sha256(body),
     }
+
+
+
+def _load_json_object(path: Path, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise JackCasebuilderContractError(f"cannot read {label} {path}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise JackCasebuilderContractError(f"{label} must be a JSON object: {path}")
+    return value
+
+
+def _write_json(path: Path, value: Mapping[str, Any] | Sequence[Mapping[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(value, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="jack-casebuilder-control",
+        description=(
+            "Validate a Casebuilder V2 case graph and compile its internal Jack "
+            "execution queue and source-bound control receipt."
+        ),
+    )
+    parser.add_argument("--graph", type=Path, required=True)
+    parser.add_argument("--conversion", type=Path)
+    parser.add_argument("--build-receipt", type=Path)
+    parser.add_argument("--queue-output", type=Path)
+    parser.add_argument("--receipt-output", type=Path)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    graph = _load_json_object(args.graph, "case graph")
+    conversion = (
+        _load_json_object(args.conversion, "conversion bundle")
+        if args.conversion is not None
+        else None
+    )
+    build_receipt = (
+        _load_json_object(args.build_receipt, "build receipt")
+        if args.build_receipt is not None
+        else None
+    )
+    receipt = build_control_plane_receipt(
+        graph,
+        conversion=conversion,
+        build_receipt=build_receipt,
+    )
+    queue = compile_jack_execution_queue(graph, conversion=conversion)
+    queue_payload = {
+        "schema": "glaciereq.jack-casebuilder-execution-queue.v1",
+        "case_id": graph["case_id"],
+        "job_count": len(queue),
+        "jobs": [job.as_dict() for job in queue],
+        "external_action_authorized": False,
+    }
+    if args.queue_output is not None:
+        _write_json(args.queue_output, queue_payload)
+    if args.receipt_output is not None:
+        _write_json(args.receipt_output, receipt)
+    print(
+        json.dumps(
+            {
+                "case_id": graph["case_id"],
+                "job_count": len(queue),
+                "capabilities": receipt["capabilities"],
+                "receipt_sha256": receipt["receipt_sha256"],
+                "external_action_authorized": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
