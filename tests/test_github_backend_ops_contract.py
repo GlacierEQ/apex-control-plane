@@ -93,7 +93,8 @@ def test_webhook_wake_is_vault_authenticated():
     assert "validate_github_worker_wake_secret_v1" in source
     assert "/functions/v1/apex-github-webhook-worker" in source
     assert "SERVICE_ROLE" in source
-    assert "github_worker_wake_secret_v1" not in source
+    assert "vault.decrypted_secrets" not in source
+    assert "resolve_github_worker_wake_secret_v1" not in source
 
 
 def test_router_worker_and_scheduler_migrations_are_present():
