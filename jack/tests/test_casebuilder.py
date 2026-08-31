@@ -44,6 +44,7 @@ def test_gap_becomes_discovery_target():
     )
     assert target.id == "DISC-GAP-1"
     assert target.allegation_id == "ALG-1"
+    assert target.gap_ids == ("GAP-1",)
 
 
 def test_mental_state_blocks_high_promotion_without_support():
@@ -176,3 +177,127 @@ def test_missing_actor_act_or_causation_blocks_pleading_ready():
     ):
         harden(allegation, sources)
         assert allegation.promotion_state != PromotionState.PLEADING_READY
+
+
+def _packet_with(allegation):
+    packet = CasePacket("MATTER-1")
+    packet.add_source(_source("SRC-1"))
+    packet.add_source(_source("SRC-2"))
+    packet.add_source(_source("SRC-3"))
+    packet.actors["ACT-DOE-1"] = {"role": "unknown actor"}
+    packet.events["EVT-1"] = {"description": "event"}
+    packet.harms["HARM-1"] = {"description": "loss of use"}
+    packet.remedies["REM-1"] = {"description": "damages"}
+    packet.add_allegation(allegation)
+    return packet
+
+
+def test_primary_source_proof_state_controls_promotion():
+    sources = {
+        "SRC-1": _source("SRC-1", ProofState.QUARANTINED),
+        "SRC-2": _source("SRC-2"),
+        "SRC-3": _source("SRC-3"),
+    }
+    allegation = _allegation()
+    harden(allegation, sources)
+    assert allegation.promotion_state == PromotionState.STRUCTURED
+
+
+def test_satisfied_element_requires_usable_support():
+    sources = {
+        "SRC-1": _source("SRC-1"),
+        "SRC-2": _source("SRC-2"),
+        "SRC-3": _source("SRC-3"),
+    }
+    allegation = _allegation(
+        elements=[ElementSupport("control", (), (), (), True)]
+    )
+    harden(allegation, sources)
+    assert allegation.promotion_state == PromotionState.ELEMENT_MAPPED
+
+
+def test_packet_rejects_empty_matter_and_source_key_identity_mismatch():
+    packet = CasePacket("")
+    packet.sources["SRC-ALIAS"] = _source("SRC-REAL")
+    errors = packet.validate()
+    assert "matter_id must be non-empty" in errors
+    assert (
+        "source map key SRC-ALIAS does not match source id SRC-REAL"
+        in errors
+    )
+
+
+def test_invalid_discovery_priority_is_rejected():
+    try:
+        gap_to_discovery_target(
+            allegation_id="ALG-1",
+            gap_id="GAP-1",
+            missing_fact="identity",
+            record_or_witness="custody log",
+            custodian="entity",
+            route="discovery",
+            priority="URGENT",
+        )
+    except ValueError as exc:
+        assert "invalid discovery priority" in str(exc)
+    else:
+        raise AssertionError("invalid priority accepted")
+
+
+def test_unresolved_gap_requires_matching_discovery_target():
+    allegation = _allegation(missing_evidence_ids=["GAP-1"])
+    packet = _packet_with(allegation)
+    errors = packet.validate()
+    assert "ALG-1: unresolved gap GAP-1 has no discovery target" in errors
+
+    target = gap_to_discovery_target(
+        allegation_id="ALG-1",
+        gap_id="GAP-1",
+        missing_fact="identity",
+        record_or_witness="custody log",
+        custodian="entity",
+        route="discovery",
+        priority="P0",
+    )
+    packet.add_discovery_target(target)
+    allegation.discovery_target_ids.append(target.id)
+    errors = packet.validate()
+    assert "ALG-1: unresolved gap GAP-1 has no discovery target" not in errors
+
+
+def test_duplicate_source_ids_do_not_inflate_score():
+    sources = {
+        "SRC-1": _source("SRC-1"),
+        "SRC-2": _source("SRC-2"),
+        "SRC-3": _source("SRC-3"),
+    }
+    unique = _allegation(corroborating_source_ids=["SRC-2"])
+    repeated = _allegation(
+        id="ALG-2",
+        corroborating_source_ids=["SRC-2"] * 5,
+    )
+    harden(unique, sources)
+    harden(repeated, sources)
+    assert repeated.impact_score == unique.impact_score
+
+
+def test_packet_validation_rejects_duplicate_source_ids():
+    allegation = _allegation(corroborating_source_ids=["SRC-2", "SRC-2"])
+    packet = _packet_with(allegation)
+    errors = packet.validate()
+    assert "ALG-1: duplicate corroborating source ids: SRC-2" in errors
+
+
+def test_compiled_packet_sections_are_detached_snapshots():
+    packet = _packet_with(_allegation())
+    compiled = compile_case(packet)
+
+    compiled["actors"]["ACT-DOE-1"]["role"] = "mutated"
+    compiled["events"]["EVT-1"]["description"] = "mutated"
+    compiled["harms"]["HARM-1"]["description"] = "mutated"
+    compiled["remedies"]["REM-1"]["description"] = "mutated"
+
+    assert packet.actors["ACT-DOE-1"]["role"] == "unknown actor"
+    assert packet.events["EVT-1"]["description"] == "event"
+    assert packet.harms["HARM-1"]["description"] == "loss of use"
+    assert packet.remedies["REM-1"]["description"] == "damages"
