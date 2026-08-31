@@ -120,6 +120,13 @@ class DiscoveryTarget:
     custodian: str
     route: str
     priority: str = "P1"
+    gap_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.priority not in {"P0", "P1", "P2", "P3"}:
+            raise ValueError(f"invalid discovery priority: {self.priority}")
+        if any(not gap_id or not gap_id.strip() for gap_id in self.gap_ids):
+            raise ValueError("discovery gap_ids must be non-empty")
 
 
 @dataclass
@@ -148,7 +155,33 @@ class CasePacket:
 
     def validate(self) -> list[str]:
         errors: list[str] = []
+        if not self.matter_id or not self.matter_id.strip():
+            errors.append("matter_id must be non-empty")
+        for source_id, source in self.sources.items():
+            if source_id != source.id:
+                errors.append(
+                    f"source map key {source_id} does not match source id {source.id}"
+                )
         for allegation in self.allegations.values():
+            source_lists = (
+                ("primary", allegation.primary_source_ids),
+                ("corroborating", allegation.corroborating_source_ids),
+                ("contradictory", allegation.contradictory_source_ids),
+                ("mental-state", allegation.mental_state_source_ids),
+            )
+            for label, source_ids in source_lists:
+                duplicates = _duplicate_ids(source_ids)
+                if duplicates:
+                    errors.append(
+                        f"{allegation.id}: duplicate {label} source ids: "
+                        + ", ".join(duplicates)
+                    )
+            for element in allegation.elements:
+                if element.satisfied and not element.supporting_source_ids:
+                    errors.append(
+                        f"{allegation.id}: satisfied element {element.name} "
+                        "has no supporting source"
+                    )
             for actor_id in allegation.actor_ids:
                 if actor_id not in self.actors:
                     errors.append(f"{allegation.id}: missing actor {actor_id}")
@@ -158,6 +191,7 @@ class CasePacket:
             for source_id in _all_source_refs(allegation):
                 if source_id not in self.sources:
                     errors.append(f"{allegation.id}: missing source {source_id}")
+            linked_gap_ids: set[str] = set()
             for target_id in allegation.discovery_target_ids:
                 target = self.discovery_targets.get(target_id)
                 if target is None:
@@ -166,6 +200,13 @@ class CasePacket:
                     errors.append(
                         f"{allegation.id}: discovery target {target_id} belongs to "
                         f"{target.allegation_id}"
+                    )
+                else:
+                    linked_gap_ids.update(target.gap_ids)
+            for gap_id in allegation.missing_evidence_ids:
+                if gap_id not in linked_gap_ids:
+                    errors.append(
+                        f"{allegation.id}: unresolved gap {gap_id} has no discovery target"
                     )
             for remedy_id in allegation.remedy_ids:
                 if remedy_id not in self.remedies:
@@ -196,12 +237,12 @@ class CasePacket:
             "contract_version": CONTRACT_VERSION,
             "matter_id": self.matter_id,
             "sources": {k: _serialize(v) for k, v in self.sources.items()},
-            "actors": self.actors,
-            "events": self.events,
+            "actors": _serialize(self.actors),
+            "events": _serialize(self.events),
             "allegations": {k: _serialize(v) for k, v in self.allegations.items()},
             "contradictions": {k: _serialize(v) for k, v in self.contradictions.items()},
-            "harms": self.harms,
-            "remedies": self.remedies,
+            "harms": _serialize(self.harms),
+            "remedies": _serialize(self.remedies),
             "discovery_targets": {k: _serialize(v) for k, v in self.discovery_targets.items()},
         }
 
@@ -212,6 +253,16 @@ def _insert_unique(mapping: dict[str, Any], key: str, value: Any) -> None:
     if key in mapping:
         raise ValueError(f"duplicate case object id: {key}")
     mapping[key] = value
+
+
+def _duplicate_ids(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for value in values:
+        if value in seen:
+            duplicates.add(value)
+        seen.add(value)
+    return sorted(duplicates)
 
 
 def _serialize(value: Any) -> Any:
@@ -232,6 +283,10 @@ def _all_source_refs(a: Allegation) -> set[str]:
         refs.update(element.supporting_source_ids)
         refs.update(element.contrary_source_ids)
     return refs
+
+
+def _source_is_usable(source: SourceRef) -> bool:
+    return proof_strength(source.proof_state) > 0
 
 
 def proof_strength(state: ProofState) -> int:
@@ -261,7 +316,24 @@ def attack(allegation: Allegation, sources: Mapping[str, SourceRef]) -> list[str
         defects.append("no elements mapped")
     elif any(not e.satisfied for e in allegation.elements):
         defects.append("one or more required elements unsatisfied")
+    for element in allegation.elements:
+        if element.satisfied and not element.supporting_source_ids:
+            defects.append(
+                f"satisfied element {element.name} has no supporting source"
+            )
+        elif element.satisfied and not any(
+            source_id in sources and _source_is_usable(sources[source_id])
+            for source_id in element.supporting_source_ids
+        ):
+            defects.append(
+                f"satisfied element {element.name} has no usable supporting source"
+            )
     missing_refs = [sid for sid in _all_source_refs(allegation) if sid not in sources]
+    if allegation.primary_source_ids and not any(
+        source_id in sources and _source_is_usable(sources[source_id])
+        for source_id in set(allegation.primary_source_ids)
+    ):
+        defects.append("no usable primary source")
     if missing_refs:
         defects.append("broken source references: " + ", ".join(sorted(missing_refs)))
     if allegation.mental_state_required and not allegation.mental_state_source_ids:
@@ -279,16 +351,20 @@ def attack(allegation: Allegation, sources: Mapping[str, SourceRef]) -> list[str
 
 def score(allegation: Allegation, sources: Mapping[str, SourceRef]) -> float:
     """Deterministic impact score; consequence never substitutes for proof."""
-    source_values = [proof_strength(sources[s].proof_state) for s in allegation.primary_source_ids if s in sources]
+    source_values = [
+        proof_strength(sources[source_id].proof_state)
+        for source_id in set(allegation.primary_source_ids)
+        if source_id in sources
+    ]
     proof = max(source_values, default=0)
     element_coverage = 5 * (sum(e.satisfied for e in allegation.elements) / len(allegation.elements)) if allegation.elements else 0
-    corroboration = min(5, len(allegation.corroborating_source_ids))
-    contradiction_power = min(5, len(allegation.contradictory_source_ids))
+    corroboration = min(5, len(set(allegation.corroborating_source_ids)))
+    contradiction_power = min(5, len(set(allegation.contradictory_source_ids)))
     actor = 5 if allegation.actor_ids else 0
-    mental = 5 if not allegation.mental_state_required else min(5, len(allegation.mental_state_source_ids) * 2.5)
+    mental = 5 if not allegation.mental_state_required else min(5, len(set(allegation.mental_state_source_ids)) * 2.5)
     defense = 5 if allegation.defenses and allegation.rebuttals else 2 if allegation.defenses else 0
-    harm = min(5, len(allegation.harm_ids) * 2.5)
-    remedy = min(5, len(allegation.remedy_ids) * 2.5)
+    harm = min(5, len(set(allegation.harm_ids)) * 2.5)
+    remedy = min(5, len(set(allegation.remedy_ids)) * 2.5)
     gap_penalty = min(15, len(allegation.missing_evidence_ids) * 3)
     return round(
         proof * 5 + element_coverage * 5 + corroboration * 3
@@ -307,11 +383,25 @@ def promote(allegation: Allegation, sources: Mapping[str, SourceRef]) -> Promoti
         return PromotionState.STRUCTURED
     if not allegation.primary_source_ids:
         return PromotionState.STRUCTURED
-    if any("broken source" in d for d in defects):
+    if any("broken source" in defect for defect in defects):
+        return PromotionState.STRUCTURED
+    if any("no usable primary source" in defect for defect in defects):
         return PromotionState.STRUCTURED
     if not allegation.elements:
         return PromotionState.SOURCED
-    if any(not e.satisfied for e in allegation.elements):
+    if any(not element.satisfied for element in allegation.elements):
+        return PromotionState.ELEMENT_MAPPED
+    if any(
+        element.satisfied
+        and (
+            not element.supporting_source_ids
+            or not any(
+                source_id in sources and _source_is_usable(sources[source_id])
+                for source_id in element.supporting_source_ids
+            )
+        )
+        for element in allegation.elements
+    ):
         return PromotionState.ELEMENT_MAPPED
     if not allegation.defenses:
         return PromotionState.ELEMENT_MAPPED
@@ -353,6 +443,7 @@ def gap_to_discovery_target(
         custodian=custodian,
         route=route,
         priority=priority,
+        gap_ids=(gap_id,),
     )
 
 
