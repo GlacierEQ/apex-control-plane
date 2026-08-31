@@ -1,0 +1,16 @@
+{
+  "schema": "APEX_CONTROL_PLANE_CASE_BINDING_RECEIPT_V1",
+  "case_id": "1FDV-23-0001009",
+  "timestamp": "2026-08-30 HST",
+  "action": "Register Jack CaseBuilder V5 whole-control-plane route",
+  "user_authorization": "User expressly requested the case be built into the whole control plane under JACK THE RIPPER CASEBUILDER / ALLEGATION FORGE.",
+  "protected_main": "Direct main write rejected because four status checks are required; this mutation is staged through the repository-required PR path.",
+  "safety_and_evidence_controls": [
+    "no fabricated source promotion",
+    "no unverified public accusation promotion",
+    "no restricted evidence copied into public GitHub",
+    "fuzzy identities quarantined",
+    "resolved source state cannot regress"
+  ],
+  "next_state": "P0 source acquisition and allegation promotion"
+}
