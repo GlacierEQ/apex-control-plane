@@ -22,6 +22,9 @@
     "webhook_worker": "apex-github-webhook-worker",
     "webhook_worker_deploy_version": 1,
     "webhook_worker_sha256": "47438064591a41d657134334874d2e2c09caad21df8f26de37e819041c28aba2",
+    "webhook_wake": "apex-github-webhook-wake",
+    "webhook_wake_deploy_version": 1,
+    "webhook_wake_sha256": "2ea781fcd5f9f6a21d3987adb5adcc2d1c2553da26bd16a8e81697917e1d58f9",
     "auth_model": "GitHub App + Keymaster + short-lived single-repository installation tokens",
     "token_persisted": false,
     "mode": "pr_first"
@@ -36,7 +39,8 @@
     "append_only_execution_receipts": true,
     "append_only_route_decisions": true,
     "append_only_webhook_results": true,
-    "raw_webhook_payload_persisted": false
+    "raw_webhook_payload_persisted": false,
+    "wake_secret_embedded_in_source": false
   },
   "app_permissions_observed": {
     "metadata": "read",
@@ -80,8 +84,12 @@
     "queue_claim_rpc": "claim_github_webhook_events_v1",
     "queue_finish_rpc": "finish_github_webhook_event_v1",
     "verified_delivery_trigger": "github_webhook_delivery_enqueue_v1",
+    "immediate_wake": "best-effort authenticated wake after enqueue",
+    "recovery_wake": "pg_cron every minute",
+    "wake_auth": "Vault-generated github_worker_wake_secret_v1",
+    "scheduler_job": "github-webhook-worker-v1",
     "worker_refreshes": ["repo.get", "actions.runs", "issue.get", "pull.get(issue_projection)"],
-    "signed_delivery_state": "pending shared-secret binding"
+    "signed_delivery_state": "pending shared GitHub App webhook secret binding"
   },
   "receipts": {
     "execution": "github_connector_receipts_v1",
@@ -102,17 +110,24 @@
     "router_compare_before_write": "passed",
     "router_stale_write_rejection": "passed",
     "atomic_resource_lease": "passed",
-    "webhook_queue_trigger": "passed with retained synthetic probe",
+    "webhook_queue_trigger": "passed",
     "webhook_worker": "passed repo.get + actions.runs",
+    "webhook_wake_unauthenticated": "rejected 401",
+    "webhook_wake_vault_authenticated": "passed 200",
+    "webhook_immediate_wake": "passed; event claimed once",
+    "webhook_retry_scheduler": "passed; cron job succeeded",
     "webhook_fail_closed": "passed: 503 webhook_secret_not_bound",
-    "webhook_signed_delivery": "pending shared-secret binding"
+    "webhook_signed_delivery": "pending shared GitHub App webhook secret binding"
   },
   "migrations": [
     "20260831154923 github_backend_ops_connector_v1",
     "20260831160850 github_backend_ops_routing_v1",
     "20260831170616 github_backend_ops_router_v2",
     "20260831170915 github_webhook_worker_v1",
-    "20260831171646 github_backend_ops_router_registry_v2"
+    "20260831171646 github_backend_ops_router_registry_v2",
+    "20260831172232 github_webhook_worker_scheduler_v1",
+    "20260831172331 github_webhook_worker_wake_v1",
+    "20260831172617 github_webhook_worker_scheduler_registry_v1"
   ],
-  "status": "runtime_verified_router_v2"
+  "status": "runtime_verified_router_v2_event_autowake"
 }
