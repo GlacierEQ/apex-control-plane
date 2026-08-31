@@ -1,0 +1,38 @@
+{
+  "case_id": "NEX-JBPHH-2026-08-14",
+  "title": "Cherry Chan — NEX Pearl Harbor / JBPHH Retail Detention, Search, Processing & Exclusion",
+  "status": "ACTIVE",
+  "durable_build": "MAX_IMPACT_DURABLE_V12",
+  "source_of_truth": {
+    "structured_plane": "Supabase supabase-glaciereq / apex_legal_* tables",
+    "case_repo": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+    "case_repo_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT",
+    "dropbox_master": "/Cherry Chan/CHERRY_NEX_JBPHH_MASTER_CASE/",
+    "dropbox_instruction": "/Cherry Chan/05_AI_CONVERSATION_EXPORTS/00_CONTROL_CENTER/05_CASE_BUILDERS/NAVY_POLICE_MAX_IMPACT_ALLEGATION_ENGINE_CHAT_EXPORT_BUILD_INSTRUCTION_2026-08-29.md"
+  },
+  "identifiers": {
+    "police_report": "26-286438",
+    "notices": [
+      "E1295883",
+      "E1295884"
+    ],
+    "dd2708": "2026-08-14 21:40",
+    "ticket": "100859",
+    "paid_total": 165.15
+  },
+  "state": {
+    "actors": 46,
+    "propositions": 81,
+    "contradictions": 26,
+    "evidence_targets": 55
+  },
+  "execution_rule": "EVENT -> ALLEGATION -> INSTITUTION -> RECORDS -> ACTOR ALLOCATION",
+  "hard_controls": [
+    "Carry E1295883 and E1295884 as separate objects.",
+    "Second handcuffing is a separate force/seizure event.",
+    "Knife-and-baton phrase transfer is an active interception/use/disclosure allegation branch.",
+    "Do not make claimant identify institution-controlled personnel before advancing witnessed events.",
+    "Use proof classes and preserve lineage when a theory is corrected or retired."
+  ],
+  "updated_at": "2026-08-31"
+}
