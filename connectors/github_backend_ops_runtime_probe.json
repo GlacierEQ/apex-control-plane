@@ -1,0 +1,7 @@
+{
+  "connector_key": "github.backend_ops",
+  "status": "runtime_write_readback_verified",
+  "branch": "feat/github-backend-ops-connector-v1",
+  "proof": "created through the deployed backend-ops gateway; gateway readback must match before success",
+  "destructive_action": false
+}
