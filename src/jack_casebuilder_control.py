@@ -13,17 +13,30 @@ BUILD_RECEIPT_SCHEMA = "casebuilder4000.build-receipt.v2"
 ALLOWED_NODE_TYPES = {
     "CASE",
     "SOURCE",
+    "SOURCE_ROOT",
+    "DOCKET",
     "ACTOR",
     "EVENT",
+    "COMMUNICATION",
+    "EVIDENCE",
+    "AUTHORITY",
     "FACT",
     "ELEMENT",
     "ALLEGATION",
+    "THEORY",
     "CONTRADICTION",
-    "HARM",
     "KNOWLEDGE",
     "PATTERN",
+    "DEFENSE",
+    "REBUTTAL",
+    "CAUSATION",
+    "HARM",
     "DISCOVERY_TARGET",
+    "REMEDY",
     "ACCOUNTABILITY_PATH",
+    "ATTACK",
+    "DEADLINE",
+    "FILING_PARAGRAPH",
     "CROSS_EXAM",
 }
 
@@ -271,6 +284,80 @@ def compile_jack_execution_queue(
                     "convert_hardened_allegation_to_downstream_work_products",
                     f"allegation is {status}, tier {tier}",
                 )
+        elif node_type in {"EVIDENCE", "SOURCE", "SOURCE_ROOT"}:
+            fact_state = str(node.get("fact_state") or "").casefold()
+            if any(token in fact_state for token in ("unresolved", "contradict", "derivative")):
+                add(
+                    node_id,
+                    node_type,
+                    "evidence_integrity",
+                    86,
+                    "resolve_source_provenance_authentication_or_conflict",
+                    f"evidence/source state is {fact_state or 'unresolved'}",
+                )
+        elif node_type == "AUTHORITY":
+            add(
+                node_id,
+                node_type,
+                "legal_authority_mapping",
+                82,
+                "map_controlling_authority_to_case_elements_and_dates",
+                str(node.get("label") or "authority node"),
+            )
+        elif node_type == "ATTACK":
+            add(
+                node_id,
+                node_type,
+                "legal_attack_development",
+                78,
+                "bind_attack_to_surviving_allegations_elements_sources_and_remedies",
+                str(node.get("label") or "attack node"),
+            )
+        elif node_type == "DEFENSE":
+            add(
+                node_id,
+                node_type,
+                "defense_testing",
+                84,
+                "attack_strongest_defense_and_bind_rebuttal_support",
+                str(node.get("label") or "defense node"),
+            )
+        elif node_type == "REBUTTAL":
+            add(
+                node_id,
+                node_type,
+                "rebuttal_hardening",
+                82,
+                "source_lock_rebuttal_and_residual_risk",
+                str(node.get("label") or "rebuttal node"),
+            )
+        elif node_type == "CAUSATION":
+            add(
+                node_id,
+                node_type,
+                "causation_development",
+                80,
+                "trace_act_to_immediate_effect_to_decision_to_harm",
+                str(node.get("label") or "causation node"),
+            )
+        elif node_type == "REMEDY":
+            add(
+                node_id,
+                node_type,
+                "remedy_projection",
+                74,
+                "map_remedy_prerequisites_authority_and_supported_allegations",
+                str(node.get("label") or "remedy node"),
+            )
+        elif node_type == "DEADLINE":
+            add(
+                node_id,
+                node_type,
+                "deadline_review",
+                98,
+                "verify_deadline_source_and_bind_to_required_case_action",
+                str(node.get("label") or "deadline node"),
+            )
         elif node_type == "HARM":
             add(
                 node_id,
