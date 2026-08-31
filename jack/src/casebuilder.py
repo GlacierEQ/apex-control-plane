@@ -149,18 +149,37 @@ class CasePacket:
     def validate(self) -> list[str]:
         errors: list[str] = []
         for allegation in self.allegations.values():
+            for actor_id in allegation.actor_ids:
+                if actor_id not in self.actors:
+                    errors.append(f"{allegation.id}: missing actor {actor_id}")
+            for event_id in allegation.event_ids:
+                if event_id not in self.events:
+                    errors.append(f"{allegation.id}: missing event {event_id}")
             for source_id in _all_source_refs(allegation):
                 if source_id not in self.sources:
                     errors.append(f"{allegation.id}: missing source {source_id}")
             for target_id in allegation.discovery_target_ids:
-                if target_id not in self.discovery_targets:
+                target = self.discovery_targets.get(target_id)
+                if target is None:
                     errors.append(f"{allegation.id}: missing discovery target {target_id}")
+                elif target.allegation_id != allegation.id:
+                    errors.append(
+                        f"{allegation.id}: discovery target {target_id} belongs to "
+                        f"{target.allegation_id}"
+                    )
             for remedy_id in allegation.remedy_ids:
                 if remedy_id not in self.remedies:
                     errors.append(f"{allegation.id}: missing remedy {remedy_id}")
             for harm_id in allegation.harm_ids:
                 if harm_id not in self.harms:
                     errors.append(f"{allegation.id}: missing harm {harm_id}")
+        for target in self.discovery_targets.values():
+            if target.allegation_id not in self.allegations:
+                errors.append(f"{target.id}: missing allegation {target.allegation_id}")
+            elif target.id not in self.allegations[target.allegation_id].discovery_target_ids:
+                errors.append(
+                    f"{target.id}: not attached to allegation {target.allegation_id}"
+                )
         for contradiction in self.contradictions.values():
             if contradiction.allegation_id not in self.allegations:
                 errors.append(f"{contradiction.id}: missing allegation {contradiction.allegation_id}")
@@ -284,6 +303,8 @@ def promote(allegation: Allegation, sources: Mapping[str, SourceRef]) -> Promoti
     defects = attack(allegation, sources)
     if allegation.proof_state in {ProofState.QUARANTINED, ProofState.DISPROVED}:
         return PromotionState.RAW
+    if not allegation.actor_ids or not allegation.act.strip():
+        return PromotionState.STRUCTURED
     if not allegation.primary_source_ids:
         return PromotionState.STRUCTURED
     if any("broken source" in d for d in defects):
@@ -297,6 +318,8 @@ def promote(allegation: Allegation, sources: Mapping[str, SourceRef]) -> Promoti
     if not allegation.rebuttals:
         return PromotionState.DEFENSE_TESTED
     if allegation.mental_state_required and not allegation.mental_state_source_ids:
+        return PromotionState.DEFENSE_TESTED
+    if not allegation.causation.strip():
         return PromotionState.DEFENSE_TESTED
     if allegation.missing_evidence_ids:
         return PromotionState.HARDENED
@@ -320,6 +343,8 @@ def gap_to_discovery_target(
     priority: str = "P1",
 ) -> DiscoveryTarget:
     """Prime directive: unresolved gaps become executable acquisition targets."""
+    if not gap_id or not gap_id.strip():
+        raise ValueError("gap_id must be non-empty")
     return DiscoveryTarget(
         id=f"DISC-{gap_id}",
         allegation_id=allegation_id,
@@ -362,12 +387,12 @@ def render_allegation_card(a: Allegation) -> str:
 
 
 def compile_case(packet: CasePacket) -> dict[str, Any]:
-    """Harden allegations, validate references, and emit the machine packet."""
-    for allegation in packet.allegations.values():
-        harden(allegation, packet.sources)
+    """Validate first, then harden allegations and emit the machine packet."""
     errors = packet.validate()
     if errors:
         raise ValueError("case packet invalid: " + "; ".join(errors))
+    for allegation in packet.allegations.values():
+        harden(allegation, packet.sources)
     result = packet.to_dict()
     result["metrics"] = {
         "sources": len(packet.sources),
