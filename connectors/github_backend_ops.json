@@ -111,7 +111,8 @@
     "20260831154923 github_backend_ops_connector_v1",
     "20260831160850 github_backend_ops_routing_v1",
     "20260831170616 github_backend_ops_router_v2",
-    "20260831170915 github_webhook_worker_v1"
+    "20260831170915 github_webhook_worker_v1",
+    "20260831171646 github_backend_ops_router_registry_v2"
   ],
   "status": "runtime_verified_router_v2"
 }
