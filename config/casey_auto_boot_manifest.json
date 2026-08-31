@@ -139,7 +139,10 @@
       "requires_case_lane": true,
       "requires_live_deadline_check_when_relevant": true,
       "requires_adaptive_source_ranking": true,
-      "requires_correction_feedback": true
+      "requires_correction_feedback": true,
+      "requires_jack_casebuilder": true,
+      "requires_casebuilder_projection_readback": true,
+      "requires_allegation_element_source_lineage": true
     },
     "systems": {
       "requires_current_sources": true,
@@ -182,6 +185,19 @@
     "compare Dockets 193 and 201",
     "reconstruct Docket 203, October 1, and Dockets 208/210",
     "build proposition-to-source proof table",
+    "load Jack CaseBuilder graph and project anchor allegations, proof gaps, discovery targets, remedies, and conversion readiness",
     "build strongest verified filing or referral artifact"
-  ]
-}
+  ],
+  "jack_casebuilder": {
+    "status": "required-legal-case",
+    "binding_config_path": "config/jack_casebuilder.json",
+    "adapter_module": "src/jack_casebuilder_adapter.py",
+    "requires_structured_case_graph": true,
+    "requires_actor_event_fact_allegation_lineage": true,
+    "requires_element_mapping": true,
+    "requires_defense_testing": true,
+    "requires_discovery_target_projection": true,
+    "requires_remedy_projection": true,
+    "projection_is_not_primary_evidence": true
+  }
+}\n
