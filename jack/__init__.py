@@ -1,1 +1,43 @@
-"""Jack relentless-execution binding package."""
+"""Jack execution and CaseBuilder runtime package."""
+
+from jack.src.casebuilder import (
+    CONTRACT_ID as CASEBUILDER_CONTRACT_ID,
+    CONTRACT_VERSION as CASEBUILDER_CONTRACT_VERSION,
+    Allegation,
+    CasePacket,
+    Contradiction,
+    DiscoveryTarget,
+    ElementSupport,
+    Lane,
+    ProofState,
+    PromotionState,
+    SourceRef,
+    attack,
+    compile_case,
+    gap_to_discovery_target,
+    harden,
+    promote,
+    render_allegation_card,
+    score,
+)
+
+__all__ = [
+    "CASEBUILDER_CONTRACT_ID",
+    "CASEBUILDER_CONTRACT_VERSION",
+    "Allegation",
+    "CasePacket",
+    "Contradiction",
+    "DiscoveryTarget",
+    "ElementSupport",
+    "Lane",
+    "ProofState",
+    "PromotionState",
+    "SourceRef",
+    "attack",
+    "compile_case",
+    "gap_to_discovery_target",
+    "harden",
+    "promote",
+    "render_allegation_card",
+    "score",
+]
