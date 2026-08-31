@@ -589,7 +589,7 @@ def render_allegation_card(a: Allegation) -> str:
     for e in a.elements:
         lines.append(
             f"- [{'x' if e.satisfied else ' '}] {e.name} "
-            f"| status={element_status(e, {}) .value if e.status else 'DERIVED_AT_COMPILE'} "
+            f"| status={e.status.value if e.status else 'DERIVED_AT_COMPILE'} "
             f"| support={list(e.supporting_source_ids)} "
             f"| contrary={list(e.contrary_source_ids)} | gaps={list(e.gap_ids)}"
         )
