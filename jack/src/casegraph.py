@@ -22,6 +22,7 @@ from jack.src.casebuilder import (
     PromotionState,
     SourceRef,
     compile_case,
+    element_status,
     proof_strength,
     promote,
 )
@@ -37,6 +38,13 @@ class ContradictionState(str, Enum):
     IMPEACHMENT_READY = "IMPEACHMENT_READY"
 
 
+class PatternState(str, Enum):
+    POTENTIAL = "POTENTIAL"
+    SUPPORTED = "SUPPORTED"
+    ESTABLISHED = "ESTABLISHED"
+    QUARANTINED = "QUARANTINED"
+
+
 @dataclass(frozen=True)
 class FactProposition:
     id: str
@@ -45,6 +53,29 @@ class FactProposition:
     actor_ids: tuple[str, ...] = ()
     event_ids: tuple[str, ...] = ()
     disputed: bool = False
+
+
+@dataclass(frozen=True)
+class IncidentNode:
+    id: str
+    title: str
+    event_ids: tuple[str, ...]
+    actor_ids: tuple[str, ...]
+    source_ids: tuple[str, ...]
+    date_or_period: str = ""
+    location_or_context: str = ""
+
+
+@dataclass(frozen=True)
+class InstitutionNode:
+    id: str
+    name: str
+    authority: tuple[str, ...] = ()
+    policy_source_ids: tuple[str, ...] = ()
+    system_names: tuple[str, ...] = ()
+    notice_fact_ids: tuple[str, ...] = ()
+    supervision_actor_ids: tuple[str, ...] = ()
+    pattern_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -70,6 +101,19 @@ class EventNode:
     fact_ids: tuple[str, ...]
     source_ids: tuple[str, ...]
     harm_ids: tuple[str, ...] = ()
+    incident_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PatternNode:
+    id: str
+    title: str
+    mechanism: str
+    event_ids: tuple[str, ...]
+    actor_ids: tuple[str, ...]
+    source_ids: tuple[str, ...]
+    allegation_ids: tuple[str, ...] = ()
+    state: PatternState = PatternState.POTENTIAL
 
 
 @dataclass(frozen=True)
@@ -124,6 +168,7 @@ class AllegationLink:
     mental_state_fact_ids: tuple[str, ...] = ()
     defense_ids: tuple[str, ...] = ()
     contradiction_ids: tuple[str, ...] = ()
+    pattern_ids: tuple[str, ...] = ()
     accountability_path_ids: tuple[str, ...] = ()
     limitations_timeliness: str | None = None
     do_not_overstate: str | None = None
@@ -184,8 +229,11 @@ class CaseGraph:
     matter_id: str
     packet: CasePacket = field(init=False)
     facts: dict[str, FactProposition] = field(default_factory=dict)
+    incidents: dict[str, IncidentNode] = field(default_factory=dict)
+    institutions: dict[str, InstitutionNode] = field(default_factory=dict)
     actor_nodes: dict[str, ActorNode] = field(default_factory=dict)
     event_nodes: dict[str, EventNode] = field(default_factory=dict)
+    patterns: dict[str, PatternNode] = field(default_factory=dict)
     defense_theories: dict[str, DefenseTheory] = field(default_factory=dict)
     damage_records: dict[str, DamageRecord] = field(default_factory=dict)
     remedy_paths: dict[str, RemedyPath] = field(default_factory=dict)
@@ -207,6 +255,12 @@ class CaseGraph:
     def add_fact(self, fact: FactProposition) -> None:
         _put_unique(self.facts, fact.id, fact)
 
+    def add_incident(self, incident: IncidentNode) -> None:
+        _put_unique(self.incidents, incident.id, incident)
+
+    def add_institution(self, institution: InstitutionNode) -> None:
+        _put_unique(self.institutions, institution.id, institution)
+
     def add_actor(self, actor: ActorNode) -> None:
         _put_unique(self.actor_nodes, actor.id, actor)
         self.packet.actors[actor.id] = _serialize(actor)
@@ -214,6 +268,9 @@ class CaseGraph:
     def add_event(self, event: EventNode) -> None:
         _put_unique(self.event_nodes, event.id, event)
         self.packet.events[event.id] = _serialize(event)
+
+    def add_pattern(self, pattern: PatternNode) -> None:
+        _put_unique(self.patterns, pattern.id, pattern)
 
     def add_allegation(
         self, allegation: Allegation, link: AllegationLink | None = None
@@ -280,7 +337,34 @@ class CaseGraph:
                 if event_id not in self.event_nodes:
                     errors.append(f"{fact.id}: missing event {event_id}")
 
+        for incident in self.incidents.values():
+            for event_id in incident.event_ids:
+                if event_id not in self.event_nodes:
+                    errors.append(f"{incident.id}: missing event {event_id}")
+            for actor_id in incident.actor_ids:
+                if actor_id not in self.actor_nodes:
+                    errors.append(f"{incident.id}: missing actor {actor_id}")
+            for source_id in incident.source_ids:
+                if source_id not in self.packet.sources:
+                    errors.append(f"{incident.id}: missing source {source_id}")
+
+        for institution in self.institutions.values():
+            for source_id in institution.policy_source_ids:
+                if source_id not in self.packet.sources:
+                    errors.append(f"{institution.id}: missing policy source {source_id}")
+            for fact_id in institution.notice_fact_ids:
+                if fact_id not in self.facts:
+                    errors.append(f"{institution.id}: missing notice fact {fact_id}")
+            for actor_id in institution.supervision_actor_ids:
+                if actor_id not in self.actor_nodes:
+                    errors.append(f"{institution.id}: missing supervisory actor {actor_id}")
+            for pattern_id in institution.pattern_ids:
+                if pattern_id not in self.patterns:
+                    errors.append(f"{institution.id}: missing pattern {pattern_id}")
+
         for actor in self.actor_nodes.values():
+            if actor.entity_id and actor.entity_id not in self.institutions:
+                errors.append(f"{actor.id}: missing institution {actor.entity_id}")
             for source_id in actor.source_ids:
                 if source_id not in self.packet.sources:
                     errors.append(f"{actor.id}: missing source {source_id}")
@@ -305,6 +389,31 @@ class CaseGraph:
             for harm_id in event.harm_ids:
                 if harm_id not in self.damage_records:
                     errors.append(f"{event.id}: missing damage {harm_id}")
+            for incident_id in event.incident_ids:
+                if incident_id not in self.incidents:
+                    errors.append(f"{event.id}: missing incident {incident_id}")
+
+        for pattern in self.patterns.values():
+            for event_id in pattern.event_ids:
+                if event_id not in self.event_nodes:
+                    errors.append(f"{pattern.id}: missing event {event_id}")
+            for actor_id in pattern.actor_ids:
+                if actor_id not in self.actor_nodes:
+                    errors.append(f"{pattern.id}: missing actor {actor_id}")
+            for source_id in pattern.source_ids:
+                if source_id not in self.packet.sources:
+                    errors.append(f"{pattern.id}: missing source {source_id}")
+            for allegation_id in pattern.allegation_ids:
+                if allegation_id not in self.packet.allegations:
+                    errors.append(f"{pattern.id}: missing allegation {allegation_id}")
+            if pattern.state in {PatternState.SUPPORTED, PatternState.ESTABLISHED} and len(set(pattern.event_ids)) < 2:
+                errors.append(
+                    f"{pattern.id}: supported pattern requires at least two events"
+                )
+            if pattern.state is PatternState.ESTABLISHED and len(set(pattern.source_ids)) < 2:
+                errors.append(
+                    f"{pattern.id}: established pattern requires at least two sources"
+                )
 
         for allegation_id, allegation in self.packet.allegations.items():
             link = self.allegation_links.get(allegation_id)
@@ -320,6 +429,12 @@ class CaseGraph:
             ):
                 if fact_id not in self.facts:
                     errors.append(f"{allegation_id}: missing fact {fact_id}")
+            for entity_id in link.entity_ids:
+                if entity_id not in self.institutions:
+                    errors.append(f"{allegation_id}: missing institution {entity_id}")
+            for pattern_id in link.pattern_ids:
+                if pattern_id not in self.patterns:
+                    errors.append(f"{allegation_id}: missing pattern {pattern_id}")
             for defense_id in link.defense_ids:
                 defense = self.defense_theories.get(defense_id)
                 if defense is None:
