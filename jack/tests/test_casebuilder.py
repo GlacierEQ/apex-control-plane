@@ -95,3 +95,84 @@ def test_compile_rejects_missing_source():
         assert "missing source SRC-1" in str(exc)
     else:
         raise AssertionError("invalid packet compiled")
+
+
+def test_discovery_target_must_belong_to_referencing_allegation():
+    packet = CasePacket("MATTER-1")
+    packet.add_source(_source("SRC-1"))
+    packet.add_source(_source("SRC-2"))
+    packet.add_source(_source("SRC-3"))
+    packet.actors["ACT-DOE-1"] = {"role": "unknown actor"}
+    packet.events["EVT-1"] = {"description": "event"}
+    packet.harms["HARM-1"] = {"description": "loss of use"}
+    packet.remedies["REM-1"] = {"description": "damages"}
+    allegation = _allegation(discovery_target_ids=["DISC-GAP-1"])
+    packet.add_allegation(allegation)
+    packet.add_discovery_target(
+        gap_to_discovery_target(
+            allegation_id="ALG-OTHER",
+            gap_id="GAP-1",
+            missing_fact="identity",
+            record_or_witness="custody log",
+            custodian="entity",
+            route="discovery",
+        )
+    )
+    errors = packet.validate()
+    assert any("belongs to ALG-OTHER" in error for error in errors)
+
+
+def test_compile_rejects_missing_actor_and_event_references():
+    packet = CasePacket("MATTER-1")
+    packet.add_source(_source("SRC-1"))
+    packet.add_source(_source("SRC-2"))
+    packet.add_source(_source("SRC-3"))
+    packet.harms["HARM-1"] = {"description": "loss of use"}
+    packet.remedies["REM-1"] = {"description": "damages"}
+    packet.add_allegation(_allegation())
+    errors = packet.validate()
+    assert "ALG-1: missing actor ACT-DOE-1" in errors
+    assert "ALG-1: missing event EVT-1" in errors
+
+
+def test_blank_gap_id_is_rejected():
+    try:
+        gap_to_discovery_target(
+            allegation_id="ALG-1",
+            gap_id="   ",
+            missing_fact="identity",
+            record_or_witness="custody log",
+            custodian="entity",
+            route="discovery",
+        )
+    except ValueError as exc:
+        assert "gap_id must be non-empty" in str(exc)
+    else:
+        raise AssertionError("blank gap id accepted")
+
+
+def test_failed_compile_does_not_mutate_allegation():
+    packet = CasePacket("MATTER-1")
+    allegation = _allegation()
+    packet.add_allegation(allegation)
+    assert allegation.promotion_state == PromotionState.RAW
+    assert allegation.impact_score == 0.0
+    try:
+        compile_case(packet)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid packet compiled")
+    assert allegation.promotion_state == PromotionState.RAW
+    assert allegation.impact_score == 0.0
+
+
+def test_missing_actor_act_or_causation_blocks_pleading_ready():
+    sources = {"SRC-1": _source("SRC-1"), "SRC-2": _source("SRC-2"), "SRC-3": _source("SRC-3")}
+    for allegation in (
+        _allegation(actor_ids=[]),
+        _allegation(act=" "),
+        _allegation(causation=" "),
+    ):
+        harden(allegation, sources)
+        assert allegation.promotion_state != PromotionState.PLEADING_READY
