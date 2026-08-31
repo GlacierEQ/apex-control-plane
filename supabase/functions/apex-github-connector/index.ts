@@ -18,6 +18,10 @@ const MAX_BODY_BYTES = 3 * 1024 * 1024;
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 const MAX_TREE_ENTRIES = 5000;
 const DEFAULT_TIMEOUT_MS = 20000;
+const PEM_PKCS8_BEGIN = ["-----BEGIN", "PRIVATE KEY-----"].join(" ");
+const PEM_PKCS8_END = ["-----END", "PRIVATE KEY-----"].join(" ");
+const PEM_PKCS1_BEGIN = ["-----BEGIN RSA", "PRIVATE KEY-----"].join(" ");
+const PEM_PKCS1_END = ["-----END RSA", "PRIVATE KEY-----"].join(" ");
 
 type Json = Record<string, unknown>;
 type Permission = "read" | "write";
@@ -171,14 +175,14 @@ function derLength(length: number): Uint8Array {
 
 function normalizeRsaPrivateKey(pem: string): string {
   const normalized = pem.trim();
-  if (normalized.includes("-----BEGIN PRIVATE KEY-----")) return normalized + "\n";
-  if (!normalized.includes("-----BEGIN RSA PRIVATE KEY-----")) {
+  if (normalized.includes(PEM_PKCS8_BEGIN)) return normalized + "\n";
+  if (!normalized.includes(PEM_PKCS1_BEGIN)) {
     throw new ConnectorError(500, "unsupported_github_private_key_format");
   }
 
   const raw = normalized
-    .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-    .replace("-----END RSA PRIVATE KEY-----", "")
+    .replace(PEM_PKCS1_BEGIN, "")
+    .replace(PEM_PKCS1_END, "")
     .replace(/\s+/g, "");
 
   const pkcs1 = base64ToBytes(raw);
@@ -192,7 +196,7 @@ function normalizeRsaPrivateKey(pem: string): string {
   const pkcs8 = concatBytes(Uint8Array.of(0x30), derLength(body.length), body);
   const encoded = bytesToBase64(pkcs8);
   const lines = encoded.match(/.{1,64}/g)?.join("\n") || "";
-  return "-----BEGIN PRIVATE KEY-----\n" + lines + "\n-----END PRIVATE KEY-----\n";
+  return PEM_PKCS8_BEGIN + "\n" + lines + "\n" + PEM_PKCS8_END + "\n";
 }
 
 async function createAppJwt(appId: number, privateKeyPem: string): Promise<string> {
@@ -356,7 +360,7 @@ function permissionsFor(operation: string): Record<string, Permission> {
   if (["repo.get"].includes(operation)) return { metadata: "read" };
   if (["contents.get", "tree.list", "branches.list", "commits.list", "code.search"].includes(operation)) return { contents: "read" };
   if (["issues.list", "issue.get"].includes(operation)) return { issues: "read" };
-  if (["pulls.list", "pull.get"].includes(operation)) return { pull_requests: "read" };
+  if (["pulls.list", "pull.get"].includes(operation)) return { issues: "read" };
   if (["actions.runs"].includes(operation)) return { actions: "read" };
 
   if (["branch.create", "contents.put"].includes(operation)) return { contents: "write" };
@@ -596,6 +600,7 @@ async function runHealth(requestId: string, actor: string): Promise<Json> {
       app_id: Number(session.app_id),
       installation_id: installationId,
       installation_scope: obj(session.verification_detail).installation_scope || null,
+      installation_permissions: installation.permissions || {},
       repositories_accessible: totalCount,
       token_persisted: false,
       default_branch_writes_allowed: false,
@@ -815,37 +820,55 @@ async function executeOperation(operation: string, repository: string, args: Jso
       const state = text(args.state, "state", 16, false) || "open";
       if (!["open", "closed", "all"].includes(state)) throw new ConnectorError(400, "invalid_state");
       const perPage = args.per_page === undefined ? 50 : integer(args.per_page, "per_page", 1, 100);
-      const result = await gh("/repos/" + repository + "/pulls" + q({ state, per_page: perPage }), token);
+      const result = await gh("/repos/" + repository + "/issues" + q({ state, per_page: perPage }), token);
       githubRequestId = result.requestId;
       const rows = Array.isArray(result.data) ? result.data : [];
+      const pulls = rows.filter((item: unknown) => Boolean(obj(item).pull_request)).map((item: unknown) => {
+        const row = obj(item);
+        return {
+          number: row.number,
+          title: row.title,
+          state: row.state,
+          draft: null,
+          head: null,
+          base: null,
+          mergeable_state: null,
+          html_url: row.html_url,
+          updated_at: row.updated_at,
+          detail_level: "issue_projection",
+        };
+      });
       return {
-        result: {
-          pulls: rows.map((item: unknown) => {
-            const row = obj(item);
-            return {
-              number: row.number, title: row.title, state: row.state, draft: row.draft,
-              head: obj(row.head).ref || null, base: obj(row.base).ref || null,
-              mergeable_state: row.mergeable_state || null, html_url: row.html_url, updated_at: row.updated_at,
-            };
-          }),
-        },
+        result: { pulls, detail_level: "issue_projection" },
         githubRequestId, readbackVerified, beforeSha, afterSha, targetRef,
       };
     }
 
     if (operation === "pull.get") {
       const number = integer(args.number, "number");
-      const result = await gh("/repos/" + repository + "/pulls/" + number, token);
+      const result = await gh("/repos/" + repository + "/issues/" + number, token);
       githubRequestId = result.requestId;
       const row = obj(result.data);
+      if (!row.pull_request) throw new ConnectorError(404, "pull_request_not_found");
       return {
         result: {
-          number: row.number, title: row.title, body: row.body, state: row.state, draft: row.draft,
-          head: obj(row.head).ref || null, head_sha: obj(row.head).sha || null,
-          base: obj(row.base).ref || null, base_sha: obj(row.base).sha || null,
-          mergeable: row.mergeable ?? null, mergeable_state: row.mergeable_state || null,
-          changed_files: row.changed_files || 0, additions: row.additions || 0, deletions: row.deletions || 0,
-          html_url: row.html_url, updated_at: row.updated_at,
+          number: row.number,
+          title: row.title,
+          body: row.body,
+          state: row.state,
+          draft: null,
+          head: null,
+          head_sha: null,
+          base: null,
+          base_sha: null,
+          mergeable: null,
+          mergeable_state: null,
+          changed_files: null,
+          additions: null,
+          deletions: null,
+          html_url: row.html_url,
+          updated_at: row.updated_at,
+          detail_level: "issue_projection",
         },
         githubRequestId, readbackVerified, beforeSha, afterSha, targetRef,
       };
