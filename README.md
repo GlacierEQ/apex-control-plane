@@ -193,4 +193,4 @@ The CaseBuilder surface carries:
 
 `SOURCE -> FACT -> EVENT -> ACTOR -> ALLEGATION -> ELEMENT -> CONTRADICTION -> HARM -> DEFENSE -> DISCOVERY TARGET -> REMEDY -> ACCOUNTABILITY PATH`
 
-The adapter validates graph integrity and exposes allegation maturity, critical discovery pressure, and unresolved proof gaps to APEX without treating the projection itself as primary evidence. The active 1FDV graph remains owned by the private `GlacierEQ/apex-legal-case` legal forge.
+The adapter validates graph integrity and exposes allegation maturity, critical discovery pressure, and unresolved proof gaps to APEX without treating the projection itself as primary evidence. The adapter is case-agnostic: the existing 1FDV binding remains the default compatibility target, while any private matter may supply a conforming validated projection without copying its evidence into this public repository. The full contract is [`docs/JACK_CASEBUILDER_CONTROL_PLANE.md`](docs/JACK_CASEBUILDER_CONTROL_PLANE.md).
