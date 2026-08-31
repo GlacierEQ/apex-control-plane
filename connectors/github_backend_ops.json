@@ -1,0 +1,75 @@
+{
+  "id": "github.backend_ops",
+  "name": "GitHub Backend Ops",
+  "authority": {
+    "source_system": "GitHub",
+    "source_scope": "GlacierEQ",
+    "gateway_is_authority": false,
+    "role": "implementation_gateway"
+  },
+  "runtime": {
+    "plane": "supabase-backend-ops",
+    "edge_function": "apex-github-connector",
+    "webhook_function": "apex-github-webhook",
+    "auth_model": "GitHub App + Keymaster + short-lived single-repository installation tokens",
+    "token_persisted": false,
+    "mode": "pr_first"
+  },
+  "invariants": {
+    "destructive_actions_allowed": false,
+    "default_branch_writes_allowed": false,
+    "code_write_readback_required": true,
+    "successful_write_idempotency": true,
+    "append_only_receipts": true,
+    "raw_webhook_payload_persisted": false
+  },
+  "operations": {
+    "read": [
+      "health",
+      "repo.get",
+      "contents.get",
+      "tree.list",
+      "branches.list",
+      "commits.list",
+      "code.search",
+      "issues.list",
+      "issue.get",
+      "pulls.list",
+      "pull.get",
+      "actions.runs"
+    ],
+    "write": [
+      "branch.create",
+      "contents.put",
+      "issue.create",
+      "issue.comment",
+      "pull.create",
+      "pull.comment",
+      "pull.review",
+      "workflow.dispatch"
+    ],
+    "intentionally_absent": [
+      "delete_file",
+      "delete_branch",
+      "delete_repository",
+      "merge_pull_request",
+      "force_update_ref",
+      "secret_export"
+    ]
+  },
+  "receipts": {
+    "execution": "github_connector_receipts_v1",
+    "webhook": "github_webhook_deliveries_v1",
+    "request_hash": "sha256",
+    "response_hash": "sha256",
+    "github_request_id": true,
+    "before_after_sha": true
+  },
+  "webhook": {
+    "state": "deployed_awaiting_secret_binding",
+    "verification": "X-Hub-Signature-256 HMAC-SHA256",
+    "dedupe": "X-GitHub-Delivery",
+    "raw_payload_persisted": false
+  },
+  "status": "deployed_unprobed"
+}
