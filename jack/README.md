@@ -30,3 +30,16 @@ ONNX SHA-256: `5602367fb172d7457c9cc7dc57e87e6aa765e8bc53cfbe8662468c5ad91d338b`
 
 Jack attacks execution failure, arguments, contradictions, source gaps, and broken workflows.
 The contract does not authorize violence, threats, unlawful access, unauthorized external actions, or fabrication.
+
+
+## CaseBuilder / Allegation Forge
+
+Jack now includes a case-construction layer in addition to the relentless execution gate.
+
+- `CASEBUILDER.md` — operating doctrine and hardening loop.
+- `config/casebuilder_contract.json` — machine contract.
+- `src/casebuilder.py` — source-linked allegation graph, attack/hardening, scoring, promotion, discovery-target conversion, rendering, and case compilation.
+- `../legal/schemas/casebuilder_case.schema.json` — external packet schema.
+- `tests/test_casebuilder.py` — fail-closed regression tests.
+
+Private case evidence must remain outside this public repository. The runtime accepts private packets at execution time and preserves source lineage without publishing the underlying evidence.
