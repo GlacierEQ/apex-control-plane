@@ -1,0 +1,89 @@
+{
+  "id": "github.backend_ops",
+  "name": "GitHub Backend Ops",
+  "authority": {
+    "source_system": "GitHub",
+    "source_scope": "GlacierEQ",
+    "gateway_is_authority": false,
+    "role": "implementation_gateway"
+  },
+  "runtime": {
+    "plane": "supabase-backend-ops",
+    "edge_function": "apex-github-connector",
+    "edge_function_version": 2,
+    "edge_function_sha256": "d0293fc170ebb186939308948727ed6cc19e911482b2b4e77b39d7609532520c",
+    "webhook_function": "apex-github-webhook",
+    "webhook_function_version": 1,
+    "webhook_function_sha256": "3bdce070f1f6866a7632d939483969b2bc61895c4afc8038f03d13764ec3a303",
+    "auth_model": "GitHub App + Keymaster + short-lived single-repository installation tokens",
+    "token_persisted": false,
+    "mode": "pr_first"
+  },
+  "invariants": {
+    "destructive_actions_allowed": false,
+    "default_branch_writes_allowed": false,
+    "code_write_readback_required": true,
+    "successful_write_idempotency": true,
+    "append_only_receipts": true,
+    "raw_webhook_payload_persisted": false
+  },
+  "app_permissions_observed": {
+    "metadata": "read",
+    "contents": "write",
+    "issues": "write",
+    "actions": "write",
+    "workflows": "write",
+    "pull_requests": "not_granted"
+  },
+  "local_operations": {
+    "verified_reads": [
+      "health",
+      "repo.get",
+      "contents.get",
+      "tree.list",
+      "branches.list",
+      "commits.list",
+      "code.search",
+      "issues.list",
+      "pulls.list(issue_projection)",
+      "pull.get(issue_projection)",
+      "actions.runs"
+    ],
+    "verified_writes": [
+      "contents.put(non_default_branch_with_hash_readback)"
+    ],
+    "available_unverified_writes": [
+      "branch.create",
+      "issue.create",
+      "issue.comment",
+      "pull.comment",
+      "workflow.dispatch"
+    ],
+    "disabled_for_current_app": [
+      "pull.create",
+      "pull.review"
+    ]
+  },
+  "composition": {
+    "full_pull_read": "github.native:get_pr_info/search_prs",
+    "pull_create": "github.native:create_pull_request",
+    "pull_review": "github.native:add_review_to_pr"
+  },
+  "receipts": {
+    "execution": "github_connector_receipts_v1",
+    "webhook": "github_webhook_deliveries_v1",
+    "request_hash": "sha256",
+    "response_hash": "sha256",
+    "github_request_id": true,
+    "before_after_sha": true
+  },
+  "verification": {
+    "health": "passed",
+    "repositories_accessible": 1184,
+    "read_suite": "passed after permission-aware PR projection repair",
+    "write_probe": "passed contents.put with matching requested/readback sha256",
+    "webhook_fail_closed": "passed: 503 webhook_secret_not_bound with zero delivery rows",
+    "webhook_signed_delivery": "pending shared-secret binding"
+  },
+  "status": "runtime_verified"
+}
