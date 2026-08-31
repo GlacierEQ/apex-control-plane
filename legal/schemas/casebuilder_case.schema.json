@@ -3,104 +3,417 @@
   "$id": "https://glaciereq.local/schemas/jtr-casebuilder-case.schema.json",
   "title": "Jack CaseBuilder Case Packet",
   "type": "object",
-  "required": ["contract_id","contract_version","matter_id","sources","actors","events","allegations","contradictions","harms","remedies","discovery_targets"],
+  "required": [
+    "contract_id",
+    "contract_version",
+    "matter_id",
+    "sources",
+    "actors",
+    "events",
+    "allegations",
+    "contradictions",
+    "harms",
+    "remedies",
+    "discovery_targets"
+  ],
   "properties": {
-    "contract_id": {"const":"JTR-CASEBUILDER-v1"},
-    "contract_version": {"type":"string"},
-    "matter_id": {"type":"string","minLength":1},
-    "sources": {"type":"object","additionalProperties":{"$ref":"#/$defs/source"}},
-    "actors": {"type":"object","additionalProperties":{"type":"object"}},
-    "events": {"type":"object","additionalProperties":{"type":"object"}},
-    "allegations": {"type":"object","additionalProperties":{"$ref":"#/$defs/allegation"}},
-    "contradictions": {"type":"object","additionalProperties":{"$ref":"#/$defs/contradiction"}},
-    "harms": {"type":"object","additionalProperties":{"type":"object"}},
-    "remedies": {"type":"object","additionalProperties":{"type":"object"}},
-    "discovery_targets": {"type":"object","additionalProperties":{"$ref":"#/$defs/discovery_target"}},
-    "metrics": {"type":"object"}
+    "contract_id": {
+      "const": "JTR-CASEBUILDER-v1"
+    },
+    "contract_version": {
+      "type": "string"
+    },
+    "matter_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "actors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "allegations": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/allegation"
+      }
+    },
+    "contradictions": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/contradiction"
+      }
+    },
+    "harms": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "remedies": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "discovery_targets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/discovery_target"
+      }
+    },
+    "metrics": {
+      "type": "object"
+    }
   },
   "$defs": {
-    "proof_state": {"enum":["VERIFIED_PRIMARY","CORROBORATED","FIRSTHAND_CONTEMPORANEOUS","ATTRIBUTED","STRONG_INFERENCE","ALLEGED","UNRESOLVED","CONTRADICTED","QUARANTINED","DISPROVED"]},
-    "promotion_state": {"enum":["RAW","STRUCTURED","SOURCED","CORROBORATED","ELEMENT_MAPPED","DEFENSE_TESTED","HARDENED","PLEADING_READY","REFERRAL_READY","TRIAL_READY"]},
+    "proof_state": {
+      "enum": [
+        "VERIFIED_PRIMARY",
+        "CORROBORATED",
+        "FIRSTHAND_CONTEMPORANEOUS",
+        "ATTRIBUTED",
+        "STRONG_INFERENCE",
+        "ALLEGED",
+        "UNRESOLVED",
+        "CONTRADICTED",
+        "QUARANTINED",
+        "DISPROVED"
+      ]
+    },
+    "promotion_state": {
+      "enum": [
+        "RAW",
+        "STRUCTURED",
+        "SOURCED",
+        "CORROBORATED",
+        "ELEMENT_MAPPED",
+        "DEFENSE_TESTED",
+        "HARDENED",
+        "PLEADING_READY",
+        "REFERRAL_READY",
+        "TRIAL_READY"
+      ]
+    },
     "source": {
-      "type":"object",
-      "required":["id","source_type","locator","proof_state"],
-      "properties":{
-        "id":{"type":"string","minLength":1},
-        "source_type":{"type":"string"},
-        "locator":{"type":"string"},
-        "proof_state":{"$ref":"#/$defs/proof_state"},
-        "excerpt":{"type":"string"},
-        "timestamp":{"type":["string","null"]},
-        "hash":{"type":["string","null"]}
+      "type": "object",
+      "required": [
+        "id",
+        "source_type",
+        "locator",
+        "proof_state"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_type": {
+          "type": "string"
+        },
+        "locator": {
+          "type": "string"
+        },
+        "proof_state": {
+          "$ref": "#/$defs/proof_state"
+        },
+        "excerpt": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "element": {
-      "type":"object",
-      "required":["name","supporting_source_ids","contrary_source_ids","gap_ids","satisfied"],
-      "properties":{
-        "name":{"type":"string","minLength":1},
-        "supporting_source_ids":{"type":"array","items":{"type":"string"}},
-        "contrary_source_ids":{"type":"array","items":{"type":"string"}},
-        "gap_ids":{"type":"array","items":{"type":"string"}},
-        "satisfied":{"type":"boolean"}
+      "type": "object",
+      "required": [
+        "name",
+        "supporting_source_ids",
+        "contrary_source_ids",
+        "gap_ids",
+        "satisfied"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supporting_source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contrary_source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "gap_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "satisfied": {
+          "type": "boolean"
+        }
       }
     },
     "allegation": {
-      "type":"object",
-      "required":["id","title","lane","actor_ids","event_ids","act","factual_theory","legal_theory","elements","primary_source_ids","proof_state","promotion_state"],
-      "properties":{
-        "id":{"type":"string"},
-        "title":{"type":"string"},
-        "lane":{"enum":["FACTUAL","PROCEDURAL","ETHICAL","CIVIL","ADMINISTRATIVE","EVIDENTIARY","POTENTIAL_CRIMINAL"]},
-        "actor_ids":{"type":"array","items":{"type":"string"}},
-        "event_ids":{"type":"array","items":{"type":"string"}},
-        "act":{"type":"string"},
-        "factual_theory":{"type":"string"},
-        "legal_theory":{"type":"string"},
-        "elements":{"type":"array","items":{"$ref":"#/$defs/element"}},
-        "primary_source_ids":{"type":"array","items":{"type":"string"}},
-        "corroborating_source_ids":{"type":"array","items":{"type":"string"}},
-        "contradictory_source_ids":{"type":"array","items":{"type":"string"}},
-        "mental_state_required":{"type":["string","null"]},
-        "mental_state_source_ids":{"type":"array","items":{"type":"string"}},
-        "causation":{"type":"string"},
-        "harm_ids":{"type":"array","items":{"type":"string"}},
-        "defenses":{"type":"array","items":{"type":"string"}},
-        "rebuttals":{"type":"array","items":{"type":"string"}},
-        "missing_evidence_ids":{"type":"array","items":{"type":"string"}},
-        "discovery_target_ids":{"type":"array","items":{"type":"string"}},
-        "remedy_ids":{"type":"array","items":{"type":"string"}},
-        "proof_state":{"$ref":"#/$defs/proof_state"},
-        "promotion_state":{"$ref":"#/$defs/promotion_state"},
-        "confidence":{"type":"number"},
-        "impact_score":{"type":"number"},
-        "pleading_paragraph":{"type":"string"}
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "lane",
+        "actor_ids",
+        "event_ids",
+        "act",
+        "factual_theory",
+        "legal_theory",
+        "elements",
+        "primary_source_ids",
+        "proof_state",
+        "promotion_state"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "lane": {
+          "enum": [
+            "FACTUAL",
+            "PROCEDURAL",
+            "ETHICAL",
+            "CIVIL",
+            "ADMINISTRATIVE",
+            "EVIDENTIARY",
+            "POTENTIAL_CRIMINAL"
+          ]
+        },
+        "actor_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "event_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "act": {
+          "type": "string"
+        },
+        "factual_theory": {
+          "type": "string"
+        },
+        "legal_theory": {
+          "type": "string"
+        },
+        "elements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/element"
+          }
+        },
+        "primary_source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "corroborating_source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contradictory_source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mental_state_required": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mental_state_source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "causation": {
+          "type": "string"
+        },
+        "harm_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "defenses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rebuttals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "discovery_target_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "remedy_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "proof_state": {
+          "$ref": "#/$defs/proof_state"
+        },
+        "promotion_state": {
+          "$ref": "#/$defs/promotion_state"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "impact_score": {
+          "type": "number"
+        },
+        "pleading_paragraph": {
+          "type": "string"
+        }
       }
     },
     "contradiction": {
-      "type":"object",
-      "required":["id","allegation_id","proposition","left_source_id","right_source_id","materiality"],
-      "properties":{
-        "id":{"type":"string"},
-        "allegation_id":{"type":"string"},
-        "proposition":{"type":"string"},
-        "left_source_id":{"type":"string"},
-        "right_source_id":{"type":"string"},
-        "materiality":{"type":"string"},
-        "resolution_target_id":{"type":["string","null"]}
+      "type": "object",
+      "required": [
+        "id",
+        "allegation_id",
+        "proposition",
+        "left_source_id",
+        "right_source_id",
+        "materiality"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "allegation_id": {
+          "type": "string"
+        },
+        "proposition": {
+          "type": "string"
+        },
+        "left_source_id": {
+          "type": "string"
+        },
+        "right_source_id": {
+          "type": "string"
+        },
+        "materiality": {
+          "type": "string"
+        },
+        "resolution_target_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "discovery_target": {
-      "type":"object",
-      "required":["id","allegation_id","missing_fact","record_or_witness","custodian","route","priority"],
-      "properties":{
-        "id":{"type":"string"},
-        "allegation_id":{"type":"string"},
-        "missing_fact":{"type":"string"},
-        "record_or_witness":{"type":"string"},
-        "custodian":{"type":"string"},
-        "route":{"type":"string"},
-        "priority":{"enum":["P0","P1","P2","P3"]}
+      "type": "object",
+      "required": [
+        "id",
+        "allegation_id",
+        "missing_fact",
+        "record_or_witness",
+        "custodian",
+        "route",
+        "priority"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "allegation_id": {
+          "type": "string"
+        },
+        "missing_fact": {
+          "type": "string"
+        },
+        "record_or_witness": {
+          "type": "string"
+        },
+        "custodian": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "priority": {
+          "enum": [
+            "P0",
+            "P1",
+            "P2",
+            "P3"
+          ]
+        },
+        "gap_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
       }
     }
   }
