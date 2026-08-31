@@ -1,0 +1,30 @@
+{
+  "matterId": "LINKEDIN-PROFILE-EMPLOYMENT-2026",
+  "state": "ACTIVE",
+  "class": "CAREER_PROFILE_AND_POTENTIAL_ADVERSE_ACTION",
+  "ownerRepo": "GlacierEQ/apex-legal-case",
+  "sourceRepos": [
+    "GlacierEQ/job-application",
+    "GlacierEQ/apex-legal-case",
+    "GlacierEQ/Casebuilder4000",
+    "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+    "GlacierEQ/monolith"
+  ],
+  "canonicalPointers": {
+    "profile": "GlacierEQ/job-application/LINKEDIN_PROFILE_FINAL.md",
+    "resume": "GlacierEQ/job-application/RESUME.md",
+    "dossier": "GlacierEQ/apex-legal-case/case-master/cases/linkedin-profile-2026/CASE_DOSSIER.md",
+    "state": "GlacierEQ/apex-legal-case/case-master/cases/linkedin-profile-2026/CASE_STATE.json",
+    "allegations": "GlacierEQ/apex-legal-case/case-master/cases/linkedin-profile-2026/ALLEGATION_FORGE_INDEX.json",
+    "discovery": "GlacierEQ/apex-legal-case/case-master/cases/linkedin-profile-2026/DISCOVERY_MATRIX.md",
+    "casebuilder": "GlacierEQ/Casebuilder4000/evidence_sources/linkedin-profile-2026/CASE_IMPORT.json",
+    "casebrain": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX/CASEBRAIN_V3/cases/linkedin-profile-2026/CASE_STATE.json",
+    "monolith": "GlacierEQ/monolith/domains/linkedin_profile_case.md"
+  },
+  "lanes": {
+    "careerProfile": "ACTIVE",
+    "adverseActionLegal": "DORMANT_UNTIL_SOURCE_BACKED_EVENT"
+  },
+  "invariant": "Facts, allegations, legal hypotheses, and career inferences remain separately classified. Downstream systems may not promote source state by repetition.",
+  "nextStateTrigger": "Native LinkedIn profile/export or specific employer/application/adverse-action source acquired"
+}
