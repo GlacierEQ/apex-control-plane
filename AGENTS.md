@@ -30,3 +30,15 @@ The Control Plane may route, execute, verify, persist, and report. It must prese
 This repository provides APEX runtime control-plane capability: orchestration, continuity, routing, proof-bound state, receipts, and execution-state integrity.
 
 Project direction from OPERATOR remains distinguishable from framework material, evidence, and agent inference. Source attribution is part of correctness.
+
+
+## Jack CaseBuilder Legal Profile
+
+For `legal_case` work, the control plane treats Jack the Ripper CaseBuilder as a required structured projection, not optional documentation.
+
+Binding: `config/jack_casebuilder.json`  
+Adapter: `src/jack_casebuilder_adapter.py`
+
+The adapter must preserve source identity and may never promote an allegation into evidence. It fails structural validation when allegations lose actor/event links, source lineage, element mapping, defenses, harms, remedies, or referenced objects. Missing elements remain development targets. Unknown actors remain discovery targets.
+
+Legal-case runtime should expose anchor allegations, development allegations, pleading-ready allegations, critical/high discovery targets, and unresolved proof gaps so the execution kernel can route work toward actual case advancement.
