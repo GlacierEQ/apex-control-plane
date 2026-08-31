@@ -1,12 +1,19 @@
 {
   "capability_id": "jack-casebuilder-allegation-forge",
   "contract_id": "JTR-CASEBUILDER-v1",
+  "graph_contract_id": "JTR-CASEGRAPH-v1",
   "prime_directive": "TURN EVERY MATERIAL EVENT INTO A PROPOSITION THAT CAN BE PROVEN, ATTACKED, STRENGTHENED, AND USED.",
   "runtime": "jack/src/casebuilder.py",
+  "graph_runtime": "jack/src/casegraph.py",
   "contract": "jack/config/casebuilder_contract.json",
+  "graph_contract": "jack/config/casebuilder_graph_contract.json",
   "schema": "legal/schemas/casebuilder_case.schema.json",
+  "graph_schema": "legal/schemas/casebuilder_graph.schema.json",
   "doctrine": "jack/CASEBUILDER.md",
-  "tests": "jack/tests/test_casebuilder.py",
+  "tests": [
+    "jack/tests/test_casebuilder.py",
+    "jack/tests/test_casegraph.py"
+  ],
   "lanes": [
     "FACTUAL",
     "PROCEDURAL",
@@ -15,6 +22,22 @@
     "ADMINISTRATIVE",
     "EVIDENTIARY",
     "POTENTIAL_CRIMINAL"
+  ],
+  "typed_graph_objects": [
+    "SourceRef",
+    "FactProposition",
+    "ActorNode",
+    "EventNode",
+    "Allegation",
+    "AllegationLink",
+    "ElementSupport",
+    "Contradiction",
+    "ContradictionAssessment",
+    "DefenseTheory",
+    "DiscoveryTarget",
+    "DamageRecord",
+    "RemedyPath",
+    "AccountabilityPath"
   ],
   "promotion_states": [
     "RAW",
@@ -31,13 +54,18 @@
   "invariants": [
     "facts remain separate from legal theories",
     "unknown actors become modeled actors plus identity discovery",
+    "every graph allegation links factual propositions and duty/prohibition",
     "every legal theory maps elements to support, contrary proof, and gaps",
-    "contradictions attach to allegation objects",
+    "contradictions attach to allegation objects and carry explicit resolution state",
     "mental state requires independent support",
-    "damages require causation lineage",
+    "damages require event and source lineage",
     "core allegations require best-defense and rebuttal testing",
     "material gaps become executable discovery targets",
-    "invalid graph references fail compilation",
+    "P0/P1 unresolved discovery blocks trial-ready promotion",
+    "referral-ready requires a ready accountability path",
+    "invalid graph references fail before derived-state mutation",
+    "orphan case objects are surfaced",
+    "pressure is emitted as a transparent vector, not only a composite score",
     "private case evidence never enters the public control-plane repository"
   ],
   "outputs": [
@@ -53,6 +81,9 @@
     "defense matrix",
     "accountability map",
     "pleading map",
-    "referral map"
+    "referral map",
+    "promotion report",
+    "pressure map",
+    "orphan report"
   ]
 }
