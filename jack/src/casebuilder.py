@@ -40,6 +40,21 @@ class PromotionState(str, Enum):
     TRIAL_READY = "TRIAL_READY"
 
 
+class AllegationTier(str, Enum):
+    T1_DIRECTLY_PROVEN = "T1_DIRECTLY_PROVEN"
+    T2_STRONGLY_CORROBORATED = "T2_STRONGLY_CORROBORATED"
+    T3_SUPPORTED_INFERENCE = "T3_SUPPORTED_INFERENCE"
+    T4_DEVELOPMENT_NEEDED = "T4_DEVELOPMENT_NEEDED"
+    T5_SPECULATIVE_QUARANTINED = "T5_SPECULATIVE_QUARANTINED"
+
+
+class ElementStatus(str, Enum):
+    PROVEN = "PROVEN"
+    SUPPORTED = "SUPPORTED"
+    DISPUTED = "DISPUTED"
+    MISSING = "MISSING"
+
+
 class Lane(str, Enum):
     FACTUAL = "FACTUAL"
     PROCEDURAL = "PROCEDURAL"
@@ -68,6 +83,7 @@ class ElementSupport:
     contrary_source_ids: tuple[str, ...] = ()
     gap_ids: tuple[str, ...] = ()
     satisfied: bool = False
+    status: ElementStatus | None = None
 
 
 @dataclass
@@ -98,6 +114,7 @@ class Allegation:
     confidence: float = 0.0
     impact_score: float = 0.0
     pleading_paragraph: str = ""
+    tier: AllegationTier = AllegationTier.T4_DEVELOPMENT_NEEDED
 
 
 @dataclass(frozen=True)
@@ -182,6 +199,17 @@ class CasePacket:
                         f"{allegation.id}: satisfied element {element.name} "
                         "has no supporting source"
                     )
+                effective_status = element_status(element, self.sources)
+                if element.status in {ElementStatus.PROVEN, ElementStatus.SUPPORTED} and not element.satisfied:
+                    errors.append(
+                        f"{allegation.id}: element {element.name} claims "
+                        f"{element.status.value} but is not satisfied"
+                    )
+                if element.status is ElementStatus.PROVEN and effective_status is not ElementStatus.PROVEN:
+                    errors.append(
+                        f"{allegation.id}: element {element.name} claims PROVEN "
+                        "without verified-primary support"
+                    )
             for actor_id in allegation.actor_ids:
                 if actor_id not in self.actors:
                     errors.append(f"{allegation.id}: missing actor {actor_id}")
@@ -220,6 +248,12 @@ class CasePacket:
             elif target.id not in self.allegations[target.allegation_id].discovery_target_ids:
                 errors.append(
                     f"{target.id}: not attached to allegation {target.allegation_id}"
+                )
+            supported_tier = derive_tier(allegation, self.sources)
+            if _TIER_RANK[allegation.tier] < _TIER_RANK[supported_tier]:
+                errors.append(
+                    f"{allegation.id}: tier {allegation.tier.value} exceeds "
+                    f"supported tier {supported_tier.value}"
                 )
         for contradiction in self.contradictions.values():
             if contradiction.allegation_id not in self.allegations:
@@ -289,6 +323,15 @@ def _source_is_usable(source: SourceRef) -> bool:
     return proof_strength(source.proof_state) > 0
 
 
+_TIER_RANK = {
+    AllegationTier.T1_DIRECTLY_PROVEN: 1,
+    AllegationTier.T2_STRONGLY_CORROBORATED: 2,
+    AllegationTier.T3_SUPPORTED_INFERENCE: 3,
+    AllegationTier.T4_DEVELOPMENT_NEEDED: 4,
+    AllegationTier.T5_SPECULATIVE_QUARANTINED: 5,
+}
+
+
 def proof_strength(state: ProofState) -> int:
     return {
         ProofState.VERIFIED_PRIMARY: 5,
@@ -302,6 +345,84 @@ def proof_strength(state: ProofState) -> int:
         ProofState.QUARANTINED: -2,
         ProofState.DISPROVED: -5,
     }[state]
+
+
+def element_status(
+    element: ElementSupport,
+    sources: Mapping[str, SourceRef],
+) -> ElementStatus:
+    """Derive an element's evidentiary state without trusting a boolean alone."""
+    usable = [
+        sources[source_id]
+        for source_id in element.supporting_source_ids
+        if source_id in sources and _source_is_usable(sources[source_id])
+    ]
+    verified = any(
+        source.proof_state is ProofState.VERIFIED_PRIMARY for source in usable
+    )
+    if element.status is ElementStatus.PROVEN and verified and element.satisfied:
+        return ElementStatus.PROVEN
+    if element.status is ElementStatus.SUPPORTED and usable and element.satisfied:
+        return ElementStatus.SUPPORTED
+    if element.status is ElementStatus.DISPUTED:
+        return ElementStatus.DISPUTED
+    if element.status is ElementStatus.MISSING:
+        return ElementStatus.MISSING
+    if element.satisfied and verified:
+        return ElementStatus.PROVEN
+    if element.satisfied and usable:
+        return ElementStatus.SUPPORTED
+    if element.contrary_source_ids:
+        return ElementStatus.DISPUTED
+    return ElementStatus.MISSING
+
+
+def derive_tier(
+    allegation: Allegation,
+    sources: Mapping[str, SourceRef],
+) -> AllegationTier:
+    """Evidence-derived allegation tier; consequence never upgrades proof."""
+    if allegation.proof_state in {ProofState.QUARANTINED, ProofState.DISPROVED}:
+        return AllegationTier.T5_SPECULATIVE_QUARANTINED
+    if allegation.missing_evidence_ids or not allegation.elements:
+        return AllegationTier.T4_DEVELOPMENT_NEEDED
+
+    statuses = [element_status(element, sources) for element in allegation.elements]
+    if any(status in {ElementStatus.MISSING, ElementStatus.DISPUTED} for status in statuses):
+        return AllegationTier.T4_DEVELOPMENT_NEEDED
+
+    primary = {
+        source_id: sources[source_id]
+        for source_id in set(allegation.primary_source_ids)
+        if source_id in sources and _source_is_usable(sources[source_id])
+    }
+    if not primary:
+        return AllegationTier.T4_DEVELOPMENT_NEEDED
+
+    if (
+        all(status is ElementStatus.PROVEN for status in statuses)
+        and any(
+            source.proof_state is ProofState.VERIFIED_PRIMARY
+            for source in primary.values()
+        )
+    ):
+        return AllegationTier.T1_DIRECTLY_PROVEN
+
+    corroborators = {
+        source_id
+        for source_id in allegation.corroborating_source_ids
+        if source_id in sources and _source_is_usable(sources[source_id])
+    }
+    if (
+        allegation.proof_state in {ProofState.VERIFIED_PRIMARY, ProofState.CORROBORATED}
+        and corroborators
+    ):
+        return AllegationTier.T2_STRONGLY_CORROBORATED
+
+    if proof_strength(allegation.proof_state) > 0:
+        return AllegationTier.T3_SUPPORTED_INFERENCE
+
+    return AllegationTier.T4_DEVELOPMENT_NEEDED
 
 
 def attack(allegation: Allegation, sources: Mapping[str, SourceRef]) -> list[str]:
@@ -419,6 +540,7 @@ def promote(allegation: Allegation, sources: Mapping[str, SourceRef]) -> Promoti
 def harden(allegation: Allegation, sources: Mapping[str, SourceRef]) -> Allegation:
     allegation.impact_score = score(allegation, sources)
     allegation.promotion_state = promote(allegation, sources)
+    allegation.tier = derive_tier(allegation, sources)
     return allegation
 
 
@@ -455,6 +577,7 @@ def render_allegation_card(a: Allegation) -> str:
         f"**Proof:** {a.proof_state.value}",
         f"**Promotion:** {a.promotion_state.value}",
         f"**Impact score:** {a.impact_score}",
+        f"**Tier:** {a.tier.value}",
         f"**Actors:** {', '.join(a.actor_ids) or 'UNMAPPED'}",
         f"**Events:** {', '.join(a.event_ids) or 'UNMAPPED'}",
         "",
@@ -464,7 +587,12 @@ def render_allegation_card(a: Allegation) -> str:
         "", "## Elements",
     ]
     for e in a.elements:
-        lines.append(f"- [{'x' if e.satisfied else ' '}] {e.name} | support={list(e.supporting_source_ids)} | contrary={list(e.contrary_source_ids)} | gaps={list(e.gap_ids)}")
+        lines.append(
+            f"- [{'x' if e.satisfied else ' '}] {e.name} "
+            f"| status={element_status(e, {}) .value if e.status else 'DERIVED_AT_COMPILE'} "
+            f"| support={list(e.supporting_source_ids)} "
+            f"| contrary={list(e.contrary_source_ids)} | gaps={list(e.gap_ids)}"
+        )
     lines += [
         "", "## Contradictions", ", ".join(a.contradictory_source_ids) or "None linked",
         "", "## Mental state", f"required={a.mental_state_required or 'none'} evidence={a.mental_state_source_ids}",
