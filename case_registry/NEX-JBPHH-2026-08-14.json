@@ -2,11 +2,13 @@
   "case_id": "NEX-JBPHH-2026-08-14",
   "title": "Cherry Chan — NEX Pearl Harbor / JBPHH Retail Detention, Search, Processing & Exclusion",
   "status": "ACTIVE",
-  "durable_build": "MAX_IMPACT_DURABLE_V12",
+  "durable_build": "JACK_CASEBUILDER_LIVE_2026-08-31",
   "source_of_truth": {
-    "structured_plane": "Supabase supabase-glaciereq / apex_legal_* tables",
+    "structured_plane": "Supabase supabase-glaciereq / apex_legal_* tables (registry-declared; current Supabase connector returned zero visible projects on 2026-08-31)",
     "case_repo": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
     "case_repo_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT",
+    "jack_machine_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER",
+    "jack_commit": "9413e6403654b30cd630330bf5eb5d3450bbccbd",
     "dropbox_master": "/Cherry Chan/CHERRY_NEX_JBPHH_MASTER_CASE/",
     "dropbox_instruction": "/Cherry Chan/05_AI_CONVERSATION_EXPORTS/00_CONTROL_CENTER/05_CASE_BUILDERS/NAVY_POLICE_MAX_IMPACT_ALLEGATION_ENGINE_CHAT_EXPORT_BUILD_INSTRUCTION_2026-08-29.md"
   },
@@ -20,19 +22,22 @@
     "ticket": "100859",
     "paid_total": 165.15
   },
-  "state": {
-    "actors": 46,
-    "propositions": 81,
-    "contradictions": 26,
-    "evidence_targets": 55
+  "object_counts": {
+    "jack_facts": 28,
+    "jack_actors": 21,
+    "jack_allegations": 12,
+    "jack_contradictions": 6,
+    "jack_discovery_targets": 16
   },
-  "execution_rule": "EVENT -> ALLEGATION -> INSTITUTION -> RECORDS -> ACTOR ALLOCATION",
+  "execution_rule": "EVENT -> FACT -> ACTOR -> ALLEGATION -> ELEMENT -> SOURCE -> CONTRADICTION -> DEFENSE -> DISCOVERY -> DAMAGE -> REMEDY",
   "hard_controls": [
     "Carry E1295883 and E1295884 as separate objects.",
     "Second handcuffing is a separate force/seizure event.",
-    "Knife-and-baton phrase transfer is an active interception/use/disclosure allegation branch.",
+    "Knife-and-baton phrase transfer is an active provenance/use/disclosure allegation branch.",
     "Do not make claimant identify institution-controlled personnel before advancing witnessed events.",
-    "Use proof classes and preserve lineage when a theory is corrected or retired."
+    "Use proof classes and preserve lineage when a theory is corrected or retired.",
+    "Unknown actors remain first-class discovery nodes.",
+    "No pleading/referral/motion reconstructs the case from scratch; consume Jack objects and underlying sources."
   ],
   "updated_at": "2026-08-31"
 }
