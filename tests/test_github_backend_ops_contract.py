@@ -21,6 +21,7 @@ def test_security_invariants():
     assert invariants["append_only_route_decisions"] is True
     assert invariants["append_only_webhook_results"] is True
     assert invariants["raw_webhook_payload_persisted"] is False
+    assert invariants["wake_secret_embedded_in_source"] is False
 
 
 def test_permission_aware_pr_composition():
@@ -36,7 +37,6 @@ def test_router_is_the_execution_entrypoint():
     assert m["runtime"]["execution_entrypoint"] == "apex-github-router"
     assert m["runtime"]["internal_gateway"] == "apex-github-connector"
     assert m["runtime"]["router_contract_version"] == 2
-
     source = (ROOT / "supabase" / "functions" / "apex-github-router" / "index.ts").read_text()
     assert "acquire_github_connector_lease_v2" in source
     assert "release_github_connector_lease_v2" in source
@@ -87,15 +87,32 @@ def test_webhook_worker_is_durable_and_router_backed():
     assert 'operation: "actions.runs"' in source
 
 
-def test_router_and_worker_migrations_are_present():
+def test_webhook_wake_is_vault_authenticated():
+    source = (ROOT / "supabase" / "functions" / "apex-github-webhook-wake" / "index.ts").read_text()
+    assert "x-apex-worker-secret" in source
+    assert "validate_github_worker_wake_secret_v1" in source
+    assert "/functions/v1/apex-github-webhook-worker" in source
+    assert "SERVICE_ROLE" in source
+    assert "github_worker_wake_secret_v1" not in source
+
+
+def test_router_worker_and_scheduler_migrations_are_present():
     router = (ROOT / "db" / "migrations" / "20260831170616_github_backend_ops_router_v2.sql").read_text()
     worker = (ROOT / "db" / "migrations" / "20260831170915_github_webhook_worker_v1.sql").read_text()
+    scheduler = (ROOT / "db" / "migrations" / "20260831172232_github_webhook_worker_scheduler_v1.sql").read_text()
+    wake = (ROOT / "db" / "migrations" / "20260831172331_github_webhook_worker_wake_v1.sql").read_text()
+    registry = (ROOT / "db" / "migrations" / "20260831172617_github_webhook_worker_scheduler_registry_v1.sql").read_text()
     assert "github_connector_operation_leases_v2" in router
     assert "github_connector_route_decisions_v2" in router
     assert "github_connector_circuit_v2" in router
     assert "github_webhook_event_queue_v1" in router
     assert "for update skip locked" in worker.lower()
     assert "github_webhook_event_results_v1" in worker
+    assert "vault.create_secret" in scheduler
+    assert "validate_github_worker_wake_secret_v1" in scheduler
+    assert "cron.schedule" in scheduler
+    assert "apex-github-webhook-wake" in wake
+    assert "webhook_retry_scheduler" in registry
 
 
 def test_runtime_probe_artifact():
