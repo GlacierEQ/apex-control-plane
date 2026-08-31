@@ -30,3 +30,47 @@ ONNX SHA-256: `5602367fb172d7457c9cc7dc57e87e6aa765e8bc53cfbe8662468c5ad91d338b`
 
 Jack attacks execution failure, arguments, contradictions, source gaps, and broken workflows.
 The contract does not authorize violence, threats, unlawful access, unauthorized external actions, or fabrication.
+
+
+## Casebuilder / Allegation Forge plane
+
+Jack now has a second executable plane for case construction. It does not replace
+the relentless execution gate and it does not absorb the specialist systems.
+
+Distributed topology:
+
+- `GlacierEQ/Casebuilder4000` — evidence-driven forge engine.
+- `GlacierEQ/apex-legal-case` — live case corpus and case-domain state.
+- `GlacierEQ/computer-user` — source acquisition and connector execution plane.
+- `GlacierEQ/legal-powerhouse` — downstream litigation artifact runtime.
+- `GlacierEQ/apex-control-plane` — Jack orchestration and receipt verification.
+
+`src/casebuilder_forge.py` binds this topology through
+`casebuilder4000.build-receipt.v2`. A Casebuilder build can become a Jack
+`VERIFIED` action only after exact artifact readback matches the receipt's
+SHA-256 and byte-size manifest and the case-state object counts agree with the
+receipt.
+
+A packet, bootstrap, generated report, or structurally valid receipt is not an
+executed build. A verified build is not a representation that the case itself
+is complete.
+
+The forge preserves these distinctions:
+
+```text
+SOURCE -> FACT -> EVENT -> ACTOR
+       -> ALLEGATION -> ELEMENT
+       -> CONTRADICTION -> KNOWLEDGE
+       -> DAMAGE -> DEFENSE -> DISCOVERY
+       -> ACCOUNTABILITY -> CROSS-EXAM
+       -> PLEADING / MOTION / REFERRAL CONVERSION
+```
+
+Killed and quarantined allegations remain visible in audit state but cannot
+silently re-enter pressure or promotion. Derived chat/history material cannot
+self-promote into primary/native proof merely because it was routed through the
+case graph.
+
+The binding contract is
+`config/casebuilder_forge_contract.json`; adversarial proof lives in
+`tests/test_casebuilder_forge.py`.
