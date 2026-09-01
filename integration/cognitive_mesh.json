@@ -1,0 +1,93 @@
+{
+  "schema": "glaciereq.cognitive-mesh.v1",
+  "version": "1.0.0",
+  "purpose": "Federate standalone GlacierEQ specialist brains without merging, copying, or subordinating their domain authority.",
+  "invariants": [
+    "Each node remains independently usable and authoritative for its declared domain.",
+    "Peer integration is additive: route by capability, exchange artifacts and receipts, preserve source identity.",
+    "No node becomes a universal source of truth merely because it routes or composes peers.",
+    "Resolve live source state before relying on remembered or copied projections.",
+    "Do not duplicate specialist registries across peers; point to the specialist-owned machine surface.",
+    "Cross-node work returns provenance and verification state to the caller."
+  ],
+  "nodes": {
+    "capabilities": {
+      "repo": "GlacierEQ/mega-skills",
+      "role": "capability_and_procedure_brain",
+      "authority": [
+        "skill discovery",
+        "skill composition",
+        "mission capability routing"
+      ],
+      "entrypoints": [
+        "skills/master/SKILL.md",
+        "registry/skills.json",
+        "registry/combo-skills.json",
+        "registry/mega-skills.json"
+      ]
+    },
+    "technology": {
+      "repo": "GlacierEQ/the-tower-of-babel",
+      "role": "technology_language_and_proof_brain",
+      "authority": [
+        "technology placement",
+        "language/runtime selection",
+        "cross-language interfaces",
+        "proof class"
+      ],
+      "entrypoints": [
+        "registry/tower.yml",
+        "generated/megamind.technology-map.json",
+        "generated/interfaces.json",
+        "generated/maturity.json"
+      ]
+    },
+    "context": {
+      "repo": "GlacierEQ/aspen-grove-core",
+      "role": "context_memory_connector_and_family_router",
+      "authority": [
+        "context recovery",
+        "memory routing",
+        "connector routing",
+        "Aspen family composition"
+      ],
+      "entrypoints": [
+        "ASPEN_GROVE_CONSTELLATION.json",
+        "glacier-mansion/router.py",
+        "APEX_POINTER_INDEX.json"
+      ]
+    },
+    "execution": {
+      "repo": "GlacierEQ/apex-control-plane",
+      "role": "execution_orchestration_and_verification_brain",
+      "authority": [
+        "mission execution",
+        "continuity",
+        "execution state",
+        "verification",
+        "receipts"
+      ],
+      "entrypoints": [
+        "src/control_plane.py",
+        "APEX_ENFORCED_STARTUP.md",
+        "config/prime_directive_policy.json"
+      ]
+    }
+  },
+  "route": [
+    "OBJECTIVE -> context: recover nearest valid continuation and live source pointers",
+    "OBJECTIVE + CONTEXT -> capabilities: select smallest sufficient existing skill/composition",
+    "CAPABILITY REQUIREMENTS -> technology when language/runtime/interface/proof choice matters",
+    "CONTEXT + CAPABILITY + TECHNOLOGY -> execution: perform highest-leverage authorized work",
+    "EXECUTION RESULT -> verify with source-native readback/tests/receipts",
+    "VERIFIED DELTA -> return provenance to context and capability layers for continuation/evolution"
+  ],
+  "composition_rules": {
+    "standalone_first": true,
+    "copy_specialist_registry": false,
+    "preserve_repo_identity": true,
+    "source_owned_entrypoints": true,
+    "peer_challenge_allowed": true,
+    "routing_is_not_authority": true
+  }
+}
