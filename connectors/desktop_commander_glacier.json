@@ -28,7 +28,8 @@
     "tests_exit": 0,
     "build_exit": 0,
     "bridge_policy_tests": "passed",
-    "keymaster_allowlist_receipt": "79d49324-645e-401d-9137-95fb481ca38f"
+    "keymaster_allowlist_receipt": "79d49324-645e-401d-9137-95fb481ca38f",
+    "keymaster_allowlist_migration": "20260902214312 github_oidc_udc_workload_allowlist_v1"
   },
   "runtime": {
     "plane": "supabase-backend-ops",
@@ -90,7 +91,8 @@
   },
   "migrations": [
     "20260902202019 desktop_commander_local_agent_plane_v1",
-    "20260902202236 desktop_commander_operation_policy_v2"
+    "20260902202236 desktop_commander_operation_policy_v2",
+    "20260902214312 github_oidc_udc_workload_allowlist_v1"
   ],
   "state": {
     "source_runtime": "verified",
