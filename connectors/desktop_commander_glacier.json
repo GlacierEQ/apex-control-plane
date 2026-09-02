@@ -104,7 +104,12 @@
     "verified_selection_monotonic": true,
     "execution_proof_policy_bound": true,
     "execution_proof_result_hash_required": true,
-    "execution_proof_result_hash_algorithm": "sha256"
+    "execution_proof_result_hash_algorithm": "sha256",
+    "device_specific_execution_binding": true,
+    "secondary_device_claim_isolation": true,
+    "secondary_device_heartbeat_isolation": true,
+    "binding_invalidation_on_identity_or_approval_loss": true,
+    "execution_promotion_serialized": true
   },
   "migrations": [
     "20260902202019 desktop_commander_local_agent_plane_v1",
@@ -115,14 +120,16 @@
     "20260902222903 desktop_commander_heartbeat_monotonic_v5",
     "20260902223005 desktop_commander_bridge_v3_registry_v6",
     "20260902223417 desktop_commander_read_probe_policy_binding_v7",
-    "20260902223457 desktop_commander_execution_proof_registry_v8"
+    "20260902223457 desktop_commander_execution_proof_registry_v8",
+    "20260902223813 desktop_commander_device_binding_guard_v9",
+    "20260902223902 desktop_commander_binding_registry_v10"
   ],
   "state": {
     "source_runtime": "verified",
     "physical_device": "not_enrolled",
     "worker": "source_runtime_hardened_device_unbound",
     "selection_enabled": false,
-    "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_policy_bound_read_job_with_sha256_result"
+    "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_device_bound_policy_read_with_sha256_result"
   },
-  "status": "source_runtime_hardened_v8_device_unbound"
+  "status": "source_runtime_hardened_v10_device_unbound"
 }
