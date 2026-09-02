@@ -117,3 +117,31 @@ def test_keymaster_admission_is_narrow_and_idempotent():
     assert "'wildcard',false" in source
     assert "expected_repositories" in source
     assert "@>" in source
+
+
+def test_registry_runtime_ready_migration_preserves_unbound_device_boundary():
+    source = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260902221859_desktop_commander_registry_runtime_ready_v3.sql"
+    ).read_text()
+    assert "'desktop_commander.glacier'" in source
+    assert "'source_runtime_ready'" in source
+    assert "'physical_device_execution',4,false" in source
+    assert "'selection_enabled',false" in source
+    assert "'github.actions.public_runner'" in source
+    assert "'runtime_verified_public_action_face'" in source
+    assert "'exact_sha_private_workload',5,true" in source
+    assert "'oidc_keymaster_one_repo_token',5,true" in source
+    assert "'immutable_private_result',5,true" in source
+
+
+def test_github_backend_ops_manifest_reports_desktop_commander_runtime_state():
+    backend = json.loads((ROOT / "connectors" / "github_backend_ops.json").read_text())
+    worker = backend["workers"]["glacier_desktop_commander"]
+    assert worker["status"] == "source_runtime_ready_device_unbound"
+    assert worker["selection_enabled"] is False
+    assert worker["action_face_run_id"] == 33686159662
+    assert worker["source_merge_commit"] == "07ca4b4bd50d9ec6c368a2579c3032c1648798cf"
+    assert worker["bridge_sha256"] == "55c0c92e8bb708a0ef358d301018fe3a78e73734c2a890b87461f64615e6ac3e"
