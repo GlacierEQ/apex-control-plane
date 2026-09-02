@@ -49,7 +49,7 @@ Live SHA-256: `55c0c92e8bb708a0ef358d301018fe3a78e73734c2a890b87461f64615e6ac3e`
 Live migrations mirrored here exactly:
 
 - `20260902202019_desktop_commander_local_agent_plane_v1.sql`
-- `20260902202236_desktop_commander_operation_policy_v2.sql`\n- `20260902214312_github_oidc_udc_workload_allowlist_v1.sql`
+- `20260902202236_desktop_commander_operation_policy_v2.sql`\n- `20260902214312_github_oidc_udc_workload_allowlist_v1.sql`\n- `20260902221859_desktop_commander_registry_runtime_ready_v3.sql`
 
 The local-agent data plane is service-role-only with RLS and contains device identities, jobs, append-only receipts, nonce replay records, and an explicit remote-operation policy.
 
@@ -88,8 +88,18 @@ Source/runtime: **verified**.
 
 Physical device: **not yet enrolled**.
 
-Worker state: **source-ready / unbound**.
+Worker state: **source/runtime verified / physical device unbound**.
 
 Selection: **disabled**.
 
 The connector must not be called online until the physical UDC process enrolls, requested roots are approved, a signed heartbeat is observed, and one read-only claimed job completes with a receipt.
+
+
+## Registry separation
+
+Backend Ops models source/runtime readiness and execution-plane readiness separately:
+
+- `desktop_commander.glacier` is `source_runtime_ready`, connected/authenticated, but non-selectable until a physical device proves the final runtime boundary.
+- `github.actions.public_runner` is a separate healthy execution-plane connector carrying the exact-SHA/OIDC/Keymaster/immutable-result proof for private workload validation.
+
+This prevents a GitHub source-control or Actions-runner problem from being misclassified as a Desktop Commander device problem.
