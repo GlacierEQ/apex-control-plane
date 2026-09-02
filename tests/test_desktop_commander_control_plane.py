@@ -16,7 +16,7 @@ def test_manifest_preserves_device_boundary():
     assert m["runtime"]["inbound_desktop_port_required"] is False
     assert m["runtime"]["device_private_key_persisted_backend"] is False
     assert m["state"]["physical_device"] == "not_enrolled"
-    assert m["state"]["worker"] == "source_ready_unbound"
+    assert m["state"]["worker"] == "source_runtime_ready_device_unbound"
     assert m["state"]["selection_enabled"] is False
 
 
@@ -89,7 +89,7 @@ def test_bridge_uses_custom_auth_and_replay_defense():
     assert "nonce_replay_rejected" in source
     assert "Ed25519" in source
     assert "desktop_commander_nonces_v1" in source
-    assert "desktop_commander_enrollment_token_v1" not in source
+    assert "validate_desktop_commander_enrollment_token_v1" in source\n    assert "vault.decrypted_secrets" not in source\n    assert "resolve_" + "desktop_commander_enrollment_token_v1" not in source
 
 
 def test_remote_manifest_forbids_high_risk_local_capabilities():
