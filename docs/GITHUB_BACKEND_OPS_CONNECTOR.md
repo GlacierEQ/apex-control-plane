@@ -152,9 +152,7 @@ The router write probe advanced `connectors/github_backend_ops_runtime_probe.jso
 
 ## Remaining external dependency
 
-`apex-github-webhook` is deployed and its fail-closed behavior is verified: without a shared webhook secret it returns HTTP 503 `webhook_secret_not_bound` and does not accept the delivery.
-
-The remaining external configuration step is binding the **same webhook secret** in Keymaster/backend configuration and the GitHub App webhook. Until that is done, signed production webhook delivery remains intentionally disabled while the queue and worker are otherwise complete.
+The GitHub App webhook secret is bound through Keymaster/Vault. A controlled signed delivery verified `signature_verified=true`, reached queue status `completed`, rolled its parent delivery to `processed`, and produced successful `repo.get` and `actions.runs` result receipts. Raw webhook payloads and raw secrets are not persisted by the connector plane.
 
 ## Migrations
 
@@ -166,3 +164,54 @@ The remaining external configuration step is binding the **same webhook secret**
 ## Validation harnesses
 
 Temporary public self-test functions are used only long enough to call JWT-protected functions with the backend service role. After verification they are retired behind JWT and return only HTTP 410. They are not production execution routes.
+
+## High-volume batch and bulk-read plane
+
+Backend Ops now has a durable GitHub batch plane rather than one Edge invocation per GitHub item.
+
+The batch tables are `github_batch_runs_v2`, `github_batch_items_v2`, `github_batch_receipts_v2`, and `github_batch_workers_v2`. Work is claimed with leases, finalized against an explicit quality policy, projected into `github_batch_metrics_v2`, and terminal failures/blocks can be inspected through `github_batch_dlq_v2` and selectively replayed without repeating successful items.
+
+### Bulk-read execution
+
+The initial high-concurrency worker design exposed a real Supabase nested-function limit: worker -> router -> connector fan-out produced Edge `RateLimitError` failures under 100-item workloads.
+
+The production read path therefore changed architecture rather than simply lowering concurrency:
+
+```text
+batch queue
+  -> apex-github-batch-worker
+      -> one apex-github-connector bulk.read call per claim
+          -> bounded in-process read concurrency
+          -> GitHub App / Keymaster / repo-scoped short-lived tokens
+          -> GitHub API
+          -> item-level connector receipts
+      -> item-level batch QC/finalization
+
+writes
+  -> apex-github-router
+      -> lease + precondition + circuit + gateway readback
+```
+
+`bulk.read` is read-only, accepts at most 50 items per connector call, and rejects operations outside the explicit read allowlist.
+
+The verified 100-item acceptance batch `313f6282-2db9-41e7-b879-d6cc1ee41dad` completed 100/100 on the first attempt with zero retries, zero blocks, zero ambiguous outcomes, and 100/100 QC passed. Item-equivalent latency was 240.20 ms average, p50 221 ms, p95 279 ms, and p99 357 ms.
+
+### Worker truth
+
+Worker state is explicit:
+
+- `github-edge-batch-v2`: online and verified.
+- `glacier-desktop-commander`: source-ready but unbound; it is not selected until a live device heartbeat and approved roots are verified.
+- `github-key-runner`: offline until a bound runner session exists.
+
+No source-ready or offline lane is silently promoted into an executable route.
+
+## Control-plane health projection
+
+`control_plane_runtime_health_v1` is the service-role-only health projection for the operating plane. It combines registry state, verified capabilities, routes, current GitHub execution evidence, batch backlog/inflight state, worker heartbeats, and webhook queue state.
+
+`control_plane_health_snapshot_v1()` returns a one-call fleet summary and an expanded `github.backend_ops` record.
+
+Health semantics distinguish present state from history. Historical failed benchmark items remain visible as evidence but do not keep a currently successful connector permanently degraded.
+
+After the bulk-read acceptance run, `github.backend_ops` read back as healthy with 104 recent successes, zero recent failures, no batch backlog/inflight work, one live Edge worker, no stale online workers, and no webhook failures.
