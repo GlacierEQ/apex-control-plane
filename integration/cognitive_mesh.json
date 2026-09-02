@@ -1,56 +1,10 @@
 {
-  "schema": "glaciereq.cognitive-mesh.discovery.v1",
-  "version": "1.1.0",
-  "purpose": "Connect independently evolving GlacierEQ systems through live discovery and composition. This file is a bootstrap protocol, not a frozen topology or source of project truth.",
-  "prime_rule": "DISCOVER CURRENT SOURCE STATE AT USE TIME. DO NOT FREEZE A FAST-MOVING PROJECT INTO COPIED PAPERWORK.",
+  "schema": "glaciereq.cognitive-mesh.bootstrap.v1",
+  "rule": "This file is only a peer bootstrap list. Discover each repository's current head and repo-owned surfaces at use time; never treat this file as a capability map, maturity map, hierarchy, or finish line.",
   "peers": [
-    {
-      "repo": "GlacierEQ/mega-skills",
-      "peer_pointer": "MESH_PEERS.json"
-    },
-    {
-      "repo": "GlacierEQ/the-tower-of-babel",
-      "peer_pointer": "MESH_PEERS.json"
-    },
-    {
-      "repo": "GlacierEQ/aspen-grove-core",
-      "peer_pointer": "MESH_PEERS.json"
-    },
-    {
-      "repo": "GlacierEQ/apex-control-plane",
-      "peer_pointer": "integration/cognitive_mesh.json"
-    }
-  ],
-  "resolution": {
-    "mode": "live_source_discovery",
-    "on_every_mission": true,
-    "after_material_mutation": "rediscover affected peers before the next routing decision",
-    "cache": "task_scoped_only",
-    "copied_snapshots_are_authority": false
-  },
-  "algorithm": [
-    "Receive the current Operator objective.",
-    "Resolve each relevant peer from its live repository head and repo-owned discovery surfaces.",
-    "Build a task-scoped capability graph from what exists now; do not reuse a stale global role map.",
-    "Compose only the peers and capabilities useful to the objective.",
-    "Execute through the strongest current implementation and interface.",
-    "Verify against the source system that actually changed.",
-    "Invalidate affected task-scoped discovery state after mutation and rediscover before subsequent routing.",
-    "Persist provenance, receipts, and continuation pointers; do not persist a frozen description as controlling truth."
-  ],
-  "anti_freeze": [
-    "No central file owns another repository's role, maturity, capability count, or end state.",
-    "No copied README, registry summary, generated map, or capability list outranks the current source repository.",
-    "A peer may evolve, split, add capabilities, replace interfaces, or supersede its own prior state without updating a central narrative first.",
-    "Integration follows interfaces and live discovery, not permanent hierarchy.",
-    "There is no architectural finish line: successful integration must remain evolvable."
-  ],
-  "durable_state": [
-    "peer repository identity",
-    "repo-owned discovery pointer",
-    "source revision used for a decision",
-    "artifacts consumed or emitted",
-    "verification receipt",
-    "next continuation pointer"
+    "GlacierEQ/mega-skills",
+    "GlacierEQ/the-tower-of-babel",
+    "GlacierEQ/aspen-grove-core",
+    "GlacierEQ/apex-control-plane"
   ]
 }
