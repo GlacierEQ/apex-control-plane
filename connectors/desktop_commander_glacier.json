@@ -45,7 +45,8 @@
     "heartbeat_rpc": "record_desktop_commander_heartbeat_v1",
     "claim_receipts_transactional": true,
     "selection_requires_read_only_execution_proof": true,
-    "verified_selection_monotonic": true
+    "verified_selection_monotonic": true,
+    "execution_proof_policy": "completed + current policy mutation_class=read + SHA-256 result hash"
   },
   "tables": {
     "devices": "desktop_commander_devices_v1",
@@ -100,7 +101,10 @@
     "result_size_enforced": true,
     "heartbeat_receipt_transactional": true,
     "selection_requires_read_only_execution_proof": true,
-    "verified_selection_monotonic": true
+    "verified_selection_monotonic": true,
+    "execution_proof_policy_bound": true,
+    "execution_proof_result_hash_required": true,
+    "execution_proof_result_hash_algorithm": "sha256"
   },
   "migrations": [
     "20260902202019 desktop_commander_local_agent_plane_v1",
@@ -109,14 +113,16 @@
     "20260902221859 desktop_commander_registry_runtime_ready_v3",
     "20260902222552 desktop_commander_runtime_hardening_v4",
     "20260902222903 desktop_commander_heartbeat_monotonic_v5",
-    "20260902223005 desktop_commander_bridge_v3_registry_v6"
+    "20260902223005 desktop_commander_bridge_v3_registry_v6",
+    "20260902223417 desktop_commander_read_probe_policy_binding_v7",
+    "20260902223457 desktop_commander_execution_proof_registry_v8"
   ],
   "state": {
     "source_runtime": "verified",
     "physical_device": "not_enrolled",
     "worker": "source_runtime_hardened_device_unbound",
     "selection_enabled": false,
-    "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_read_only_job"
+    "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_policy_bound_read_job_with_sha256_result"
   },
-  "status": "source_runtime_hardened_v6_device_unbound"
+  "status": "source_runtime_hardened_v8_device_unbound"
 }
