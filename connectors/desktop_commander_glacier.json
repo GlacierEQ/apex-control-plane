@@ -34,14 +34,18 @@
   "runtime": {
     "plane": "supabase-backend-ops",
     "bridge_function": "apex-desktop-commander-bridge",
-    "bridge_deploy_version": 2,
-    "bridge_sha256": "55c0c92e8bb708a0ef358d301018fe3a78e73734c2a890b87461f64615e6ac3e",
+    "bridge_deploy_version": 3,
+    "bridge_sha256": "a79a9200fce9d74469b058cce24d3b9588ff182fd44109e86be54184632c2fc6",
     "transport": "outbound_signed_bridge_v1",
     "local_mcp_transport": "stdio",
     "inbound_desktop_port_required": false,
     "device_private_key_persisted_backend": false,
     "enrollment_secret": "Vault:desktop_commander_enrollment_token_v1",
-    "registry_migration": "20260902221859 desktop_commander_registry_runtime_ready_v3"
+    "registry_migration": "20260902221859 desktop_commander_registry_runtime_ready_v3",
+    "heartbeat_rpc": "record_desktop_commander_heartbeat_v1",
+    "claim_receipts_transactional": true,
+    "selection_requires_read_only_execution_proof": true,
+    "verified_selection_monotonic": true
   },
   "tables": {
     "devices": "desktop_commander_devices_v1",
@@ -88,20 +92,31 @@
     "service_role_tables": true,
     "rls_enabled": true,
     "physical_device_required_for_online_state": true,
-    "selection_enabled_without_heartbeat": false
+    "selection_enabled_without_heartbeat": false,
+    "re_enrollment_identity_change_resets_approval": true,
+    "atomic_enqueue_idempotency": true,
+    "expired_lease_recovery": true,
+    "finish_requires_live_lease": true,
+    "result_size_enforced": true,
+    "heartbeat_receipt_transactional": true,
+    "selection_requires_read_only_execution_proof": true,
+    "verified_selection_monotonic": true
   },
   "migrations": [
     "20260902202019 desktop_commander_local_agent_plane_v1",
     "20260902202236 desktop_commander_operation_policy_v2",
     "20260902214312 github_oidc_udc_workload_allowlist_v1",
-    "20260902221859 desktop_commander_registry_runtime_ready_v3"
+    "20260902221859 desktop_commander_registry_runtime_ready_v3",
+    "20260902222552 desktop_commander_runtime_hardening_v4",
+    "20260902222903 desktop_commander_heartbeat_monotonic_v5",
+    "20260902223005 desktop_commander_bridge_v3_registry_v6"
   ],
   "state": {
     "source_runtime": "verified",
     "physical_device": "not_enrolled",
-    "worker": "source_runtime_ready_device_unbound",
+    "worker": "source_runtime_hardened_device_unbound",
     "selection_enabled": false,
     "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_read_only_job"
   },
-  "status": "source_runtime_verified_device_unbound"
+  "status": "source_runtime_hardened_v6_device_unbound"
 }
