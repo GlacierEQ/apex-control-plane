@@ -163,7 +163,8 @@
     },
     "control_plane_health": "passed: github.backend_ops effective_health_status healthy; 104 recent successes, 0 recent failures, 0 backlog, 1 live worker",
     "desktop_commander_source_runtime": "passed: UDC exact-SHA node-ci run 33686159662; bridge source/runtime parity verified; physical device remains unbound",
-    "desktop_commander_runtime_hardening": "passed live: approval reset on identity change, atomic enqueue idempotency, expired-lease recovery, live-lease finish, result-size limit, transactional heartbeat/claim evidence, read-only proof selection gate, monotonic verified heartbeat"
+    "desktop_commander_runtime_hardening": "passed live: approval reset on identity change, atomic enqueue idempotency, expired-lease recovery, live-lease finish, result-size limit, transactional heartbeat/claim evidence, read-only proof selection gate, monotonic verified heartbeat",
+    "desktop_commander_execution_proof": "passed rollback-only live probe: job policy mismatch rejected; completed read without result hash did not promote; policy-bound completed read with SHA-256 hash promoted only inside rolled-back probe"
   },
   "migrations": [
     "20260831154923 github_backend_ops_connector_v1",
@@ -188,7 +189,9 @@
     "20260902221859 desktop_commander_registry_runtime_ready_v3",
     "20260902222552 desktop_commander_runtime_hardening_v4",
     "20260902222903 desktop_commander_heartbeat_monotonic_v5",
-    "20260902223005 desktop_commander_bridge_v3_registry_v6"
+    "20260902223005 desktop_commander_bridge_v3_registry_v6",
+    "20260902223417 desktop_commander_read_probe_policy_binding_v7",
+    "20260902223457 desktop_commander_execution_proof_registry_v8"
   ],
   "status": "runtime_verified_bulk_v6_control_plane_health",
   "batch": {
@@ -221,7 +224,8 @@
       "bridge_function": "apex-desktop-commander-bridge",
       "bridge_version": 3,
       "bridge_sha256": "a79a9200fce9d74469b058cce24d3b9588ff182fd44109e86be54184632c2fc6",
-      "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_read_only_job"
+      "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_policy_bound_read_job_with_sha256_result",
+      "execution_proof_policy": "current policy read + SHA-256 result hash"
     },
     "github_key_runner": {
       "status": "offline",
