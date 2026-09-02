@@ -40,7 +40,8 @@
     "local_mcp_transport": "stdio",
     "inbound_desktop_port_required": false,
     "device_private_key_persisted_backend": false,
-    "enrollment_secret": "Vault:desktop_commander_enrollment_token_v1"
+    "enrollment_secret": "Vault:desktop_commander_enrollment_token_v1",
+    "registry_migration": "20260902221859 desktop_commander_registry_runtime_ready_v3"
   },
   "tables": {
     "devices": "desktop_commander_devices_v1",
@@ -92,12 +93,13 @@
   "migrations": [
     "20260902202019 desktop_commander_local_agent_plane_v1",
     "20260902202236 desktop_commander_operation_policy_v2",
-    "20260902214312 github_oidc_udc_workload_allowlist_v1"
+    "20260902214312 github_oidc_udc_workload_allowlist_v1",
+    "20260902221859 desktop_commander_registry_runtime_ready_v3"
   ],
   "state": {
     "source_runtime": "verified",
     "physical_device": "not_enrolled",
-    "worker": "source_ready_unbound",
+    "worker": "source_runtime_ready_device_unbound",
     "selection_enabled": false,
     "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_read_only_job"
   },
