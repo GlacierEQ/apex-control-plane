@@ -544,6 +544,14 @@ function summarize(operation: string, result: Json): Json {
   if (operation === "code.search") {
     return { total_count: result.total_count || 0, items_returned: Array.isArray(result.items) ? result.items.length : 0 };
   }
+  if (operation === "bulk.read") {
+    return {
+      execution_mode: result.execution_mode || null,
+      item_count: result.item_count || 0,
+      succeeded: result.succeeded || 0,
+      failed: result.failed || 0,
+    };
+  }
   return result;
 }
 
@@ -1162,6 +1170,144 @@ async function executeOperation(operation: string, repository: string, args: Jso
   }
 }
 
+const BULK_READ_OPERATIONS = new Set([
+  "repo.get","contents.get","tree.list","branches.list","commits.list",
+  "code.search","issues.list","issue.get","pulls.list","pull.get","actions.runs"
+]);
+
+async function runBulkReadV3(items: unknown[], parentRequestId: string, actor: string): Promise<Json> {
+  if (!Array.isArray(items) || items.length < 1 || items.length > 50) {
+    throw new ConnectorError(400, "bulk_item_count_out_of_range");
+  }
+
+  const normalized = items.map((raw, index) => {
+    const item = obj(raw);
+    const operation = text(item.operation, "operation", 128);
+    if (!BULK_READ_OPERATIONS.has(operation)) {
+      throw new ConnectorError(400, "bulk_read_operation_not_allowed", undefined, { operation });
+    }
+    const repository = text(item.repository, "repository", 256);
+    const args = obj(item.args);
+    const requestId = text(item.request_id, "request_id", 256, false)
+      || (parentRequestId + ":" + String(index + 1)).slice(0, 256);
+    return { index, operation, repository, args, requestId };
+  });
+
+  const results: Json[] = new Array(normalized.length);
+  let cursor = 0;
+  const concurrency = Math.min(8, normalized.length);
+
+  async function worker(): Promise<void> {
+    while (true) {
+      const current = cursor++;
+      if (current >= normalized.length) return;
+      const item = normalized[current];
+      const started = Date.now();
+      const correlationId = crypto.randomUUID();
+      const requestHash = await sha256Hex(stable({
+        operation: item.operation,
+        repository: item.repository,
+        args: item.args,
+      }));
+
+      try {
+        const execution = await executeOperation(
+          item.operation,
+          item.repository,
+          item.args,
+          { requestId: item.requestId, actor },
+        );
+        const responseHash = await sha256Hex(stable(execution.result));
+        await persistReceipt({
+          requestId: item.requestId,
+          correlationId,
+          operation: item.operation,
+          repository: item.repository,
+          targetRef: execution.targetRef,
+          mutationClass: "read",
+          outcome: "succeeded",
+          requestHash,
+          responseHash,
+          githubRequestId: execution.githubRequestId,
+          readbackVerified: execution.readbackVerified,
+          beforeSha: execution.beforeSha,
+          afterSha: execution.afterSha,
+          durationMs: Date.now() - started,
+          actor,
+          resultSummary: summarize(item.operation, execution.result),
+          metadata: {
+            bulk_parent_request_id: parentRequestId,
+            bulk_index: item.index,
+            token_persisted: false,
+            execution_mode: "in_process_bulk_read_v3",
+          },
+        });
+        results[item.index] = {
+          ok: true,
+          request_id: item.requestId,
+          correlation_id: correlationId,
+          operation: item.operation,
+          repository: item.repository,
+          github_request_id: execution.githubRequestId,
+          readback_verified: execution.readbackVerified,
+          result: execution.result,
+        };
+      } catch (error) {
+        const ce = error instanceof ConnectorError
+          ? error
+          : new ConnectorError(500, "internal_connector_error", error instanceof Error ? error.message : "internal_connector_error");
+        try {
+          await persistReceipt({
+            requestId: item.requestId,
+            correlationId,
+            operation: item.operation,
+            repository: item.repository,
+            targetRef: null,
+            mutationClass: "read",
+            outcome: ce.status === 400 || ce.status === 401 || ce.status === 403 ? "rejected" : "failed",
+            requestHash,
+            responseHash: null,
+            githubRequestId: typeof ce.details.github_request_id === "string" ? ce.details.github_request_id : null,
+            readbackVerified: false,
+            durationMs: Date.now() - started,
+            actor,
+            resultSummary: { error: ce.code },
+            metadata: {
+              bulk_parent_request_id: parentRequestId,
+              bulk_index: item.index,
+              details: ce.details,
+              token_persisted: false,
+              execution_mode: "in_process_bulk_read_v3",
+            },
+          });
+        } catch {}
+        results[item.index] = {
+          ok: false,
+          request_id: item.requestId,
+          correlation_id: correlationId,
+          operation: item.operation,
+          repository: item.repository,
+          status: ce.status,
+          error: ce.code,
+          message: ce.message,
+          details: ce.details,
+        };
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  const succeeded = results.filter((r) => r?.ok === true).length;
+  const failed = results.length - succeeded;
+  return {
+    execution_mode: "in_process_bulk_read_v3",
+    item_count: results.length,
+    succeeded,
+    failed,
+    results,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   const started = Date.now();
   const correlationId = crypto.randomUUID();
@@ -1191,7 +1337,9 @@ Deno.serve(async (req: Request) => {
     if (!requestId) requestId = crypto.randomUUID();
     if (write && requestId.length < 8) throw new ConnectorError(400, "request_id_required_for_write");
 
-    repository = operation === "health" ? null : text(input.repository, "repository", 256);
+    repository = operation === "health" || operation === "bulk.read"
+      ? null
+      : text(input.repository, "repository", 256);
     const args = obj(input.args);
     requestHash = await sha256Hex(stable({ operation, repository, args }));
 
@@ -1224,6 +1372,13 @@ Deno.serve(async (req: Request) => {
     if (operation === "health") {
       result = await runHealth(requestId, actor);
       githubRequestId = typeof result.github_request_id === "string" ? result.github_request_id : null;
+      readbackVerified = true;
+    } else if (operation === "bulk.read") {
+      result = await runBulkReadV3(
+        Array.isArray(input.items) ? input.items : [],
+        requestId,
+        actor,
+      );
       readbackVerified = true;
     } else {
       const execution = await executeOperation(operation, repository as string, obj(input.args), { requestId, actor });
