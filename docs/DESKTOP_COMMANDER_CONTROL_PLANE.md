@@ -51,6 +51,8 @@ Live migrations mirrored here exactly:
 - `20260902202019_desktop_commander_local_agent_plane_v1.sql`
 - `20260902202236_desktop_commander_operation_policy_v2.sql`\n- `20260902214312_github_oidc_udc_workload_allowlist_v1.sql`\n- `20260902221859_desktop_commander_registry_runtime_ready_v3.sql`
 - `20260902223005_desktop_commander_bridge_v3_registry_v6.sql`
+- `20260902223457_desktop_commander_execution_proof_registry_v8.sql`
+- `20260902223417_desktop_commander_read_probe_policy_binding_v7.sql`
 - `20260902222903_desktop_commander_heartbeat_monotonic_v5.sql`
 - `20260902222552_desktop_commander_runtime_hardening_v4.sql`
 
@@ -125,3 +127,12 @@ The original migration history remains intact. Corrective migrations harden the 
 - After that read-only proof, subsequent heartbeats preserve the verified selection state; they cannot silently demote it.
 
 Physical execution remains unverified in the current live state. No device has yet crossed the final read-only execution gate.
+
+
+## Execution-proof binding
+
+The final physical-execution promotion is bound to the current operation policy at finish time.
+
+A stored `mutation_class='read'` value is not sufficient. The terminal RPC verifies that the job's stored mutation class matches the enabled policy entry for that operation. Promotion additionally requires a successful terminal status and a non-null SHA-256 result hash.
+
+The merged UDC agent already emits SHA-256 result hashes for every allowed read operation, so this strengthens the proof without widening the client contract.
