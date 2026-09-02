@@ -89,7 +89,9 @@ def test_bridge_uses_custom_auth_and_replay_defense():
     assert "nonce_replay_rejected" in source
     assert "Ed25519" in source
     assert "desktop_commander_nonces_v1" in source
-    assert "validate_desktop_commander_enrollment_token_v1" in source\n    assert "vault.decrypted_secrets" not in source\n    assert "resolve_" + "desktop_commander_enrollment_token_v1" not in source
+    assert "validate_desktop_commander_enrollment_token_v1" in source
+    assert "vault.decrypted_secrets" not in source
+    assert "resolve_desktop_commander_enrollment_token_v1" not in source
 
 
 def test_remote_manifest_forbids_high_risk_local_capabilities():
