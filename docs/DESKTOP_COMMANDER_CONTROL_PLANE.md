@@ -52,6 +52,8 @@ Live migrations mirrored here exactly:
 - `20260902202236_desktop_commander_operation_policy_v2.sql`\n- `20260902214312_github_oidc_udc_workload_allowlist_v1.sql`\n- `20260902221859_desktop_commander_registry_runtime_ready_v3.sql`
 - `20260902223005_desktop_commander_bridge_v3_registry_v6.sql`
 - `20260902223457_desktop_commander_execution_proof_registry_v8.sql`
+- `20260902223902_desktop_commander_binding_registry_v10.sql`
+- `20260902223813_desktop_commander_device_binding_guard_v9.sql`
 - `20260902223417_desktop_commander_read_probe_policy_binding_v7.sql`
 - `20260902222903_desktop_commander_heartbeat_monotonic_v5.sql`
 - `20260902222552_desktop_commander_runtime_hardening_v4.sql`
@@ -136,3 +138,17 @@ The final physical-execution promotion is bound to the current operation policy 
 A stored `mutation_class='read'` value is not sufficient. The terminal RPC verifies that the job's stored mutation class matches the enabled policy entry for that operation. Promotion additionally requires a successful terminal status and a non-null SHA-256 result hash.
 
 The merged UDC agent already emits SHA-256 result hashes for every allowed read operation, so this strengthens the proof without widening the client contract.
+
+
+## Device-specific execution binding
+
+Physical execution verification belongs to one concrete approved device identity, not to every approved Desktop Commander installation.
+
+- Promotion is serialized with a transaction-scoped advisory lock.
+- Once a device owns the execution binding, another approved device cannot claim through that lane.
+- A secondary device heartbeat is recorded but cannot replace the active worker/connector binding.
+- A second concurrent read proof is terminally receipted but cannot steal the established binding.
+- Changing the bound device identity, removing all approved roots, suspending it, or revoking it automatically invalidates `physical_device_execution` and returns the worker/connector to the non-selectable source/runtime-ready state.
+- The connector registry's preservation trigger protects a valid binding from stale baseline updates, but deliberately allows a downgrade after the execution capability has been invalidated.
+
+The current live state still has no physical device binding, so these controls are installed but no device is selected.
