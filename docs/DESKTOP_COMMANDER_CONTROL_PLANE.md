@@ -42,14 +42,17 @@ UDC was added narrowly to the existing Keymaster bootstrap repository allowlist.
 
 ## Backend runtime
 
-Live Edge function: `apex-desktop-commander-bridge` v2.
+Live Edge function: `apex-desktop-commander-bridge` v3.
 
-Live SHA-256: `55c0c92e8bb708a0ef358d301018fe3a78e73734c2a890b87461f64615e6ac3e`.
+Live SHA-256: `a79a9200fce9d74469b058cce24d3b9588ff182fd44109e86be54184632c2fc6`.
 
 Live migrations mirrored here exactly:
 
 - `20260902202019_desktop_commander_local_agent_plane_v1.sql`
 - `20260902202236_desktop_commander_operation_policy_v2.sql`\n- `20260902214312_github_oidc_udc_workload_allowlist_v1.sql`\n- `20260902221859_desktop_commander_registry_runtime_ready_v3.sql`
+- `20260902223005_desktop_commander_bridge_v3_registry_v6.sql`
+- `20260902222903_desktop_commander_heartbeat_monotonic_v5.sql`
+- `20260902222552_desktop_commander_runtime_hardening_v4.sql`
 
 The local-agent data plane is service-role-only with RLS and contains device identities, jobs, append-only receipts, nonce replay records, and an explicit remote-operation policy.
 
@@ -103,3 +106,22 @@ Backend Ops models source/runtime readiness and execution-plane readiness separa
 - `github.actions.public_runner` is a separate healthy execution-plane connector carrying the exact-SHA/OIDC/Keymaster/immutable-result proof for private workload validation.
 
 This prevents a GitHub source-control or Actions-runner problem from being misclassified as a Desktop Commander device problem.
+
+
+## Runtime hardening v4–v6
+
+The original migration history remains intact. Corrective migrations harden the live runtime without rewriting prior ledger entries.
+
+- Re-enrollment with a changed public key or host fingerprint resets the device to `pending`, clears approved roots, and requires approval again.
+- Enqueue is atomic under concurrent idempotency-key reuse. Same key + same payload replays the original job; same key + different payload fails closed.
+- Expired claimed jobs are reclaimed while attempts remain; exhausted expired leases are terminalized with an append-only failure receipt.
+- Terminal results require the device to remain approved and to still own a live lease.
+- Result payload size is enforced from the operation policy's `max_result_bytes`.
+- Heartbeat persistence and its append-only receipt are committed transactionally by `record_desktop_commander_heartbeat_v1`.
+- Claim receipts are written transactionally inside the claim RPC rather than best-effort in Edge.
+- Bridge v3 distinguishes a duplicate nonce (`nonce_replay_rejected`) from a nonce-store failure (`nonce_persistence_failed`).
+- Heartbeats merge runtime metadata rather than replacing source provenance.
+- An approved heartbeat proves presence, not execution. Selection remains disabled until a completed **read-only claimed job** records the final proof.
+- After that read-only proof, subsequent heartbeats preserve the verified selection state; they cannot silently demote it.
+
+Physical execution remains unverified in the current live state. No device has yet crossed the final read-only execution gate.
