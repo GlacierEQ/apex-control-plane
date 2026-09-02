@@ -49,7 +49,7 @@ Live SHA-256: `55c0c92e8bb708a0ef358d301018fe3a78e73734c2a890b87461f64615e6ac3e`
 Live migrations mirrored here exactly:
 
 - `20260902202019_desktop_commander_local_agent_plane_v1.sql`
-- `20260902202236_desktop_commander_operation_policy_v2.sql`
+- `20260902202236_desktop_commander_operation_policy_v2.sql`\n- `20260902214312_github_oidc_udc_workload_allowlist_v1.sql`
 
 The local-agent data plane is service-role-only with RLS and contains device identities, jobs, append-only receipts, nonce replay records, and an explicit remote-operation policy.
 
