@@ -162,7 +162,8 @@
       "p99_ms": 357
     },
     "control_plane_health": "passed: github.backend_ops effective_health_status healthy; 104 recent successes, 0 recent failures, 0 backlog, 1 live worker",
-    "desktop_commander_source_runtime": "passed: UDC exact-SHA node-ci run 33686159662; bridge source/runtime parity verified; physical device remains unbound"
+    "desktop_commander_source_runtime": "passed: UDC exact-SHA node-ci run 33686159662; bridge source/runtime parity verified; physical device remains unbound",
+    "desktop_commander_runtime_hardening": "passed live: approval reset on identity change, atomic enqueue idempotency, expired-lease recovery, live-lease finish, result-size limit, transactional heartbeat/claim evidence, read-only proof selection gate, monotonic verified heartbeat"
   },
   "migrations": [
     "20260831154923 github_backend_ops_connector_v1",
@@ -184,7 +185,10 @@
     "20260902202019 desktop_commander_local_agent_plane_v1",
     "20260902202236 desktop_commander_operation_policy_v2",
     "20260902214312 github_oidc_udc_workload_allowlist_v1",
-    "20260902221859 desktop_commander_registry_runtime_ready_v3"
+    "20260902221859 desktop_commander_registry_runtime_ready_v3",
+    "20260902222552 desktop_commander_runtime_hardening_v4",
+    "20260902222903 desktop_commander_heartbeat_monotonic_v5",
+    "20260902223005 desktop_commander_bridge_v3_registry_v6"
   ],
   "status": "runtime_verified_bulk_v6_control_plane_health",
   "batch": {
@@ -207,7 +211,7 @@
       "worker_id": "github-edge-batch-v2"
     },
     "glacier_desktop_commander": {
-      "status": "source_runtime_ready_device_unbound",
+      "status": "source_runtime_hardened_device_unbound",
       "worker_id": "glacier-desktop-commander",
       "selection_enabled": false,
       "source_repo": "GlacierEQ/UDC",
@@ -215,8 +219,8 @@
       "validated_source_sha": "8bbf1c7751ec0ebbdcc4f98d6fc48f3adb00c048",
       "action_face_run_id": 33686159662,
       "bridge_function": "apex-desktop-commander-bridge",
-      "bridge_version": 2,
-      "bridge_sha256": "55c0c92e8bb708a0ef358d301018fe3a78e73734c2a890b87461f64615e6ac3e",
+      "bridge_version": 3,
+      "bridge_sha256": "a79a9200fce9d74469b058cce24d3b9588ff182fd44109e86be54184632c2fc6",
       "next_gate": "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_read_only_job"
     },
     "github_key_runner": {
