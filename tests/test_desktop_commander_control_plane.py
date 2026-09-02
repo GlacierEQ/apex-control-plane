@@ -101,3 +101,19 @@ def test_remote_manifest_forbids_high_risk_local_capabilities():
     assert operations["process_termination"] is False
     assert operations["scheduled_task_control"] is False
     assert operations["ownership_change"] is False
+
+
+def test_keymaster_admission_is_narrow_and_idempotent():
+    source = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260902214312_github_oidc_udc_workload_allowlist_v1.sql"
+    ).read_text()
+    assert '"GlacierEQ/UDC"' in source
+    assert "owner_login='GlacierEQ'" in source
+    assert "permission_ceiling" in source
+    assert "'contents:read'" in source
+    assert "'wildcard',false" in source
+    assert "expected_repositories" in source
+    assert "@>" in source
