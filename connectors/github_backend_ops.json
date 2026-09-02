@@ -14,8 +14,8 @@
     "router_deploy_version": 1,
     "router_sha256": "c43eea0c9f9c3462fbba7bc28a65d74aea7774496b7f28e604386834b40b6196",
     "internal_gateway": "apex-github-connector",
-    "gateway_deploy_version": 2,
-    "gateway_sha256": "d0293fc170ebb186939308948727ed6cc19e911482b2b4e77b39d7609532520c",
+    "gateway_deploy_version": 3,
+    "gateway_sha256": "c4e137313d316f6e0154b38d6fed0af4e5610fc7dc079b8ae0c12829b03a1873",
     "webhook_ingress": "apex-github-webhook",
     "webhook_deploy_version": 1,
     "webhook_sha256": "3bdce070f1f6866a7632d939483969b2bc61895c4afc8038f03d13764ec3a303",
@@ -27,7 +27,15 @@
     "webhook_wake_sha256": "2ea781fcd5f9f6a21d3987adb5adcc2d1c2553da26bd16a8e81697917e1d58f9",
     "auth_model": "GitHub App + Keymaster + short-lived single-repository installation tokens",
     "token_persisted": false,
-    "mode": "pr_first"
+    "mode": "pr_first",
+    "batch_worker": "apex-github-batch-worker",
+    "batch_worker_deploy_version": 5,
+    "batch_worker_contract_version": 6,
+    "batch_worker_sha256": "baf4b2e4d161c79e693b055349e08ab28cda2f9abba25a3ef3d53e77ebf0fb79",
+    "bulk_read_entrypoint": "apex-github-connector",
+    "bulk_read_execution_mode": "in_process_bulk_read_v3",
+    "control_plane_health_view": "control_plane_runtime_health_v1",
+    "control_plane_health_rpc": "control_plane_health_snapshot_v1"
   },
   "invariants": {
     "destructive_actions_allowed": false,
@@ -59,7 +67,12 @@
     },
     "read_retry": {
       "enabled": true,
-      "retryable_statuses": [429, 502, 503, 504],
+      "retryable_statuses": [
+        429,
+        502,
+        503,
+        504
+      ],
       "max_attempts": 3
     },
     "write_retry": {
@@ -68,7 +81,17 @@
     },
     "full_pull_read": "github.native:get_pr_info/search_prs",
     "pull_create": "github.native:create_pull_request",
-    "pull_review": "github.native:add_review_to_pr"
+    "pull_review": "github.native:add_review_to_pr",
+    "bulk_read": {
+      "preferred": true,
+      "selected_connector": "github.backend_ops",
+      "selected_tool": "bulk.read",
+      "max_items_per_connector_call": 50,
+      "nested_edge_fanout": false,
+      "item_level_receipts": true
+    },
+    "write_path": "apex-github-router",
+    "write_path_reason": "writes retain resource leases, compare-before-write, circuit state, and post-write readback"
   },
   "concurrency": {
     "lease_table": "github_connector_operation_leases_v2",
@@ -88,8 +111,13 @@
     "recovery_wake": "pg_cron every minute",
     "wake_auth": "Vault-generated github_worker_wake_secret_v1",
     "scheduler_job": "github-webhook-worker-v1",
-    "worker_refreshes": ["repo.get", "actions.runs", "issue.get", "pull.get(issue_projection)"],
-    "signed_delivery_state": "pending shared GitHub App webhook secret binding"
+    "worker_refreshes": [
+      "repo.get",
+      "actions.runs",
+      "issue.get",
+      "pull.get(issue_projection)"
+    ],
+    "signed_delivery_state": "bound_and_controlled_signed_delivery_verified"
   },
   "receipts": {
     "execution": "github_connector_receipts_v1",
@@ -117,7 +145,23 @@
     "webhook_immediate_wake": "passed; event claimed once",
     "webhook_retry_scheduler": "passed; cron job succeeded",
     "webhook_fail_closed": "passed: 503 webhook_secret_not_bound",
-    "webhook_signed_delivery": "pending shared GitHub App webhook secret binding"
+    "webhook_signed_delivery": "passed: HMAC verified, queue completed, parent processed, two result receipts",
+    "bulk_read_100_item": {
+      "batch_id": "313f6282-2db9-41e7-b879-d6cc1ee41dad",
+      "status": "completed",
+      "succeeded": 100,
+      "failed": 0,
+      "blocked": 0,
+      "retries": 0,
+      "first_attempt_success_ratio": 1,
+      "quality_passed": 100,
+      "ambiguous_outcomes": 0,
+      "avg_item_equivalent_ms": 240.2,
+      "p50_ms": 221,
+      "p95_ms": 279,
+      "p99_ms": 357
+    },
+    "control_plane_health": "passed: github.backend_ops effective_health_status healthy; 104 recent successes, 0 recent failures, 0 backlog, 1 live worker"
   },
   "migrations": [
     "20260831154923 github_backend_ops_connector_v1",
@@ -127,7 +171,45 @@
     "20260831171646 github_backend_ops_router_registry_v2",
     "20260831172232 github_webhook_worker_scheduler_v1",
     "20260831172331 github_webhook_worker_wake_v1",
-    "20260831172617 github_webhook_worker_scheduler_registry_v1"
+    "20260831172617 github_webhook_worker_scheduler_registry_v1",
+    "20260831190322 github_webhook_parent_status_rollup_v2",
+    "20260831190507 github_batch_runtime_v2",
+    "20260831190720 github_batch_autowake_scheduler_v2",
+    "20260831190933 github_batch_quality_ops_v3",
+    "20260831191902 github_batch_global_dispatch_lease_v3",
+    "20260902192146 github_batch_receipts_item_index_v4",
+    "20260902192256 github_bulk_read_route_v6",
+    "20260902192843 control_plane_runtime_health_v3"
   ],
-  "status": "runtime_verified_router_v2_event_autowake"
+  "status": "runtime_verified_bulk_v6_control_plane_health",
+  "batch": {
+    "max_items_per_batch": 5000,
+    "configured_max_concurrency": 32,
+    "global_dispatch_lease": "github_batch_dispatch_leases_v2",
+    "queue": "github_batch_items_v2",
+    "workers": "github_batch_workers_v2",
+    "receipts": "github_batch_receipts_v2",
+    "metrics": "github_batch_metrics_v2",
+    "dlq": "github_batch_dlq_v2",
+    "selective_replay": "replay_github_batch_failures_v2",
+    "cancellation": "cancel_github_batch_v2",
+    "autowake": "github_batch_run_autowake_v2",
+    "recovery_scheduler": "github-batch-worker-v2"
+  },
+  "workers": {
+    "github_edge_batch": {
+      "status": "online",
+      "worker_id": "github-edge-batch-v2"
+    },
+    "glacier_desktop_commander": {
+      "status": "source_ready_unbound",
+      "worker_id": "glacier-desktop-commander",
+      "selection_enabled": false
+    },
+    "github_key_runner": {
+      "status": "offline",
+      "worker_id": "github-key-runner",
+      "selection_enabled": false
+    }
+  }
 }
