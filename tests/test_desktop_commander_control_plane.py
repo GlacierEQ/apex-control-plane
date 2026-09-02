@@ -249,3 +249,36 @@ def test_execution_proof_registry_v8_remains_unverified_until_runtime():
     assert "'execution_proof_requires_result_hash',true" in source
     assert "'execution_proof_result_hash_algorithm','sha256'" in source
     assert "and verified=false" in source
+
+
+def test_device_binding_guard_v9_is_device_specific_and_fail_closed():
+    source = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260902223813_desktop_commander_device_binding_guard_v9.sql"
+    ).read_text()
+    assert "desktop_commander_device_execution_guard_v1" in source
+    assert "device_not_active_execution_binding" in source
+    assert "active_execution_bound_to_other_device" in source
+    assert "pg_advisory_xact_lock" in source
+    assert "execution_binding_exists" in source
+    assert "binding_invalidated_reason" in source
+    assert "physical_device_execution_verified',false" in source
+    assert "selection_enabled',false" in source
+    assert "v_bound_device_id=old.device_id::text" in source
+
+
+def test_binding_registry_v10_keeps_physical_lane_unverified():
+    source = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260902223902_desktop_commander_binding_registry_v10.sql"
+    ).read_text()
+    assert "after update of device_id,status,device_key" in source.lower()
+    assert "'device_specific_execution_binding',true" in source
+    assert "'secondary_device_claim_isolation',true" in source
+    assert "'secondary_device_heartbeat_isolation',true" in source
+    assert "'binding_invalidation_on_identity_or_approval_loss',true" in source
+    assert "and verified=false" in source
