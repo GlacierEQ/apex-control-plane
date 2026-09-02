@@ -221,3 +221,31 @@ def test_bridge_v3_registry_receipt_does_not_promote_physical_execution():
     assert "'selection_requires_read_only_execution_proof',true" in source
     assert "'verified_selection_monotonic',true" in source
     assert "physical_device_execution" not in source
+
+
+def test_read_probe_policy_binding_v7_requires_policy_and_hash():
+    source = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260902223417_desktop_commander_read_probe_policy_binding_v7.sql"
+    ).read_text()
+    assert "v_job.mutation_class<>v_policy.mutation_class" in source
+    assert "job_policy_mismatch" in source
+    assert "v_policy.mutation_class='read'" in source
+    assert "p_result_hash is not null" in source
+    assert "read_probe_result_hash" in source
+    assert "execution_proof" in source
+
+
+def test_execution_proof_registry_v8_remains_unverified_until_runtime():
+    source = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260902223457_desktop_commander_execution_proof_registry_v8.sql"
+    ).read_text()
+    assert "'execution_proof_policy_bound',true" in source
+    assert "'execution_proof_requires_result_hash',true" in source
+    assert "'execution_proof_result_hash_algorithm','sha256'" in source
+    assert "and verified=false" in source
