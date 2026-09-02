@@ -94,7 +94,10 @@ async function verifyDeviceSignature(req:Request, rawBody:string, deviceId:strin
   const {error:nonceError}=await admin
     .from("desktop_commander_nonces_v1")
     .insert({device_id:deviceId,nonce});
-  if(nonceError) throw new BridgeError(409,"nonce_replay_rejected");
+  if(nonceError){
+    if(nonceError.code==="23505") throw new BridgeError(409,"nonce_replay_rejected");
+    throw new BridgeError(500,"nonce_persistence_failed");
+  }
 
   await admin.from("desktop_commander_nonces_v1")
     .delete()
@@ -105,70 +108,17 @@ async function verifyDeviceSignature(req:Request, rawBody:string, deviceId:strin
 }
 
 async function recordHeartbeat(device:Json, input:Json) {
-  const now=new Date().toISOString();
-  const capabilities=Array.isArray(input.capabilities) ? input.capabilities.slice(0,128) : device.capabilities || [];
-  const metadata=obj(input.metadata);
-  const {error}=await admin.from("desktop_commander_devices_v1").update({
-    last_heartbeat_at:now,
-    agent_version:typeof input.agent_version==="string" ? input.agent_version.slice(0,64) : null,
-    capabilities,
-    metadata:{...obj(device.metadata),...metadata},
-    updated_at:now,
-  }).eq("device_id",device.device_id);
-  if(error) throw new BridgeError(500,"heartbeat_persistence_failed");
-
-  await admin.from("desktop_commander_receipts_v1").insert({
-    device_id:device.device_id,
-    receipt_type:"heartbeat",
-    outcome:device.status==="approved" ? "online" : device.status,
-    detail:{
-      device_key:device.device_key,
-      status:device.status,
-      capabilities_count:capabilities.length,
-      approved_roots_count:Array.isArray(device.approved_roots)?device.approved_roots.length:0,
-    }
+  const capabilities=Array.isArray(input.capabilities)
+    ? input.capabilities.slice(0,128)
+    : device.capabilities || [];
+  const {data,error}=await admin.rpc("record_desktop_commander_heartbeat_v1",{
+    p_device_id:device.device_id,
+    p_agent_version:typeof input.agent_version==="string" ? input.agent_version.slice(0,64) : null,
+    p_capabilities:capabilities,
+    p_metadata:obj(input.metadata),
   });
-
-  await admin.from("github_batch_workers_v2").upsert({
-    worker_id:"glacier-desktop-commander",
-    worker_type:"desktop_commander",
-    connector_key:"desktop_commander.glacier",
-    status:device.status==="approved" ? "online" : "source_ready",
-    max_concurrency:8,
-    capabilities,
-    last_heartbeat_at:device.status==="approved" ? now : null,
-    metadata:{
-      transport:"outbound_signed_bridge_v1",
-      device_id:device.device_id,
-      device_key:device.device_key,
-      approved_roots_count:Array.isArray(device.approved_roots)?device.approved_roots.length:0,
-      selection_enabled:device.status==="approved",
-    },
-    updated_at:now,
-  }, {onConflict:"worker_id"});
-
-  if(device.status==="approved"){
-    await admin.from("connector_registry_v2").update({
-      lifecycle_state:"connected",
-      authentication_state:"authenticated",
-      health_status:"healthy",
-      freshness_status:"fresh",
-      last_checked_at:now,
-      last_successful_probe_at:now,
-      next_human_gate:"none",
-      metadata:{
-        repository:"GlacierEQ/UDC",
-        worker_id:"glacier-desktop-commander",
-        transport:"outbound_signed_bridge_v1",
-        device_id:device.device_id,
-        public_key_sha256:device.public_key_sha256,
-        selection_enabled:true,
-        approved_roots:device.approved_roots,
-      },
-      updated_at:now,
-    }).eq("connector_key","desktop_commander.glacier");
-  }
-  return {status:device.status,observed_at:now};
+  if(error) throw new BridgeError(500,"heartbeat_persistence_failed",{message:error.message});
+  return data;
 }
 
 Deno.serve(async (req:Request) => {
@@ -239,13 +189,6 @@ Deno.serve(async (req:Request) => {
       });
       if(error) throw new BridgeError(500,"job_claim_failed",{message:error.message});
       const jobs=Array.isArray(data)?data:[];
-      for(const job of jobs){
-        await admin.from("desktop_commander_receipts_v1").insert({
-          device_id:device.device_id,job_id:job.job_id,receipt_type:"job_claimed",
-          outcome:"claimed",payload_hash:job.input_hash,
-          detail:{operation:job.operation,mutation_class:job.mutation_class,attempts:job.attempts}
-        });
-      }
       return respond(200,{ok:true,correlation_id:correlationId,jobs});
     }
     if(action==="finish"){
