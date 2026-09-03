@@ -61,3 +61,29 @@ def test_event_has_source_and_hash():
 def test_invalid_transition_rejected():
     with pytest.raises(ValueError):
         validate_transition("RAW", "PROSECUTOR_REVIEW")
+
+
+def test_generator_outbounds_are_not_exhausted():
+    rows = (
+        row for row in [{
+            "outbound_id": "OUT-1",
+            "case_id": "CASE-1",
+            "provider_receipt": "msg1",
+            "thread_or_run": "thread1",
+            "status": "ACK_PENDING",
+        }]
+    )
+    d = decide(base(), rows, now=NOW)
+    assert d.effective_state == "ACK_PENDING"
+    assert "msg1" in d.receipts
+
+
+def test_malformed_deadline_does_not_crash_control_loop():
+    d = decide(base(state="ACK_PENDING", follow_up_due="2026-99-99T25:00:00Z", next_action="Follow up"), now=NOW)
+    assert d.action_kind == "await_ack"
+    assert d.calendar == ()
+
+
+def test_calendar_event_id_uses_full_sha256():
+    d = decide(base(state="ACK_PENDING", follow_up_due="2026-09-04T09:00:00Z", next_action="Follow up"), now=NOW)
+    assert len(d.calendar[0]["calendar_event_id"]) == 64
