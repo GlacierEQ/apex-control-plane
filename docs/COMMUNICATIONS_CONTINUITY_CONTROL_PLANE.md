@@ -146,3 +146,39 @@ The plane is designed to prefer a visible unresolved state over a wrong confiden
 - provider error → receipt + event + next-action re-evaluation.
 
 That fail-closed behavior is what gives phone and email agents continuity across sessions instead of allowing each agent to improvise from partial context.
+
+
+## Federated global frontier
+
+The continuity plane and the estate-wide global frontier are deliberately separate **authority roles**, not competing sources of truth.
+
+Authority flows in one direction:
+
+```text
+GlacierEQ/DOCKETS
+  case/source execution truth
+        |
+        v
+Supabase Backend Ops
+  communications continuity + legal execution runtime
+        |
+        v
+Supabase GlacierEQ
+  estate-wide/global frontier projection
+```
+
+Provider-native receipts and source records remain authoritative for provider execution state.
+
+The two Supabase projects federate through a narrow checkpoint contract:
+
+- frontier SHA-256 hash;
+- watermark timestamp;
+- operator cursor reference;
+- provider receipt references;
+- aggregate priority/attention counts.
+
+They do **not** bulk-replicate case narratives, allegation text, evidence bytes, private communications, or other sensitive source payloads merely to keep the planes synchronized.
+
+Primary GlacierEQ registers Backend Ops as `binding:supabase:backend_ops_continuity`. Backend Ops records the primary global frontier in `continuity_peer_frontiers_v1`.
+
+The synchronization loop must treat a conflicting authority claim as an error rather than choosing whichever copy was updated most recently.
