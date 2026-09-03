@@ -34,7 +34,9 @@
     "run_ledger": "control_runs",
     "heartbeat_registry": "control_heartbeats",
     "checkpoint_ledger": "control_checkpoints",
-    "receipt_ledger": "control_receipts"
+    "receipt_ledger": "control_receipts",
+    "mirror_target": "apex.supabase",
+    "outbox_table": "control_deliveries"
   },
   "mirrored_health_inputs": [
     "case_id",
@@ -103,5 +105,20 @@
       "idempotency_key",
       "payload"
     ]
+  },
+  "supabase_mirror": {
+    "migration": "db/migrations/20260903093500_legal_case_continuous_control_plane_v1.sql",
+    "event_table": "public.legal_case_control_events_v1",
+    "health_table": "public.legal_case_runtime_health_v1",
+    "receipt_table": "public.legal_case_control_receipts_v1",
+    "health_view": "public.legal_case_control_plane_health_v1",
+    "event_ingest_rpc": "public.ingest_legal_case_control_event_v1(jsonb)",
+    "health_upsert_rpc": "public.upsert_legal_case_runtime_health_v1(text,jsonb)",
+    "access": "service_role_only",
+    "event_history": "append_only",
+    "receipt_history": "append_only",
+    "current_health": "recoverable_mutable_projection",
+    "delivery_semantics": "at_least_once_remote_idempotent",
+    "truth_class_mutation": false
   }
 }
