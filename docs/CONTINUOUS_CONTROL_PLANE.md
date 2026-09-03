@@ -67,3 +67,35 @@ Domain-specific terminal conditions remain authoritative.
   `20260903091500_continuous_control_plane_v1.sql`
 
 No heartbeat, dispatch, API 200, send, or commit alone is completion.
+
+
+## Epistemic lattice
+
+AKOS is the HOW-TO-KNOW layer running through the control plane. It does not replace the Operator's mission or the owning domain. It shapes how information becomes knowledge and how knowledge is challenged before state promotion.
+
+```text
+PERCEIVE
+ -> PROVENANCE
+ -> CLASSIFY
+ -> MODEL
+ -> FALSIFY
+ -> VERIFY
+ -> LEARN
+ -> REENTER
+```
+
+The authoritative shared continuity substrate is `supabase-backend-ops`. The foundation is represented there as:
+- matter: `foundation:apex-three-pillars-akos`
+- control state: `foundation:apex-three-pillars-akos:v1`
+- project/system constellation: `continuity_entities_v1`
+- source-bound epistemic claims: `continuity_facts_v1`
+
+The GlacierEQ Supabase project remains a domain projection/data plane, not a second competing continuity authority.
+
+The operating foundation is:
+1. Operator-centric bootup and ascension.
+2. Strongest coherent change — smallest is the floor, not the target.
+3. Deep-work sequential iteration.
+4. AKOS six-layer epistemology as the shape applied through all three pillars.
+
+Before destructive or high-blast-radius mutation, resolve structural indirection (including symlinks), dependents, recovery, and near-/long-term consequences. Uncertainty triggers retrieval, experiment, or verification rather than automatic minimization.
