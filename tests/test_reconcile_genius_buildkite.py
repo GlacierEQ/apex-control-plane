@@ -41,7 +41,8 @@ def test_desired_pipeline_is_exact_main_clustered_and_status_publishing():
 def test_upload_configuration_has_stable_key_exact_sha_and_agent_v3_v4_secret_guard():
     config = mod.PIPELINE_UPLOAD_CONFIGURATION
     assert "key: upload-repository-pipeline" in config
-    assert 'test "$actual" = "$BUILDKITE_COMMIT"' in config
+    assert 'expected="${APEX_EXPECTED_COMMIT:-${BUILDKITE_COMMIT:-}}"' in config
+    assert 'test "$actual" = "$expected"' in config
     assert "--reject-secrets" in config
     assert "set -- pipeline upload .buildkite/pipeline.yml" in config
     assert 'buildkite-agent "$@"' in config
@@ -235,3 +236,26 @@ def test_resolve_build_number_uses_verified_projection_when_reusing():
         "repository": "GlacierEQ/Genius-Verification",
     }
     assert mod.resolve_build_number(result) == 7
+
+
+def test_trigger_build_injects_exact_expected_commit(monkeypatch):
+    monkeypatch.setenv("BUILDKITE_TRIGGER_BUILD", "1")
+    requested = "a" * 40
+
+    class Capture:
+        def __init__(self):
+            self.payload = None
+
+        def request(self, method, path, payload=None):
+            self.payload = payload
+            return {"number": 77, "commit": "HEAD"}
+
+    api = Capture()
+    result = mod.trigger_build(
+        api,
+        "genius-mastery",
+        "GlacierEQ/Genius-Mastery",
+        requested,
+    )
+    assert result["number"] == 77
+    assert api.payload["env"]["APEX_EXPECTED_COMMIT"] == requested
