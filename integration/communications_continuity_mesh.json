@@ -8,7 +8,10 @@
     "orchestration": "GlacierEQ/apex-control-plane@main",
     "runtime_state": "Supabase Backend Ops",
     "provider_truth": "provider-native receipts and source records",
-    "rule": "continuity coordinates identity, context, preflight, receipts, commitments, and calendar projections; it never replaces case source truth"
+    "rule": "continuity coordinates identity, context, preflight, receipts, commitments, and calendar projections; it never replaces case source truth",
+    "global_projection": "Supabase GlacierEQ / control_plane_global_frontier_v2",
+    "federation_direction": "GlacierEQ/DOCKETS -> Supabase Backend Ops continuity/legal runtime -> Supabase GlacierEQ global projection",
+    "cross_project_replication": "frontier_hash_watermark_counts_receipts_only"
   },
   "peers": {
     "case_execution": {
@@ -26,13 +29,22 @@
         "continuity_matter_identity_resolution_v4",
         "continuity_matter_resolver_fix_v5",
         "continuity_ingest_resolution_v6",
-        "continuity_ingest_metadata_v7"
+        "continuity_ingest_metadata_v7",
+        "continuity_global_frontier_federation_v8",
+        "control_plane_backend_ops_continuity_binding_v1"
       ]
     },
     "providers": {
       "email": "Gmail or another authorized email provider",
       "phone": "authorized phone provider",
       "calendar": "Google Calendar or another authorized calendar provider"
+    },
+    "global_frontier": {
+      "runtime": "Supabase GlacierEQ",
+      "view": "control_plane_global_frontier_v2",
+      "binding": "binding:supabase:backend_ops_continuity",
+      "role": "estate_global_projection",
+      "source_of_case_truth": false
     }
   },
   "loop": [
@@ -47,6 +59,7 @@
     "finish continuity action and write event/receipt/follow-up commitment",
     "project source deadlines and follow-ups into calendar without making calendar authoritative",
     "feed normalized provider receipt back to DOCKETS reconciliation",
+    "exchange only frontier hashes, watermarks, counts, operator cursor references, and provider receipt references between Backend Ops and the primary global projection",
     "repeat until lane is terminal, quarantined, or awaiting a source-bound trigger"
   ],
   "identity_resolution": {
@@ -81,6 +94,8 @@
     "ambiguous_matter_binding_fails_closed": true,
     "weak_name_only_binding_forbidden": true,
     "action_receipts_append_only": true,
-    "provider_attempt_never_equals_provider_success": true
+    "provider_attempt_never_equals_provider_success": true,
+    "cross_project_bulk_case_replication_forbidden": true,
+    "conflicting_authority_claims_fail_closed": true
   }
 }
