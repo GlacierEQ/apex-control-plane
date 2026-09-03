@@ -21,7 +21,9 @@
     "continuity_calendar_bindings_v1",
     "continuity_attention_queue_v1",
     "continuity_control_state_v1",
-    "continuity_sync_cursors_v1"
+    "continuity_sync_cursors_v1",
+    "continuity_entities_v1",
+    "continuity_facts_v1"
   ],
   "legal_tables": [
     "legal_control_events_v1",
@@ -65,6 +67,31 @@
       "1FDV-CWS",
       "ops:communications-continuity"
     ],
-    "note": "Readback is evidence of the observed runtime state at this timestamp, not a static guarantee of future state."
+    "note": "Readback is evidence of the observed runtime state at this timestamp, not a static guarantee of future state.",
+    "foundation_binding": {
+      "observed_at": "2026-09-03T09:00:00Z",
+      "status": "BOUND",
+      "matter_key": "foundation:apex-three-pillars-akos",
+      "system_entities": 12,
+      "foundation_facts": 3,
+      "control_key": "foundation:apex-three-pillars-akos:v1"
+    }
+  },
+  "epistemic_binding": {
+    "engine": "GlacierEQ/AKOS",
+    "authoritative_fact_table": "continuity_facts_v1",
+    "entity_table": "continuity_entities_v1",
+    "control_state_table": "continuity_control_state_v1",
+    "foundation_control_key": "foundation:apex-three-pillars-akos:v1",
+    "foundation_matter_key": "foundation:apex-three-pillars-akos",
+    "classes": [
+      "operator_observation",
+      "source_verified",
+      "external_verified",
+      "inference",
+      "proposal",
+      "unresolved"
+    ],
+    "rule": "verification authority is epistemic, not sovereign"
   }
 }
