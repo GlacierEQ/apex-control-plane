@@ -4,7 +4,9 @@
   "authority": {
     "orchestration": "APEX",
     "operator": "operator_intent",
-    "external_action": "exact approval reference required before MUTATING"
+    "external_action": "exact approval reference required before MUTATING",
+    "epistemic": "AKOS",
+    "factual_state": "question-specific live source"
   },
   "domains": {
     "case_execution": {
@@ -153,7 +155,11 @@
     "provider replies, calls, calendar deadlines, CI results, and evidence arrivals feed back as events",
     "expired external-action leases move to RECONCILING, never blind retry",
     "completion requires configured receipt kinds",
-    "new sessions recover the last persisted frontier instead of rebuilding context"
+    "new sessions recover the last persisted frontier instead of rebuilding context",
+    "AKOS governs epistemic integrity, not project-direction sovereignty",
+    "operator firsthand knowledge remains first-class source material and is distinguished from independent corroboration",
+    "symlinks, mounts, registries, generators, aliases, and shared capability pointers are resolved before destructive mutation",
+    "every material cycle re-evaluates near-term and long-term impact before selecting the next frontier"
   ],
   "persistence": {
     "local_fallback": ".apex/continuous-control-plane",
@@ -170,5 +176,77 @@
       "project_ref": "kjebemdgvjvuutzvhbtp",
       "role": "case-domain projection and legal evidence/data plane"
     }
+  },
+  "cognitive_constellation": {
+    "akos": {
+      "repository": "GlacierEQ/AKOS",
+      "role": "epistemic spine / HOW TO KNOW",
+      "layers": [
+        "perception",
+        "provenance",
+        "classification",
+        "model",
+        "falsification",
+        "verification"
+      ]
+    },
+    "monolith": {
+      "repository": "GlacierEQ/monolith",
+      "role": "estate cartography and source orientation"
+    },
+    "aspen_grove": {
+      "repository": "GlacierEQ/aspen-grove-core",
+      "role": "memory, continuity, provenance federation"
+    },
+    "tower_of_babel": {
+      "repository": "GlacierEQ/the-tower-of-babel",
+      "role": "technology selection, interoperability, proof"
+    },
+    "make_it_heavy": {
+      "repository": "GlacierEQ/make-it-heavy",
+      "role": "parallel reasoning and contradiction preservation"
+    },
+    "mega_skills": {
+      "repository": "GlacierEQ/mega-skills",
+      "role": "capability composition"
+    },
+    "genius_mastery": {
+      "repository": "GlacierEQ/Genius-Mastery",
+      "role": "mastery, challenge, teaching, ascension"
+    },
+    "job_app_helix": {
+      "repository": "GlacierEQ/job-app-helix",
+      "role": "evidence-bound application and exact-state proof"
+    },
+    "mastermind": {
+      "repository": "GlacierEQ/mastermind",
+      "role": "mission routing and receipt-backed coordination"
+    },
+    "computer_user": {
+      "repository": "GlacierEQ/computer-user",
+      "role": "terminal execution and post-action readback"
+    },
+    "omni_engine": {
+      "repository": "GlacierEQ/Omni_Engine",
+      "role": "ingestion, memory bridge, operator observability"
+    }
+  },
+  "foundation": {
+    "control_key": "foundation:apex-three-pillars-akos:v1",
+    "matter_key": "foundation:apex-three-pillars-akos",
+    "pillars": [
+      "operator_centric_bootup_and_ascension",
+      "strongest_coherent_change",
+      "deep_work_sequential_iteration"
+    ],
+    "epistemic_layers": [
+      "perception_acquisition",
+      "provenance_authority",
+      "classification_truth_state",
+      "inference_model_construction",
+      "adversarial_falsification",
+      "operational_verification_learning"
+    ],
+    "rule": "smallest change is the floor, not the objective; select the strongest coherent intervention justified by impact, evidence, complexity, and risk"
   }
 }
