@@ -244,3 +244,24 @@ def test_binding_names_real_mirror_rpcs_and_outbox():
     )
     assert runtime["outbox_table"] == "control_deliveries"
     assert runtime["mirror_target"] == "apex.supabase"
+
+
+def test_internal_immutable_trigger_function_is_not_client_executable():
+    root = Path(__file__).resolve().parents[1]
+    migration = (
+        root
+        / "db"
+        / "migrations"
+        / "20260903094500_harden_legal_case_control_trigger_acl_v1.sql"
+    )
+    sql = migration.read_text(encoding="utf-8")
+    assert (
+        "revoke all on function public.legal_case_control_immutable_v1()"
+        in sql
+    )
+    assert "from public,anon,authenticated;" in sql
+    assert (
+        "grant execute on function public.legal_case_control_immutable_v1()"
+        in sql
+    )
+    assert "to service_role;" in sql
