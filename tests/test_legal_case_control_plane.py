@@ -102,6 +102,50 @@ def test_historical_or_current_failed_work_degrades_not_truth_rewrites():
     assert result["truth_class_mutated"] is False
 
 
+def test_blocked_casebuilder_work_projects_blocked():
+    snapshot = _healthy_snapshot()
+    snapshot["work"]["blocked"] = 1
+    result = normalize_casebuilder_health(
+        snapshot,
+        revision_chain_valid=True,
+        evidence_chain_valid=True,
+        build_verified=True,
+    )
+    assert result["status"] == "blocked"
+    assert "blocked_work" in result["blocked_reasons"]
+
+
+def test_terminal_mirror_failure_projects_degraded():
+    snapshot = _healthy_snapshot()
+    snapshot["deliveries"] = {
+        "backlog": 0,
+        "failed": 1,
+    }
+    result = normalize_casebuilder_health(
+        snapshot,
+        revision_chain_valid=True,
+        evidence_chain_valid=True,
+        build_verified=True,
+    )
+    assert result["status"] == "degraded"
+    assert "external_delivery_failed" in result["degraded_reasons"]
+
+
+def test_pending_mirror_delivery_does_not_degrade_by_itself():
+    snapshot = _healthy_snapshot()
+    snapshot["deliveries"] = {
+        "backlog": 3,
+        "failed": 0,
+    }
+    result = normalize_casebuilder_health(
+        snapshot,
+        revision_chain_valid=True,
+        evidence_chain_valid=True,
+        build_verified=True,
+    )
+    assert result["status"] == "healthy"
+
+
 def test_backlog_without_live_worker_degrades():
     snapshot = _healthy_snapshot()
     snapshot["work"]["backlog"] = 3
