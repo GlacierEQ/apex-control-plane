@@ -157,6 +157,18 @@
   ],
   "persistence": {
     "local_fallback": ".apex/continuous-control-plane",
-    "shared_backend": "Supabase migration 20260903091500_continuous_control_plane_v1.sql"
+    "shared_backend": {
+      "provider": "supabase",
+      "project_name": "supabase-backend-ops",
+      "project_ref": "dyhprklicgewmrimecey",
+      "contract": "config/continuous_control_plane_supabase.json",
+      "role": "authoritative shared continuity / legal execution substrate"
+    },
+    "domain_projection": {
+      "provider": "supabase",
+      "project_name": "supabase-glaciereq",
+      "project_ref": "kjebemdgvjvuutzvhbtp",
+      "role": "case-domain projection and legal evidence/data plane"
+    }
   }
 }
