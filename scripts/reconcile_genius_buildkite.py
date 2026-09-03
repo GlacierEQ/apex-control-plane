@@ -110,7 +110,7 @@ steps:
     command: |
       set -euo pipefail
       actual="$(git rev-parse HEAD)"
-      expected="${APEX_EXPECTED_COMMIT:-${BUILDKITE_COMMIT:-}}"
+      expected="${{APEX_EXPECTED_COMMIT:-${{BUILDKITE_COMMIT:-}}}}"
       test -n "$expected"
       test "$actual" = "$expected"
       help="$(buildkite-agent pipeline upload --help 2>&1)"
