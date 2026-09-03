@@ -4,11 +4,14 @@
   "status": "ACTIVE",
   "durable_build": "MAX_IMPACT_DURABLE_V12",
   "source_of_truth": {
-    "structured_plane": "Supabase supabase-glaciereq / apex_legal_* tables",
     "case_repo": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
     "case_repo_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT",
-    "dropbox_master": "/Cherry Chan/CHERRY_NEX_JBPHH_MASTER_CASE/",
-    "dropbox_instruction": "/Cherry Chan/05_AI_CONVERSATION_EXPORTS/00_CONTROL_CENTER/05_CASE_BUILDERS/NAVY_POLICE_MAX_IMPACT_ALLEGATION_ENGINE_CHAT_EXPORT_BUILD_INSTRUCTION_2026-08-29.md"
+    "case_control_plane_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/CONTROL_PLANE",
+    "jack_casebuilder_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER",
+    "execution_contract": "GlacierEQ/DOCKETS/CASE_EXECUTION_ENGINE",
+    "external_execution_state": "supabase://dyhprklicgewmrimecey/public/legal_execution_state_v1",
+    "forensic_project_id": "kjebemdgvjvuutzvhbtp",
+    "dropbox_master": "/Cherry Chan/02_CHERRY_CHAN_RECOVERY_PORTFOLIO/CHERRY_NEX_JBPHH_MASTER_CASE/"
   },
   "identifiers": {
     "police_report": "26-286438",
@@ -52,11 +55,21 @@
     ]
   },
   "continuous_control_plane": {
-    "desired_mode": "event-driven + hourly health reconciliation",
-    "authoritative_case_repo": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+    "mode": "CONTINUOUS_FEDERATED_LIVE",
+    "case_control_plane_commit": "9f46b6767a4a4e41e646428c11af3c95320bc70b",
+    "dockets_live_execution": "GlacierEQ/DOCKETS/CASE_EXECUTION_ENGINE/LIVE_EXECUTIONS/NEX-JBPHH-2026-08-14.json",
+    "dockets_binding_commit": "480527206283b141bbe7efa12f0b6138fab2acf9",
+    "external_execution_state": "supabase://dyhprklicgewmrimecey/public/legal_execution_state_v1",
+    "forensic_project_id": "kjebemdgvjvuutzvhbtp",
+    "apex_core_bridge": {
+      "status": "MERGED",
+      "pull_request": 117,
+      "commit": "e3ccbf0410816d514f6c9fe1fbe9a4c59905c1eb"
+    },
+    "supplemental_registry_pr": 111,
     "monolith_registry_commit": "5d75cd5c41598be15ebdb4c1be6b1727b34f8eb0",
     "connector_degradation_is_nonfatal": true,
-    "projection_rule": "append event -> validate -> project idempotently -> record receipt -> retry degraded target without blocking healthy targets"
+    "projection_rule": "read authority -> reconcile -> append idempotent event -> apply Jack delta -> queue approved action -> capture provider receipt -> project -> reconcile health"
   },
   "updated_at": "2026-09-02"
 }
