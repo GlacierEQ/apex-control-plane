@@ -59,7 +59,7 @@ ALLOWED_TRANSITIONS = {
     WorkState.RECEIVED: {WorkState.HYDRATING, WorkState.BLOCKED},
     WorkState.HYDRATING: {WorkState.COMPILED, WorkState.BLOCKED},
     WorkState.COMPILED: {WorkState.DISPATCHED, WorkState.BLOCKED},
-    WorkState.DISPATCHED: {WorkState.EXECUTING, WorkState.WAITING, WorkState.BLOCKED},
+    WorkState.DISPATCHED: {WorkState.EXECUTING, WorkState.WAITING, WorkState.RECONCILING, WorkState.BLOCKED},
     WorkState.EXECUTING: {WorkState.RECONCILING, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
     WorkState.WAITING: {WorkState.RECEIVED, WorkState.RECONCILING, WorkState.BLOCKED},
     WorkState.RECONCILING: {WorkState.CHANGESET_READY, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
