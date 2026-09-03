@@ -77,12 +77,15 @@ def _parse_dt(value: Any) -> datetime | None:
     text = str(value).strip()
     if not text:
         return None
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    parsed = datetime.fromisoformat(text)
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise ValueError("execution timestamps must be timezone-aware")
-    return parsed.astimezone(UTC)
+    try:
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            return None
+        return parsed.astimezone(UTC)
+    except (ValueError, OSError):
+        return None
 
 def _case_outbounds(case_id: str, outbound_rows: Iterable[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
     return [row for row in outbound_rows if str(row.get("case_id", "")).strip() == case_id]
@@ -133,7 +136,7 @@ def _calendar_projection(execution: Mapping[str, Any]) -> tuple[dict[str, Any], 
             continue
         items.append(
             {
-                "calendar_event_id": stable_hash({"case_id": case_id, "execution_id": execution_id, "kind": kind, "due_at": due.isoformat()})[:24],
+                "calendar_event_id": stable_hash({"case_id": case_id, "execution_id": execution_id, "kind": kind, "due_at": due.isoformat()}),
                 "case_id": case_id,
                 "execution_id": execution_id,
                 "kind": kind,
@@ -157,6 +160,7 @@ def decide(
     current = now or datetime.now(UTC)
     if current.tzinfo is None or current.utcoffset() is None:
         raise ValueError("now must be timezone-aware")
+    outbound_rows = list(outbound_rows)
 
     case_id = str(execution.get("case_id", "")).strip()
     execution_id = str(execution.get("execution_id", "")).strip()
