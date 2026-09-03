@@ -117,8 +117,11 @@ def normalize_casebuilder_health(
 
     work = snapshot.get("work", {})
     failed = int(work.get("failed") or 0)
+    blocked = int(work.get("blocked") or 0)
     backlog = int(work.get("backlog") or 0)
     inflight = int(work.get("inflight") or 0)
+    deliveries = snapshot.get("deliveries", {})
+    delivery_failed = int(deliveries.get("failed") or 0)
     workers = snapshot.get("workers", [])
     live_workers = [
         worker
@@ -132,8 +135,12 @@ def normalize_casebuilder_health(
         if worker.get("stale")
     ]
 
+    if blocked:
+        blocked_reasons.append("blocked_work")
     if failed:
         degraded_reasons.append("terminal_failed_work")
+    if delivery_failed:
+        degraded_reasons.append("external_delivery_failed")
     if stale_workers:
         degraded_reasons.append("stale_worker")
     if backlog and not live_workers:
@@ -158,6 +165,7 @@ def normalize_casebuilder_health(
         "casebuilder": {
             "events": snapshot.get("events", {}),
             "work": work,
+            "deliveries": deliveries,
             "workers": workers,
             "latest_checkpoint": snapshot.get("latest_checkpoint"),
         },
