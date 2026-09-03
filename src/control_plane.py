@@ -71,3 +71,4 @@ if __name__ == "__main__":
     )
 else:
     from control_plane_runtime import *  # noqa: F401,F403
+    from continuous_control_plane import *  # noqa: F401,F403
