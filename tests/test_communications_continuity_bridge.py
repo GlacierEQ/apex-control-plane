@@ -140,3 +140,39 @@ def test_sql_contracts_preserve_security_and_fail_closed_behavior():
     assert "target_has_unrepaired_delivery_failure" in sql
     assert "ambiguous" in sql
     assert "continuity_ingest_and_resolve_v1" in sql
+
+
+def test_federated_frontier_contract_is_narrow_and_directional():
+    mesh = json.loads(
+        (ROOT / "integration" / "communications_continuity_mesh.json").read_text()
+    )
+    authority = mesh["authority_model"]
+    assert authority["case_truth"] == "GlacierEQ/DOCKETS@master/CASE_EXECUTION_ENGINE"
+    assert authority["runtime_state"] == "Supabase Backend Ops"
+    assert authority["global_projection"] == "Supabase GlacierEQ / control_plane_global_frontier_v2"
+    assert authority["cross_project_replication"] == "frontier_hash_watermark_counts_receipts_only"
+    assert mesh["peers"]["global_frontier"]["source_of_case_truth"] is False
+    assert mesh["failure_policy"]["cross_project_bulk_case_replication_forbidden"] is True
+    assert mesh["failure_policy"]["conflicting_authority_claims_fail_closed"] is True
+
+
+def test_cross_project_federation_migrations_preserve_authority_boundaries():
+    primary = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260903094752_control_plane_backend_ops_continuity_binding_v1.sql"
+    ).read_text()
+    backend = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260903094759_continuity_global_frontier_federation_v8.sql"
+    ).read_text()
+    assert "binding:supabase:backend_ops_continuity" in primary
+    assert "frontier_hash_watermark_receipts_only" in primary
+    assert "provider-native receipt outranks projection" in primary
+    assert "continuity_peer_frontiers_v1" in backend
+    assert "continuity_record_peer_frontier_v1" in backend
+    assert "hash_watermark_receipts_only" in backend
+    assert "fail_closed_on_conflicting_authority_claims" in backend
