@@ -120,5 +120,26 @@
     "current_health": "recoverable_mutable_projection",
     "delivery_semantics": "at_least_once_remote_idempotent",
     "truth_class_mutation": false
+  },
+  "continuity_kernel": {
+    "source_system_for_casebuilder": "casebuilder4000",
+    "canonical_matter_rpc": "public.continuity_canonical_matter_v1(text,text)",
+    "ingest_rpc": "public.continuity_ingest_external_event_v1(text,text,text,text,timestamptz,jsonb,text)",
+    "ingest_queue": "public.continuity_ingest_queue_v1",
+    "unified_timeline": "public.continuity_events_v1",
+    "legal_event_mirror_trigger": "legal_control_mirror_continuity_event_v1_trg",
+    "legal_execution_reducer_trigger": "legal_reduce_continuity_event_v1_trg",
+    "legal_execution_state": "public.legal_execution_state_v1",
+    "calendar_bindings": "public.continuity_calendar_bindings_v1",
+    "commitments": "public.continuity_commitments_v1",
+    "outbound_actions": "public.continuity_outbound_actions_v1",
+    "action_receipts": "public.continuity_action_receipts_v1",
+    "health_tick": "public.legal_control_health_tick_v1()",
+    "health_cron": "legal-control-health-v1 */5 * * * *",
+    "casebuilder_bridge_trigger": "legal_case_control_to_continuity_v1_trg",
+    "execution_rule": "Casebuilder events enter continuity ingestion; only the existing legal reducer may transition legal execution state for recognized event types.",
+    "unresolved_matter_rule": "Unresolved Casebuilder case IDs remain unresolved continuity ingest items; no case merge or guessed binding.",
+    "source_rebuild_state": "PARTIAL_RUNTIME_GAP_OBSERVED_2026-09-03",
+    "runtime_note": "The continuity/legal-execution kernel is live in supabase-backend-ops and newer than portions currently represented by checked-in APEX migrations. This binding records the live contract until full migration-source reconstruction is completed."
   }
 }
