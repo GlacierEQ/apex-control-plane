@@ -110,8 +110,8 @@ steps:
     command: |
       set -euo pipefail
       actual="$(git rev-parse HEAD)"
-      requested="${BUILDKITE_COMMIT:-}"
-      resolved="${BUILDKITE_COMMIT_RESOLVED:-}"
+      requested="${{BUILDKITE_COMMIT:-}}"
+      resolved="${{BUILDKITE_COMMIT_RESOLVED:-}}"
       case "$requested" in
         HEAD)
           if [ -n "$resolved" ]; then
