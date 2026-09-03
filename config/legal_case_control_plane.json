@@ -1,0 +1,107 @@
+{
+  "schema": "apex.legal-case-control-plane.v1",
+  "status": "ACTIVE_CONTINUOUS_BINDING",
+  "source_of_case_truth": {
+    "repository": "GlacierEQ/Casebuilder4000",
+    "case_truth_boundary": "Casebuilder analytical state plus CASEBRAIN provenance acceptance",
+    "lifecycle_does_not_promote_truth_class": true
+  },
+  "estate_registry": {
+    "repository": "GlacierEQ/apex-legal-case",
+    "path": "case-estate/CASE_REGISTRY.json",
+    "preserves_matter_identity": true
+  },
+  "host_execution": {
+    "repository": "GlacierEQ/computer-user",
+    "binding": "00_CONTROL_PLANE/JACK_CASEBUILDER_EXECUTION_BINDING.md",
+    "role": "connector/device/browser/filesystem acquisition and readback"
+  },
+  "dispatch": {
+    "repository": "GlacierEQ/mastermind",
+    "role": "mission decomposition and dispatch"
+  },
+  "knowledge_state": {
+    "repository": "GlacierEQ/AKOS",
+    "role": "identity, provenance, receipt and knowledge-state discipline"
+  },
+  "local_casebuilder_runtime": {
+    "health_schema": "casebuilder4000.control-plane-health.v1",
+    "topology_path": "config/continuous_control_plane.json",
+    "store": "control_plane.sqlite3",
+    "worker_command": "casebuilder-control serve",
+    "event_journal": "control_events",
+    "work_queue": "control_work",
+    "run_ledger": "control_runs",
+    "heartbeat_registry": "control_heartbeats",
+    "checkpoint_ledger": "control_checkpoints",
+    "receipt_ledger": "control_receipts"
+  },
+  "mirrored_health_inputs": [
+    "case_id",
+    "observed_at",
+    "status",
+    "work.backlog",
+    "work.inflight",
+    "work.failed",
+    "workers",
+    "latest_checkpoint"
+  ],
+  "health_normalization": {
+    "healthy": [
+      "no terminal failed work",
+      "no stale active worker",
+      "no backlog without live worker",
+      "no inflight work without live lease owner"
+    ],
+    "degraded": [
+      "terminal failed work exists",
+      "stale worker exists",
+      "backlog exists with no live worker",
+      "inflight work exists without a live worker"
+    ],
+    "blocked": [
+      "case revision chain invalid",
+      "evidence manifest chain invalid",
+      "build receipt invalid",
+      "truth/provenance acceptance boundary rejects state"
+    ]
+  },
+  "execution_semantics": {
+    "reads_and_reversible_hardening": "eligible for standing execution policy when live route authorization permits",
+    "external_filing_service_publication_accusation": "requires action-specific authority",
+    "retries": "bounded exponential retry",
+    "lease_recovery": "stale work leases are recovered",
+    "replay": "replayed events preserve correlation and causation links",
+    "idempotency": "event and work idempotency keys suppress duplicate execution",
+    "checkpoints": "verified progress markers, not governance vetoes"
+  },
+  "anti_collapse": [
+    "APEX does not become case truth authority",
+    "host execution does not become case truth authority",
+    "AKOS does not become project-direction authority",
+    "case overlap creates links, not silent merges",
+    "provider dashboards are projections, not source truth",
+    "historical failures remain evidence but do not poison current health after verified recovery"
+  ],
+  "event_bridge": {
+    "accepted_event_types": [
+      "evidence.ingested",
+      "evidence.derivative_registered",
+      "source.bridged",
+      "extraction.completed",
+      "law.verified",
+      "case.state.changed",
+      "case.build.completed",
+      "external.receipt",
+      "timer.tick"
+    ],
+    "required_envelope": [
+      "case_id",
+      "event_type",
+      "source",
+      "correlation_id",
+      "idempotency_key",
+      "payload"
+    ]
+  }
+}
