@@ -133,3 +133,70 @@ def test_binding_missing_truth_boundary_is_rejected(tmp_path):
 
     with pytest.raises(LegalCaseControlPlaneError):
         load_binding(path)
+
+
+def test_supabase_mirror_contract_is_service_role_only_and_history_safe():
+    root = Path(__file__).resolve().parents[1]
+    binding = load_binding(
+        root / "config" / "legal_case_control_plane.json"
+    )
+    mirror = binding["supabase_mirror"]
+    migration = root / mirror["migration"]
+    sql = migration.read_text(encoding="utf-8")
+
+    assert "alter table public.legal_case_control_events_v1 enable row level security;" in sql
+    assert "alter table public.legal_case_runtime_health_v1 enable row level security;" in sql
+    assert "alter table public.legal_case_control_receipts_v1 enable row level security;" in sql
+
+    assert (
+        "revoke all on public.legal_case_control_events_v1 from public,anon,authenticated;"
+        in sql
+    )
+    assert (
+        "revoke all on public.legal_case_runtime_health_v1 from public,anon,authenticated;"
+        in sql
+    )
+    assert (
+        "revoke all on public.legal_case_control_receipts_v1 from public,anon,authenticated;"
+        in sql
+    )
+
+    assert (
+        "grant select,insert on public.legal_case_control_events_v1 to service_role;"
+        in sql
+    )
+    assert (
+        "grant select,insert,update on public.legal_case_runtime_health_v1 to service_role;"
+        in sql
+    )
+    assert (
+        "grant select,insert on public.legal_case_control_receipts_v1 to service_role;"
+        in sql
+    )
+
+    assert "legal_case_control_events_v1_immutable" in sql
+    assert "legal_case_control_receipts_v1_immutable" in sql
+    assert "event_idempotent_replay" in sql
+    assert "upsert_legal_case_runtime_health_v1" in sql
+    assert "where public.legal_case_runtime_health_v1.observed_at <= excluded.observed_at;" in sql
+    assert mirror["truth_class_mutation"] is False
+
+
+def test_binding_names_real_mirror_rpcs_and_outbox():
+    root = Path(__file__).resolve().parents[1]
+    binding = load_binding(
+        root / "config" / "legal_case_control_plane.json"
+    )
+    mirror = binding["supabase_mirror"]
+    runtime = binding["local_casebuilder_runtime"]
+
+    assert (
+        mirror["event_ingest_rpc"]
+        == "public.ingest_legal_case_control_event_v1(jsonb)"
+    )
+    assert (
+        mirror["health_upsert_rpc"]
+        == "public.upsert_legal_case_runtime_health_v1(text,jsonb)"
+    )
+    assert runtime["outbox_table"] == "control_deliveries"
+    assert runtime["mirror_target"] == "apex.supabase"
