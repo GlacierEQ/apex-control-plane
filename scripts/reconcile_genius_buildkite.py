@@ -110,7 +110,9 @@ steps:
     command: |
       set -euo pipefail
       actual="$(git rev-parse HEAD)"
-      test "$actual" = "$BUILDKITE_COMMIT"
+      expected="${APEX_EXPECTED_COMMIT:-${BUILDKITE_COMMIT:-}}"
+      test -n "$expected"
+      test "$actual" = "$expected"
       help="$(buildkite-agent pipeline upload --help 2>&1)"
       set -- pipeline upload .buildkite/pipeline.yml
       printf '%s' "$help" | grep -q -- '--reject-parse-warnings' && set -- "$@" --reject-parse-warnings || true
@@ -477,6 +479,7 @@ def trigger_build(
         "env": {
             "APEX_EXECUTION_SURFACE": "buildkite",
             "APEX_GENIUS_RECONCILIATION": "api-v1",
+            "APEX_EXPECTED_COMMIT": commit,
         },
         "meta_data": {
             "apex_mission": "genius-family-ci-verification",
