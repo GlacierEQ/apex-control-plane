@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "control_plane": "GlacierEQ/apex-control-plane",
+  "authority": {
+    "orchestration": "APEX",
+    "operator": "operator_intent",
+    "external_action": "exact approval reference required before MUTATING"
+  },
+  "domains": {
+    "case_execution": {
+      "repository": "GlacierEQ/DOCKETS",
+      "contract": "CASE_EXECUTION_ENGINE/EXECUTION_SCHEMA.json",
+      "state_machine": "CASE_EXECUTION_ENGINE/REFERRAL_STATE_MACHINE.csv"
+    },
+    "mastery": {
+      "repository": "GlacierEQ/Genius-Mastery",
+      "contract": "GENIUS.yaml"
+    },
+    "orchestration": {
+      "repository": "GlacierEQ/apex-control-plane"
+    }
+  },
+  "event_routes": [
+    {
+      "event_type": "dockets.referral.ready",
+      "domain": "case_execution",
+      "capability": "case.referral.transmit",
+      "objective": "Transmit a source-bound referral through the verified route",
+      "priority": 95,
+      "external_action": true,
+      "required_receipt_kinds": [
+        "provider_receipt",
+        "readback",
+        "verification"
+      ]
+    },
+    {
+      "event_type": "dockets.referral.transmitted",
+      "domain": "case_execution",
+      "capability": "case.ack.monitor",
+      "objective": "Obtain acknowledgement, tracking number, assigned unit, and secure evidence route",
+      "priority": 90,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "dockets.ack.pending",
+      "domain": "case_execution",
+      "capability": "case.follow_up.prepare",
+      "objective": "Prepare the next due acknowledgement follow-up without duplicating prior outbound",
+      "priority": 88,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "gmail.message.sent",
+      "domain": "case_execution",
+      "capability": "case.outbound.reconcile",
+      "objective": "Bind the Gmail provider receipt to the case ledger and schedule acknowledgement monitoring",
+      "priority": 90,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "gmail.reply.received",
+      "domain": "case_execution",
+      "capability": "case.response.ingest",
+      "objective": "Ingest the provider reply as a source-bound agency response and recompute next action",
+      "priority": 94,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "call_e.call.completed",
+      "domain": "case_execution",
+      "capability": "case.call.reconcile",
+      "objective": "Bind call outcome, run identifier, tracking data, supplements, and follow-up state",
+      "priority": 92,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "calendar.follow_up.due",
+      "domain": "case_execution",
+      "capability": "case.follow_up.prepare",
+      "objective": "Rehydrate the exact case lane and prepare the due follow-up from prior receipts",
+      "priority": 90,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "github.workflow.*",
+      "domain": "engineering",
+      "capability": "ci.reconcile",
+      "objective": "Classify exact-head CI as domain failure versus infrastructure failure",
+      "priority": 82,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "buildkite.build.*",
+      "domain": "engineering",
+      "capability": "ci.reconcile",
+      "objective": "Classify Buildkite execution, bootstrap, runner, or domain failure and preserve exact-SHA evidence",
+      "priority": 84,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "genius.progress.*",
+      "domain": "mastery",
+      "capability": "genius.advance",
+      "objective": "Continue from the last verified Genius frontier and compound the strongest gain",
+      "priority": 75,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    },
+    {
+      "event_type": "connector.health.degraded",
+      "domain": "orchestration",
+      "capability": "connector.repair",
+      "objective": "Repair or route around a degraded connector without losing mission continuity",
+      "priority": 96,
+      "external_action": false,
+      "required_receipt_kinds": [
+        "verification"
+      ]
+    }
+  ],
+  "invariants": [
+    "one mission may span many repositories and providers but has one correlation id",
+    "every external side effect requires an exact approval reference before MUTATING",
+    "external retries reconcile provider state before retrying",
+    "TRANSMITTED is progress, not completion",
+    "provider replies, calls, calendar deadlines, CI results, and evidence arrivals feed back as events",
+    "expired external-action leases move to RECONCILING, never blind retry",
+    "completion requires configured receipt kinds",
+    "new sessions recover the last persisted frontier instead of rebuilding context"
+  ],
+  "persistence": {
+    "local_fallback": ".apex/continuous-control-plane",
+    "shared_backend": "Supabase migration 20260903091500_continuous_control_plane_v1.sql"
+  }
+}
