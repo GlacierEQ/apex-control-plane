@@ -1,0 +1,73 @@
+{
+  "schema": "glaciereq.continuous-control-plane.v1",
+  "mission": "preserve and advance one source-bound operating state across agents, repos, connectors, and sessions",
+  "authority": {
+    "mission": "operator",
+    "factual_state": "question_specific_live_source",
+    "epistemic": "AKOS",
+    "orchestration": "apex-control-plane",
+    "terminal_execution": "computer-user",
+    "durable_shared_state": "supabase-glaciereq"
+  },
+  "loop": [
+    "boot",
+    "read_operator_context",
+    "read_frontier",
+    "read_constellation",
+    "read_epistemic_state",
+    "acquire_live_sources",
+    "evaluate_impact",
+    "select_strongest_coherent_frontier",
+    "route",
+    "execute",
+    "readback",
+    "write_event",
+    "write_receipt",
+    "update_epistemic_state",
+    "update_frontier",
+    "fan_out",
+    "recompute"
+  ],
+  "supabase": {
+    "project_id": "kjebemdgvjvuutzvhbtp",
+    "read_surface": "public.control_plane_continuity_spine_v1",
+    "operator_context": "public.operator_runtime_context_current_v1",
+    "frontier": "public.control_plane_global_frontier_v1",
+    "constellation": "public.control_plane_constellation_v1",
+    "epistemic_state": "public.control_plane_epistemic_state_v1",
+    "events": "public.control_plane_events",
+    "receipts": "public.control_plane_receipts",
+    "actions": "public.control_plane_action_outbox",
+    "obligations": "public.control_plane_obligations"
+  },
+  "epistemic_states": [
+    "unknown",
+    "hypothesized",
+    "inferred",
+    "observed",
+    "corroborated",
+    "disputed",
+    "contradicted",
+    "verified"
+  ],
+  "epistemic_layers": [
+    "perception",
+    "provenance",
+    "classification",
+    "model",
+    "falsification",
+    "verification"
+  ],
+  "invariants": [
+    "operator controls mission direction",
+    "live evidence controls claims about current factual state",
+    "verification is epistemic not sovereign",
+    "inherit and verify before rebuilding",
+    "smallest change is a floor not the objective",
+    "resolve symlinks and other indirection before mutation",
+    "no execution claim without execution evidence",
+    "no verified mutation without readback",
+    "destructive high-impact action requires dependency/blast-radius/recovery evaluation",
+    "every material state change updates the durable frontier"
+  ]
+}
