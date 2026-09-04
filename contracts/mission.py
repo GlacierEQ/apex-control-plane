@@ -43,6 +43,131 @@ class MissionStatus(str, enum.Enum):
 # Only mutation + readback + (expected == observed) allows transition to COMPLETE.
 TERMINAL_STATES = {MissionStatus.COMPLETE, MissionStatus.FAILED, MissionStatus.BLOCKED}
 
+# Forward spine used by MasterWorkflowRunner. Illegal to skip or reverse these edges.
+FORWARD_SPINE = (
+    MissionStatus.RECEIVED,
+    MissionStatus.CONTEXT_HYDRATING,
+    MissionStatus.CONTEXT_LOCKED,
+    MissionStatus.MISSION_COMPILED,
+    MissionStatus.DISPATCHING,
+    MissionStatus.EXECUTING,
+    MissionStatus.RESULTS_COLLECTING,
+    MissionStatus.RECONCILING,
+    MissionStatus.CHANGESET_READY,
+    MissionStatus.PREFLIGHT,
+    MissionStatus.MUTATING,
+    MissionStatus.READBACK,
+    MissionStatus.VERIFYING,
+    MissionStatus.COMMITTING_STATE,
+    MissionStatus.COMPLETE,
+)
+
+LEGAL_TRANSITIONS: dict[MissionStatus, frozenset[MissionStatus]] = {
+    MissionStatus.RECEIVED: frozenset(
+        {MissionStatus.CONTEXT_HYDRATING, MissionStatus.FAILED, MissionStatus.BLOCKED}
+    ),
+    MissionStatus.CONTEXT_HYDRATING: frozenset(
+        {MissionStatus.CONTEXT_LOCKED, MissionStatus.WAITING_INPUT, MissionStatus.FAILED}
+    ),
+    MissionStatus.CONTEXT_LOCKED: frozenset(
+        {MissionStatus.MISSION_COMPILED, MissionStatus.FAILED}
+    ),
+    MissionStatus.MISSION_COMPILED: frozenset(
+        {MissionStatus.DISPATCHING, MissionStatus.FAILED}
+    ),
+    MissionStatus.DISPATCHING: frozenset(
+        {MissionStatus.EXECUTING, MissionStatus.BLOCKED, MissionStatus.FAILED}
+    ),
+    MissionStatus.EXECUTING: frozenset(
+        {MissionStatus.RESULTS_COLLECTING, MissionStatus.RETRYING, MissionStatus.FAILED}
+    ),
+    MissionStatus.RESULTS_COLLECTING: frozenset(
+        {MissionStatus.RECONCILING, MissionStatus.FAILED}
+    ),
+    MissionStatus.RECONCILING: frozenset(
+        {MissionStatus.CHANGESET_READY, MissionStatus.FAILED}
+    ),
+    MissionStatus.CHANGESET_READY: frozenset(
+        {MissionStatus.PREFLIGHT, MissionStatus.FAILED}
+    ),
+    MissionStatus.PREFLIGHT: frozenset(
+        {MissionStatus.MUTATING, MissionStatus.BLOCKED, MissionStatus.FAILED}
+    ),
+    MissionStatus.MUTATING: frozenset(
+        {MissionStatus.READBACK, MissionStatus.COMPENSATING, MissionStatus.FAILED}
+    ),
+    MissionStatus.READBACK: frozenset(
+        {MissionStatus.VERIFYING, MissionStatus.FAILED}
+    ),
+    MissionStatus.VERIFYING: frozenset(
+        {
+            MissionStatus.COMMITTING_STATE,
+            MissionStatus.COMPENSATING,
+            MissionStatus.FAILED,
+        }
+    ),
+    MissionStatus.COMMITTING_STATE: frozenset(
+        {MissionStatus.COMPLETE, MissionStatus.PARTIAL, MissionStatus.FAILED}
+    ),
+    MissionStatus.COMPLETE: frozenset(
+        {MissionStatus.RETRYING, MissionStatus.COMPENSATING}
+    ),
+    MissionStatus.FAILED: frozenset(
+        {MissionStatus.RETRYING, MissionStatus.COMPENSATING}
+    ),
+    MissionStatus.BLOCKED: frozenset(
+        {MissionStatus.RETRYING, MissionStatus.WAITING_INPUT, MissionStatus.FAILED}
+    ),
+    MissionStatus.PARTIAL: frozenset(
+        {MissionStatus.RETRYING, MissionStatus.COMPENSATING, MissionStatus.COMPLETE}
+    ),
+    MissionStatus.RETRYING: frozenset(
+        {
+            MissionStatus.CONTEXT_HYDRATING,
+            MissionStatus.DISPATCHING,
+            MissionStatus.EXECUTING,
+        }
+    ),
+    MissionStatus.COMPENSATING: frozenset(
+        {MissionStatus.FAILED, MissionStatus.PARTIAL}
+    ),
+    MissionStatus.WAITING_INPUT: frozenset(
+        {MissionStatus.CONTEXT_HYDRATING, MissionStatus.DISPATCHING, MissionStatus.FAILED}
+    ),
+}
+
+
+def is_legal_transition(current: MissionStatus, new_status: MissionStatus) -> bool:
+    """Return True iff the directed edge exists on the mission graph."""
+    allowed = LEGAL_TRANSITIONS.get(current)
+    if allowed is None:
+        return False
+    return new_status in allowed
+
+
+def walk_forward_spine(mission: "Mission") -> "Mission":
+    """Advance a mission along FORWARD_SPINE from its current node to COMPLETE."""
+    return advance_to(mission, MissionStatus.COMPLETE)
+
+
+def advance_to(mission: "Mission", target: MissionStatus) -> "Mission":
+    """Walk FORWARD_SPINE from the current node to target. No skips."""
+    if mission.status == target:
+        return mission
+    if mission.status not in FORWARD_SPINE or target not in FORWARD_SPINE:
+        raise ValueError(
+            f"advance_to only walks the forward spine, not {mission.status} -> {target}"
+        )
+    start = FORWARD_SPINE.index(mission.status)
+    dest = FORWARD_SPINE.index(target)
+    if dest <= start:
+        raise ValueError(
+            f"Cannot advance backwards along spine {mission.status} -> {target}"
+        )
+    for nxt in FORWARD_SPINE[start + 1 : dest + 1]:
+        mission.transition_to(nxt, reason="advance-to")
+    return mission
+
 
 @dataclass
 class SourceState:
@@ -106,18 +231,22 @@ class Mission:
         )
 
     def transition_to(self, new_status: MissionStatus, reason: Optional[str] = None) -> None:
-        """Enforces legal state transitions."""
-        if self.status in TERMINAL_STATES and new_status not in {MissionStatus.RETRYING, MissionStatus.COMPENSATING}:
-            raise ValueError(f"Cannot transition from terminal state {self.status} to {new_status}")
+        """Enforces legal state transitions. Logs the previous status before mutation."""
+        old_status = self.status
+        if not is_legal_transition(old_status, new_status):
+            raise ValueError(
+                f"Cannot transition from terminal state {old_status} to {new_status}"
+                if old_status in TERMINAL_STATES
+                else f"Illegal mission transition {old_status} -> {new_status}"
+            )
         self.status = new_status
         self.updated_at_utc = time.time()
-        if reason:
-            self.metadata.setdefault("transition_log", []).append({
-                "from": str(self.status),
-                "to": str(new_status),
-                "timestamp_utc": self.updated_at_utc,
-                "reason": reason,
-            })
+        self.metadata.setdefault("transition_log", []).append({
+            "from": str(old_status),
+            "to": str(new_status),
+            "timestamp_utc": self.updated_at_utc,
+            "reason": reason,
+        })
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)

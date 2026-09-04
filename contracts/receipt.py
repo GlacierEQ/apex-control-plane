@@ -29,24 +29,36 @@ class ECHOReceipt:
     previous_receipt_hash: str
     receipt_hash: str = ""
 
+    def payload_for_hash(self) -> Dict[str, Any]:
+        """Canonical payload whose SHA-256 is receipt_hash. Keys are load-bearing."""
+        return {
+            "receipt_id": self.receipt_id,
+            "mission_id": self.mission_id,
+            "correlation_id": self.correlation_id,
+            "step": self.step,
+            "started_at": self.started_at_utc,
+            "completed_at": self.completed_at_utc,
+            "inputs_hash": self.inputs_hash,
+            "expected": self.expected_state,
+            "observed": self.observed_state,
+            "external_ids": self.external_ids,
+            "result": self.result,
+            "previous_receipt_hash": self.previous_receipt_hash,
+        }
+
+    def compute_payload_hash(self) -> str:
+        raw = json.dumps(self.payload_for_hash(), sort_keys=True)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def hash_matches_payload(self) -> bool:
+        """False when a stored receipt_hash does not cover the current fields."""
+        if not self.receipt_hash:
+            return False
+        return self.receipt_hash == self.compute_payload_hash()
+
     def __post_init__(self):
         if not self.receipt_hash:
-            payload = {
-                "receipt_id": self.receipt_id,
-                "mission_id": self.mission_id,
-                "correlation_id": self.correlation_id,
-                "step": self.step,
-                "started_at": self.started_at_utc,
-                "completed_at": self.completed_at_utc,
-                "inputs_hash": self.inputs_hash,
-                "expected": self.expected_state,
-                "observed": self.observed_state,
-                "external_ids": self.external_ids,
-                "result": self.result,
-                "previous_receipt_hash": self.previous_receipt_hash,
-            }
-            raw = json.dumps(payload, sort_keys=True)
-            self.receipt_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+            self.receipt_hash = self.compute_payload_hash()
 
     @classmethod
     def create(

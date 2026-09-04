@@ -17,7 +17,13 @@ if str(BASE_DIR) not in sys.path:
 
 from contracts.changeset import ChangeSet, Operation
 from contracts.context_pack import ContextPack
-from contracts.mission import Mission, MissionStatus
+from contracts.mission import (
+    FORWARD_SPINE,
+    Mission,
+    MissionStatus,
+    is_legal_transition,
+    walk_forward_spine,
+)
 from contracts.receipt import ECHOReceipt
 from adapters.echo.store import ECHOStore
 from adapters.roottruth.store import RootTruthStore
@@ -69,11 +75,16 @@ class TestApexControlPlane(unittest.TestCase):
         m = Mission.create(objective="Upgrade repo X", project="job-app-master")
         self.assertEqual(m.status, MissionStatus.RECEIVED)
 
-        m.transition_to(MissionStatus.CONTEXT_HYDRATING)
-        self.assertEqual(m.status, MissionStatus.CONTEXT_HYDRATING)
+        with self.assertRaises(ValueError):
+            m.transition_to(MissionStatus.MUTATING)
 
-        m.transition_to(MissionStatus.COMPLETE)
+        walk_forward_spine(m)
         self.assertEqual(m.status, MissionStatus.COMPLETE)
+        self.assertEqual(len(m.metadata["transition_log"]), len(FORWARD_SPINE) - 1)
+        first = m.metadata["transition_log"][0]
+        self.assertEqual(first["from"], str(MissionStatus.RECEIVED))
+        self.assertEqual(first["to"], str(MissionStatus.CONTEXT_HYDRATING))
+        self.assertNotEqual(first["from"], first["to"])
 
         # Cannot transition out of COMPLETE without RETRYING
         with self.assertRaises(ValueError):
@@ -201,6 +212,61 @@ class TestApexControlPlane(unittest.TestCase):
         # Because observed delta != expected delta, it MUST transition to FAILED!
         self.assertEqual(final_mission.status, MissionStatus.FAILED)
         self.assertIn("Verification failed", final_mission.metadata["transition_log"][-1]["reason"])
+
+    def test_06_illegal_skip_and_adjacency(self):
+        self.assertTrue(
+            is_legal_transition(MissionStatus.RECEIVED, MissionStatus.CONTEXT_HYDRATING)
+        )
+        self.assertFalse(
+            is_legal_transition(MissionStatus.RECEIVED, MissionStatus.MUTATING)
+        )
+        self.assertFalse(
+            is_legal_transition(MissionStatus.COMPLETE, MissionStatus.EXECUTING)
+        )
+        self.assertTrue(
+            is_legal_transition(MissionStatus.COMPLETE, MissionStatus.RETRYING)
+        )
+        self.assertTrue(
+            is_legal_transition(MissionStatus.VERIFYING, MissionStatus.COMPENSATING)
+        )
+
+    def test_07_genesis_anchor_required(self):
+        with self.assertRaises(ValueError):
+            self.echo.append_receipt(
+                ECHOReceipt.create(
+                    mission_id="msn_genesis",
+                    correlation_id="run_genesis",
+                    step="step1",
+                    started_at=1.0,
+                    expected_state={},
+                    observed_state={},
+                    external_ids={},
+                    result="VERIFIED",
+                    previous_receipt_hash="NOT_GENESIS",
+                )
+            )
+
+    def test_08_payload_tamper_breaks_audit(self):
+        r1 = ECHOReceipt.create(
+            mission_id="msn_tamper",
+            correlation_id="run_tamper",
+            step="step1",
+            started_at=1.0,
+            expected_state={"a": 1},
+            observed_state={"a": 1},
+            external_ids={},
+            result="VERIFIED",
+            previous_receipt_hash="GENESIS_ROOT",
+        )
+        self.echo.append_receipt(r1)
+        lines = self.echo_log.read_text(encoding="utf-8").splitlines()
+        obj = json.loads(lines[0])
+        obj["result"] = "FAILED"
+        self.echo_log.write_text(json.dumps(obj) + "\n", encoding="utf-8")
+        report = self.echo.audit_chain()
+        self.assertFalse(report["is_valid"])
+        self.assertEqual(report["reason"], "payload_hash_mismatch")
+        self.assertEqual(report["broken_at_index"], 1)
 
 
 if __name__ == "__main__":

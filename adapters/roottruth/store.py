@@ -19,7 +19,8 @@ class RootTruthStore:
     """
 
     def __init__(self, storage_path: Optional[Path] = None):
-        self.path = storage_path or Path("/Users/kcbflux/APEX_SYSTEM/INFRASTRUCTURE/apex-control-plane/data/root_truth.json")
+        package_root = Path(__file__).resolve().parent.parent.parent
+        self.path = storage_path or (package_root / "data" / "root_truth.json")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._state: Dict[str, Any] = self._load()
 

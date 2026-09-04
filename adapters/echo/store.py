@@ -24,7 +24,8 @@ class ECHOStore:
     """
 
     def __init__(self, log_path: Optional[Path] = None):
-        self.path = log_path or Path("/Users/kcbflux/APEX_SYSTEM/INFRASTRUCTURE/apex-control-plane/data/echo_receipts.jsonl")
+        package_root = Path(__file__).resolve().parent.parent.parent
+        self.path = log_path or (package_root / "data" / "echo_receipts.jsonl")
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def get_last_receipt(self) -> Optional[ECHOReceipt]:
@@ -49,8 +50,14 @@ class ECHOStore:
                 )
         else:
             if receipt.previous_receipt_hash != "GENESIS_ROOT":
-                # First receipt must anchor to GENESIS_ROOT
-                pass
+                raise ValueError(
+                    "First receipt must anchor to GENESIS_ROOT, "
+                    f"got {receipt.previous_receipt_hash}"
+                )
+        if not receipt.hash_matches_payload():
+            raise ValueError(
+                f"Receipt {receipt.receipt_id} hash does not match payload"
+            )
 
         with open(self.path, "a", encoding="utf-8") as f:
             f.write(json.dumps(receipt.to_dict()) + "\n")
@@ -86,13 +93,32 @@ class ECHOStore:
                 count += 1
                 d = json.loads(line.strip())
                 rcpt = ECHOReceipt(**d)
-                if line_idx > 1 and rcpt.previous_receipt_hash != prev_hash:
+                if count == 1 and rcpt.previous_receipt_hash != "GENESIS_ROOT":
+                    return {
+                        "is_valid": False,
+                        "broken_at_index": count,
+                        "receipt_id": rcpt.receipt_id,
+                        "expected_prev": "GENESIS_ROOT",
+                        "observed_prev": rcpt.previous_receipt_hash,
+                        "total_checked": count,
+                    }
+                if count > 1 and rcpt.previous_receipt_hash != prev_hash:
                     return {
                         "is_valid": False,
                         "broken_at_index": count,
                         "receipt_id": rcpt.receipt_id,
                         "expected_prev": prev_hash,
                         "observed_prev": rcpt.previous_receipt_hash,
+                        "total_checked": count,
+                    }
+                if not rcpt.hash_matches_payload():
+                    return {
+                        "is_valid": False,
+                        "broken_at_index": count,
+                        "receipt_id": rcpt.receipt_id,
+                        "reason": "payload_hash_mismatch",
+                        "stored_hash": rcpt.receipt_hash,
+                        "recomputed_hash": rcpt.compute_payload_hash(),
                         "total_checked": count,
                     }
                 prev_hash = rcpt.receipt_hash

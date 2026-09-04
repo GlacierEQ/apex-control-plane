@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from contracts.mission import Mission, MissionStatus
+from contracts.mission import Mission, MissionStatus, advance_to
 from adapters.buildkite.adapter import BuildkiteAdapter
 from api.webhooks.buildkite import process_buildkite_event
 from adapters.notion.adapter import NotionCockpitAdapter
@@ -75,7 +75,7 @@ class TestAdaptersAndWorkflows(unittest.TestCase):
             priority="P0",
             repositories=["GlacierEQ/monolith"],
         )
-        m.transition_to(MissionStatus.EXECUTING)
+        advance_to(m, MissionStatus.EXECUTING)
 
         # Sync authoritative state to Notion Cockpit
         sync_res = self.notion.sync_mission_state(
