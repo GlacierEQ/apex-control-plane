@@ -1,6 +1,6 @@
 {
   "schema_version": "1.2.0",
-  "name": "Notion-First Continuity + Relationship Mapping Preflight",
+  "name": "Mesh Continuity + Relationship Mapping Preflight",
   "stage_order": [
     "notion_boot_analysis",
     "existing_work_discovery",
@@ -10,43 +10,17 @@
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "authority_semantics": {
     "project_direction_authority": "operator_intent",
-    "canonical_fields_are_compatibility_labels": true,
-    "canonical_fields_do_not_override_operator_intent": true,
     "historical_governance_is_evidence_not_project_authority": true,
     "continuation_before_restart": true,
     "operator_override_may_authorize_new_root": true,
     "discovered_relationships_do_not_authorize_integration": true,
     "inspection_and_mapping_are_observation_only": true,
     "operator_owned_asset_value_ranking_requires_explicit_operator_request": true,
-    "operator_owned_asset_disposition_requires_explicit_operator_request": true
+    "operator_owned_asset_disposition_requires_explicit_operator_request": true,
+    "source_labels_are_provenance_not_hierarchy": true,
+    "no_node_overrides_operator_intent": true,
+    "mesh_relationships_are_discovered_continuously": true
   },
-  "canonical_notion_pages": [
-    {
-      "id": "6b2f21f8-a845-4aa6-9c53-3824900ea43b",
-      "role": "continuity_state",
-      "title": "SuperNova Continuity Ledger — Session Memory"
-    },
-    {
-      "id": "2d3a844d-19ad-4b36-a23f-7ea7e0a8cc6b",
-      "role": "identity_capability",
-      "title": "NOVA-001 — Highest Cognitive Structure"
-    },
-    {
-      "id": "a0db5ee6-49c4-4e7a-9d6a-f8366227bf96",
-      "role": "continuity_method",
-      "title": "SKILL 5 — Memory & Continuity Engineering"
-    },
-    {
-      "id": "44556054-f66e-4bf2-9d05-5a6e650ea082",
-      "role": "notion_governance",
-      "title": "Notion (Workspace) Connector"
-    },
-    {
-      "id": "3abb1e4f-3223-8118-9dd9-c11476bf446f",
-      "role": "chat_continuity_index",
-      "title": "H20 Holographic Continuity Index v0"
-    }
-  ],
   "receipt_requirements": {
     "notion_status": "complete",
     "minimum_pages_loaded": 5,
@@ -100,5 +74,32 @@
     "never_embed_secrets": true,
     "do_not_require_sensitive_payloads_in_receipts": true,
     "store_pointers_and_roles_not_private_content": true
-  }
+  },
+  "peer_notion_nodes": [
+    {
+      "id": "6b2f21f8-a845-4aa6-9c53-3824900ea43b",
+      "role": "continuity_state",
+      "title": "SuperNova Continuity Ledger — Session Memory"
+    },
+    {
+      "id": "2d3a844d-19ad-4b36-a23f-7ea7e0a8cc6b",
+      "role": "identity_capability",
+      "title": "NOVA-001 — Highest Cognitive Structure"
+    },
+    {
+      "id": "a0db5ee6-49c4-4e7a-9d6a-f8366227bf96",
+      "role": "continuity_method",
+      "title": "SKILL 5 — Memory & Continuity Engineering"
+    },
+    {
+      "id": "44556054-f66e-4bf2-9d05-5a6e650ea082",
+      "role": "notion_governance",
+      "title": "Notion (Workspace) Connector"
+    },
+    {
+      "id": "3abb1e4f-3223-8118-9dd9-c11476bf446f",
+      "role": "chat_continuity_index",
+      "title": "H20 Holographic Continuity Index v0"
+    }
+  ]
 }
