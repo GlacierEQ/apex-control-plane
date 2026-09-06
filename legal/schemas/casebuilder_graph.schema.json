@@ -1,0 +1,502 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://glaciereq.local/schemas/jtr-casebuilder-graph.schema.json",
+  "title": "Jack CaseBuilder Full Case Graph",
+  "allOf": [
+    {
+      "$ref": "casebuilder_case.schema.json"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "graph_contract_id",
+    "graph_contract_version",
+    "facts",
+    "typed_actors",
+    "typed_events",
+    "defense_theories",
+    "damage_records",
+    "remedy_paths",
+    "accountability_paths",
+    "allegation_links",
+    "contradiction_assessments",
+    "resolved_discovery_target_ids",
+    "promotion_report",
+    "pressure_map",
+    "orphans",
+    "ledgers"
+  ],
+  "properties": {
+    "graph_contract_id": {
+      "const": "JTR-CASEGRAPH-v1"
+    },
+    "graph_contract_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "facts": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/fact"
+      }
+    },
+    "typed_actors": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/actor"
+      }
+    },
+    "typed_events": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/event"
+      }
+    },
+    "defense_theories": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/defense"
+      }
+    },
+    "damage_records": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/damage"
+      }
+    },
+    "remedy_paths": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/remedy"
+      }
+    },
+    "accountability_paths": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/accountability"
+      }
+    },
+    "allegation_links": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/allegation_link"
+      }
+    },
+    "contradiction_assessments": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/contradiction_assessment"
+      }
+    },
+    "resolved_discovery_target_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "promotion_report": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "RAW",
+          "STRUCTURED",
+          "SOURCED",
+          "CORROBORATED",
+          "ELEMENT_MAPPED",
+          "DEFENSE_TESTED",
+          "HARDENED",
+          "PLEADING_READY",
+          "REFERRAL_READY",
+          "TRIAL_READY"
+        ]
+      }
+    },
+    "pressure_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "orphans": {
+      "type": "object"
+    },
+    "ledgers": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "string_array": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "fact": {
+      "type": "object",
+      "required": [
+        "id",
+        "proposition",
+        "source_ids",
+        "actor_ids",
+        "event_ids",
+        "disputed"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proposition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "actor_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "event_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "disputed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "required": [
+        "id",
+        "name_or_role",
+        "authority",
+        "source_ids",
+        "unknown_identity",
+        "identity_discovery_target_ids"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name_or_role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string"
+        },
+        "entity_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authority": {
+          "$ref": "#/$defs/string_array"
+        },
+        "source_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "unknown_identity": {
+          "type": "boolean"
+        },
+        "identity_discovery_target_ids": {
+          "$ref": "#/$defs/string_array"
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "date_or_period",
+        "location_or_context",
+        "act",
+        "actor_ids",
+        "fact_ids",
+        "source_ids",
+        "harm_ids"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "date_or_period": {
+          "type": "string"
+        },
+        "location_or_context": {
+          "type": "string"
+        },
+        "act": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "fact_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "source_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "harm_ids": {
+          "$ref": "#/$defs/string_array"
+        }
+      }
+    },
+    "defense": {
+      "type": "object",
+      "required": [
+        "id",
+        "allegation_id",
+        "theory",
+        "supporting_fact_ids",
+        "rebuttal_fact_ids"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allegation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "theory": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supporting_fact_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "rebuttal_fact_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "unresolved_risk": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "damage": {
+      "type": "object",
+      "required": [
+        "id",
+        "description",
+        "cause_event_ids",
+        "source_ids"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cause_event_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "source_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "amount": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "remedy": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "basis",
+        "allegation_ids",
+        "authority_ids",
+        "proof_required"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allegation_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "authority_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "proof_required": {
+          "$ref": "#/$defs/string_array"
+        }
+      }
+    },
+    "accountability": {
+      "type": "object",
+      "required": [
+        "id",
+        "allegation_id",
+        "forum_or_entity",
+        "route",
+        "basis",
+        "remedy_ids",
+        "ready"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allegation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forum_or_entity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remedy_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "ready": {
+          "type": "boolean"
+        }
+      }
+    },
+    "allegation_link": {
+      "type": "object",
+      "required": [
+        "allegation_id",
+        "fact_ids",
+        "duty_or_prohibition",
+        "entity_ids",
+        "knowledge_fact_ids",
+        "mental_state_fact_ids",
+        "defense_ids",
+        "contradiction_ids",
+        "accountability_path_ids"
+      ],
+      "properties": {
+        "allegation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fact_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "duty_or_prohibition": {
+          "$ref": "#/$defs/string_array"
+        },
+        "entity_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "knowledge_fact_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "mental_state_fact_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "defense_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "contradiction_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "accountability_path_ids": {
+          "$ref": "#/$defs/string_array"
+        },
+        "limitations_timeliness": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "do_not_overstate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "contradiction_assessment": {
+      "type": "object",
+      "required": [
+        "contradiction_id",
+        "state",
+        "discovery_target_ids"
+      ],
+      "properties": {
+        "contradiction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "enum": [
+            "OPEN",
+            "PARTIALLY_RECONCILED",
+            "RESOLVED",
+            "IMPEACHMENT_READY"
+          ]
+        },
+        "impeachment_value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "knowledge_inference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "discovery_target_ids": {
+          "$ref": "#/$defs/string_array"
+        }
+      }
+    }
+  }
+}
