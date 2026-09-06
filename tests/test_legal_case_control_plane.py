@@ -265,3 +265,73 @@ def test_internal_immutable_trigger_function_is_not_client_executable():
         in sql
     )
     assert "to service_role;" in sql
+
+
+def test_casebuilder_continuity_bridge_preserves_execution_authority_boundary():
+    root = Path(__file__).resolve().parents[1]
+    migration = (
+        root
+        / "db"
+        / "migrations"
+        / "20260903100000_casebuilder_continuity_event_bridge_v1.sql"
+    )
+    sql = migration.read_text(encoding="utf-8")
+    binding = load_binding(
+        root / "config" / "legal_case_control_plane.json"
+    )
+    continuity = binding["continuity_kernel"]
+
+    assert "continuity_canonical_matter_v1" in sql
+    assert "continuity_ingest_external_event_v1" in sql
+    assert "legal_case_control_to_continuity_v1_trg" in sql
+    assert "continuity_mirrored" in sql
+    assert "continuity_mirror_failed" in sql
+    assert "legal_control_deadletter_v1" in sql
+
+    # The bridge is ingestion-only. It must not invoke the state transition RPC.
+    assert "legal_execution_transition_v1(" not in sql
+    assert (
+        continuity["legal_execution_reducer_trigger"]
+        == "legal_reduce_continuity_event_v1_trg"
+    )
+    assert (
+        continuity["execution_rule"]
+        .startswith("Casebuilder events enter continuity ingestion")
+    )
+
+
+def test_casebuilder_continuity_bridge_is_service_role_only():
+    root = Path(__file__).resolve().parents[1]
+    sql = (
+        root
+        / "db"
+        / "migrations"
+        / "20260903100000_casebuilder_continuity_event_bridge_v1.sql"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "revoke all on function public.legal_case_control_to_continuity_v1()"
+        in sql
+    )
+    assert "from public,anon,authenticated;" in sql
+    assert (
+        "grant execute on function public.legal_case_control_to_continuity_v1()"
+        in sql
+    )
+    assert "to service_role;" in sql
+
+
+def test_continuity_binding_records_live_runtime_source_gap():
+    root = Path(__file__).resolve().parents[1]
+    binding = load_binding(
+        root / "config" / "legal_case_control_plane.json"
+    )
+    continuity = binding["continuity_kernel"]
+
+    assert (
+        continuity["source_rebuild_state"]
+        == "PARTIAL_RUNTIME_GAP_OBSERVED_2026-09-03"
+    )
+    assert continuity["calendar_bindings"] == "public.continuity_calendar_bindings_v1"
+    assert continuity["outbound_actions"] == "public.continuity_outbound_actions_v1"
+    assert continuity["action_receipts"] == "public.continuity_action_receipts_v1"
