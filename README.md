@@ -183,3 +183,8 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 CASEY_AUTO_BOOT_MODE=request python3 src/control_plane.py
 python3 -m pytest -q tests/test_apex_enforced_startup.py
 ```
+
+## Jack Casebuilder / Allegation Forge
+
+The Jack legal case-construction subsystem is implemented in `src/jack_casebuilder.py` with its machine contract at `config/jack_casebuilder_contract.json` and architecture at `docs/JACK_CASEBUILDER_ALLEGATION_FORGE.md`. It adds stable case-graph objects, occurrence-first Doe actors, element mapping, proof-bound allegation promotion, pressure mapping, and SHA-256 state receipts without collapsing allegations into verified facts.
+
