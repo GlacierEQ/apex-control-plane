@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.1",
+  "binding_name": "JACK_THE_RIPPER_CASEBUILDER",
+  "case_id": "1FDV-23-0001009",
+  "profile": "legal_case",
+  "source_repository": "GlacierEQ/apex-legal-case",
+  "source_path": "legal-forge/cases/1FDV-23-0001009/casebuilder.json",
+  "source_schema_path": "legal-forge/schemas/casebuilder.schema.json",
+  "source_validator_path": "scripts/jack_casebuilder.py",
+  "adapter_module": "src/jack_casebuilder_adapter.py",
+  "required": true,
+  "fail_closed_on_structural_corruption": true,
+  "truth_policy": {
+    "casebuilder_is_projection_not_primary_evidence": true,
+    "allegations_never_auto_promote_to_fact": true,
+    "duplicate_sources_do_not_create_corroboration": true,
+    "unknown_actors_remain_discovery_targets": true,
+    "missing_elements_block_promotion_not_investigation": true,
+    "firsthand_fact_is_direct_evidence": true,
+    "corroboration_is_additive_not_prerequisite": true
+  },
+  "required_outputs": [
+    "anchor_allegation_ids",
+    "development_allegation_ids",
+    "pleading_ready_ids",
+    "critical_discovery_target_ids",
+    "high_discovery_target_ids",
+    "open_gap_count",
+    "unresolved_gap_refs"
+  ],
+  "contract_path": "docs/JACK_CASEBUILDER_CONTROL_PLANE.md",
+  "binding_mode": "runtime_selected_case_with_default_binding",
+  "default_binding": {
+    "case_id": "1FDV-23-0001009",
+    "source_repository": "GlacierEQ/apex-legal-case",
+    "source_path": "legal-forge/cases/1FDV-23-0001009/casebuilder.json",
+    "source_schema_path": "legal-forge/schemas/casebuilder.schema.json",
+    "source_validator_path": "scripts/jack_casebuilder.py"
+  },
+  "multi_case": {
+    "adapter_is_case_agnostic": true,
+    "private_matter_projection_allowed": true,
+    "private_case_evidence_must_not_be_copied_into_public_control_plane": true,
+    "selected_projection_must_validate_before_runtime_projection": true
+  }
+}

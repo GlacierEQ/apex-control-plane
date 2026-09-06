@@ -183,3 +183,14 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 CASEY_AUTO_BOOT_MODE=request python3 src/control_plane.py
 python3 -m pytest -q tests/test_apex_enforced_startup.py
 ```
+
+
+## Jack the Ripper CaseBuilder
+
+The `legal_case` profile now binds to a structured CaseBuilder projection through `config/jack_casebuilder.json` and `src/jack_casebuilder_adapter.py`.
+
+The CaseBuilder surface carries:
+
+`SOURCE -> FACT -> EVENT -> ACTOR -> ALLEGATION -> ELEMENT -> CONTRADICTION -> HARM -> DEFENSE -> DISCOVERY TARGET -> REMEDY -> ACCOUNTABILITY PATH`
+
+The adapter validates graph integrity and exposes allegation maturity, critical discovery pressure, and unresolved proof gaps to APEX without treating the projection itself as primary evidence. The adapter is case-agnostic: the existing 1FDV binding remains the default compatibility target, while any private matter may supply a conforming validated projection without copying its evidence into this public repository. The full contract is [`docs/JACK_CASEBUILDER_CONTROL_PLANE.md`](docs/JACK_CASEBUILDER_CONTROL_PLANE.md).
