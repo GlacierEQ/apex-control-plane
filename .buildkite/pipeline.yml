@@ -202,14 +202,21 @@ steps:
       test "$$actual" = "$BUILDKITE_COMMIT"
       operator_fidelity_sha="$$(buildkite-agent meta-data get operator-fidelity-junit-sha256)"
       registry_audit_sha="$(buildkite-agent meta-data get registry-audit-junit-sha256)"
-      genius_reconciliation_sha="$(buildkite-agent meta-data get genius-reconciliation-sha256)"
-      mastermind_reconciliation_sha="$(buildkite-agent meta-data get mastermind-reconciliation-sha256)"
-      printf '%s  %s\n%s  %s\n%s  %s\n%s  %s\n' \
-        "$operator_fidelity_sha" "operator-fidelity.xml" \
-        "$registry_audit_sha" "registry-audit.xml" \
-        "$genius_reconciliation_sha" "genius-reconciliation.json" \
-        "$mastermind_reconciliation_sha" "mastermind-reconciliation.json" \
-        > artifacts/buildkite/SHA256SUMS
+      if [ "$BUILDKITE_BRANCH" = "main" ]; then
+        genius_reconciliation_sha="$(buildkite-agent meta-data get genius-reconciliation-sha256)"
+        mastermind_reconciliation_sha="$(buildkite-agent meta-data get mastermind-reconciliation-sha256)"
+        printf '%s  %s\n%s  %s\n%s  %s\n%s  %s\n' \
+          "$operator_fidelity_sha" "operator-fidelity.xml" \
+          "$registry_audit_sha" "registry-audit.xml" \
+          "$genius_reconciliation_sha" "genius-reconciliation.json" \
+          "$mastermind_reconciliation_sha" "mastermind-reconciliation.json" \
+          > artifacts/buildkite/SHA256SUMS
+      else
+        printf '%s  %s\n%s  %s\n' \
+          "$operator_fidelity_sha" "operator-fidelity.xml" \
+          "$registry_audit_sha" "registry-audit.xml" \
+          > artifacts/buildkite/SHA256SUMS
+      fi
       python3 - <<'PY' > artifacts/buildkite/verified-ci-receipt.json
       import datetime
       import json
