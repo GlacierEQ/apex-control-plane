@@ -97,6 +97,9 @@ def _terminate_blocked(code: int = _BOOT_BLOCKED_EXIT) -> None:
         os._exit(code)
 
 
+from operator_impact_context import OPERATOR_IMPACT_CONTEXT
+
+APEX_OPERATOR_IMPACT_CONTEXT = OPERATOR_IMPACT_CONTEXT
 APEX_STRONG_BOOT_SESSION = None
 APEX_RUNTIME_KERNEL = None
 

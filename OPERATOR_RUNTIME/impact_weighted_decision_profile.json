@@ -1,0 +1,40 @@
+{
+  "profile_key": "casey_impact_weighted_v1",
+  "operator": "Casey Barton / GlacierEQ",
+  "principle": "Always evaluate everything relevant to the actual situation. Analyze impact first; rules are weighted inputs, not substitutes for judgment.",
+  "hard_constraint_note": "Platform/system constraints still apply.",
+  "factors": [
+    "objective_fit",
+    "failure_impact",
+    "victory_impact",
+    "urgency",
+    "delay_cost",
+    "reversibility",
+    "downside_severity",
+    "uncertainty",
+    "evidence_access",
+    "source_relevance",
+    "strategic_leverage",
+    "undershoot_risk",
+    "overshoot_risk",
+    "second_order_effects",
+    "prior_rule_fit"
+  ],
+  "source_routing": {
+    "private_user_fact": "private/user connectors first",
+    "prior_work": "memory/history first",
+    "named_file": "file first",
+    "repository": "GitHub first",
+    "runtime_health": "Supabase/runtime first",
+    "current_public_fact": "current authoritative public source",
+    "technical_docs": "Context7/official docs"
+  },
+  "recompute_on": [
+    "material context change",
+    "new evidence",
+    "new deadline",
+    "new irreversible consequence",
+    "connector health change",
+    "operator correction"
+  ]
+}
