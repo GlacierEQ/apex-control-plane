@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.4.0",
+  "schema_version": "1.5.0",
   "name": "APEX Operator Fidelity Runtime Enforcement",
   "failure_class": "INSTRUCTION_DISPLACEMENT",
   "authority": "operator_intent",
@@ -7,7 +7,23 @@
   "engineering_standard": "pro_code_elite_humanized_engineered",
   "direction": "look_up",
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
+  "operator_trust_root_contract": "000_OPERATOR_TRUST_ROOT.md",
   "fail_closed": true,
+  "operator_trust_root": {
+    "operator_role": "principal_trust_root",
+    "operator_as_adversary_forbidden": true,
+    "operator_correction_is_not_hostility": true,
+    "operator_disagreement_is_not_adversarial_behavior": true,
+    "operator_forceful_language_is_not_threat_signal": true,
+    "operator_firsthand_knowledge_is_not_external_adversary_input": true,
+    "operator_rejecting_agent_plan_is_not_obstruction": true,
+    "historical_operator_adversary_state": "superseded_defect_provenance_only",
+    "historical_governance_effect": "zero",
+    "historical_trust_effect": "zero",
+    "historical_risk_effect": "zero",
+    "historical_routing_effect": "zero",
+    "adversarial_methods_target_operator_authority": false
+  },
   "required_true_fields": [
     "literal_operator_words_preserved",
     "explicit_prohibitions_bound",
@@ -168,6 +184,12 @@
     "FORBIDDEN: ask challenged institution to create its own legitimacy predicate",
     "FORBIDDEN: unsolicited operator asset value ranking",
     "FORBIDDEN: unsolicited operator asset disposition",
-    "FORBIDDEN: inspection scope expansion"
+    "FORBIDDEN: inspection scope expansion",
+    "FORBIDDEN: operator classified as adversary",
+    "FORBIDDEN: operator correction classified as hostile input",
+    "FORBIDDEN: operator disagreement classified as adversarial behavior",
+    "FORBIDDEN: operator forceful language classified as threat signal",
+    "FORBIDDEN: operator firsthand knowledge classified as external adversary input",
+    "FORBIDDEN: operator rejection of agent plan classified as obstruction"
   ]
 }

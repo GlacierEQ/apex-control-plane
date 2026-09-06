@@ -1,0 +1,62 @@
+{
+  "protocol": "glaciereq.case-execution/1.0",
+  "mode": "continuous_peer_federation",
+  "authority_model": {
+    "operator_direction": "human OPERATOR remains project-direction source",
+    "case_source_of_record": "GlacierEQ/DOCKETS@master/CASE_EXECUTION_ENGINE",
+    "orchestrator": "GlacierEQ/apex-control-plane@main",
+    "rule": "orchestration may route and reconcile; it must not replace source identity or self-promote external action"
+  },
+  "peers": {
+    "case_execution": {
+      "repository": "GlacierEQ/DOCKETS",
+      "ref": "master",
+      "engine_root": "CASE_EXECUTION_ENGINE",
+      "schema": "CASE_EXECUTION_ENGINE/EXECUTION_SCHEMA.json",
+      "outbound_ledger": "CASE_EXECUTION_ENGINE/OUTBOUND_LEDGER.csv",
+      "readiness_matrix": "CASE_EXECUTION_ENGINE/CASE_READINESS_MATRIX.csv"
+    },
+    "apex": {
+      "repository": "GlacierEQ/apex-control-plane",
+      "ref": "main",
+      "bridge": "src/case_execution_bridge.py",
+      "runtime": "src/control_plane_runtime.py"
+    }
+  },
+  "loop": [
+    "recover current case execution object and outbound receipts",
+    "reconcile observed state with provider-backed receipts",
+    "suppress duplicate outbound actions",
+    "calculate next action and follow-up/response calendar projections",
+    "route only an explicitly authorized external action",
+    "capture provider execution receipt",
+    "ingest acknowledgement, tracking number, assignment, reply, or refusal",
+    "write result back into the case execution source",
+    "re-evaluate until investigation/prosecutor review, disposition+escalation evaluation, or operator closure"
+  ],
+  "event_contract": {
+    "event_type": "case_execution.reconciled",
+    "idempotency": "sha256(protocol,case_id,execution_id,lane,effective_state,action_kind,target,packet_ref)",
+    "provenance_required": true,
+    "external_action_authorized_default": false
+  },
+  "calendar_projection": {
+    "fields": [
+      "follow_up_due",
+      "response_deadline"
+    ],
+    "dedupe": "stable calendar_event_id derived from case/execution/kind/due_at",
+    "calendar_is_projection": true
+  },
+  "duplicate_policy": {
+    "existing_provider_receipt_blocks_new_send": true,
+    "repeated_press_charges_advances_existing_lane": true,
+    "new_send_requires_no_equivalent_outbound_or_explicit_new_lane": true
+  },
+  "failure_policy": {
+    "never_promote_attempt_to_execution_without_receipt": true,
+    "preserve_dead_letters": true,
+    "preserve_prior_message_thread_run_ids": true,
+    "quarantine_unsupported_theories": true
+  }
+}
