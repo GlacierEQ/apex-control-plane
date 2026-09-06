@@ -110,7 +110,21 @@ steps:
     command: |
       set -euo pipefail
       actual="$(git rev-parse HEAD)"
-      test "$actual" = "$BUILDKITE_COMMIT"
+      requested="${{BUILDKITE_COMMIT:-}}"
+      resolved="${{BUILDKITE_COMMIT_RESOLVED:-}}"
+      case "$requested" in
+        HEAD)
+          if [ -n "$resolved" ]; then
+            test "$actual" = "$resolved"
+          fi
+          ;;
+        "$actual")
+          ;;
+        *)
+          echo "checkout mismatch: actual=$actual requested=$requested resolved=$resolved" >&2
+          exit 42
+          ;;
+      esac
       help="$(buildkite-agent pipeline upload --help 2>&1)"
       set -- pipeline upload .buildkite/pipeline.yml
       printf '%s' "$help" | grep -q -- '--reject-parse-warnings' && set -- "$@" --reject-parse-warnings || true

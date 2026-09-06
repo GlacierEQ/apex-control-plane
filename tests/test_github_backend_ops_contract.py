@@ -122,3 +122,60 @@ def test_runtime_probe_artifact():
     assert probe["status"] == "router_v2_compare_before_write_verified"
     assert probe["resource_lease"] == "required"
     assert probe["destructive_action"] is False
+
+
+def test_bulk_read_is_read_only_and_bounded():
+    source = (ROOT / "supabase" / "functions" / "apex-github-connector" / "index.ts").read_text()
+    assert 'operation === "bulk.read"' in source
+    assert "BULK_READ_OPERATIONS" in source
+    assert "items.length > 50" in source
+    assert '"branch.create"' not in source[source.index("const BULK_READ_OPERATIONS"):source.index("async function runBulkReadV3")]
+    assert 'execution_mode: "in_process_bulk_read_v3"' in source
+
+
+def test_batch_worker_splits_reads_and_writes():
+    source = (ROOT / "supabase" / "functions" / "apex-github-batch-worker" / "index.ts").read_text()
+    assert 'operation:"bulk.read"' in source
+    assert 'const readItems=items.filter((item)=>!isWrite(item.operation));' in source
+    assert 'const writeItems=items.filter((item)=>isWrite(item.operation));' in source
+    assert 'execution_mode:"router_write_v2"' in source
+    assert "acquire_github_batch_dispatch_lease_v2" in source
+
+
+def test_batch_control_plane_migrations_present():
+    names = [
+        "20260831190507_github_batch_runtime_v2.sql",
+        "20260831190720_github_batch_autowake_scheduler_v2.sql",
+        "20260831190933_github_batch_quality_ops_v3.sql",
+        "20260831191902_github_batch_global_dispatch_lease_v3.sql",
+        "20260902192146_github_batch_receipts_item_index_v4.sql",
+        "20260902192256_github_bulk_read_route_v6.sql",
+        "20260902192843_control_plane_runtime_health_v3.sql",
+    ]
+    for name in names:
+        assert (ROOT / "db" / "migrations" / name).exists(), name
+
+
+def test_batch_receipts_and_rls_contract():
+    source = (ROOT / "db" / "migrations" / "20260831190507_github_batch_runtime_v2.sql").read_text().lower()
+    assert "github_batch_receipts_v2 is append-only" in source
+    assert "enable row level security" in source
+    assert "revoke all on public.github_batch_runs_v2 from public,anon,authenticated" in source
+    assert "grant select,insert,update on public.github_batch_runs_v2 to service_role" in source
+    assert "batch_item_count_out_of_range" in source
+
+
+def test_control_plane_health_is_service_role_only():
+    source = (ROOT / "db" / "migrations" / "20260902192843_control_plane_runtime_health_v3.sql").read_text().lower()
+    assert "control_plane_runtime_health_v1" in source
+    assert "control_plane_health_snapshot_v1" in source
+    assert "security_invoker=true" in source
+    assert "revoke all on public.control_plane_runtime_health_v1 from public,anon,authenticated" in source
+    assert "grant select on public.control_plane_runtime_health_v1 to service_role" in source
+
+
+def test_unbound_desktop_commander_is_not_claimable():
+    m = manifest()
+    worker = m["workers"]["glacier_desktop_commander"]
+    assert worker["status"] == "source_ready_unbound"
+    assert worker["selection_enabled"] is False

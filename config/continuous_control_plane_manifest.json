@@ -1,0 +1,123 @@
+{
+  "manifest": "apex.continuous-control-plane",
+  "version": "1.0.0",
+  "generated_at": "2026-09-03T06:17:00-10:00",
+  "generated_at_utc": "2026-09-03T16:17:00Z",
+  "generated_by": "SuperNova NOVA-001 (Notion AI orchestration node)",
+  "binding_event": "STATE-CTRL-001 activation checklist execution",
+  "case_scope": ["1FDV-23-0001009", "MAT-NEX-JBPHH-2026-08-14"],
+  "authority_precedence": [
+    "github_decision_schema",
+    "supabase_runtime_receipt",
+    "approved_original_source_bytes",
+    "notion_projection",
+    "task_record",
+    "unverified_memory_or_prose"
+  ],
+  "planes": {
+    "0_operator": { "owner": "Operator", "authority": "direction_and_approval", "role": "Approves writes, destructive actions, filings" },
+    "1_case_continuous_control": {
+      "owner": "Notion CONTINUOUS CONTROL PLANE databases (State Registry / Event Bus / Action-Receipt Ledger)",
+      "authority": "case_state_spine",
+      "role": "Every material event -> event row -> state transition -> action/receipt"
+    },
+    "2_connector_ops": {
+      "owner": "Unified Operations Plane + Connector Mesh Control Plane (Notion)",
+      "authority": "routing_and_failure_law",
+      "role": "Connector selection, circuits, failure ledger, toolbelt tiers"
+    },
+    "3_machine_projection": {
+      "owner": "GitHub GlacierEQ/apex-control-plane",
+      "authority": "schemas_validators_decisions_pr_ci_receipts",
+      "role": "Versioned machine state; runtime manifest home (this file)"
+    },
+    "4_operational_ledger": {
+      "owner": "Supabase supabase-backend-ops",
+      "project_ref": "dyhprklicgewmrimecey",
+      "authority": "runtime_receipts_circuits_budgets",
+      "role": "Immutable runtime truth; canonical health writer = job 12 connector-health-ping-every-10-min"
+    },
+    "5_evidence_vaults": {
+      "owner": "Google Drive originals / Dropbox forensic mirror / Box controlled archive",
+      "authority": "original_bytes",
+      "role": "SHA-256 manifests; immutable originals"
+    },
+    "6_task_execution": {
+      "owner": "Linear (APEX Prime queue); Asana secondary",
+      "authority": "work_packets",
+      "role": "One task authority; no competing queues"
+    },
+    "7_comms_time": {
+      "owner": "Gmail / Outlook / Google Calendar / Slack",
+      "authority": "source_native_comms_and_deadlines",
+      "role": "Read-first; writes approval-gated"
+    },
+    "8_nex_case_plane": {
+      "owner": "APEX OMEGA Durable Control-Plane Sync + JACK NEX control plane",
+      "authority": "case_scoped_mirror",
+      "role": "Same taxonomy, NEX- IDs; no second control plane"
+    }
+  },
+  "heartbeat_loop": ["OBSERVE", "EVENT", "TRANSITION", "ACTION", "VERIFY", "PROJECT"],
+  "state_law": "OBSERVED != INFERRED != PROPOSED != ATTEMPTED != EXECUTED != VERIFIED != COMMITTED != DEPLOYED != OBSERVED_IN_OPERATION; material promotion requires the matching receipt",
+  "event_taxonomy": [
+    "Source Acquired", "Source Verified", "Email Sent", "Email Received",
+    "Call Planned", "Call Started", "Call Failed", "Call Completed",
+    "Tip / Referral Submitted", "Receipt Captured", "Docket Event", "Filing Event",
+    "Deadline Trigger", "Response Received", "Contradiction Found",
+    "Correction / Supersession", "Automation Check", "State Transition"
+  ],
+  "watch_conditions": [
+    "source_ingestion", "filing_or_docket_change_nef", "deadline_approach",
+    "connector_failure_or_recovery", "contradiction_detected",
+    "external_actor_action", "operator_directive"
+  ],
+  "failure_escalation_law": [
+    "auth_failure -> disable dependent routes + open circuits + stale freshness + reauth + probe",
+    "rate_limit -> respect cooldown + no retry storms + record budget impact",
+    "ambiguous_external_outcome -> never auto-replay; dead-letter + evidence reconciliation",
+    "policy_block -> retain block; never weaken approval gates to force execution",
+    "projection_failure_after_durable_success -> recover from durable payload; never reinvoke connector"
+  ],
+  "notion_bindings": {
+    "pipeline_page": "3ceb1e4f-3223-81f6-a0db-ed1dc94e4ebe",
+    "state_registry": "collection://fed8c1b6-120f-4eef-a577-a9eee1e9ead0",
+    "event_bus": "collection://fed8c1b6-120f-4eef-a537-c8f96a0b32d93",
+    "action_receipt_ledger": "collection://fed8c1b6-120f-4eef-a949-2c853d3f6a3f",
+    "root_state_node": "STATE-CTRL-001",
+    "seeded_instrument_states": [
+      "STATE-M01-001", "STATE-M02-001", "STATE-M03-001", "STATE-M04-001",
+      "STATE-M05-001", "STATE-M06-001", "STATE-M07-001", "STATE-M08-001", "STATE-M09-001"
+    ],
+    "priority_map": { "P0": ["STATE-M01-001", "STATE-M04-001", "STATE-M05-001"], "P1": ["STATE-M02-001", "STATE-M03-001", "STATE-M06-001", "STATE-M07-001", "STATE-M08-001", "STATE-M09-001"] }
+  },
+  "ingested_failure_reference": {
+    "event_id": "EVT-20260902-FBI-FAIL-001",
+    "function": "EV-0001 (first ingested failure on the Event Bus)",
+    "summary": "FBI Honolulu intake call execution failed; CALL-E run hs7oGKfkDMW4ZDNYHC0YAg; backend_status FAILED; no intake/reference number",
+    "linked_state": "STATE-CRIM-FBI-001 (FAILED)",
+    "linked_action": "ACT-FBI-CALL-001 (FAILED, Failure Receipt)",
+    "note": "Pre-existing ingestion verified and adopted; duplicate EV-0001 row intentionally not created (anti-sprawl / continuity law)"
+  },
+  "health_cadence": {
+    "continuous": "Supabase job 12 connector-health-ping (10-min) remains canonical health writer",
+    "per_session": "State Registry queried before case work; stale projections flagged, not trusted",
+    "weekly": "Operator summary in Unified Operations Plane format; meaningful changes only"
+  },
+  "hard_invariants": [
+    "no_silent_failure",
+    "no_unearned_state_promotion",
+    "no_forecast_as_fact",
+    "no_second_control_plane_extend_never_fork",
+    "no_privileged_bytes_secrets_or_protected_minor_identifiers_in_notion",
+    "a_win_is_not_complete_until_ordered_relief_is_implemented"
+  ],
+  "activation_checklist": [
+    { "item": "Seed live P0/P1 state rows into State Registry", "status": "DONE", "receipt": "STATE-M01-001..STATE-M09-001 created 2026-09-03 HST" },
+    { "item": "Ingest current failed call as Event Bus record EV-0001", "status": "SATISFIED_EXISTING", "receipt": "EVT-20260902-FBI-FAIL-001 verified fully wired (event->state->action) 2026-09-03 HST" },
+    { "item": "Commit runtime manifest to GlacierEQ/apex-control-plane", "status": "IN_REVIEW", "receipt": "this PR; merge creates durable receipt" },
+    { "item": "Create operator views on the three continuous-control databases", "status": "PENDING" },
+    { "item": "Verify recurring health check writes through to State Registry", "status": "PENDING" }
+  ],
+  "receipts": []
+}

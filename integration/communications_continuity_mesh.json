@@ -1,0 +1,101 @@
+{
+  "protocol": "glaciereq.communications-continuity/1.0",
+  "mode": "closed_loop_peer_federation",
+  "public_source_scope": "schema_contracts_only_no_live_case_payloads",
+  "authority_model": {
+    "operator_direction": "human OPERATOR remains project-direction source",
+    "case_truth": "GlacierEQ/DOCKETS@master/CASE_EXECUTION_ENGINE",
+    "orchestration": "GlacierEQ/apex-control-plane@main",
+    "runtime_state": "Supabase Backend Ops",
+    "provider_truth": "provider-native receipts and source records",
+    "rule": "continuity coordinates identity, context, preflight, receipts, commitments, and calendar projections; it never replaces case source truth",
+    "global_projection": "Supabase GlacierEQ / control_plane_global_frontier_v2",
+    "federation_direction": "GlacierEQ/DOCKETS -> Supabase Backend Ops continuity/legal runtime -> Supabase GlacierEQ global projection",
+    "cross_project_replication": "frontier_hash_watermark_counts_receipts_only"
+  },
+  "peers": {
+    "case_execution": {
+      "protocol": "glaciereq.case-execution/1.0",
+      "bridge": "src/case_execution_bridge.py",
+      "mesh": "integration/case_execution_mesh.json"
+    },
+    "continuity": {
+      "bridge": "src/communications_continuity_bridge.py",
+      "runtime": "Supabase Backend Ops",
+      "migrations": [
+        "continuity_communications_intelligence_v1",
+        "continuity_control_loop_v2",
+        "continuity_outbound_transaction_v3",
+        "continuity_matter_identity_resolution_v4",
+        "continuity_matter_resolver_fix_v5",
+        "continuity_ingest_resolution_v6",
+        "continuity_ingest_metadata_v7",
+        "continuity_global_frontier_federation_v8",
+        "control_plane_backend_ops_continuity_binding_v1"
+      ]
+    },
+    "providers": {
+      "email": "Gmail or another authorized email provider",
+      "phone": "authorized phone provider",
+      "calendar": "Google Calendar or another authorized calendar provider"
+    },
+    "global_frontier": {
+      "runtime": "Supabase GlacierEQ",
+      "view": "control_plane_global_frontier_v2",
+      "binding": "binding:supabase:backend_ops_continuity",
+      "role": "estate_global_projection",
+      "source_of_case_truth": false
+    }
+  },
+  "loop": [
+    "read DOCKETS execution object and provider-backed receipts",
+    "derive ControlDecision without self-authorizing external action",
+    "resolve continuity matter identity using canonical keys, aliases, and strong routes",
+    "build fresh context packet containing source-typed facts, recent events, delivery risks, and open commitments",
+    "run continuity_preflight_outbound_v2 for stale context, duplicate-action, bounce, and overdue-risk checks",
+    "record append-only preflight receipt",
+    "execute provider action only through an explicitly authorized provider path",
+    "capture provider-native receipt",
+    "finish continuity action and write event/receipt/follow-up commitment",
+    "project source deadlines and follow-ups into calendar without making calendar authoritative",
+    "feed normalized provider receipt back to DOCKETS reconciliation",
+    "exchange only frontier hashes, watermarks, counts, operator cursor references, and provider receipt references between Backend Ops and the primary global projection",
+    "repeat until lane is terminal, quarantined, or awaiting a source-bound trigger"
+  ],
+  "identity_resolution": {
+    "canonical_lookup": "continuity_canonical_matter_v1",
+    "resolver": "continuity_resolve_matter_v1",
+    "ingest": "continuity_ingest_and_resolve_v1",
+    "auto_bind_min_score": 80,
+    "auto_bind_min_margin": 20,
+    "weak_signal_policy": "unresolved",
+    "ambiguity_policy": "unresolved",
+    "archived_matter_auto_bind": false
+  },
+  "outbound_transaction": {
+    "prepare": "continuity_prepare_outbound_v1",
+    "start": "continuity_start_outbound_v1",
+    "finish": "continuity_finish_outbound_v1",
+    "external_action_authorized_default": false,
+    "duplicate_window_minutes": 60,
+    "context_packet_ttl_hours": 24,
+    "provider_receipt_required_for_execution_claim": true
+  },
+  "calendar": {
+    "role": "projection",
+    "source_of_truth": false,
+    "rule": "deadlines and follow-ups originate in case/continuity commitments; calendar mirrors them idempotently"
+  },
+  "failure_policy": {
+    "stale_context_blocks_action": true,
+    "recent_duplicate_blocks_action": true,
+    "known_bounced_target_blocks_normal_email": true,
+    "delivery_repair_may_target_known_bounce": true,
+    "ambiguous_matter_binding_fails_closed": true,
+    "weak_name_only_binding_forbidden": true,
+    "action_receipts_append_only": true,
+    "provider_attempt_never_equals_provider_success": true,
+    "cross_project_bulk_case_replication_forbidden": true,
+    "conflicting_authority_claims_fail_closed": true
+  }
+}

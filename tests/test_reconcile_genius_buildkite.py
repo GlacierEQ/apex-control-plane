@@ -38,10 +38,15 @@ def test_desired_pipeline_is_exact_main_clustered_and_status_publishing():
     assert provider["build_pull_request_forks"] is False
 
 
-def test_upload_configuration_has_stable_key_exact_sha_and_agent_v3_v4_secret_guard():
+def test_upload_configuration_accepts_exact_or_symbolic_commit_and_guards_agent_versions():
     config = mod.PIPELINE_UPLOAD_CONFIGURATION
     assert "key: upload-repository-pipeline" in config
-    assert 'test "$actual" = "$BUILDKITE_COMMIT"' in config
+    assert 'requested="${BUILDKITE_COMMIT:-}"' in config
+    assert 'resolved="${BUILDKITE_COMMIT_RESOLVED:-}"' in config
+    assert 'HEAD)' in config
+    assert 'test "$actual" = "$resolved"' in config
+    assert '"$actual")' in config
+    assert 'exit 42' in config
     assert "--reject-secrets" in config
     assert "set -- pipeline upload .buildkite/pipeline.yml" in config
     assert 'buildkite-agent "$@"' in config
