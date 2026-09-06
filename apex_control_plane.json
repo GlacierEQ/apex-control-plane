@@ -29,5 +29,15 @@
       "scheduled connector writes are disabled"
     ]
   },
-  "audit_log": []
+  "audit_log": [],
+  "legal_case_routes": {
+    "1FDV-23-0001009": {
+      "status": "active_pending_protected_main_checks",
+      "jack_route": "jack/config/cases/1FDV-23-0001009.json",
+      "legal_map": "legal/cases/1FDV-23-0001009/JACK_CONTROL_PLANE.md",
+      "action_queue": "action_queue/case_1FDV-23-0001009_jack_v5.json",
+      "audit_receipt": "audit_logs/case_1FDV_20260830_jack_v5_binding.json"
+    }
+  },
+  "last_case_binding": "2026-08-30 HST"
 }

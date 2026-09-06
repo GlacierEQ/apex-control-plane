@@ -30,3 +30,9 @@ ONNX SHA-256: `5602367fb172d7457c9cc7dc57e87e6aa765e8bc53cfbe8662468c5ad91d338b`
 
 Jack attacks execution failure, arguments, contradictions, source gaps, and broken workflows.
 The contract does not authorize violence, threats, unlawful access, unauthorized external actions, or fabrication.
+
+
+## Registered legal case routes
+- `1FDV-23-0001009` → `jack/config/cases/1FDV-23-0001009.json`
+
+Case routes supply evidence/object/action pointers to the existing fail-closed Jack runtime. They do not bypass the global gate contract or turn allegations into facts.

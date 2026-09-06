@@ -1,0 +1,67 @@
+{
+  "schema": "APEX_CASE_ACTION_QUEUE_V1",
+  "case_id": "1FDV-23-0001009",
+  "generated_at": "2026-08-30 HST",
+  "immediate_fix": [
+    {
+      "severity": "P0",
+      "id": "YAM-G001",
+      "title": "Acquire July 24 native audio/video",
+      "asana_task_id": "1218002467369491",
+      "auto_execute": false
+    },
+    {
+      "severity": "P0",
+      "id": "YAM-G002",
+      "title": "Dkts.57/67 opposition autopsy",
+      "asana_task_id": "1218001238987169",
+      "auto_execute": false
+    },
+    {
+      "severity": "P0",
+      "id": "YAM-G003",
+      "title": "Reconstruct June 26 off-record conferences",
+      "asana_task_id": "1218001239141502",
+      "auto_execute": false
+    },
+    {
+      "severity": "P0",
+      "id": "YAM-G004",
+      "title": "Lock withdrawal consent and transition record",
+      "asana_task_id": "1218001239046311",
+      "auto_execute": false
+    },
+    {
+      "severity": "P0",
+      "id": "YAM-G005-G006",
+      "title": "Resolve request withdrawals and exhibit disposition",
+      "asana_task_id": "1217997292796930",
+      "auto_execute": false
+    },
+    {
+      "severity": "P0",
+      "id": "YAM-G007",
+      "title": "Redline oral ruling vs Dkts.91/94/98",
+      "asana_task_id": "1217994881581693",
+      "auto_execute": false
+    }
+  ],
+  "strategic_consolidation": [
+    {
+      "severity": "P1",
+      "id": "YAM-G009-G010",
+      "title": "Clio turnover + fee/lien reconciliation",
+      "asana_task_id": "1217994881679450",
+      "auto_execute": false
+    },
+    {
+      "severity": "P1",
+      "id": "YAM-G011",
+      "title": "Build malpractice trial-within-a-trial",
+      "asana_task_id": "1217994881423649",
+      "auto_execute": false
+    }
+  ],
+  "blocked_by_auth": [],
+  "rule": "Queue items are execution tasks, not factual findings."
+}
