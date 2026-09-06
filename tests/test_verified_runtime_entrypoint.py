@@ -93,7 +93,9 @@ def _session(kernel: FakeKernel):
     )
 
 
-def test_runtime_context_requires_exact_injected_session_and_kernel(monkeypatch) -> None:
+def test_runtime_context_requires_exact_injected_session_and_kernel(
+    monkeypatch,
+) -> None:
     kernel = FakeKernel()
     session = _session(kernel)
     monkeypatch.setattr(entry, "require_strong_boot", lambda: session)
@@ -109,7 +111,9 @@ def test_runtime_context_requires_exact_injected_session_and_kernel(monkeypatch)
     assert resolved_kernel is kernel
 
 
-def test_runtime_context_rejects_session_or_kernel_identity_mismatch(monkeypatch) -> None:
+def test_runtime_context_rejects_session_or_kernel_identity_mismatch(
+    monkeypatch,
+) -> None:
     kernel = FakeKernel()
     session = _session(kernel)
     monkeypatch.setattr(entry, "require_strong_boot", lambda: session)

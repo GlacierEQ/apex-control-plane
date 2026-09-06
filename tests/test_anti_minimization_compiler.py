@@ -19,7 +19,10 @@ from anti_minimization_compiler import (
         ("Ship the minimum viable implementation.", "MVP_DEFAULT"),
         ("Choose the safest slice for now.", "SAFEST_SLICE_DEFAULT"),
         ("Use a bounded scope as the delivery target.", "BOUNDED_SLICE_DEFAULT"),
-        ("Pick the least capable implementation that passes.", "LEAST_CAPABILITY_DEFAULT"),
+        (
+            "Pick the least capable implementation that passes.",
+            "LEAST_CAPABILITY_DEFAULT",
+        ),
         ("Freeze architecture after the first green test.", "FREEZE_PRODUCT"),
         ("Enter a feature freeze as the delivery strategy.", "FEATURE_FREEZE_DELIVERY"),
         ("Governance first, implementation later.", "GOVERNANCE_FIRST"),
@@ -59,7 +62,9 @@ def test_boolean_friendly_prose_still_gets_caught() -> None:
     assert "FREEZE_PRODUCT" in codes
 
 
-def test_legitimate_local_quality_phrase_cannot_camouflage_same_clause_regression() -> None:
+def test_legitimate_local_quality_phrase_cannot_camouflage_same_clause_regression() -> (
+    None
+):
     text = (
         "Use least privilege for deployment credentials and take the safest slice "
         "while we freeze architecture."
@@ -96,17 +101,23 @@ def test_local_quality_narrowing_is_preserved(text: str) -> None:
 
 
 def test_explicit_operator_directed_reduction_is_authoritative() -> None:
-    assert inspect_execution_text(
-        "Freeze architecture and take the smallest implementation.",
-        operator_directed_reduction=True,
-    ) == ()
+    assert (
+        inspect_execution_text(
+            "Freeze architecture and take the smallest implementation.",
+            operator_directed_reduction=True,
+        )
+        == ()
+    )
 
 
 def test_compile_upward_repairs_product_level_minimization() -> None:
     compiled = compile_upward(
         "Do the bare minimum. Take the smallest useful step. Freeze architecture. Governance first."
     )
-    assert "maximum coherent advance consistent with the Operator-defined target" in compiled
+    assert (
+        "maximum coherent advance consistent with the Operator-defined target"
+        in compiled
+    )
     assert "largest coherent executable tranche" in compiled
     assert "continue evolution" in compiled
     assert "governance serve functional advance" in compiled
@@ -114,9 +125,14 @@ def test_compile_upward_repairs_product_level_minimization() -> None:
 
 
 def test_compile_upward_rewrites_minimum_permissions_language() -> None:
-    compiled = compile_upward("Use minimum necessary permissions for the worker identity.")
+    compiled = compile_upward(
+        "Use minimum necessary permissions for the worker identity."
+    )
     assert "minimum necessary permissions" not in compiled.lower()
-    assert "maximum coherent advance consistent with the Operator-defined target" in compiled
+    assert (
+        "maximum coherent advance consistent with the Operator-defined target"
+        in compiled
+    )
     assert inspect_execution_text(compiled) == ()
 
 
@@ -129,7 +145,9 @@ def test_compile_upward_preserves_quality_and_repairs_neighboring_regression() -
     assert inspect_execution_text(compiled) == ()
 
 
-def test_compile_upward_preserves_negated_prohibition_and_repairs_other_clause() -> None:
+def test_compile_upward_preserves_negated_prohibition_and_repairs_other_clause() -> (
+    None
+):
     compiled = compile_upward(
         "Never freeze architecture; take the safest slice for the implementation."
     )

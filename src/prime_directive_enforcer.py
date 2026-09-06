@@ -5,6 +5,7 @@ Tool calls are allowed through, but a stage advances only after a successful
 tool result is recorded. The module is provider-shape tolerant and stores no
 tool arguments or model content in its audit log.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -211,7 +212,9 @@ class StartupGateEnforcer:
             if self._state.terminal_blocked:
                 raise GateViolation("startup gate is terminally blocked")
             if not bool(self.policy.get("allow_verified_boot_receipt", False)):
-                raise GateViolation("verified boot receipt attachment is disabled by policy")
+                raise GateViolation(
+                    "verified boot receipt attachment is disabled by policy"
+                )
             if not is_authentic_validation(validation):
                 raise GateViolation("boot validation is not authentic")
             if (
@@ -240,7 +243,9 @@ class StartupGateEnforcer:
                 raise GateViolation("startup gate is terminally blocked")
             missing = self._missing_stages()
             if missing:
-                raise GateViolation("cannot mark gate passed; missing: " + ", ".join(missing))
+                raise GateViolation(
+                    "cannot mark gate passed; missing: " + ", ".join(missing)
+                )
             self._state.gate_passed = True
             self._audit("gate_complete", source="recorded_tool_results")
             return self.snapshot()
@@ -289,11 +294,15 @@ class StartupGateEnforcer:
         target_text = _stable_text(arguments).lower()
         result_path = _result_path(result).lower()
         content = _result_content(result)
-        content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest() if content else ""
+        content_hash = (
+            hashlib.sha256(content.encode("utf-8")).hexdigest() if content else ""
+        )
 
         for path, expected_hash in self._required_files.items():
             path_lower = path.lower()
-            target_matches = path_lower in target_text or result_path.endswith(path_lower)
+            target_matches = path_lower in target_text or result_path.endswith(
+                path_lower
+            )
             if target_matches and content_hash == expected_hash:
                 self._state.ground_truth_files_loaded.add(path)
                 self._audit("ground_truth_verified", file=path, success=True)
@@ -304,7 +313,9 @@ class StartupGateEnforcer:
         aliases = self._aliases.get(stage, set())
         if tool_name in aliases:
             return True
-        return any(tool_name.endswith(f".{alias}") for alias in aliases if "." not in alias)
+        return any(
+            tool_name.endswith(f".{alias}") for alias in aliases if "." not in alias
+        )
 
     def _complete_if_ready(self) -> None:
         if not self._state.terminal_blocked and not self._missing_stages():
@@ -315,7 +326,9 @@ class StartupGateEnforcer:
         missing: list[str] = []
         if not self._state.memory_search_complete:
             missing.append("memory_search")
-        missing_files = sorted(set(self._required_files) - self._state.ground_truth_files_loaded)
+        missing_files = sorted(
+            set(self._required_files) - self._state.ground_truth_files_loaded
+        )
         if missing_files:
             missing.append("ground_truth_read:" + ",".join(missing_files))
         if not self._state.tool_inventory_complete:
@@ -361,16 +374,26 @@ class StartupGateEnforcer:
         numbered = []
         for index, stage in enumerate(self._missing_stages(), start=1):
             if stage == "memory_search":
-                instruction = "Run memory_search on the task topic and user/project context."
+                instruction = (
+                    "Run memory_search on the task topic and user/project context."
+                )
             elif stage.startswith("ground_truth_read:"):
                 files = stage.split(":", 1)[1]
-                instruction = f"Read and hash-verify the missing ground-truth file(s): {files}."
+                instruction = (
+                    f"Read and hash-verify the missing ground-truth file(s): {files}."
+                )
             elif stage == "tool_inventory":
-                instruction = "List the tools and connectors actually loaded in this worker."
+                instruction = (
+                    "List the tools and connectors actually loaded in this worker."
+                )
             elif stage == "current_source_open":
-                instruction = "Open the current task sources required by the active profile."
+                instruction = (
+                    "Open the current task sources required by the active profile."
+                )
             else:
-                instruction = "Build and validate the combined provider-backed startup receipt."
+                instruction = (
+                    "Build and validate the combined provider-backed startup receipt."
+                )
             numbered.append(f"{index}. {instruction}")
 
         return {
@@ -410,7 +433,11 @@ class StartupGateEnforcer:
                 continue
             event[key] = value
         self._state.audit_events.append(event)
-        if event_type in {"hard_correction", "terminal_block", "ground_truth_hash_mismatch"}:
+        if event_type in {
+            "hard_correction",
+            "terminal_block",
+            "ground_truth_hash_mismatch",
+        }:
             LOGGER.warning("[GATEKEEPER] %s", event_type)
 
 

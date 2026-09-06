@@ -33,14 +33,18 @@ def _evidence(**overrides) -> ExecutionEvidence:
     return ExecutionEvidence(**values)
 
 
-def test_strong_estate_scale_execution_is_allowed_when_it_is_understood_and_recoverable() -> None:
+def test_strong_estate_scale_execution_is_allowed_when_it_is_understood_and_recoverable() -> (
+    None
+):
     result = evaluate_execution(_evidence())
     assert result.decision is GateDecision.ALLOW
     assert result.allowed is True
 
 
 @pytest.mark.parametrize("state", [EpistemicState.HYPOTHESIZED, EpistemicState.UNKNOWN])
-def test_guess_cannot_be_promoted_into_high_impact_execution(state: EpistemicState) -> None:
+def test_guess_cannot_be_promoted_into_high_impact_execution(
+    state: EpistemicState,
+) -> None:
     result = evaluate_execution(_evidence(epistemic_state=state))
     assert result.decision is GateDecision.RESEARCH_REQUIRED
     assert any("hypothesis or unknown" in reason for reason in result.reasons)
@@ -97,7 +101,9 @@ def test_irreversible_action_requires_operator_authorization_and_preservation() 
     assert any("preservation checkpoint" in reason for reason in result.reasons)
 
 
-def test_irreversible_action_can_proceed_when_operator_authorizes_and_recovery_is_verified() -> None:
+def test_irreversible_action_can_proceed_when_operator_authorizes_and_recovery_is_verified() -> (
+    None
+):
     result = evaluate_execution(
         _evidence(
             reversibility=Reversibility.IRREVERSIBLE,
@@ -122,7 +128,9 @@ def test_completion_requires_receipt_readback_verification_and_no_active_work() 
     assert any("still active" in error for error in errors)
 
 
-def test_failure_cannot_be_narrated_into_completion_before_recovery_state_is_observed() -> None:
+def test_failure_cannot_be_narrated_into_completion_before_recovery_state_is_observed() -> (
+    None
+):
     errors = validate_completion_claim(
         CompletionEvidence(
             execution_receipt=True,
@@ -137,13 +145,16 @@ def test_failure_cannot_be_narrated_into_completion_before_recovery_state_is_obs
 
 
 def test_verified_terminal_state_can_be_claimed_complete() -> None:
-    assert validate_completion_claim(
-        CompletionEvidence(
-            execution_receipt=True,
-            terminal_readback=True,
-            verification_passed=True,
-            active_operations=0,
-            failure_detected=False,
-            recovery_state_observed=True,
+    assert (
+        validate_completion_claim(
+            CompletionEvidence(
+                execution_receipt=True,
+                terminal_readback=True,
+                verification_passed=True,
+                active_operations=0,
+                failure_detected=False,
+                recovery_state_observed=True,
+            )
         )
-    ) == ()
+        == ()
+    )

@@ -10,6 +10,7 @@ The learner never grants project authority and never mutates external systems.
 It ranks evidence/capability candidates; Operator intent and the control-plane
 mutation interlocks remain controlling.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -133,7 +134,9 @@ class AdaptiveRanker:
             reverse=True,
         )
 
-    def observe(self, candidate: AdaptiveCandidate, reward: float) -> tuple[float, float]:
+    def observe(
+        self, candidate: AdaptiveCandidate, reward: float
+    ) -> tuple[float, float]:
         """Learn from an observed outcome.
 
         ``reward`` is bounded to [-1, 1]. Positive outcomes reinforce active
@@ -151,7 +154,9 @@ class AdaptiveRanker:
             if name not in self.weights:
                 continue
             updated = self.weights[name] + self.learning_rate * error * value
-            self.weights[name] = max(-self.weight_limit, min(self.weight_limit, updated))
+            self.weights[name] = max(
+                -self.weight_limit, min(self.weight_limit, updated)
+            )
 
         self.bias = max(
             -self.weight_limit,

@@ -10,7 +10,9 @@ from src.adaptive_intelligence import (
 
 
 def _candidate(candidate_id: str, **features: float) -> AdaptiveCandidate:
-    return AdaptiveCandidate(candidate_id=candidate_id, kind="context", features=features)
+    return AdaptiveCandidate(
+        candidate_id=candidate_id, kind="context", features=features
+    )
 
 
 def test_rank_prefers_provenance_alignment_and_verification() -> None:

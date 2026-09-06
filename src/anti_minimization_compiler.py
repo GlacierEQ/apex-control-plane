@@ -15,6 +15,7 @@ a prohibition, but it cannot excuse "take the safest slice" later in the text.
 Only selected execution language should be scanned. Literal Operator words may
 quote rejected phrases and must remain intact for provenance.
 """
+
 from __future__ import annotations
 
 import re
@@ -166,7 +167,7 @@ def _clauses(text: str) -> tuple[str, ...]:
 
 
 def _locally_negated(clause: str, match_start: int) -> bool:
-    prefix = clause[max(0, match_start - 96):match_start]
+    prefix = clause[max(0, match_start - 96) : match_start]
     return bool(_NEGATION_PREFIX_RE.search(prefix))
 
 
@@ -228,9 +229,9 @@ def compile_upward(text: str) -> str:
             ]
             for match in reversed(matches):
                 rewritten = (
-                    rewritten[:match.start()]
+                    rewritten[: match.start()]
                     + rule.replacement
-                    + rewritten[match.end():]
+                    + rewritten[match.end() :]
                 )
         compiled.append(rewritten)
     return "\n".join(compiled)

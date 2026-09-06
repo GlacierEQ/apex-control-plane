@@ -38,9 +38,7 @@ def validate_result(result: dict[str, object]) -> tuple[int, int]:
     }
     unexpected = sorted(set(result) - allowed)
     if unexpected:
-        raise SystemExit(
-            f"History continuity returned unexpected fields: {unexpected}"
-        )
+        raise SystemExit(f"History continuity returned unexpected fields: {unexpected}")
     if result.get("ok") is not True or result.get("status") not in {
         "audited",
         "already_audited",
@@ -65,7 +63,9 @@ def validate_result(result: dict[str, object]) -> tuple[int, int]:
     derived_suspects = 0
     for name, raw_count in classifications.items():
         if not isinstance(name, str) or not name:
-            raise SystemExit("History continuity returned an invalid classification name")
+            raise SystemExit(
+                "History continuity returned an invalid classification name"
+            )
         count = _nonnegative_int(raw_count, f"classification count for {name}")
         total += count
         if name in SUSPECT_CLASSES:

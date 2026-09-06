@@ -83,7 +83,9 @@ def test_cold_start_without_blocker_is_recovering():
 
 
 def test_preflight_failure_with_exact_blocker_is_blocked():
-    assert evaluate(GateState(), exact_blockers=["provider unavailable"]) == Status.BLOCKED
+    assert (
+        evaluate(GateState(), exact_blockers=["provider unavailable"]) == Status.BLOCKED
+    )
 
 
 def test_current_blocker_precedes_complete():
@@ -175,7 +177,9 @@ def test_executed_action_rejects_non_string_provider_receipts():
         except ValueError as exc:
             assert "requires string provider_receipt" in str(exc)
         else:
-            raise AssertionError(f"malformed provider receipt was accepted: {invalid!r}")
+            raise AssertionError(
+                f"malformed provider receipt was accepted: {invalid!r}"
+            )
 
 
 def test_verified_action_requires_executed_true():

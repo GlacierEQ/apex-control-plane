@@ -14,11 +14,10 @@ request without accidentally converting inspection into runtime authorization.
 Only the explicit test harness may otherwise bypass runtime boot so CI can
 exercise units.
 """
+
 from __future__ import annotations
 
-import json
 import os
-import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -49,7 +48,9 @@ class OperatorFidelityLockValidation:
 _IN_PROCESS: OperatorFidelityLockValidation | None = None
 
 
-def _issue(ok: bool, status: str, errors: Sequence[str] = ()) -> OperatorFidelityLockValidation:
+def _issue(
+    ok: bool, status: str, errors: Sequence[str] = ()
+) -> OperatorFidelityLockValidation:
     return OperatorFidelityLockValidation(ok, status, tuple(errors), _SEAL)
 
 
@@ -58,7 +59,10 @@ def get_in_process_operator_fidelity_lock() -> OperatorFidelityLockValidation | 
 
 
 def _testing() -> bool:
-    return os.getenv("CASEY_AUTO_BOOT_TESTING", "0") == "1" or os.getenv("PYTEST_CURRENT_TEST") is not None
+    return (
+        os.getenv("CASEY_AUTO_BOOT_TESTING", "0") == "1"
+        or os.getenv("PYTEST_CURRENT_TEST") is not None
+    )
 
 
 def _text_list(value: Any) -> list[str]:
@@ -104,10 +108,17 @@ def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ..
 
     path = row.get("selected_path")
     if isinstance(path, Mapping):
-        if path.get("capability_reduction") is True and row.get("operator_directed_reduction") is not True:
-            errors.append("operator fidelity lock rejects non-operator-directed capability reduction")
+        if (
+            path.get("capability_reduction") is True
+            and row.get("operator_directed_reduction") is not True
+        ):
+            errors.append(
+                "operator fidelity lock rejects non-operator-directed capability reduction"
+            )
         if path.get("instruction_displacement") is not False:
-            errors.append("operator fidelity lock requires instruction_displacement=false")
+            errors.append(
+                "operator fidelity lock requires instruction_displacement=false"
+            )
         if path.get("minimum_scope_default") is not False:
             errors.append("operator fidelity lock requires minimum_scope_default=false")
         if path.get("governance_first") is not False:
@@ -170,7 +181,10 @@ def _reject_runtime_bypass(errors: Sequence[str]) -> None:
 
 def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
     """Preserve lock diagnostics while exposing a non-authorizing recovery path."""
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
+    from startup_continuation import (
+        emit_startup_continuation,
+        record_startup_continuation,
+    )
 
     payload = {
         "boot_status": "continuation_required",

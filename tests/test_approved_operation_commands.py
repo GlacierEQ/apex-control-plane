@@ -35,7 +35,10 @@ def action_request() -> dict:
         "connector": "github",
         "operation": "issue.create",
         "target": {"repository": "GlacierEQ/apex-control-plane"},
-        "provider_input": {"title": "Command test", "body": "This text must not enter receipts."},
+        "provider_input": {
+            "title": "Command test",
+            "body": "This text must not enter receipts.",
+        },
         "consequence": "Creates one named issue visible to repository collaborators.",
         "evidence_refs": ["receipt-github-001"],
         "idempotency_key": "command-test-action-001",
@@ -94,8 +97,12 @@ def test_execution_admission_command_keeps_provider_material_out_of_ledger(tmp_p
     action_path.write_text(json.dumps(action_request()), encoding="utf-8")
     execution_path = tmp_path / "provider-execution.json"
     readback_path = tmp_path / "provider-readback.json"
-    execution_path.write_text('{"provider_id": 101, "secret": "do-not-ledger"}', encoding="utf-8")
-    readback_path.write_text('{"number": 101, "title": "Command test"}', encoding="utf-8")
+    execution_path.write_text(
+        '{"provider_id": 101, "secret": "do-not-ledger"}', encoding="utf-8"
+    )
+    readback_path.write_text(
+        '{"number": 101, "title": "Command test"}', encoding="utf-8"
+    )
     manifest_path = tmp_path / "execution-manifest.json"
     manifest_path.write_text(
         json.dumps(
@@ -105,10 +112,15 @@ def test_execution_admission_command_keeps_provider_material_out_of_ledger(tmp_p
                 "execution_source_refs": ["github://issue/create/101"],
                 "execution_observation_path": str(execution_path),
                 "executed_at": NOW.isoformat().replace("+00:00", "Z"),
-                "result_target": {"repository": "GlacierEQ/apex-control-plane", "issue_number": 101},
+                "result_target": {
+                    "repository": "GlacierEQ/apex-control-plane",
+                    "issue_number": 101,
+                },
                 "readback_source_refs": ["github://issue/101"],
                 "readback_observation_path": str(readback_path),
-                "readback_at": (NOW + timedelta(seconds=1)).isoformat().replace("+00:00", "Z"),
+                "readback_at": (NOW + timedelta(seconds=1))
+                .isoformat()
+                .replace("+00:00", "Z"),
             }
         ),
         encoding="utf-8",

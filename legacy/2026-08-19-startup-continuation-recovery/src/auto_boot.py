@@ -10,6 +10,7 @@ No network client or credential is embedded here. A connected agent or bridge
 must retrieve the notes and sources, then provide a receipt through
 ``CASEY_BOOT_RECEIPT_JSON`` or ``CASEY_BOOT_RECEIPT_PATH``.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -134,7 +135,9 @@ def required_note_versions(
         try:
             version = int(raw_version)
         except (TypeError, ValueError) as exc:
-            raise BootError(f"missing or invalid required version for note {note_id}") from exc
+            raise BootError(
+                f"missing or invalid required version for note {note_id}"
+            ) from exc
         if version < 1:
             raise BootError(f"required note version must be >= 1 for {note_id}")
         output[note_id] = version
@@ -162,8 +165,7 @@ def build_boot_request(
         "profiles": list(profiles),
         "required_note_ids": list(versions),
         "required_notes": [
-            {"id": note_id, "version": version}
-            for note_id, version in versions.items()
+            {"id": note_id, "version": version} for note_id, version in versions.items()
         ],
         "task": task,
         "requirements": {
@@ -214,7 +216,9 @@ def _receipt_from_environment() -> dict[str, Any] | None:
     return None
 
 
-def _loaded_note_versions(receipt: Mapping[str, Any]) -> tuple[dict[str, int], list[str]]:
+def _loaded_note_versions(
+    receipt: Mapping[str, Any],
+) -> tuple[dict[str, int], list[str]]:
     loaded: dict[str, int] = {}
     errors: list[str] = []
     rows = receipt.get("notes_loaded")
@@ -308,7 +312,9 @@ def _validate_deadline_check(
         errors.append("deadline_check.status must be verified or not_relevant")
     if status == "verified":
         source_ids = value.get("source_ids")
-        if not isinstance(source_ids, list) or not any(str(item).strip() for item in source_ids):
+        if not isinstance(source_ids, list) or not any(
+            str(item).strip() for item in source_ids
+        ):
             errors.append("verified deadline_check requires source_ids")
     if status == "not_relevant" and not str(value.get("reason", "")).strip():
         errors.append("not_relevant deadline_check requires reason")
@@ -355,7 +361,9 @@ def validate_receipt(
     if not isinstance(receipt_profiles, list):
         errors.append("boot_profile must be an array")
         receipt_profiles = []
-    missing_profiles = [profile for profile in profiles if profile not in receipt_profiles]
+    missing_profiles = [
+        profile for profile in profiles if profile not in receipt_profiles
+    ]
     if missing_profiles:
         errors.append("missing boot profiles: " + ", ".join(missing_profiles))
 
@@ -369,9 +377,15 @@ def validate_receipt(
         rule = requirements.get(profile, {})
         if rule.get("requires_current_sources") and valid_sources < 1:
             errors.append(f"profile {profile} requires current sources")
-        if rule.get("requires_case_lane") and not str(receipt.get("case_lane", "")).strip():
+        if (
+            rule.get("requires_case_lane")
+            and not str(receipt.get("case_lane", "")).strip()
+        ):
             errors.append(f"profile {profile} requires case_lane")
-        if rule.get("requires_matter_lane") and not str(receipt.get("matter_lane", "")).strip():
+        if (
+            rule.get("requires_matter_lane")
+            and not str(receipt.get("matter_lane", "")).strip()
+        ):
             errors.append(f"profile {profile} requires matter_lane")
         if rule.get("requires_repository_receipt") and valid_repo_receipts < 1:
             errors.append(f"profile {profile} requires repository receipt")
@@ -425,9 +439,7 @@ def automatic_boot() -> BootValidation | None:
     manifest = load_manifest()
     profile_value = os.getenv("CASEY_BOOT_PROFILE", "systems")
     profiles = normalize_profiles(manifest, [profile_value])
-    restricted_authorized = (
-        os.getenv("CASEY_RESTRICTED_CONTEXT_AUTHORIZED", "0") == "1"
-    )
+    restricted_authorized = os.getenv("CASEY_RESTRICTED_CONTEXT_AUTHORIZED", "0") == "1"
     task = os.getenv(
         "CASEY_BOOT_TASK",
         "resume highest-value unfinished material action",
@@ -502,7 +514,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[],
         help="boot profile; repeat or use comma-separated values",
     )
-    parser.add_argument("--task", default="resume highest-value unfinished material action")
+    parser.add_argument(
+        "--task", default="resume highest-value unfinished material action"
+    )
     parser.add_argument("--emit-request", action="store_true")
     parser.add_argument("--verify-receipt", type=Path)
     parser.add_argument("--restricted-authorized", action="store_true")
@@ -536,14 +550,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             profiles,
             restricted_authorized=args.restricted_authorized,
         )
-        print(json.dumps({
-            "ok": result.ok,
-            "status": result.status,
-            "profiles": list(result.profiles),
-            "required_note_ids": list(result.required_note_ids),
-            "loaded_note_ids": list(result.loaded_note_ids),
-            "errors": list(result.errors),
-        }, ensure_ascii=False, indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                {
+                    "ok": result.ok,
+                    "status": result.status,
+                    "profiles": list(result.profiles),
+                    "required_note_ids": list(result.required_note_ids),
+                    "loaded_note_ids": list(result.loaded_note_ids),
+                    "errors": list(result.errors),
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return 0 if result.ok else EXIT_BOOT_BLOCKED
 
     parser.error("choose --emit-request or --verify-receipt")

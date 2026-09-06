@@ -7,7 +7,9 @@ import unittest
 from pathlib import Path
 
 MODULE_PATH = Path(__file__).with_name("enforce.py")
-SPEC = importlib.util.spec_from_file_location("apex_non_regression_enforce", MODULE_PATH)
+SPEC = importlib.util.spec_from_file_location(
+    "apex_non_regression_enforce", MODULE_PATH
+)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError(f"cannot load enforcement module: {MODULE_PATH}")
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -47,13 +49,17 @@ class DownwardDirectiveClassifierTests(unittest.TestCase):
         self.assert_allowed("FORBIDDEN: freeze scope")
 
     def test_allows_diagnostic_isolation(self) -> None:
-        self.assert_allowed("Use the smallest useful slice only to isolate this failing test.")
+        self.assert_allowed(
+            "Use the smallest useful slice only to isolate this failing test."
+        )
 
     def test_allows_least_privilege_security(self) -> None:
         self.assert_allowed("Always enforce least privilege for runtime credentials.")
 
     def test_allows_rollback_checkpoint(self) -> None:
-        self.assert_allowed("Freeze implementation only as a known-good rollback checkpoint while evolution continues.")
+        self.assert_allowed(
+            "Freeze implementation only as a known-good rollback checkpoint while evolution continues."
+        )
 
 
 if __name__ == "__main__":

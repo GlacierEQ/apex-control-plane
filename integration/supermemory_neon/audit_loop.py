@@ -12,7 +12,6 @@ For each active connector:
 At the end of the run, pushes a daily audit summary to Supermemory.
 """
 
-import os
 import json
 from datetime import datetime, timezone
 from connector_registry import ConnectorRegistry
@@ -32,18 +31,60 @@ def check_connector_health(connector: dict) -> dict:
 
     # Extend with real HTTP health checks per kind
     health_checks = {
-        "github":      lambda c: {"ok": True, "note": "API token present"} if c.get("token") else {"ok": False, "note": "missing token"},
-        "notion":      lambda c: {"ok": True, "note": "integration key present"} if c.get("api_key") else {"ok": False, "note": "missing api_key"},
-        "supabase":    lambda c: {"ok": True, "note": "url+key present"} if c.get("url") and c.get("service_key") else {"ok": False, "note": "missing url or service_key"},
-        "sentry":      lambda c: {"ok": True, "note": "dsn present"} if c.get("dsn") else {"ok": False, "note": "missing dsn"},
-        "neon":        lambda c: {"ok": True, "note": "dsn present"} if c.get("dsn") else {"ok": False, "note": "missing dsn"},
-        "supermemory": lambda c: {"ok": True, "note": "api_key present"} if c.get("api_key") else {"ok": False, "note": "missing api_key"},
-        "clickup":     lambda c: {"ok": True, "note": "api_key present"} if c.get("api_key") else {"ok": False, "note": "missing api_key"},
-        "pinecone":    lambda c: {"ok": True, "note": "api_key present"} if c.get("api_key") else {"ok": False, "note": "missing api_key"},
-        "qdrant":      lambda c: {"ok": True, "note": "url present"} if c.get("url") else {"ok": False, "note": "missing url"},
-        "motherduck":  lambda c: {"ok": True, "note": "token present"} if c.get("token") else {"ok": False, "note": "missing token"},
+        "github": lambda c: (
+            {"ok": True, "note": "API token present"}
+            if c.get("token")
+            else {"ok": False, "note": "missing token"}
+        ),
+        "notion": lambda c: (
+            {"ok": True, "note": "integration key present"}
+            if c.get("api_key")
+            else {"ok": False, "note": "missing api_key"}
+        ),
+        "supabase": lambda c: (
+            {"ok": True, "note": "url+key present"}
+            if c.get("url") and c.get("service_key")
+            else {"ok": False, "note": "missing url or service_key"}
+        ),
+        "sentry": lambda c: (
+            {"ok": True, "note": "dsn present"}
+            if c.get("dsn")
+            else {"ok": False, "note": "missing dsn"}
+        ),
+        "neon": lambda c: (
+            {"ok": True, "note": "dsn present"}
+            if c.get("dsn")
+            else {"ok": False, "note": "missing dsn"}
+        ),
+        "supermemory": lambda c: (
+            {"ok": True, "note": "api_key present"}
+            if c.get("api_key")
+            else {"ok": False, "note": "missing api_key"}
+        ),
+        "clickup": lambda c: (
+            {"ok": True, "note": "api_key present"}
+            if c.get("api_key")
+            else {"ok": False, "note": "missing api_key"}
+        ),
+        "pinecone": lambda c: (
+            {"ok": True, "note": "api_key present"}
+            if c.get("api_key")
+            else {"ok": False, "note": "missing api_key"}
+        ),
+        "qdrant": lambda c: (
+            {"ok": True, "note": "url present"}
+            if c.get("url")
+            else {"ok": False, "note": "missing url"}
+        ),
+        "motherduck": lambda c: (
+            {"ok": True, "note": "token present"}
+            if c.get("token")
+            else {"ok": False, "note": "missing token"}
+        ),
     }
-    check_fn = health_checks.get(kind, lambda c: {"ok": True, "note": "no health check defined"})
+    check_fn = health_checks.get(
+        kind, lambda c: {"ok": True, "note": "no health check defined"}
+    )
     result = check_fn(config)
     result["connector_name"] = name
     result["kind"] = kind

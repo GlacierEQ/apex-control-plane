@@ -6,6 +6,7 @@ authority, continuation, preserved prior gain, Operator-aligned coherent path
 selection, Operator asset sovereignty, and evidence-backed execution-state
 transitions.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from auto_boot import BootError
 from prime_directive_boot import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
@@ -78,7 +79,9 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
     if not isinstance(operator_authority, dict):
         raise BootError("APEX operator_authority must be an object")
     if operator_authority.get("mode") != "absolute_project_direction":
-        raise BootError("APEX operator_authority.mode must be absolute_project_direction")
+        raise BootError(
+            "APEX operator_authority.mode must be absolute_project_direction"
+        )
     required_authority_flags = {
         "sole_human_project_authority": True,
         "current_explicit_instruction_is_sufficient_authorization_for_its_scope": True,
@@ -105,11 +108,21 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         raise BootError(
             "APEX cannot grant a secondary human approval layer authority over the Operator"
         )
-    if interlock.get("operator_owned_asset_disposition_requires_explicit_operator_direction") is not True:
+    if (
+        interlock.get(
+            "operator_owned_asset_disposition_requires_explicit_operator_direction"
+        )
+        is not True
+    ):
         raise BootError(
             "APEX operator-owned asset disposition must remain Operator-directed"
         )
-    if interlock.get("operator_owned_asset_value_ranking_requires_explicit_operator_direction") is not True:
+    if (
+        interlock.get(
+            "operator_owned_asset_value_ranking_requires_explicit_operator_direction"
+        )
+        is not True
+    ):
         raise BootError(
             "APEX operator-owned asset value ranking must remain Operator-directed"
         )
@@ -141,7 +154,9 @@ def validate_state_transition(
     """Validate a material execution-state transition against APEX proof rules."""
     source = str(from_state).strip().upper()
     target = str(to_state).strip().upper()
-    states = {str(value).strip().upper() for value in policy.get("execution_states", ())}
+    states = {
+        str(value).strip().upper() for value in policy.get("execution_states", ())
+    }
     if source not in states or target not in states:
         return ("state transition uses an unknown execution state",)
 
@@ -165,7 +180,9 @@ def _validate_operator_authorization(row: Mapping[str, Any], errors: list[str]) 
     if authorization.get("authorized") is not True:
         errors.append("operator_authorization.authorized must be true")
     if not _receipt_ref(authorization.get("authorization_ref")):
-        errors.append("operator_authorization.authorization_ref must be a receipt reference")
+        errors.append(
+            "operator_authorization.authorization_ref must be a receipt reference"
+        )
 
 
 def validate_apex_startup_receipt(
@@ -229,7 +246,9 @@ def validate_apex_startup_receipt(
 
     mutation = _norm(row.get("mutation_intent", "none"))
     if mutation not in {"none", "authorized", "blocked"}:
-        errors.append("apex_startup.mutation_intent must be none, authorized, or blocked")
+        errors.append(
+            "apex_startup.mutation_intent must be none, authorized, or blocked"
+        )
 
     action_scope = _norm(row.get("action_scope"))
     allowed_scopes = {_norm(value) for value in policy.get("action_scopes", ())}
@@ -246,11 +265,19 @@ def validate_apex_startup_receipt(
                 "authorized mutation requires apex_startup.operator_plan_authorized=true"
             )
         if action_scope not in {"internal", "external"}:
-            errors.append("authorized mutation requires internal or external action_scope")
+            errors.append(
+                "authorized mutation requires internal or external action_scope"
+            )
         if action_scope == "external" and isinstance(interlock, Mapping):
-            if interlock.get("external_action_requires_operator_authorization_receipt") is True:
+            if (
+                interlock.get("external_action_requires_operator_authorization_receipt")
+                is True
+            ):
                 _validate_operator_authorization(row, errors)
-            if interlock.get("external_action_requires_secondary_human_approval") is True:
+            if (
+                interlock.get("external_action_requires_secondary_human_approval")
+                is True
+            ):
                 errors.append(
                     "secondary human approval cannot override or re-authorize the Operator"
                 )
@@ -259,7 +286,9 @@ def validate_apex_startup_receipt(
     if not isinstance(claims, list):
         errors.append("apex_startup.material_claims must be an array when supplied")
     else:
-        states = {str(value).strip().upper() for value in policy.get("execution_states", ())}
+        states = {
+            str(value).strip().upper() for value in policy.get("execution_states", ())
+        }
         promoted_states = {
             "ATTEMPTED",
             "EXECUTED",
@@ -288,7 +317,9 @@ def validate_apex_startup_receipt(
                     errors.append(f"{prefix}.source_state is required for {state}")
                     continue
                 if not isinstance(evidence, Mapping):
-                    errors.append(f"{prefix}.transition_evidence is required for {state}")
+                    errors.append(
+                        f"{prefix}.transition_evidence is required for {state}"
+                    )
                     continue
                 transition_errors = validate_state_transition(
                     policy,
@@ -301,7 +332,9 @@ def validate_apex_startup_receipt(
     return tuple(errors)
 
 
-def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[str, Any]:
+def build_apex_startup_request(
+    policy: Mapping[str, Any], *, task: str
+) -> dict[str, Any]:
     return {
         "request_type": "apex_genesis_enforced_startup",
         "schema_version": policy.get("schema_version"),
@@ -350,7 +383,7 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
                 "action_scope": "none|internal|external",
                 "operator_authorization": {
                     "authorized": True,
-                    "authorization_ref": "operator-command:receipt-reference; required for external actions"
+                    "authorization_ref": "operator-command:receipt-reference; required for external actions",
                 },
                 "selected_path": {
                     "id": "non-empty string",
@@ -378,7 +411,10 @@ def _continue_apex_startup(
     *,
     request: Mapping[str, Any],
 ) -> ApexStartupValidation:
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
+    from startup_continuation import (
+        emit_startup_continuation,
+        record_startup_continuation,
+    )
 
     continuation = record_startup_continuation(
         "apex_enforced_startup",
@@ -403,7 +439,9 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
     policy = load_apex_policy()
-    task = os.getenv("CASEY_BOOT_TASK", "resume Operator-directed unfinished material action")
+    task = os.getenv(
+        "CASEY_BOOT_TASK", "resume Operator-directed unfinished material action"
+    )
     receipt = receipt_from_environment()
 
     if receipt is None:

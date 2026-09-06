@@ -9,6 +9,7 @@ Observation, inspection, mapping, overlap, similarity, tool access, and path
 selection do not authorize unsolicited value ranking, subordination, merger,
 retirement, or other disposition.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
@@ -115,7 +116,9 @@ def missing(g: GateState, names: list[str] = COMPLETION) -> list[str]:
 
 
 def evaluate(g: GateState, *, exact_blockers: list[str] | None = None) -> Status:
-    blockers = [str(value).strip() for value in (exact_blockers or []) if str(value).strip()]
+    blockers = [
+        str(value).strip() for value in (exact_blockers or []) if str(value).strip()
+    ]
     if blockers:
         return Status.BLOCKED
     if completion_ready(g):
@@ -234,7 +237,9 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
     if (gates.resources_invoked or gates.required_sources_opened) and not any(
         isinstance(row, Mapping) and row.get("opened") is True for row in sources
     ):
-        raise ValueError("resource/source gates require at least one opened source receipt")
+        raise ValueError(
+            "resource/source gates require at least one opened source receipt"
+        )
 
     if gates.material_action_executed and not any(
         isinstance(row, Mapping)

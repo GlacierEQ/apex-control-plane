@@ -67,7 +67,9 @@ def test_valid_lock_receipt_passes() -> None:
     assert validate_operator_fidelity_lock(_receipt()) == ()
 
 
-def test_request_mode_without_receipt_yields_non_authorizing_continuation(monkeypatch) -> None:
+def test_request_mode_without_receipt_yields_non_authorizing_continuation(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "request")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
     lock._IN_PROCESS = None
@@ -76,11 +78,16 @@ def test_request_mode_without_receipt_yields_non_authorizing_continuation(monkey
     assert validation.ok is False
     assert validation.status == "continuation_required"
     assert "boot receipt" in validation.errors[0]
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
+    assert (
+        lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"]
+        == "continuation_required"
+    )
     assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
 
 
-def test_strict_compatibility_mode_without_receipt_yields_continuation(monkeypatch) -> None:
+def test_strict_compatibility_mode_without_receipt_yields_continuation(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
     lock._IN_PROCESS = None
@@ -88,7 +95,10 @@ def test_strict_compatibility_mode_without_receipt_yields_continuation(monkeypat
     assert validation is not None
     assert validation.ok is False
     assert validation.status == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
+    assert (
+        lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"]
+        == "continuation_required"
+    )
     assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
 
 
@@ -108,7 +118,10 @@ def test_disable_flag_records_continuation_then_terminates_fail_closed(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity" in captured.err
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
+    assert (
+        lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"]
+        == "continuation_required"
+    )
     assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
     assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
@@ -129,7 +142,10 @@ def test_off_mode_records_continuation_then_terminates_fail_closed(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity" in captured.err
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
+    assert (
+        lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"]
+        == "continuation_required"
+    )
     assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
     assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
@@ -150,7 +166,9 @@ def test_durable_context_anchor_is_required() -> None:
         "Function before governance",
     ]
     receipt["operator_fidelity"]["literal_constraints"] = words
-    receipt["operator_fidelity"]["operator_words_digest"] = digest_operator_words(*words)
+    receipt["operator_fidelity"]["operator_words_digest"] = digest_operator_words(
+        *words
+    )
     errors = validate_operator_fidelity_lock(receipt)
     assert any("context first" in error for error in errors)
 
@@ -164,7 +182,9 @@ def test_durable_upward_anchor_is_required() -> None:
         "Function before governance",
     ]
     receipt["operator_fidelity"]["literal_constraints"] = words
-    receipt["operator_fidelity"]["operator_words_digest"] = digest_operator_words(*words)
+    receipt["operator_fidelity"]["operator_words_digest"] = digest_operator_words(
+        *words
+    )
     errors = validate_operator_fidelity_lock(receipt)
     assert any("look up" in error or "do not look down" in error for error in errors)
 
@@ -192,7 +212,9 @@ def test_capability_reduction_requires_operator_direction() -> None:
     receipt = _receipt()
     receipt["operator_fidelity"]["selected_path"]["capability_reduction"] = True
     errors = validate_operator_fidelity_lock(receipt)
-    assert any("non-operator-directed capability reduction" in error for error in errors)
+    assert any(
+        "non-operator-directed capability reduction" in error for error in errors
+    )
 
     receipt["operator_fidelity"]["operator_directed_reduction"] = True
     assert validate_operator_fidelity_lock(receipt) == ()

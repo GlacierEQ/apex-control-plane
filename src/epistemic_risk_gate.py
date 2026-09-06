@@ -15,6 +15,7 @@ The module is intentionally independent of any one branch or repository tool so
 it can be reused by branch consolidation, data migration, deployment, cleanup,
 refactoring, and other consequential mutation paths.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -93,11 +94,15 @@ def evaluate_execution(evidence: ExecutionEvidence) -> GateResult:
     if not evidence.source_state_observed:
         research_reasons.append("source state has not been observed")
 
-    if evidence.blast_radius >= BlastRadius.MULTI_OBJECT and not evidence.dependency_map_observed:
+    if (
+        evidence.blast_radius >= BlastRadius.MULTI_OBJECT
+        and not evidence.dependency_map_observed
+    ):
         research_reasons.append("dependency and lineage impact has not been observed")
 
     if (
-        evidence.epistemic_state in {EpistemicState.HYPOTHESIZED, EpistemicState.UNKNOWN}
+        evidence.epistemic_state
+        in {EpistemicState.HYPOTHESIZED, EpistemicState.UNKNOWN}
         and evidence.blast_radius >= BlastRadius.MULTI_OBJECT
     ):
         research_reasons.append(
@@ -106,28 +111,46 @@ def evaluate_execution(evidence: ExecutionEvidence) -> GateResult:
 
     if evidence.blast_radius is BlastRadius.ESTATE:
         if not evidence.recovery_checkpoint_verified:
-            block_reasons.append("estate-scale mutation lacks a verified recovery checkpoint")
+            block_reasons.append(
+                "estate-scale mutation lacks a verified recovery checkpoint"
+            )
         if not evidence.recovery_procedure_verified:
-            block_reasons.append("estate-scale mutation lacks a verified recovery procedure")
+            block_reasons.append(
+                "estate-scale mutation lacks a verified recovery procedure"
+            )
         if not evidence.staged_execution:
-            block_reasons.append("estate-scale mutation is not staged with readback boundaries")
+            block_reasons.append(
+                "estate-scale mutation is not staged with readback boundaries"
+            )
 
     if evidence.novel_operation and evidence.blast_radius >= BlastRadius.MULTI_OBJECT:
         if not evidence.dry_run_verified:
-            research_reasons.append("novel high-impact operation has no verified rehearsal")
+            research_reasons.append(
+                "novel high-impact operation has no verified rehearsal"
+            )
         if not evidence.staged_execution:
-            block_reasons.append("novel high-impact operation cannot run as one unobserved batch")
+            block_reasons.append(
+                "novel high-impact operation cannot run as one unobserved batch"
+            )
 
     if evidence.reversibility is Reversibility.IRREVERSIBLE:
         if not evidence.operator_explicit_irreversible_authorization:
-            block_reasons.append("irreversible mutation lacks explicit Operator authorization")
+            block_reasons.append(
+                "irreversible mutation lacks explicit Operator authorization"
+            )
         if not evidence.recovery_checkpoint_verified:
-            block_reasons.append("irreversible mutation lacks a verified preservation checkpoint")
+            block_reasons.append(
+                "irreversible mutation lacks a verified preservation checkpoint"
+            )
 
     if block_reasons:
-        return GateResult(GateDecision.BLOCK, tuple(dict.fromkeys(block_reasons + research_reasons)))
+        return GateResult(
+            GateDecision.BLOCK, tuple(dict.fromkeys(block_reasons + research_reasons))
+        )
     if research_reasons:
-        return GateResult(GateDecision.RESEARCH_REQUIRED, tuple(dict.fromkeys(research_reasons)))
+        return GateResult(
+            GateDecision.RESEARCH_REQUIRED, tuple(dict.fromkeys(research_reasons))
+        )
     return GateResult(GateDecision.ALLOW, ())
 
 
@@ -159,5 +182,7 @@ def validate_completion_claim(evidence: CompletionEvidence) -> tuple[str, ...]:
     if evidence.active_operations:
         errors.append("completion is impossible while operations are still active")
     if evidence.failure_detected and not evidence.recovery_state_observed:
-        errors.append("failure recovery state must be observed before any completion claim")
+        errors.append(
+            "failure recovery state must be observed before any completion claim"
+        )
     return tuple(errors)

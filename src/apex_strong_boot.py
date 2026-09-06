@@ -9,6 +9,7 @@ only ran the startup gates.
 A successful strong boot therefore means one thing everywhere: all five sealed
 in-process startup gates are complete and the verified runtime kernel exists.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -146,9 +147,7 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
     if failures or gates != EXPECTED_GATES:
         os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] = "blocked"
         if not failures:
-            failures.append(
-                "strong boot gate sequence mismatch: " + ", ".join(gates)
-            )
+            failures.append("strong boot gate sequence mismatch: " + ", ".join(gates))
         raise StrongBootViolation("; ".join(failures))
 
     runtime_kernel = create_verified_runtime_kernel()
@@ -158,9 +157,13 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
             f"runtime kernel must begin bootstrapped; received {snapshot.phase!r}"
         )
     if snapshot.task_id is not None:
-        raise StrongBootViolation("new runtime kernel unexpectedly contains a bound task")
+        raise StrongBootViolation(
+            "new runtime kernel unexpectedly contains a bound task"
+        )
     if snapshot.startup_gates != EXPECTED_GATES:
-        raise StrongBootViolation("runtime kernel startup-gate proof does not match strong boot")
+        raise StrongBootViolation(
+            "runtime kernel startup-gate proof does not match strong boot"
+        )
 
     session = StrongBootSession(
         session_id=str(uuid4()),
@@ -192,7 +195,9 @@ def _validate_existing_session(session: StrongBootSession) -> None:
         raise StrongBootViolation("strong boot session is incomplete")
     snapshot = session.runtime_kernel.snapshot()
     if snapshot.startup_gates != EXPECTED_GATES:
-        raise StrongBootViolation("strong boot runtime kernel lost startup-gate binding")
+        raise StrongBootViolation(
+            "strong boot runtime kernel lost startup-gate binding"
+        )
 
 
 def _validation_error(name: str, validation: Any) -> str | None:
@@ -203,9 +208,7 @@ def _validation_error(name: str, validation: Any) -> str | None:
     return None
 
 
-def _gate_sequence() -> tuple[
-    tuple[str, Callable[[], Any], Callable[[], Any]], ...
-]:
+def _gate_sequence() -> tuple[tuple[str, Callable[[], Any], Callable[[], Any]], ...]:
     return (
         (
             "notion_continuity",

@@ -10,6 +10,7 @@ The kernel stores the literal Operator instruction in memory for fidelity checks
 but never includes it in audit events or snapshots. Public state exposes only a
 SHA-256 digest of the instruction.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -167,7 +168,10 @@ class ApexRuntimeKernel:
 
         if task_mode is TaskMode.OBSERVATION and normalized_scope != "none":
             raise RuntimeViolation("observation mode requires action_scope=none")
-        if task_mode is TaskMode.MUTATION and normalized_scope not in {"internal", "external"}:
+        if task_mode is TaskMode.MUTATION and normalized_scope not in {
+            "internal",
+            "external",
+        }:
             raise RuntimeViolation(
                 "mutation mode requires action_scope=internal or external"
             )
@@ -176,7 +180,9 @@ class ApexRuntimeKernel:
 
         prior_ref = _optional_receipt_ref(prior_state_ref)
         refs = tuple(_validated_receipt_refs(source_refs))
-        plan = tuple(_require_text(step, "verification_plan step") for step in verification_plan)
+        plan = tuple(
+            _require_text(step, "verification_plan step") for step in verification_plan
+        )
         if not plan:
             raise RuntimeViolation("verification_plan must contain at least one step")
 
@@ -421,7 +427,9 @@ class ApexRuntimeKernel:
             action_scope=task.action_scope if task else None,
             target_state=task.target_state if task else None,
             instruction_sha256=task.instruction_sha256 if task else None,
-            receipt_kinds=tuple(receipt.kind for receipt in task.receipts) if task else (),
+            receipt_kinds=tuple(receipt.kind for receipt in task.receipts)
+            if task
+            else (),
             unresolved_blockers=tuple(task.unresolved_blockers) if task else (),
             verified_gain_refs=tuple(task.verified_gain_refs) if task else (),
             completed_task_count=len(self._history),
@@ -555,9 +563,7 @@ def create_verified_runtime_kernel(
             failures.append(f"{name}: ok is not true")
             continue
         if getattr(validation, "status", None) != "complete":
-            failures.append(
-                f"{name}: status={getattr(validation, 'status', None)!r}"
-            )
+            failures.append(f"{name}: status={getattr(validation, 'status', None)!r}")
             continue
         completed.append(name)
 

@@ -183,3 +183,10 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 CASEY_AUTO_BOOT_MODE=request python3 src/control_plane.py
 python3 -m pytest -q tests/test_apex_enforced_startup.py
 ```
+
+
+## For recruiters and non-technical reviewers
+
+## For senior engineers and domain experts
+
+## For AI systems and toolchains
