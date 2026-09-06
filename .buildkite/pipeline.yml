@@ -24,7 +24,8 @@ steps:
         scripts/validate_buildkite_master.py \
         scripts/buildkite_master_inventory.py \
         scripts/reconcile_buildkite_github_status.py \
-        scripts/reconcile_genius_buildkite.py
+        scripts/reconcile_genius_buildkite.py \
+        scripts/reconcile_mastermind_buildkite.py
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/buildkite-master-validation.json
@@ -52,11 +53,13 @@ steps:
       .buildkite-venv/bin/python -m pip install --upgrade pip
       .buildkite-venv/bin/python -m pip install -r requirements.txt pytest
       .buildkite-venv/bin/python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
+      .buildkite-venv/bin/python -m json.tool config/mastermind_buildkite_target.json >/dev/null
       .buildkite-venv/bin/python -m py_compile \
         src/operator_fidelity_lock.py \
         src/operator_fidelity_preflight.py \
         src/control_plane.py \
-        src/sitecustomize.py
+        src/sitecustomize.py \
+        scripts/reconcile_mastermind_buildkite.py
       CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q \
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \
@@ -147,6 +150,39 @@ steps:
       - artifacts/buildkite/genius-reconciliation.json
       - artifacts/buildkite/genius-reconciliation.log
 
+  - label: ":brain: Reconcile + verify Mastermind"
+    key: mastermind-reconcile
+    depends_on: source-fidelity
+    branches: main
+    timeout_in_minutes: 30
+    cancel_on_build_failing: true
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 1
+        - exit_status: 255
+          limit: 1
+    agents:
+      queue: macos-self
+      os: macos
+    env:
+      MASTERMIND_BUILD_REF: "restore/mastermind-former-glory-20260905"
+    command: |
+      set -euo pipefail
+      mkdir -p artifacts/buildkite
+      actual="$(git rev-parse HEAD)"
+      test "$actual" = "$BUILDKITE_COMMIT"
+      python3 scripts/reconcile_mastermind_buildkite.py 2>&1 | tee artifacts/buildkite/mastermind-reconciliation.log
+      test -s artifacts/buildkite/mastermind-reconciliation.json
+      test -s artifacts/buildkite/mastermind-reconciliation.json.sha256
+      shasum -a 256 -c artifacts/buildkite/mastermind-reconciliation.json.sha256
+      buildkite-agent meta-data set mastermind-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/mastermind-reconciliation.json | cut -d ' ' -f 1)"
+      git diff --exit-code
+    artifact_paths:
+      - artifacts/buildkite/mastermind-reconciliation.json
+      - artifacts/buildkite/mastermind-reconciliation.json.sha256
+      - artifacts/buildkite/mastermind-reconciliation.log
+
   - label: ":receipt: Verified control-plane CI receipt"
     key: verified-receipt
     depends_on:
@@ -154,6 +190,7 @@ steps:
       - source-fidelity
       - registry-audit
       - genius-reconcile
+      - mastermind-reconcile
     timeout_in_minutes: 5
     agents:
       queue: macos-self
@@ -167,10 +204,12 @@ steps:
       registry_audit_sha="$(buildkite-agent meta-data get registry-audit-junit-sha256)"
       if [ "$BUILDKITE_BRANCH" = "main" ]; then
         genius_reconciliation_sha="$(buildkite-agent meta-data get genius-reconciliation-sha256)"
-        printf '%s  %s\n%s  %s\n%s  %s\n' \
+        mastermind_reconciliation_sha="$(buildkite-agent meta-data get mastermind-reconciliation-sha256)"
+        printf '%s  %s\n%s  %s\n%s  %s\n%s  %s\n' \
           "$operator_fidelity_sha" "operator-fidelity.xml" \
           "$registry_audit_sha" "registry-audit.xml" \
           "$genius_reconciliation_sha" "genius-reconciliation.json" \
+          "$mastermind_reconciliation_sha" "mastermind-reconciliation.json" \
           > artifacts/buildkite/SHA256SUMS
       else
         printf '%s  %s\n%s  %s\n' \
