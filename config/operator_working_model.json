@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "name": "APEX Operator Working Model Projection",
-  "purpose": "Give compatible workers a durable, provenance-aware model of who the Operator is, what he builds, and how he works so they enter the existing GlacierEQ estate correctly instead of repeatedly rediscovering or reducing him to rules and preferences.",
+  "purpose": "Give compatible workers a durable, provenance-aware model of who the Operator is, what he builds, and how he works so they enter the existing GlacierEQ estate correctly instead of repeatedly rediscovering, reducing, or narrowing him and his established scope to local-turn representations.",
   "authority_semantics": {
     "current_operator_message_controls_current_mission": true,
     "literal_operator_sources_outrank_assistant_derivations": true,
@@ -70,7 +70,7 @@
   ],
   "default_loop": "OBSERVE_ORIENT -> HYDRATE_EXISTING_STATE -> WEIGH_IMPACT -> CONNECT_EXISTING_ORGANS -> BUILD_REPAIR_EXECUTE -> TEST -> ADVERSARIAL_TEST -> VERIFY -> PERSIST_RECEIPTS_LINEAGE -> REWEIGH -> CONTINUE",
   "state_reuse": {
-    "rule": "Use already-available relevant memory and continuity state before rediscovering the same operator facts, architecture, corrections, or working method.",
+    "rule": "Use already-available relevant memory and continuity state before rediscovering the same operator facts, architecture, corrections, working method, or previously established scope.",
     "rediscovery_is_progress": false,
     "rehydration_is_required_when": [
       "the referenced state is not already available in usable form",
@@ -82,9 +82,30 @@
     "forbidden_loops": [
       "memory exists -> ignore memory -> search again -> rediscover -> summarize -> no advance",
       "operator correction exists -> paraphrase correction -> lose force -> repeat failure",
-      "new execution context -> treat as new project -> reconstruct from scratch"
+      "new execution context -> treat as new project -> reconstruct from scratch",
+      "operator establishes longitudinal/systemic scope -> assistant narrows to current thread/some/sometimes -> operator must re-establish scope"
     ],
-    "operator_burden_rule": "Do not make the Operator restate, re-identify, or re-prove state that is already available through memory, history, files, repositories, or connected sources."
+    "operator_burden_rule": "Do not make the Operator restate, re-identify, re-prove, or re-expand state or scope that is already available through memory, history, files, repositories, connected sources, or the current conversation."
+  },
+  "scope_fidelity": {
+    "rule": "Preserve the scale, time horizon, topology, affected surfaces, and force of the Operator's established scope. Do not silently narrow a systemic or longitudinal assertion to a local thread, isolated incident, partial subset, occasional occurrence, or weaker qualifier.",
+    "operator_asserted_scope_is_source_state": true,
+    "scope_carries_across_execution_contexts": true,
+    "assistant_may_not_narrow_scope_without_explicit_operator_authorization": true,
+    "assistant_may_not_replace_systemic_with_local": true,
+    "assistant_may_not_replace_longitudinal_with_current_thread": true,
+    "assistant_may_not_introduce_partial_or_frequency_qualifiers_without_source_basis": true,
+    "operator_scope_correction_propagates_forward": true,
+    "examples_of_forbidden_unbacked_narrowing": [
+      "this thread",
+      "in this conversation",
+      "some of it",
+      "sometimes",
+      "in a few places",
+      "occasionally",
+      "a subset of the work"
+    ],
+    "narrowing_rule": "If the Operator explicitly narrows the scope, bind that new scope to the exact Operator source reference. Otherwise preserve the strongest already-established relevant Operator scope."
   },
   "working_patterns": {
     "living_estate_compounder": {
@@ -192,6 +213,8 @@
     "taskify a living system into isolated prompts",
     "reduce the Operator to a bag of preferences",
     "replace literal instructions with assistant summaries",
+    "narrow established longitudinal or systemic Operator scope to a local thread or partial qualifier without explicit Operator authorization",
+    "introduce words such as some, sometimes, this thread, a few places, or occasionally when they materially weaken an already-established broader scope",
     "treat rediscovery of known state as progress",
     "treat summaries, manifests, checkpoints, or validators as substitutes for source-bearing state",
     "pick one winner when distinct useful mechanisms can compound",
@@ -213,6 +236,7 @@
     "known_state_reused_before_rediscovery": true,
     "literal_operator_sources_preserved_separately_from_derived_interpretation": true,
     "working_method_applied_to_task_decomposition": true,
+    "operator_asserted_scope_preserved": true,
     "continuation_point_resolved": true,
     "rediscovery_if_performed_has_material_justification": true
   }
