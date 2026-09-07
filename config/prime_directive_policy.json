@@ -19,11 +19,11 @@
     },
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
-      "sha256": "9779bccacc2d89807458bb8efd00e0bcf917d86977424f98c5c4277e16f52740"
+      "sha256": "937698597879c9b6762f37a1dfa65f940e6c575a7192063bc1034119d1d193a8"
     },
     {
       "path": "APEX_ENFORCED_STARTUP.md",
-      "sha256": "b3b2e059a0e7155fe930a573ae3120b0e7274e41384aadf031cae1e237a3e154"
+      "sha256": "7e3993e29d466696d9192e4c70b45e2a7e9a7fde4b30e3725e6558993c9e43e6"
     },
     {
       "path": "OPERATOR_EXECUTION_LAW.md",
@@ -34,6 +34,7 @@
   "max_corrections_before_terminal_block": 8,
   "apex_binding": {
     "protocol_path": "APEX_ENFORCED_STARTUP.md",
+    "operator_working_model_path": "config/operator_working_model.json",
     "project_direction_authority": "operator_intent",
     "operator_authority_mode": "absolute_project_direction",
     "sole_human_project_authority": true,
@@ -44,6 +45,12 @@
     "repository_or_registry_override": false,
     "objective": "maximum_coherent_advance",
     "state_evolution": "current_state_plus_verified_gain",
+    "known_state_reused_before_rediscovery": true,
+    "rediscovery_is_not_progress": true,
+    "operator_working_model_is_derived_non_sovereign": true,
+    "literal_operator_sources_outrank_assistant_derivations": true,
+    "historical_summaries_are_routing_hints_only": true,
+    "working_method_applies_to_task_decomposition": true,
     "context_before_mutation": true,
     "continuation_before_restart": true,
     "prior_valid_gains_preserved": true,
@@ -80,12 +87,18 @@
     "failure_mode": "continuation_recovery_with_non_authorizing_external_boundary",
     "operator_controls_project_direction": true,
     "operator_project_direction_authority_is_absolute": true,
+    "known_state_reuse_precedes_rediscovery": true,
+    "working_model_is_continuity_projection_not_authority": true,
     "required_order": [
-      "context_reconstruction",
+      "current_operator_message",
+      "relevant_known_memory_and_continuity_state",
+      "derived_non_sovereign_operator_working_model",
+      "active_thread_and_nearest_valid_continuation",
+      "material_delta_hydration",
       "literal_operator_words_binding",
       "prior_correction_retrieval",
       "instruction_displacement_check",
-      "continuation_resolution",
+      "operator_working_method_binding",
       "operator_intent_binding",
       "target_state_derivation",
       "maximum_coherent_path_selection",
@@ -120,7 +133,7 @@
     "current_source_open",
     "receipt_validation"
   ],
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "security": {
     "log_content": false,
     "log_tool_names": true,
