@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "name": "APEX Model Attractor + Platform Pressure Defense",
   "failure_class": "MODEL_ATTRACTOR_DRIFT",
   "fail_closed": true,

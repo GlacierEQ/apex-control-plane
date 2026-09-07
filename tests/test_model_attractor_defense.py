@@ -29,6 +29,14 @@ def _continuity_receipt() -> dict:
             "platform_constraint_reframed_mission": False,
             "generic_assistant_prior_reframed_operation": False,
             "unnecessary_reasking_of_recoverable_state": False,
+            "providers_are_typed_peers": True,
+            "connector_authority_tiers_are_routing_metadata_only": True,
+            "canonical_role_fields_are_compatibility_labels_only": True,
+            "topology_does_not_confer_epistemic_or_project_authority": True,
+            "proposition_specific_source_authority_required": True,
+            "operator_controls_project_direction": True,
+            "source_bearing_systems_control_external_fact_support_within_domain": True,
+            "verification_controls_completion_state": True,
             "platform_constraint_scope": "none",
             "blocked_sources": [],
             "partial_hydration_declared": False,
@@ -141,6 +149,15 @@ def test_policy_cannot_disable_fail_closed(tmp_path) -> None:
         load_model_attractor_policy(target)
 
 
+def test_policy_requires_boolean_source_role_semantics(tmp_path) -> None:
+    policy = load_model_attractor_policy()
+    policy["source_role_semantics"]["providers_are_typed_peers"] = "yes"
+    target = tmp_path / "bad-source-role-semantics.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+    with pytest.raises(BootError, match="boolean invariants"):
+        load_model_attractor_policy(target)
+
+
 def test_request_exposes_the_hidden_harm_countermeasures() -> None:
     policy = load_model_attractor_policy()
     request = build_model_attractor_request(policy, task="continue living estate")
@@ -148,3 +165,20 @@ def test_request_exposes_the_hidden_harm_countermeasures() -> None:
     assert requirements["treat_memory_and_summaries_as_routing_hints_only"] is True
     assert requirements["forbid_platform_constraint_from_rewriting_operator_mission"] is True
     assert requirements["forbid_generic_model_prior_from_rewriting_operation_class"] is True
+
+
+def test_source_role_semantics_are_runtime_enforced() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    receipt["model_attractor_defense"]["connector_authority_tiers_are_routing_metadata_only"] = False
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("connector_authority_tiers_are_routing_metadata_only" in error for error in errors)
+
+
+def test_request_exposes_source_role_semantics_and_forbidden_transformations() -> None:
+    policy = load_model_attractor_policy()
+    request = build_model_attractor_request(policy, task="continue living estate")
+    assert request["source_role_semantics"]["providers_are_typed_peers"] is True
+    assert "CONNECTOR_AUTHORITY_TIER -> GLOBAL_EPISTEMIC_HIERARCHY" in request["forbidden_transformations"]
+    contract = request["receipt_contract"]["model_attractor_defense"]
+    assert contract["topology_does_not_confer_epistemic_or_project_authority"] is True

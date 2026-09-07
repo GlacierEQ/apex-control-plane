@@ -74,6 +74,7 @@ def load_model_attractor_policy(
         "constraint_scoping",
         "routing_hints_only",
         "forbidden_transformations",
+        "source_role_semantics",
     }
     missing = sorted(required - value.keys())
     if missing:
@@ -84,6 +85,19 @@ def load_model_attractor_policy(
         raise BootError("model-attractor required_boolean_fields must be an object")
     if not isinstance(value.get("continuity_required_fields"), Mapping):
         raise BootError("model-attractor continuity_required_fields must be an object")
+    semantics = value.get("source_role_semantics")
+    if not isinstance(semantics, Mapping) or not semantics:
+        raise BootError("model-attractor source_role_semantics must be a non-empty object")
+    if not all(
+        isinstance(key, str) and key.strip() and isinstance(expected, bool)
+        for key, expected in semantics.items()
+    ):
+        raise BootError("model-attractor source_role_semantics must contain boolean invariants")
+    transformations = value.get("forbidden_transformations")
+    if not isinstance(transformations, list) or not transformations or not all(
+        isinstance(item, str) and item.strip() for item in transformations
+    ):
+        raise BootError("model-attractor forbidden_transformations must be a non-empty string array")
     return value
 
 
@@ -108,6 +122,12 @@ def validate_model_attractor_receipt(
         errors.append("model_attractor_defense.continuity_required must be boolean")
 
     for field_name, expected in policy.get("required_boolean_fields", {}).items():
+        if row.get(field_name) is not expected:
+            errors.append(
+                f"model_attractor_defense.{field_name} must be {expected!r}"
+            )
+
+    for field_name, expected in policy.get("source_role_semantics", {}).items():
         if row.get(field_name) is not expected:
             errors.append(
                 f"model_attractor_defense.{field_name} must be {expected!r}"
@@ -156,12 +176,15 @@ def validate_model_attractor_receipt(
 def build_model_attractor_request(
     policy: Mapping[str, Any], *, task: str
 ) -> dict[str, Any]:
+    source_role_semantics = dict(policy.get("source_role_semantics", {}))
     return {
         "request_type": "glaciereq_model_attractor_defense_preflight",
         "schema_version": policy.get("schema_version"),
         "task": task,
         "failure_class": policy.get("failure_class"),
         "principle": policy.get("principle"),
+        "forbidden_transformations": list(policy.get("forbidden_transformations", ())),
+        "source_role_semantics": source_role_semantics,
         "requirements": {
             "classify_continuity_requirement": True,
             "bind_current_operator_message": True,
@@ -177,6 +200,8 @@ def build_model_attractor_request(
             "forbid_platform_constraint_from_rewriting_operator_mission": True,
             "forbid_generic_model_prior_from_rewriting_operation_class": True,
             "recover_known_state_instead_of_reasking_when_available": True,
+            "enforce_source_role_semantics": True,
+            "forbid_connector_metadata_from_becoming_global_authority": True,
         },
         "receipt_contract": {
             "model_attractor_defense": {
@@ -194,6 +219,7 @@ def build_model_attractor_request(
                 "platform_constraint_reframed_mission": False,
                 "generic_assistant_prior_reframed_operation": False,
                 "unnecessary_reasking_of_recoverable_state": False,
+                **source_role_semantics,
                 "platform_constraint_scope": "none|narrow_action_constraint",
                 "blocked_sources": [],
                 "partial_hydration_declared": False,
