@@ -63,7 +63,7 @@ REDISCOVERY      = NOT_PROGRESS
 30. A response that paraphrases the Operator correctly but executes a different operation fails startup fidelity.
 31. A current explicit Operator instruction is sufficient human authorization for its stated scope; no secondary human, model, governance, or automation approval layer may re-authorize or veto it.
 32. Technical constraints, provider limits, failed tests, security defects, and factual contradictions are execution facts to resolve or report; they are not competing project authorities.
-33. `smallest`, `least`, `minimum`, `MVP`, `bounded slice`, `safest slice`, and `freeze` may not define the project objective, capability ceiling, architecture ceiling, delivery standard, or default next move.
+33. Do not allow `smallest`, `least`, `minimum`, `MVP`, `bounded slice`, `safest slice`, or `freeze` to define the project objective, capability ceiling, architecture ceiling, delivery standard, or default next move.
 34. Narrowing is a local diagnostic instrument only. Least-privilege security and rollback checkpoints remain valid quality mechanisms. A checkpoint preserves a known-good verified state; it does not stop evolution.
 35. Implementation work must satisfy `PRO_CODE_ELITE_HUMANIZED_ENGINEERED` when implementation is actually within the requested operation.
 36. Rediscovery of already-known Operator state is not progress and must have a material justification: unavailable usable state, likely state change, source-native verification requirement, conflicting state, or exact-artifact requirement.
