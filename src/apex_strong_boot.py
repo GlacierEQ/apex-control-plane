@@ -9,7 +9,8 @@ runtime gates ran.
 
 A successful strong boot therefore means one thing everywhere: the mandatory
 anti-drift preflight passed, all five sealed in-process startup gates are
-complete, and the verified runtime kernel exists.
+complete, and the verified runtime kernel exists behind the mission-outcome
+fidelity hard lock.
 """
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ from apex_enforced_startup import (
     automatic_apex_enforced_startup,
     get_in_process_apex_validation,
 )
-from apex_runtime_kernel import ApexRuntimeKernel, create_verified_runtime_kernel
+from apex_runtime_kernel import create_verified_runtime_kernel
 from model_attractor_defense import (
     automatic_model_attractor_defense,
     get_in_process_model_attractor_validation,
@@ -40,6 +41,10 @@ from operator_fidelity_lock import (
 from operator_fidelity_preflight import (
     automatic_operator_fidelity_preflight,
     get_in_process_operator_fidelity_validation,
+)
+from outcome_fidelity_runtime import (
+    OutcomeFidelityRuntime,
+    enforce_outcome_fidelity,
 )
 from prime_directive_boot import (
     automatic_prime_directive_boot,
@@ -73,7 +78,7 @@ class StrongBootSession:
     status: str
     created_at: datetime
     gates: tuple[str, ...]
-    runtime_kernel: ApexRuntimeKernel = field(repr=False, compare=False)
+    runtime_kernel: OutcomeFidelityRuntime = field(repr=False, compare=False)
     _seal: object = field(repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -161,7 +166,7 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
             )
         raise StrongBootViolation("; ".join(failures))
 
-    runtime_kernel = create_verified_runtime_kernel()
+    runtime_kernel = enforce_outcome_fidelity(create_verified_runtime_kernel())
     snapshot = runtime_kernel.snapshot()
     if snapshot.phase != "bootstrapped":
         raise StrongBootViolation(
@@ -171,6 +176,8 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
         raise StrongBootViolation("new runtime kernel unexpectedly contains a bound task")
     if snapshot.startup_gates != EXPECTED_GATES:
         raise StrongBootViolation("runtime kernel startup-gate proof does not match strong boot")
+    if runtime_kernel.outcome_state()["recorded"] is not False:
+        raise StrongBootViolation("new runtime kernel unexpectedly contains a mission outcome")
 
     session = StrongBootSession(
         session_id=str(uuid4()),

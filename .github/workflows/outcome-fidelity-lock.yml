@@ -1,0 +1,111 @@
+name: Mission Outcome Fidelity Hard Lock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "config/outcome_fidelity_policy.json"
+      - "src/outcome_fidelity_runtime.py"
+      - "src/apex_strong_boot.py"
+      - "tests/test_outcome_fidelity_runtime.py"
+      - "tests/test_apex_strong_boot.py"
+      - ".github/workflows/outcome-fidelity-lock.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "config/outcome_fidelity_policy.json"
+      - "src/outcome_fidelity_runtime.py"
+      - "src/apex_strong_boot.py"
+      - "tests/test_outcome_fidelity_runtime.py"
+      - "tests/test_apex_strong_boot.py"
+      - ".github/workflows/outcome-fidelity-lock.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  outcome-hard-lock:
+    name: mission-outcome-hard-lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pytest
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Compile outcome boundary
+        run: |
+          python -m py_compile \
+            src/outcome_fidelity_runtime.py \
+            src/apex_strong_boot.py
+
+      - name: Run outcome and strong-boot regressions
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_outcome_fidelity_runtime.py \
+            tests/test_apex_strong_boot.py
+
+      - name: Prove artifact production cannot authorize persistence
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python - <<'PY'
+          from types import SimpleNamespace
+          import apex_runtime_kernel as runtime
+          from apex_runtime_kernel import TaskMode, create_verified_runtime_kernel
+          from outcome_fidelity_runtime import OutcomeFidelityViolation, enforce_outcome_fidelity
+
+          valid = SimpleNamespace(ok=True, status="complete")
+          for name in (
+              "get_in_process_notion_validation",
+              "get_in_process_boot_validation",
+              "get_in_process_operator_fidelity_lock",
+              "get_in_process_operator_fidelity_validation",
+              "get_in_process_apex_validation",
+          ):
+              setattr(runtime, name, lambda valid=valid: valid)
+
+          kernel = enforce_outcome_fidelity(create_verified_runtime_kernel())
+          kernel.bind_task(
+              literal_instruction="continue the live case",
+              target_state="underlying case state changes",
+              operation_class="continue_case_execution",
+              mode=TaskMode.MUTATION,
+              action_scope="internal",
+              operator_authorization_ref="operator-command:ci",
+              prior_state_ref="case-proposition:before",
+              source_refs=("case-source:known",),
+              verification_plan=("verify case-state change",),
+          )
+          kernel.begin()
+          kernel.record_execution("execution:artifact-only")
+          kernel.record_test("test:artifact-only", passed=True)
+          kernel.record_adversarial_test("test:artifact-only-adversarial", passed=True)
+          kernel.record_verification(
+              "verification:artifact-only",
+              passed=True,
+              verified_gain_refs=("artifact:ledger",),
+          )
+
+          try:
+              kernel.record_mission_outcome(
+                  "outcome:artifact-only",
+                  transition_kind="ledger_created",
+                  before_state_ref="case-proposition:before",
+                  after_state_ref="artifact:new-ledger",
+                  evidence_refs=("ledger:new-ledger",),
+              )
+          except OutcomeFidelityViolation:
+              pass
+          else:
+              raise SystemExit("artifact-only outcome was incorrectly accepted")
+
+          try:
+              kernel.begin_persistence()
+          except OutcomeFidelityViolation:
+              pass
+          else:
+              raise SystemExit("artifact-only work incorrectly reached persistence")
+          PY
