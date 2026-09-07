@@ -16,6 +16,8 @@ def _receipt() -> dict:
         "apex_startup": {
             "authority": "operator_intent",
             "objective": "maximum_coherent_advance",
+            "operator_identity_loaded": True,
+            "operator_estate_model_loaded": True,
             "operator_model_loaded": True,
             "relevant_memory_consulted_when_available": True,
             "known_state_reused_before_rediscovery": True,
@@ -97,6 +99,12 @@ def test_operator_working_model_is_loaded_as_non_sovereign_starting_state() -> N
     assert authority["assistant_working_model_is_derived_and_non_sovereign"] is True
     assert authority["memory_and_continuity_state_are_starting_state_not_project_authority"] is True
     assert model["state_reuse"]["rediscovery_is_progress"] is False
+    assert model["operator_identity"]["name"] == "Casey Barton / GlacierEQ"
+    assert "THE OPERATOR / THE ARCHITECT" in model["operator_identity"]["primary_model"]
+    assert model["estate_model"]["target"] == "MAXIMUM_USEFUL_ENGINEERING_DENSITY"
+    assert model["actual_work_pattern"]
+    assert model["default_loop"]
+    assert model["impact_first_judgment"]["reweight_on_state_change"] is True
 
 
 def test_startup_request_requires_state_reuse_before_rediscovery() -> None:
@@ -114,6 +122,12 @@ def test_startup_request_requires_state_reuse_before_rediscovery() -> None:
     projection = request["operator_working_model"]
     assert projection["authority_semantics"]["assistant_working_model_is_derived_and_non_sovereign"] is True
     assert projection["state_reuse"]["rediscovery_is_progress"] is False
+    assert projection["operator_identity"]["name"] == "Casey Barton / GlacierEQ"
+    assert "THE OPERATOR / THE ARCHITECT" in projection["operator_identity"]["primary_model"]
+    assert projection["estate_model"]["target"] == "MAXIMUM_USEFUL_ENGINEERING_DENSITY"
+    assert projection["actual_work_pattern"]
+    assert projection["default_loop"]
+    assert projection["impact_first_judgment"]["frameworks_are_inputs_not_substitutes_for_judgment"] is True
 
 
 def test_known_state_rediscovery_failure_fails_closed() -> None:
@@ -132,6 +146,16 @@ def test_missing_operator_model_load_fails_closed() -> None:
     receipt["apex_startup"]["operator_model_loaded"] = False
     errors = validate_apex_startup_receipt(policy, receipt)
     assert "apex_startup.operator_model_loaded must be true" in errors
+
+
+def test_missing_operator_identity_or_estate_load_fails_closed() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["operator_identity_loaded"] = False
+    receipt["apex_startup"]["operator_estate_model_loaded"] = False
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert "apex_startup.operator_identity_loaded must be true" in errors
+    assert "apex_startup.operator_estate_model_loaded must be true" in errors
 
 
 def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> None:
@@ -182,6 +206,8 @@ def test_mutation_interlock_fields_are_mandatory() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
     for field in (
+        "operator_identity_loaded",
+        "operator_estate_model_loaded",
         "operator_model_loaded",
         "relevant_memory_consulted_when_available",
         "known_state_reused_before_rediscovery",
@@ -194,6 +220,8 @@ def test_mutation_interlock_fields_are_mandatory() -> None:
         receipt["apex_startup"][field] = False
     errors = validate_apex_startup_receipt(policy, receipt)
     for field in (
+        "operator_identity_loaded",
+        "operator_estate_model_loaded",
         "operator_model_loaded",
         "relevant_memory_consulted_when_available",
         "known_state_reused_before_rediscovery",
