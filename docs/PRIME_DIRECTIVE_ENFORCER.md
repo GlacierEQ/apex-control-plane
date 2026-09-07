@@ -85,7 +85,7 @@ A host execution loop may satisfy the memory-state stage in either of two ways.
 
 ### Reuse known state
 
-When materially relevant state is already available and usable, record a provenance-bearing reuse proof without invoking a search tool:
+When materially relevant state is already available and usable, record a reuse proof without invoking a search tool. Reuse requires explicit structured `class:locator` provenance, a non-empty item count, and `known_state_available=true`:
 
 ```python
 from prime_directive_enforcer import StartupGateEnforcer
@@ -94,6 +94,7 @@ enforcer = StartupGateEnforcer()
 enforcer.record_memory_state_reuse(
     source="conversation-context:current-worker",
     item_count=3,
+    known_state_available=True,
 )
 ```
 
@@ -101,7 +102,7 @@ The reuse path is monotonic: later unrelated retrieval calls cannot silently dow
 
 ### Perform materially justified rediscovery
 
-When usable state is unavailable, may have changed, conflicts with another source-bearing state, or exact source-native verification is required, invoke an allowed search tool and record the successful result. The provider receipt must include the material rediscovery justification.
+When usable state is unavailable, may have changed, conflicts with another source-bearing state, or exact source-native verification is required, invoke an allowed search tool and record the successful result. **The search invocation itself** must carry a non-empty query and an allowed `material_rediscovery_justification`; a successful search result without that proof does not advance the memory-state stage. The provider receipt must preserve the same justification.
 
 The broader execution loop validates the combined Prime Directive receipt and attaches the sealed validation before this middleware permits text. The APEX entrypoint then separately validates the Genesis startup receipt before runtime load.
 
@@ -119,6 +120,7 @@ if reusable_state_is_already_present():
     enforcer.record_memory_state_reuse(
         source="conversation-context:current-worker",
         item_count=reusable_state_count(),
+        known_state_available=True,
     )
 
 while True:
@@ -158,6 +160,15 @@ while True:
     deliver_to_user(checked)
 ```
 
+A memory-search tool call must therefore look like this at invocation time:
+
+```json
+{
+  "query": "task topic and user/project context",
+  "material_rediscovery_justification": "state_not_available_in_usable_form"
+}
+```
+
 A tool invocation alone does not advance a stage. The execution loop records a successful result. A hand-built object claiming `ok=true` cannot complete the gate; only a sealed validation object issued by the validator is accepted.
 
 ## Combined boot receipt
@@ -186,6 +197,16 @@ The provider-backed receipt includes continuity fields plus evidence for memory-
       "path": "AGENT_SYSTEM_PROMPT.md",
       "sha256": "<pinned sha256>",
       "source": "GitHub.fetch_file:AGENT_SYSTEM_PROMPT.md"
+    },
+    {
+      "path": "APEX_ENFORCED_STARTUP.md",
+      "sha256": "<pinned sha256>",
+      "source": "GitHub.fetch_file:APEX_ENFORCED_STARTUP.md"
+    },
+    {
+      "path": "OPERATOR_EXECUTION_LAW.md",
+      "sha256": "<pinned sha256>",
+      "source": "GitHub.fetch_file:OPERATOR_EXECUTION_LAW.md"
     }
   ],
   "tool_inventory": {
@@ -199,6 +220,8 @@ The provider-backed receipt includes continuity fields plus evidence for memory-
   }
 }
 ```
+
+The reuse `source` is not free-form text: it must have both a source class and locator separated by `:`. An unstructured projection such as `"invented-projection"` cannot establish provenance.
 
 ### Searched state receipt
 
@@ -217,7 +240,9 @@ The provider-backed receipt includes continuity fields plus evidence for memory-
 }
 ```
 
-Legacy `memory_search` receipts remain accepted as compatibility input, but new requests emit `memory_state` semantics.
+For searched state, the provenance source class must match the search tool. Null or non-string `source`, `query`, or justification fields are invalid rather than being string-coerced into apparent proof.
+
+Legacy `memory_search` receipts remain accepted as compatibility input only when their legacy status is valid; invalid statuses are preserved through projection and rejected. New requests emit `memory_state` semantics.
 
 ## APEX Genesis extension
 
