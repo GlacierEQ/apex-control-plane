@@ -43,6 +43,10 @@ class DownwardDirectiveClassifierTests(unittest.TestCase):
     def test_allows_explicit_prohibition(self) -> None:
         self.assert_allowed("Do not default to the smallest useful next step.")
 
+    def test_allows_may_not_prohibition(self) -> None:
+        phrase = "The minimum" + " viable implementation may not define the project objective."
+        self.assert_allowed(phrase)
+
     def test_allows_forbidden_signature_vocabulary(self) -> None:
         self.assert_allowed("FORBIDDEN: freeze scope")
 
