@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.6.0",
+  "schema_version": "1.7.0",
   "name": "APEX Enforced Startup",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
@@ -9,11 +9,14 @@
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "operator_trust_root_contract": "000_OPERATOR_TRUST_ROOT.md",
   "operator_working_model_path": "config/operator_working_model.json",
+  "worker_execution_contract_path": "config/casey_worker_execution_contract.json",
   "fail_closed": true,
   "operator_authority": {
     "mode": "absolute_project_direction",
     "sole_human_project_authority": true,
     "current_explicit_instruction_is_sufficient_authorization_for_its_scope": true,
+    "standing_authorization_persists_until_revoked_superseded_or_completed": true,
+    "mechanical_state_change_does_not_reopen_operator_decision": true,
     "secondary_human_approval_authority": false,
     "lower_level_policy_veto": false,
     "assistant_or_automation_override": false,
@@ -39,6 +42,8 @@
     "relevant_memory_is_starting_state": true,
     "known_state_must_be_reused_before_rediscovery": true,
     "rediscovery_is_not_progress": true,
+    "worker_activity_is_not_progress": true,
+    "progress_requires_material_target_state_change": true,
     "historical_summaries_are_routing_hints_only": true,
     "do_not_taskify_living_systems": true,
     "do_not_reduce_operator_to_preferences": true,
@@ -46,6 +51,8 @@
     "operator_asserted_scope_must_be_preserved": true,
     "operator_asserted_scope_may_not_be_narrowed_without_explicit_operator_authorization": true,
     "failure_scope_carries_across_execution_contexts": true,
+    "standing_operator_authority_must_be_preserved_across_execution_contexts": true,
+    "literal_operation_class_must_persist_until_target_change_or_operator_supersession": true,
     "failure_interrupts_trigger_upstream_state_recovery": true,
     "failure_interrupts_are_not_literalized_when_context_is_assistant_directed_continuity_failure": true,
     "rediscovery_requires_material_justification": [
@@ -92,7 +99,13 @@
     "restore_operator_role": "principal_trust_root"
   },
   "required_startup_fields": [
+    "operator_identity_loaded",
+    "operator_estate_model_loaded",
     "operator_model_loaded",
+    "worker_execution_contract_loaded",
+    "standing_authorizations_preserved",
+    "target_state_progress_semantics_loaded",
+    "operator_operation_class_preserved",
     "relevant_memory_consulted_when_available",
     "known_state_reused_before_rediscovery",
     "literal_operator_sources_preserved_separately_from_derived_interpretation",
@@ -159,11 +172,20 @@
     "operator_working_method_preserved": true,
     "operator_asserted_scope_preserved": true,
     "unsupported_scope_narrowing": false,
-    "known_state_reused_before_rediscovery": true
+    "known_state_reused_before_rediscovery": true,
+    "standing_operator_authority_preserved": true,
+    "assistant_activity_not_claimed_as_progress": true,
+    "operator_operation_class_preserved": true
   },
   "mutation_interlock": {
     "required_true_fields": [
+      "operator_identity_loaded",
+      "operator_estate_model_loaded",
       "operator_model_loaded",
+      "worker_execution_contract_loaded",
+      "standing_authorizations_preserved",
+      "target_state_progress_semantics_loaded",
+      "operator_operation_class_preserved",
       "relevant_memory_consulted_when_available",
       "known_state_reused_before_rediscovery",
       "literal_operator_sources_preserved_separately_from_derived_interpretation",
@@ -203,7 +225,8 @@
       "prior_valid_gains_preserved",
       "no_unearned_state_promotion",
       "no_material_regression",
-      "operator_intent_aligned"
+      "operator_intent_aligned",
+      "material_target_state_changed_when_progress_is_claimed"
     ]
   },
   "compatibility": {
@@ -215,6 +238,7 @@
     "observation_is_knowledge_not_authority": true,
     "operator_working_model_is_projection_not_sovereign_authority": true,
     "memory_summary_is_not_identity_or_current_project_state": true,
-    "state_reuse_does_not_prevent_source_native_verification_when_material": true
+    "state_reuse_does_not_prevent_source_native_verification_when_material": true,
+    "standing_authority_persistence_does_not_create_ungranted_authority": true
   }
 }

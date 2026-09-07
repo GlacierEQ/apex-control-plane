@@ -2,13 +2,13 @@
 """Deterministic Casey continuity auto-boot gate.
 
 This module never pretends that a Mem search result is a loaded note or that a
-connector is live merely because it is configured. It emits an exact boot
-request and validates a provider-backed receipt before a case or systems
-runtime proceeds.
+connector is live merely because it is configured. It emits an exact-ID boot
+request with per-note version semantics and validates a provider-backed receipt
+before a case or systems runtime proceeds.
 
-No network client or credential is embedded here. A connected agent or bridge
-must retrieve the notes and sources, then provide a receipt through
-``CASEY_BOOT_RECEIPT_JSON`` or ``CASEY_BOOT_RECEIPT_PATH``.
+Living Mem notes use AT_LEAST version floors. Intentionally immutable contracts
+use EXACT versions. This prevents normal durable-state evolution from creating a
+self-inflicted dead boot while still fail-closing immutable contracts.
 """
 from __future__ import annotations
 
@@ -70,6 +70,7 @@ def load_manifest(path: Path | None = None) -> dict[str, Any]:
         raise BootError("manifest.profiles must be an object")
     if not isinstance(manifest["required_note_versions"], dict):
         raise BootError("manifest.required_note_versions must be an object")
+    _version_requirement(manifest["canonical_mem_manifest"], label="canonical_mem_manifest")
     return manifest
 
 
@@ -114,31 +115,65 @@ def required_note_ids(
     return tuple(output)
 
 
-def required_note_versions(
+def _version_requirement(value: Any, *, label: str) -> dict[str, Any]:
+    """Normalize legacy integer and structured version requirements."""
+    if isinstance(value, bool):
+        raise BootError(f"invalid required version for {label}")
+    if isinstance(value, Mapping):
+        mode = str(value.get("mode", value.get("version_mode", ""))).strip().lower()
+        raw_version = value.get("version")
+    else:
+        mode = "exact"
+        raw_version = value
+    if mode not in {"exact", "at_least"}:
+        raise BootError(f"invalid version mode for {label}: {mode!r}")
+    if isinstance(raw_version, bool):
+        raise BootError(f"invalid required version for {label}")
+    try:
+        version = int(raw_version)
+    except (TypeError, ValueError) as exc:
+        raise BootError(f"missing or invalid required version for {label}") from exc
+    if version < 1:
+        raise BootError(f"required version must be >= 1 for {label}")
+    return {"mode": mode, "version": version}
+
+
+def required_note_requirements(
     manifest: Mapping[str, Any],
     profiles: Sequence[str],
     *,
     restricted_authorized: bool = False,
-) -> dict[str, int]:
+) -> dict[str, dict[str, Any]]:
     ids = required_note_ids(
         manifest,
         profiles,
         restricted_authorized=restricted_authorized,
     )
     version_map = manifest.get("required_note_versions", {})
-    output: dict[str, int] = {}
+    output: dict[str, dict[str, Any]] = {}
     for note_id in ids:
-        raw_version = version_map.get(note_id)
-        if isinstance(raw_version, bool):
-            raise BootError(f"invalid required version for note {note_id}")
-        try:
-            version = int(raw_version)
-        except (TypeError, ValueError) as exc:
-            raise BootError(f"missing or invalid required version for note {note_id}") from exc
-        if version < 1:
-            raise BootError(f"required note version must be >= 1 for {note_id}")
-        output[note_id] = version
+        if note_id not in version_map:
+            raise BootError(f"missing required version for note {note_id}")
+        output[note_id] = _version_requirement(
+            version_map[note_id],
+            label=f"note {note_id}",
+        )
     return output
+
+
+def required_note_versions(
+    manifest: Mapping[str, Any],
+    profiles: Sequence[str],
+    *,
+    restricted_authorized: bool = False,
+) -> dict[str, int]:
+    """Compatibility view returning each note's exact version or minimum floor."""
+    requirements = required_note_requirements(
+        manifest,
+        profiles,
+        restricted_authorized=restricted_authorized,
+    )
+    return {note_id: int(rule["version"]) for note_id, rule in requirements.items()}
 
 
 def build_boot_request(
@@ -148,32 +183,45 @@ def build_boot_request(
     task: str = "resume Operator-directed unfinished material action",
     restricted_authorized: bool = False,
 ) -> dict[str, Any]:
-    versions = required_note_versions(
+    requirements = required_note_requirements(
         manifest,
         profiles,
         restricted_authorized=restricted_authorized,
+    )
+    manifest_requirement = _version_requirement(
+        manifest["canonical_mem_manifest"],
+        label="canonical_mem_manifest",
     )
     return {
         "request_type": "casey_continuity_auto_boot",
         "requested_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "boot_manifest_id": manifest["canonical_mem_manifest"]["id"],
-        "boot_manifest_version": manifest["canonical_mem_manifest"]["version"],
+        "boot_manifest_version": manifest_requirement["version"],
+        "boot_manifest_version_mode": manifest_requirement["mode"],
         "mem_collection_id": manifest["mem_collection"]["id"],
         "profiles": list(profiles),
-        "required_note_ids": list(versions),
+        "required_note_ids": list(requirements),
         "required_notes": [
-            {"id": note_id, "version": version}
-            for note_id, version in versions.items()
+            {
+                "id": note_id,
+                "version": rule["version"],
+                "version_mode": rule["mode"],
+            }
+            for note_id, rule in requirements.items()
         ],
         "task": task,
         "requirements": {
-            "fetch_each_note_by_exact_id_and_version": True,
+            "fetch_each_note_by_exact_id_and_version_policy": True,
+            "living_notes_accept_newer_provider_version": True,
+            "immutable_notes_require_exact_version": True,
             "search_result_is_not_loaded_note": True,
             "open_current_task_sources": True,
             "emit_provider_receipt": True,
             "preserve_case_boundaries": True,
-            "no_external_action_without_authority": True,
+            "preserve_standing_operator_authority": True,
             "preserve_literal_operator_operation_scope": True,
+            "progress_requires_material_target_state_change": True,
+            "no_external_action_without_authority": True,
             "no_unsolicited_operator_asset_value_ranking": True,
             "no_unsolicited_operator_asset_disposition": True,
         },
@@ -191,6 +239,9 @@ def build_boot_request(
             "restricted_context": "boolean",
             "current_task": "string",
             "next_material_action": "string",
+            "operator_operation_class": "string",
+            "standing_authorizations_preserved": "boolean",
+            "target_state_progress_semantics_loaded": "boolean",
             "boot_status": "complete|degraded|blocked",
             "blockers": "array[string]",
         },
@@ -318,6 +369,21 @@ def _validate_deadline_check(
     return errors
 
 
+def _validate_version(
+    *,
+    label: str,
+    actual: int,
+    requirement: Mapping[str, Any],
+) -> str | None:
+    mode = str(requirement["mode"])
+    required = int(requirement["version"])
+    if mode == "exact" and actual != required:
+        return f"version mismatch for {label}: expected exactly {required}, got {actual}"
+    if mode == "at_least" and actual < required:
+        return f"version below minimum for {label}: expected >= {required}, got {actual}"
+    return None
+
+
 def validate_receipt(
     manifest: Mapping[str, Any],
     receipt: Mapping[str, Any],
@@ -325,7 +391,7 @@ def validate_receipt(
     *,
     restricted_authorized: bool = False,
 ) -> BootValidation:
-    required_versions = required_note_versions(
+    required = required_note_requirements(
         manifest,
         profiles,
         restricted_authorized=restricted_authorized,
@@ -334,25 +400,38 @@ def validate_receipt(
     errors: list[str] = list(note_errors)
 
     expected_manifest = manifest["canonical_mem_manifest"]
+    manifest_requirement = _version_requirement(
+        expected_manifest,
+        label="canonical_mem_manifest",
+    )
     if receipt.get("boot_manifest_id") != expected_manifest["id"]:
         errors.append("boot_manifest_id mismatch")
     try:
         receipt_version = int(receipt.get("boot_manifest_version", 0))
     except (TypeError, ValueError):
         receipt_version = 0
-    if receipt_version != int(expected_manifest["version"]):
-        errors.append("boot_manifest_version mismatch")
+    manifest_error = _validate_version(
+        label="boot manifest",
+        actual=receipt_version,
+        requirement=manifest_requirement,
+    )
+    if manifest_error:
+        errors.append(manifest_error)
     if receipt.get("mem_collection_id") != manifest["mem_collection"]["id"]:
         errors.append("mem_collection_id mismatch")
 
-    for note_id, expected_version in required_versions.items():
+    for note_id, requirement in required.items():
         actual_version = loaded_versions.get(note_id)
         if actual_version is None:
             errors.append(f"missing loaded note ID: {note_id}")
-        elif actual_version != expected_version:
-            errors.append(
-                f"note version mismatch for {note_id}: expected {expected_version}, got {actual_version}"
-            )
+            continue
+        version_error = _validate_version(
+            label=f"note {note_id}",
+            actual=actual_version,
+            requirement=requirement,
+        )
+        if version_error:
+            errors.append(version_error)
 
     receipt_profiles = receipt.get("boot_profile")
     if not isinstance(receipt_profiles, list):
@@ -381,6 +460,14 @@ def validate_receipt(
         if rule.get("requires_live_deadline_check_when_relevant"):
             errors.extend(_validate_deadline_check(manifest, receipt))
 
+    if "always" in profiles:
+        if receipt.get("standing_authorizations_preserved") is not True:
+            errors.append("standing_authorizations_preserved must be true")
+        if receipt.get("target_state_progress_semantics_loaded") is not True:
+            errors.append("target_state_progress_semantics_loaded must be true")
+        if not str(receipt.get("operator_operation_class", "")).strip():
+            errors.append("operator_operation_class is required")
+
     restricted_context = receipt.get("restricted_context")
     if not isinstance(restricted_context, bool):
         errors.append("restricted_context must be a boolean")
@@ -405,18 +492,14 @@ def validate_receipt(
         ok=not errors,
         status="complete" if not errors else "blocked",
         profiles=tuple(profiles),
-        required_note_ids=tuple(required_versions),
+        required_note_ids=tuple(required),
         loaded_note_ids=tuple(loaded_versions),
         errors=tuple(errors),
     )
 
 
 def automatic_boot() -> BootValidation | None:
-    """Run the environment-driven boot validation and surface recoverable continuations.
-
-    Missing or invalid evidence remains non-authorizing, but now returns a durable
-    continuation receipt so local diagnosis and receipt repair can proceed.
-    """
+    """Run environment-driven boot validation and surface recoverable continuations."""
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
     if mode == "off" or os.getenv("CASEY_AUTO_BOOT_DISABLE") == "1":
         return None
@@ -426,9 +509,7 @@ def automatic_boot() -> BootValidation | None:
     manifest = load_manifest()
     profile_value = os.getenv("CASEY_BOOT_PROFILE", "systems")
     profiles = normalize_profiles(manifest, [profile_value])
-    restricted_authorized = (
-        os.getenv("CASEY_RESTRICTED_CONTEXT_AUTHORIZED", "0") == "1"
-    )
+    restricted_authorized = os.getenv("CASEY_RESTRICTED_CONTEXT_AUTHORIZED", "0") == "1"
     task = os.getenv(
         "CASEY_BOOT_TASK",
         "resume Operator-directed unfinished material action",
@@ -539,14 +620,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             profiles,
             restricted_authorized=args.restricted_authorized,
         )
-        print(json.dumps({
-            "ok": result.ok,
-            "status": result.status,
-            "profiles": list(result.profiles),
-            "required_note_ids": list(result.required_note_ids),
-            "loaded_note_ids": list(result.loaded_note_ids),
-            "errors": list(result.errors),
-        }, ensure_ascii=False, indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                {
+                    "ok": result.ok,
+                    "status": result.status,
+                    "profiles": list(result.profiles),
+                    "required_note_ids": list(result.required_note_ids),
+                    "loaded_note_ids": list(result.loaded_note_ids),
+                    "errors": list(result.errors),
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return 0 if result.ok else EXIT_BOOT_BLOCKED
 
     parser.error("choose --emit-request or --verify-receipt")
