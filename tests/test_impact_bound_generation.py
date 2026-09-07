@@ -1,6 +1,12 @@
+from pathlib import Path
 import json
+import sys
 
-from src.impact_bound_generation import ImpactBoundGenerationHost
+SRC = Path(__file__).resolve().parents[1] / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from impact_bound_generation import ImpactBoundGenerationHost  # noqa: E402
 
 
 def _proposal_model(_messages):
@@ -99,7 +105,8 @@ def test_proposal_output_never_becomes_action_without_selection() -> None:
     assert turn.decision.selected_candidate_id == "wire-selection"
     assert turn.output["content"] == "executed selected operation"
     frames = [
-        row for row in seen_execution_messages
+        row
+        for row in seen_execution_messages
         if row.get("type") == "continuous_impact_selection"
     ]
     assert len(frames) == 1
