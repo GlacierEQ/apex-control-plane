@@ -103,7 +103,7 @@ def test_null_source_is_rejected_instead_of_becoming_string_none() -> None:
 
     errors = validate_prime_directive_receipt(policy, receipt)
 
-    assert "memory_state.source must be a non-empty string" in errors
+    assert "memory_state.source is required" in errors
 
 
 def test_null_search_query_is_rejected_instead_of_becoming_string_none() -> None:
@@ -113,7 +113,7 @@ def test_null_search_query_is_rejected_instead_of_becoming_string_none() -> None
 
     errors = validate_prime_directive_receipt(policy, receipt)
 
-    assert "searched memory_state.query must be a non-empty string" in errors
+    assert "searched memory_state.query must be a string" in errors
 
 
 def test_reused_unstructured_provenance_is_rejected() -> None:
@@ -123,7 +123,7 @@ def test_reused_unstructured_provenance_is_rejected() -> None:
 
     errors = validate_prime_directive_receipt(policy, receipt)
 
-    assert "memory_state.source must use structured class:locator provenance" in errors
+    assert "memory_state.source must use non-empty class:locator provenance" in errors
 
 
 def test_searched_source_must_match_search_tool() -> None:
@@ -133,7 +133,7 @@ def test_searched_source_must_match_search_tool() -> None:
 
     errors = validate_prime_directive_receipt(policy, receipt)
 
-    assert "searched memory_state.source class must match searched memory_state.tool" in errors
+    assert "searched memory_state.source class must match memory_state.tool" in errors
 
 
 def test_invalid_legacy_status_survives_projection_and_is_rejected() -> None:
