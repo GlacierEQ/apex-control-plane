@@ -3,10 +3,11 @@
 This module blocks user-facing model text until the startup gate is proven.
 Relevant memory/continuity state must be consulted before text, but a fresh
 search is not mandatory: already-available state may be explicitly reused with
-provenance. Search tool calls remain valid when rediscovery is materially
-justified. Other tool calls are allowed through, but a stage advances only after
-a successful result is recorded. The module is provider-shape tolerant and
-stores no tool arguments or model content in its audit log.
+structured provenance. Search tool calls establish the memory stage only when
+rediscovery is materially justified. Other tool calls are allowed through, but
+a stage advances only after a successful result is recorded. The module is
+provider-shape tolerant and stores no tool arguments or model content in its
+audit log.
 """
 from __future__ import annotations
 
@@ -131,19 +132,31 @@ class StartupGateEnforcer:
         with self._lock:
             return tuple(self._state.tools_invoked)
 
-    def record_memory_state_reuse(self, *, source: str, item_count: int) -> GateSnapshot:
+    def record_memory_state_reuse(
+        self,
+        *,
+        source: str,
+        item_count: int,
+        known_state_available: bool,
+    ) -> GateSnapshot:
         """Prove that relevant already-available state was consulted and reused.
 
-        This is the non-tool-call path through the memory-state stage. The host
-        execution loop supplies a provenance-bearing source locator for state
-        already present in the worker/context. It may not use this method for an
-        empty or invented state projection.
+        The host supplies an explicit ``class:locator`` provenance reference and
+        asserts that known state is actually available. Empty, invented-looking,
+        or unstructured source strings cannot complete the memory-state stage.
         """
         with self._lock:
             if self._state.terminal_blocked:
                 raise GateViolation("startup gate is terminally blocked")
-            if not isinstance(source, str) or not source.strip():
-                raise GateViolation("memory-state reuse requires a provenance source")
+            provenance = _structured_provenance(source)
+            if provenance is None:
+                raise GateViolation(
+                    "memory-state reuse requires structured class:locator provenance source"
+                )
+            if known_state_available is not True:
+                raise GateViolation(
+                    "memory-state reuse requires known_state_available=true"
+                )
             if isinstance(item_count, bool) or not isinstance(item_count, int) or item_count < 1:
                 raise GateViolation("memory-state reuse requires item_count>=1")
             self._state.memory_search_complete = True
@@ -152,7 +165,7 @@ class StartupGateEnforcer:
             self._state.memory_reuse_locked = True
             self._audit(
                 "memory_state_reused",
-                source_type=source.split(":", 1)[0].strip() or "unknown",
+                source_type=provenance[0],
                 item_count=item_count,
                 success=True,
             )
@@ -223,12 +236,14 @@ class StartupGateEnforcer:
                 self._state.successful_tools.append(normalized)
 
             if not self._state.memory_reuse_locked and self._is_memory_search_tool(normalized):
+                justification = self._validate_memory_search_arguments(arguments)
                 self._state.memory_search_complete = True
                 self._state.memory_search_empty = _result_is_empty_search(result)
                 self._state.memory_state_mode = "searched"
                 self._audit(
                     "memory_state_searched",
                     empty=self._state.memory_search_empty,
+                    justification=justification,
                     success=True,
                 )
 
@@ -370,6 +385,35 @@ class StartupGateEnforcer:
         """Match only explicit memory-search tools; no generic suffix inference."""
         return tool_name in self._aliases.get("memory_search", set())
 
+    def _validate_memory_search_arguments(self, arguments: Any) -> str:
+        """Require the same material reason that the sealed receipt must prove."""
+        if not isinstance(arguments, Mapping):
+            raise GateViolation(
+                "memory search cannot advance startup without structured arguments"
+            )
+        raw_query = arguments.get("query")
+        if not isinstance(raw_query, str) or not raw_query.strip():
+            raise GateViolation(
+                "memory search cannot advance startup without a non-empty query"
+            )
+        raw_justification = arguments.get("material_rediscovery_justification")
+        if not isinstance(raw_justification, str) or not raw_justification.strip():
+            raise GateViolation(
+                "memory search cannot advance startup without material_rediscovery_justification"
+            )
+        justification = raw_justification.strip()
+        requirements = self.policy.get("receipt_requirements", {})
+        allowed = {
+            str(value).strip()
+            for value in requirements.get("rediscovery_material_justifications", ())
+            if str(value).strip()
+        }
+        if allowed and justification not in allowed:
+            raise GateViolation(
+                "memory search material_rediscovery_justification is not allowed"
+            )
+        return justification
+
     def _effective_memory_state_mode(self) -> str:
         if self._state.memory_reuse_locked:
             return "reused"
@@ -440,8 +484,8 @@ class StartupGateEnforcer:
             if stage == "memory_state":
                 instruction = (
                     "Consult relevant already-available memory/continuity state first. "
-                    "Record provenance-bearing reuse when usable state exists; search "
-                    "only when rediscovery is materially justified."
+                    "Record structured provenance-bearing reuse when usable state exists; "
+                    "search only when rediscovery has an allowed material justification."
                 )
             elif stage.startswith("ground_truth_read:"):
                 files = stage.split(":", 1)[1]
@@ -498,6 +542,17 @@ class StartupGateEnforcer:
 
 def _normalize_tool_name(value: Any) -> str:
     return str(value or "").strip().lower().replace("::", ".")
+
+
+def _structured_provenance(value: Any) -> tuple[str, str] | None:
+    if not isinstance(value, str) or not value.strip() or ":" not in value:
+        return None
+    source_class, locator = value.strip().split(":", 1)
+    source_class = source_class.strip()
+    locator = locator.strip()
+    if not source_class or not locator:
+        return None
+    return source_class, locator
 
 
 def _extract_tool_calls(output: Mapping[str, Any]) -> tuple[ToolInvocation, ...]:
