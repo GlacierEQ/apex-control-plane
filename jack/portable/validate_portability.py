@@ -64,12 +64,12 @@ def main() -> int:
     contract_id, contract_version = parse_contract_identity(contract_text)
     require(contract_id == source["contract_id"], "contract id mismatch between manifest and source")
     require(
-        version_tuple(contract_version) >= version_tuple("1.2.0"),
-        f"contract version {contract_version} is below mandatory 1.2.0",
+        version_tuple(contract_version) >= version_tuple("1.3.0"),
+        f"contract version {contract_version} is below mandatory 1.3.0",
     )
     require(
-        version_tuple(source["minimum_contract_version"]) >= version_tuple("1.2.0"),
-        "portability manifest permits a pre-sovereignty Jack contract",
+        version_tuple(source["minimum_contract_version"]) >= version_tuple("1.3.0"),
+        "portability manifest permits a pre-reuse-first Jack contract",
     )
 
     projection = manifest["projection_policy"]
@@ -83,8 +83,26 @@ def main() -> int:
         projection["adapter_may_create_secondary_approval_authority"] is False,
         "secondary approval authority enabled",
     )
+    require(
+        projection["adapter_may_force_rediscovery_of_usable_known_state"] is False,
+        "adapter can force rediscovery over usable known state",
+    )
+    require(
+        projection["adapter_may_replace_continuation_with_reconstruction"] is False,
+        "adapter can replace continuation with reconstruction",
+    )
     require(projection["adapter_must_preserve_directional_semantics"] is True, "directional semantics not protected")
     require(projection["adapter_must_preserve_operation_class"] is True, "operation class not protected")
+    require(projection["adapter_must_reuse_known_state_where_usable"] is True, "known-state reuse not protected")
+    require(projection["adapter_must_hydrate_only_material_delta"] is True, "material-delta hydration not protected")
+
+    continuation = manifest["continuation_model"]
+    require(continuation["known_state_before_rediscovery"] is True, "known state does not precede rediscovery")
+    require(continuation["reuse_known_state_where_usable"] is True, "known-state reuse disabled")
+    require(continuation["material_delta_hydration_only"] is True, "material-delta hydration disabled")
+    require(continuation["redundant_rediscovery_is_not_progress"] is True, "rediscovery can impersonate progress")
+    require(continuation["reconstruction_over_usable_state_forbidden"] is True, "reconstruction over usable state allowed")
+    require(continuation["search_or_reopen_requires_material_reason"] is True, "search can be forced without material reason")
 
     asset = manifest["operator_asset_sovereignty"]
     require(asset["look_inspect_open_list_inventory_map_trace_are_observation_only"] is True, "observational verbs can expand scope")
@@ -98,24 +116,36 @@ def main() -> int:
 
     expected_kernel = [
         "Operator word -> solidify.",
-        "Opposing word -> destabilize.",
+        "Known valid state -> reuse.",
         "Prior work -> inherit.",
+        "Material delta -> hydrate.",
+        "Opposing word -> destabilize.",
         "New information -> compound.",
-        "Missing information -> investigate.",
+        "Missing material information -> investigate.",
         "Jack -> execute.",
     ]
-    require(manifest["reconstruction_kernel"] == expected_kernel, "reconstruction kernel drift")
+    require(manifest["continuity_kernel"] == expected_kernel, "continuity kernel drift")
+    require("reconstruction_kernel" not in manifest, "legacy reconstruction kernel survived in active manifest")
     for line in expected_kernel:
         require(line in bootstrap_text, f"bootstrap is missing kernel line: {line}")
 
     require("No authority laundering" in bootstrap_text, "bootstrap lost no-authority-laundering invariant")
     require("Operator Asset Sovereignty" in bootstrap_text, "bootstrap lost Operator Asset Sovereignty")
+    require("Rediscovery of already-known relevant Operator/project state is not progress." in bootstrap_text, "bootstrap lost rediscovery-is-not-progress invariant")
     require("Tool access is capability. Observation is knowledge. Neither is authority." in bootstrap_text, "bootstrap lost capability/knowledge/authority distinction")
     require("UNSOLICITED_ASSET_RANKING=FORBIDDEN" in startup_text, "APEX startup lost unsolicited asset-ranking prohibition")
     require("UNSOLICITED_ASSET_DISPOSITION=FORBIDDEN" in startup_text, "APEX startup lost unsolicited asset-disposition prohibition")
     require("INSPECTION_SCOPE_EXPANSION=FORBIDDEN" in startup_text, "APEX startup lost inspection-scope prohibition")
     require("The phrase `winners vs dead weight`" in sovereignty_text, "asset-sovereignty correction receipt missing")
     require("project_direction_authority: OPERATOR_INTENT" in contract_text, "Jack contract authority drift")
+    require("known_state_before_rediscovery: true" in contract_text, "Jack contract lost known-state-first invariant")
+    require("reuse_known_state_where_usable: true" in contract_text, "Jack contract lost reuse invariant")
+    require("material_delta_hydration_only: true" in contract_text, "Jack contract lost material-delta invariant")
+    require("- CONSULT_RELEVANT_KNOWN_STATE" in contract_text, "Jack loop does not begin from known state")
+    require("- REUSE_KNOWN_STATE_WHERE_USABLE" in contract_text, "Jack loop does not reuse known state")
+    require("- HYDRATE_MATERIAL_DELTA_IF_REQUIRED" in contract_text, "Jack loop does not hydrate material delta")
+    require("RECONSTRUCT_CONTEXT" not in contract_text, "legacy reconstruction-first Jack loop survived")
+    require("search_existing_work_before_creation" not in contract_text, "legacy forced-search invariant survived")
     require("operator_asset_sovereignty_preserved" in contract_text, "Jack contract sovereignty gate missing")
     require("operator_aligned_delta_selected" in contract_text, "Jack contract still lacks Operator-aligned delta gate")
     require("highest_value_delta_selected" not in contract_text, "legacy highest-value delta authority survived in active Jack contract")
@@ -132,6 +162,9 @@ def main() -> int:
         "api_and_mcp_agents",
     }
     require(expected_targets.issubset(targets), "one or more required propagation targets are missing")
+    for adapter in ("chatgpt", "claude", "gemini"):
+        require(targets[adapter]["known_state_first"] is True, f"{adapter} adapter is not known-state-first")
+        require(targets[adapter]["material_delta_retrieval_only"] is True, f"{adapter} adapter can force broad rediscovery")
 
     print(
         json.dumps(
@@ -140,6 +173,7 @@ def main() -> int:
                 "package": manifest["package"],
                 "contract_id": contract_id,
                 "contract_version": contract_version,
+                "continuation_semantics": "reuse-first-material-delta",
                 "operator_asset_sovereignty": "verified",
                 "targets": sorted(expected_targets),
             },

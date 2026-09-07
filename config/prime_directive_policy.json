@@ -15,7 +15,7 @@
   "ground_truth_files": [
     {
       "path": "STATE.md",
-      "sha256": "ddf8ea3670f4d34c32bc7c687d1086a15a0d9cb9cb0a60b42f9030cec3298b7a"
+      "sha256": "f82a27796a7679cf422149fa0b1e78611aea9fef23d1f5826dfe2b02dbefa719"
     },
     {
       "path": "AGENT_SYSTEM_PROMPT.md",
@@ -27,7 +27,7 @@
     },
     {
       "path": "OPERATOR_EXECUTION_LAW.md",
-      "sha256": "c6a9633ee2faade14c32b2430c4bfb5cdf814a5e308ad4a092dc989e31563d4f"
+      "sha256": "e851a63923f82d3249fa7b9d7c35d7ae6d4afa224fd7885b5b53d2289adabb3f"
     }
   ],
   "hard_correction_role": "system",
@@ -47,6 +47,8 @@
     "state_evolution": "current_state_plus_verified_gain",
     "known_state_reused_before_rediscovery": true,
     "rediscovery_is_not_progress": true,
+    "memory_state_consultation_required": true,
+    "memory_search_requires_material_justification_when_known_state_is_usable": true,
     "operator_working_model_is_derived_non_sovereign": true,
     "literal_operator_sources_outrank_assistant_derivations": true,
     "historical_summaries_are_routing_hints_only": true,
@@ -119,21 +121,31 @@
     "blockers_must_be_empty": true,
     "boot_status": "complete",
     "ground_truth_status": "complete",
-    "memory_search_statuses": [
+    "memory_state_modes": [
+      "reused",
+      "searched"
+    ],
+    "memory_state_statuses": [
       "complete",
-      "searched",
       "empty"
+    ],
+    "rediscovery_material_justifications": [
+      "state_not_available_in_usable_form",
+      "state_may_have_changed",
+      "source_native_verification_required",
+      "available_states_conflict",
+      "exact_artifact_required_for_execution"
     ],
     "tool_inventory_status": "complete"
   },
   "required_stages": [
-    "memory_search",
+    "memory_state",
     "ground_truth_read",
     "tool_inventory",
     "current_source_open",
     "receipt_validation"
   ],
-  "schema_version": "1.4.0",
+  "schema_version": "1.5.0",
   "security": {
     "log_content": false,
     "log_tool_names": true,

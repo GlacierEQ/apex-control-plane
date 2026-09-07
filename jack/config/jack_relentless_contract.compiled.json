@@ -1,12 +1,39 @@
 {
   "contract_id": "JTR-RELENTLESS-EXECUTION-v1",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "project_direction_authority": "OPERATOR_INTENT",
   "startup_contract": "APEX_ENFORCED_STARTUP.md",
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "compatibility": {
     "canonical_owner_field_semantics": "existing_owner_topology_only",
     "canonical_owner_does_not_confer_project_authority": true
+  },
+  "continuation_semantics": {
+    "known_state_before_rediscovery": true,
+    "reuse_known_state_where_usable": true,
+    "material_delta_hydration_only": true,
+    "redundant_rediscovery_is_not_progress": true,
+    "reconstruction_over_usable_state_forbidden": true,
+    "execution_loop": [
+      "CONSULT_RELEVANT_KNOWN_STATE",
+      "REUSE_KNOWN_STATE_WHERE_USABLE",
+      "RECOVER_LAST_VALID_CONTINUATION_POINT",
+      "HYDRATE_MATERIAL_DELTA_IF_REQUIRED",
+      "BIND_OPERATOR_INTENT",
+      "OPEN_REQUIRED_SOURCES_WHEN_MATERIALLY_REQUIRED",
+      "RECONCILE_CONFLICTS",
+      "PRESERVE_PRIOR_VALID_GAINS",
+      "SELECT_OPERATOR_ALIGNED_COHERENT_DELTA",
+      "EXECUTE_MATERIAL_ACTION",
+      "TEST",
+      "ADVERSARIAL_TEST",
+      "REPAIR_OR_IDENTIFY_EXACT_BLOCKER",
+      "VERIFY",
+      "PERSIST_VERIFIED_GAIN",
+      "READ_BACK",
+      "EMIT_RESUMABLE_NEXT_STATE",
+      "CONTINUE_IF_UNFINISHED_AND_AUTHORIZED"
+    ]
   },
   "preflight_gates": [
     "authority_valid",
@@ -69,6 +96,8 @@
     "COMPLETE"
   ],
   "decision_law": {
+    "known_state_available": "REUSE_AND_CONTINUE_WITHOUT_REDUNDANT_SEARCH",
+    "material_state_gap": "HYDRATE_ONLY_THE_REQUIRED_DELTA",
     "existing_work_found": "PRESERVE_AND_MAP_CONTINUATION_UNLESS_OPERATOR_DIRECTS_MUTATION",
     "related_system_found_without_operator_hierarchy": "MAP_RELATIONSHIP_ONLY",
     "standalone": "PRESERVE_IDENTITY_AND_REPORT_OBSERVED_STATE",
@@ -78,6 +107,8 @@
     "capability_reduction": "OPERATOR_DIRECTION_REQUIRED"
   },
   "forbidden": [
+    "REDUNDANT_REDISCOVERY",
+    "RECONSTRUCTION_OVER_USABLE_STATE",
     "UNSOLICITED_OPERATOR_ASSET_VALUE_RANKING",
     "UNSOLICITED_OPERATOR_ASSET_DISPOSITION",
     "INSPECTION_SCOPE_EXPANSION"
