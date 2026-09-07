@@ -120,7 +120,7 @@ def _version_requirement(value: Any, *, label: str) -> dict[str, Any]:
     if isinstance(value, bool):
         raise BootError(f"invalid required version for {label}")
     if isinstance(value, Mapping):
-        mode = str(value.get("mode", "")).strip().lower()
+        mode = str(value.get("mode", value.get("version_mode", ""))).strip().lower()
         raw_version = value.get("version")
     else:
         mode = "exact"
