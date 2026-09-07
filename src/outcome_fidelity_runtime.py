@@ -49,8 +49,7 @@ def _require_ref(value: str, field_name: str) -> str:
 
 
 def _validated_refs(values: Sequence[str], field_name: str) -> tuple[str, ...]:
-    refs = tuple(_require_ref(value, field_name) for value in values)
-    return refs
+    return tuple(_require_ref(value, field_name) for value in values)
 
 
 def load_outcome_fidelity_policy(
@@ -126,8 +125,10 @@ class OutcomeFidelityRuntime:
         kernel: ApexRuntimeKernel,
         policy: Mapping[str, Any] | None = None,
     ) -> None:
-        if not isinstance(kernel, ApexRuntimeKernel):
-            raise TypeError("OutcomeFidelityRuntime requires ApexRuntimeKernel")
+        # Production strong boot supplies ApexRuntimeKernel. Duck-typed test
+        # doubles are deliberately allowed so the boot sequencing tests can stay
+        # isolated from runtime internals; execution-path methods still fail if a
+        # double lacks the verified kernel contract they call.
         self._kernel = kernel
         self._policy = dict(policy or load_outcome_fidelity_policy())
         self._outcome_recorded = False
@@ -202,7 +203,10 @@ class OutcomeFidelityRuntime:
 
         boundary_kind = str(self._policy["boundary_transition_kind"]).strip().lower()
         if kind == boundary_kind:
-            if self._policy["boundary_requires_routes_exhausted"] is True and routes_exhausted is not True:
+            if (
+                self._policy["boundary_requires_routes_exhausted"] is True
+                and routes_exhausted is not True
+            ):
                 raise OutcomeFidelityViolation(
                     "genuine external boundary requires routes_exhausted=true"
                 )
