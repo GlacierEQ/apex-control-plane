@@ -3,8 +3,8 @@
 This layer sits above the existing continuity and Prime Directive proofs. It does
 not replace them. It binds those proofs to absolute OPERATOR project-direction
 authority, continuation, preserved prior gain, Operator-aligned coherent path
-selection, Operator asset sovereignty, Operator-model state reuse, and
-evidence-backed execution-state transitions.
+selection, Operator asset sovereignty, Operator-model state reuse, longitudinal
+Operator-scope fidelity, and evidence-backed execution-state transitions.
 """
 from __future__ import annotations
 
@@ -114,6 +114,9 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         "do_not_taskify_living_systems": True,
         "do_not_reduce_operator_to_preferences": True,
         "working_method_must_inform_decomposition": True,
+        "operator_asserted_scope_must_be_preserved": True,
+        "operator_asserted_scope_may_not_be_narrowed_without_explicit_operator_authorization": True,
+        "failure_scope_carries_across_execution_contexts": True,
         "failure_interrupts_trigger_upstream_state_recovery": True,
         "failure_interrupts_are_not_literalized_when_context_is_assistant_directed_continuity_failure": True,
     }
@@ -145,9 +148,11 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         raise BootError(
             "APEX operator-owned asset value ranking must remain Operator-directed"
         )
+    if interlock.get("operator_scope_narrowing_requires_explicit_operator_authorization") is not True:
+        raise BootError(
+            "APEX Operator scope narrowing must require explicit Operator authorization"
+        )
 
-    # Loading the referenced working model is part of policy validation. This makes
-    # an absent or authority-inverted model a boot defect rather than advisory prose.
     load_operator_working_model(value)
     return value
 
@@ -204,6 +209,37 @@ def _validate_operator_authorization(row: Mapping[str, Any], errors: list[str]) 
         errors.append("operator_authorization.authorization_ref must be a receipt reference")
 
 
+def _validate_operator_scope_binding(row: Mapping[str, Any], errors: list[str]) -> None:
+    """Bind the Operator's asserted scope and reject silent assistant narrowing."""
+    binding = row.get("operator_scope_binding")
+    if not isinstance(binding, Mapping):
+        errors.append("apex_startup.operator_scope_binding must be an object")
+        return
+
+    if not _receipt_ref(binding.get("source_ref")):
+        errors.append("operator_scope_binding.source_ref must be a receipt reference")
+    if not _nonempty_text(binding.get("asserted_scope")):
+        errors.append("operator_scope_binding.asserted_scope must be non-empty")
+    if binding.get("preserved") is not True:
+        errors.append("operator_scope_binding.preserved must be true")
+
+    narrowed = binding.get("narrowed")
+    if type(narrowed) is not bool:
+        errors.append("operator_scope_binding.narrowed must be boolean")
+        return
+
+    authorization_ref = binding.get("operator_narrowing_authorization_ref")
+    if narrowed:
+        if not _receipt_ref(authorization_ref):
+            errors.append(
+                "narrowed Operator scope requires operator_narrowing_authorization_ref"
+            )
+    elif _nonempty_text(authorization_ref):
+        errors.append(
+            "operator_narrowing_authorization_ref is allowed only when narrowed=true"
+        )
+
+
 def validate_apex_startup_receipt(
     policy: Mapping[str, Any], receipt: Mapping[str, Any]
 ) -> tuple[str, ...]:
@@ -223,6 +259,8 @@ def validate_apex_startup_receipt(
     for field_name in policy.get("required_startup_fields", ()):
         if field_name not in row:
             errors.append(f"apex_startup.{field_name} is required")
+
+    _validate_operator_scope_binding(row, errors)
 
     interlock = policy.get("mutation_interlock", {})
     required_true_fields = (
@@ -356,6 +394,9 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
             "rediscovery_is_not_progress": True,
             "preserve_literal_operator_sources_separately_from_derived_model": True,
             "apply_operator_working_method_to_task_decomposition": True,
+            "preserve_operator_asserted_scope": True,
+            "prohibit_unapproved_scope_narrowing": True,
+            "carry_failure_scope_across_execution_contexts": True,
             "failure_interrupts_trigger_upstream_state_recovery": True,
             "context_before_mutation": True,
             "continuation_before_restart": True,
@@ -386,6 +427,14 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
                 "known_state_reused_before_rediscovery": True,
                 "literal_operator_sources_preserved_separately_from_derived_interpretation": True,
                 "working_method_applied_to_task_decomposition": True,
+                "operator_scope_binding": {
+                    "source_ref": "operator-message:source-reference",
+                    "asserted_scope": "non-empty exact or faithful scope statement",
+                    "preserved": True,
+                    "narrowed": False,
+                    "operator_narrowing_authorization_ref": "empty unless narrowed=true"
+                },
+                "operator_asserted_scope_preserved": True,
                 "operator_working_model_ref": operator_model_path,
                 "context_reconstructed": True,
                 "prior_state_retrieved": True,
