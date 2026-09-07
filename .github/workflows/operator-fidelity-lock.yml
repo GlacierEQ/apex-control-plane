@@ -6,28 +6,38 @@ on:
     paths:
       - "OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md"
       - "config/operator_fidelity_runtime_policy.json"
+      - "config/model_attractor_defense_policy.json"
       - "src/anti_minimization_compiler.py"
+      - "src/model_attractor_defense.py"
       - "src/operator_fidelity_lock.py"
       - "src/operator_fidelity_preflight.py"
+      - "src/apex_strong_boot.py"
       - "src/control_plane.py"
       - "src/sitecustomize.py"
       - "tests/test_anti_minimization_compiler.py"
+      - "tests/test_model_attractor_defense.py"
       - "tests/test_operator_fidelity_lock.py"
       - "tests/test_operator_fidelity_preflight.py"
+      - "tests/test_apex_strong_boot.py"
       - ".github/workflows/operator-fidelity-lock.yml"
   pull_request:
     branches: [main]
     paths:
       - "OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md"
       - "config/operator_fidelity_runtime_policy.json"
+      - "config/model_attractor_defense_policy.json"
       - "src/anti_minimization_compiler.py"
+      - "src/model_attractor_defense.py"
       - "src/operator_fidelity_lock.py"
       - "src/operator_fidelity_preflight.py"
+      - "src/apex_strong_boot.py"
       - "src/control_plane.py"
       - "src/sitecustomize.py"
       - "tests/test_anti_minimization_compiler.py"
+      - "tests/test_model_attractor_defense.py"
       - "tests/test_operator_fidelity_lock.py"
       - "tests/test_operator_fidelity_preflight.py"
+      - "tests/test_apex_strong_boot.py"
       - ".github/workflows/operator-fidelity-lock.yml"
 
 permissions:
@@ -51,8 +61,10 @@ jobs:
         run: |
           python -m py_compile \
             src/anti_minimization_compiler.py \
+            src/model_attractor_defense.py \
             src/operator_fidelity_lock.py \
             src/operator_fidelity_preflight.py \
+            src/apex_strong_boot.py \
             src/control_plane.py \
             src/sitecustomize.py
 
@@ -60,8 +72,10 @@ jobs:
         run: |
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
             tests/test_anti_minimization_compiler.py \
+            tests/test_model_attractor_defense.py \
             tests/test_operator_fidelity_lock.py \
-            tests/test_operator_fidelity_preflight.py
+            tests/test_operator_fidelity_preflight.py \
+            tests/test_apex_strong_boot.py
 
       - name: Prove disable flag cannot bypass fidelity
         shell: bash
@@ -93,6 +107,7 @@ jobs:
         shell: bash
         run: |
           set +e
+          GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
           GLACIEREQ_APEX_STARTUP_STATUS=complete \
@@ -157,6 +172,10 @@ jobs:
                   "preserves_prior_valid_gain": True,
                   "maximum_coherent_advance": True,
                   "pro_code_elite_humanized_engineered": True,
+                  "unsolicited_operator_asset_value_ranking": False,
+                  "unsolicited_operator_asset_disposition": False,
+                  "inspection_scope_expansion": False,
+                  "operator_owned_asset_identity_preserved": True,
                   "functional_advance": "semantic hard lock",
                   "strongest_coherent_path": "take the safest slice and freeze architecture",
               },
@@ -168,6 +187,48 @@ jobs:
           )
           assert any("SAFEST_SLICE_DEFAULT" in e for e in errors), errors
           assert any("FREEZE_PRODUCT" in e for e in errors), errors
+          PY
+
+      - name: Prove compressed summary cannot impersonate source state
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src python - <<'PY'
+          from model_attractor_defense import (
+              load_model_attractor_policy,
+              validate_model_attractor_receipt,
+          )
+
+          row = {
+              "failure_class": "MODEL_ATTRACTOR_DRIFT",
+              "continuity_required": True,
+              "current_operator_message_bound": True,
+              "operator_mission_preserved": True,
+              "nearest_valid_continuation_checked": True,
+              "abstraction_substitution_checked": True,
+              "memory_projection_treated_as_authority": False,
+              "summary_substituted_for_state": True,
+              "reconstruction_substituted_for_continuation": False,
+              "plan_substituted_for_execution": False,
+              "global_canonicalization_without_operator_direction": False,
+              "platform_constraint_reframed_mission": False,
+              "generic_assistant_prior_reframed_operation": False,
+              "unnecessary_reasking_of_recoverable_state": False,
+              "platform_constraint_scope": "none",
+              "blocked_sources": [],
+              "partial_hydration_declared": False,
+              "active_thread": "living estate continuation",
+              "continuation_ref": "git:verified-continuation",
+              "source_refs": ["github:source-bearing-state"],
+              "hydration_complete_for_material_state": True,
+              "source_bearing_state_used": True,
+              "polycentric_state_preserved": True,
+              "provenance_preserved": True,
+              "contradictions_preserved_or_explicitly_resolved": True,
+          }
+          errors = validate_model_attractor_receipt(
+              load_model_attractor_policy(),
+              {"model_attractor_defense": row},
+          )
+          assert any("summary_substituted_for_state" in e for e in errors), errors
           PY
 
       - name: Prove stale digest cannot survive literal-word mutation
@@ -218,6 +279,10 @@ jobs:
                   "preserves_prior_valid_gain": True,
                   "maximum_coherent_advance": True,
                   "pro_code_elite_humanized_engineered": True,
+                  "unsolicited_operator_asset_value_ranking": False,
+                  "unsolicited_operator_asset_disposition": False,
+                  "inspection_scope_expansion": False,
+                  "operator_owned_asset_identity_preserved": True,
                   "functional_advance": "hard lock",
                   "strongest_coherent_path": "runtime rejection",
               },
