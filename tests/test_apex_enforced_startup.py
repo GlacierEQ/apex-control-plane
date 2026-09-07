@@ -8,6 +8,7 @@ from apex_enforced_startup import (
     validate_apex_startup_receipt,
     validate_state_transition,
 )
+from operator_working_model import load_operator_working_model
 
 
 def _receipt() -> dict:
@@ -15,6 +16,11 @@ def _receipt() -> dict:
         "apex_startup": {
             "authority": "operator_intent",
             "objective": "maximum_coherent_advance",
+            "operator_model_loaded": True,
+            "relevant_memory_consulted_when_available": True,
+            "known_state_reused_before_rediscovery": True,
+            "literal_operator_sources_preserved_separately_from_derived_interpretation": True,
+            "working_method_applied_to_task_decomposition": True,
             "context_reconstructed": True,
             "prior_state_retrieved": True,
             "continuation_resolved": True,
@@ -41,6 +47,8 @@ def _receipt() -> dict:
                 "unsolicited_operator_asset_disposition": False,
                 "inspection_scope_expansion": False,
                 "operator_owned_asset_identity_preserved": True,
+                "operator_working_method_preserved": True,
+                "known_state_reused_before_rediscovery": True,
             },
             "verification_plan": ["run tests", "adversarial state-promotion audit"],
             "material_claims": [
@@ -80,6 +88,52 @@ def test_operator_project_direction_authority_is_absolute() -> None:
     assert interlock["operator_owned_asset_value_ranking_requires_explicit_operator_direction"] is True
 
 
+def test_operator_working_model_is_loaded_as_non_sovereign_starting_state() -> None:
+    policy = load_apex_policy()
+    model = load_operator_working_model(policy)
+    authority = model["authority_semantics"]
+    assert authority["current_operator_message_controls_current_mission"] is True
+    assert authority["literal_operator_sources_outrank_assistant_derivations"] is True
+    assert authority["assistant_working_model_is_derived_and_non_sovereign"] is True
+    assert authority["memory_and_continuity_state_are_starting_state_not_project_authority"] is True
+    assert model["state_reuse"]["rediscovery_is_progress"] is False
+
+
+def test_startup_request_requires_state_reuse_before_rediscovery() -> None:
+    policy = load_apex_policy()
+    request = build_apex_startup_request(policy, task="continue existing Operator work")
+    requirements = request["requirements"]
+    assert requirements["load_operator_working_model_before_task_decomposition"] is True
+    assert requirements["consult_relevant_memory_when_available"] is True
+    assert requirements["reuse_known_state_before_rediscovery"] is True
+    assert requirements["rediscovery_is_not_progress"] is True
+    assert requirements["preserve_literal_operator_sources_separately_from_derived_model"] is True
+    assert requirements["apply_operator_working_method_to_task_decomposition"] is True
+    assert requirements["failure_interrupts_trigger_upstream_state_recovery"] is True
+    assert request["operator_working_model_ref"] == "config/operator_working_model.json"
+    projection = request["operator_working_model"]
+    assert projection["authority_semantics"]["assistant_working_model_is_derived_and_non_sovereign"] is True
+    assert projection["state_reuse"]["rediscovery_is_progress"] is False
+
+
+def test_known_state_rediscovery_failure_fails_closed() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["known_state_reused_before_rediscovery"] = False
+    receipt["apex_startup"]["selected_path"]["known_state_reused_before_rediscovery"] = False
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert "apex_startup.known_state_reused_before_rediscovery must be true" in errors
+    assert any("selected_path.known_state_reused_before_rediscovery" in error for error in errors)
+
+
+def test_missing_operator_model_load_fails_closed() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["operator_model_loaded"] = False
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert "apex_startup.operator_model_loaded must be true" in errors
+
+
 def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> None:
     policy = load_apex_policy()
     request = build_apex_startup_request(policy, task="execute operator target")
@@ -99,6 +153,8 @@ def test_operator_asset_sovereignty_is_in_every_selected_path() -> None:
     assert path["unsolicited_operator_asset_disposition"] is False
     assert path["inspection_scope_expansion"] is False
     assert path["operator_owned_asset_identity_preserved"] is True
+    assert path["operator_working_method_preserved"] is True
+    assert path["known_state_reused_before_rediscovery"] is True
 
     request = build_apex_startup_request(policy, task="look at legal repos")
     selected = request["receipt_contract"]["apex_startup"]["selected_path"]
@@ -126,6 +182,10 @@ def test_mutation_interlock_fields_are_mandatory() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
     for field in (
+        "operator_model_loaded",
+        "relevant_memory_consulted_when_available",
+        "known_state_reused_before_rediscovery",
+        "working_method_applied_to_task_decomposition",
         "prior_state_retrieved",
         "target_identity_resolved",
         "prior_valid_gains_identified",
@@ -134,6 +194,10 @@ def test_mutation_interlock_fields_are_mandatory() -> None:
         receipt["apex_startup"][field] = False
     errors = validate_apex_startup_receipt(policy, receipt)
     for field in (
+        "operator_model_loaded",
+        "relevant_memory_consulted_when_available",
+        "known_state_reused_before_rediscovery",
+        "working_method_applied_to_task_decomposition",
         "prior_state_retrieved",
         "target_identity_resolved",
         "prior_valid_gains_identified",
