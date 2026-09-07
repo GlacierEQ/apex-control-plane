@@ -16,6 +16,7 @@ if str(SRC) not in sys.path:
 import apex_strong_boot as boot
 from apex_strong_boot import (
     EXPECTED_GATES,
+    MODEL_ATTRACTOR_PREFLIGHT,
     StrongBootSession,
     StrongBootViolation,
     apply_strongest_boot,
@@ -45,8 +46,24 @@ def _fake_kernel(*, phase: str = "bootstrapped", gates=EXPECTED_GATES):
     )
 
 
+def _arm_model_attractor_preflight(monkeypatch) -> None:
+    state = {"value": None}
+    validation = SimpleNamespace(ok=True, status="complete")
+
+    def automatic():
+        state["value"] = validation
+        return validation
+
+    def getter():
+        return state["value"]
+
+    monkeypatch.setattr(boot, "automatic_model_attractor_defense", automatic)
+    monkeypatch.setattr(boot, "get_in_process_model_attractor_validation", getter)
+
+
 def _arm_complete_boot(monkeypatch) -> list[str]:
     calls: list[str] = []
+    _arm_model_attractor_preflight(monkeypatch)
     for index, (automatic_name, getter_name) in enumerate(_GATE_BINDINGS):
         state = {"value": None}
         validation = SimpleNamespace(ok=True, status="complete")
@@ -83,6 +100,39 @@ def test_strong_boot_runs_exact_gate_sequence_and_creates_kernel(monkeypatch) ->
     assert session.runtime_id == "runtime-proof"
     assert get_in_process_strong_boot() is session
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
+
+
+def test_model_attractor_preflight_is_mandatory_before_kernel_creation(monkeypatch) -> None:
+    _arm_complete_boot(monkeypatch)
+    state = {"value": None}
+    validation = SimpleNamespace(ok=False, status="continuation_required")
+
+    def automatic():
+        state["value"] = validation
+        return validation
+
+    monkeypatch.setattr(boot, "automatic_model_attractor_defense", automatic)
+    monkeypatch.setattr(
+        boot,
+        "get_in_process_model_attractor_validation",
+        lambda: state["value"],
+    )
+    kernel_called = {"value": False}
+
+    def kernel_factory():
+        kernel_called["value"] = True
+        return _fake_kernel()
+
+    monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
+
+    with pytest.raises(
+        StrongBootViolation,
+        match=f"{MODEL_ATTRACTOR_PREFLIGHT}: validation ok is not true",
+    ):
+        apply_strongest_boot()
+
+    assert kernel_called["value"] is False
+    assert get_in_process_strong_boot() is None
 
 
 def test_strong_boot_is_idempotent_inside_process(monkeypatch) -> None:
