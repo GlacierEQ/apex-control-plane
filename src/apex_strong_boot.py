@@ -1,13 +1,15 @@
 """Single fail-closed boot path for every compatible APEX runtime entrypoint.
 
 This module composes the existing continuity, Prime Directive, Operator-fidelity,
-and APEX startup proofs with the verified post-boot runtime kernel. It does not
-replace those mechanisms. It removes a weaker condition that previously existed:
-`control_plane.py` created the verified runtime kernel, while `sitecustomize.py`
-only ran the startup gates.
+model-attractor defense, and APEX startup proofs with the verified post-boot
+runtime kernel. It does not replace those mechanisms. It removes weaker
+conditions where generic model behavior, context compression, or a platform
+constraint could silently rewrite the Operator mission before the established
+runtime gates ran.
 
-A successful strong boot therefore means one thing everywhere: all five sealed
-in-process startup gates are complete and the verified runtime kernel exists.
+A successful strong boot therefore means one thing everywhere: the mandatory
+anti-drift preflight passed, all five sealed in-process startup gates are
+complete, and the verified runtime kernel exists.
 """
 from __future__ import annotations
 
@@ -23,6 +25,10 @@ from apex_enforced_startup import (
     get_in_process_apex_validation,
 )
 from apex_runtime_kernel import ApexRuntimeKernel, create_verified_runtime_kernel
+from model_attractor_defense import (
+    automatic_model_attractor_defense,
+    get_in_process_model_attractor_validation,
+)
 from notion_continuity_gate import (
     automatic_notion_continuity_preflight,
     get_in_process_notion_validation,
@@ -41,6 +47,7 @@ from prime_directive_boot import (
 )
 
 
+MODEL_ATTRACTOR_PREFLIGHT = "model_attractor_defense"
 EXPECTED_GATES = (
     "notion_continuity",
     "prime_directive",
@@ -48,6 +55,7 @@ EXPECTED_GATES = (
     "operator_fidelity",
     "apex_startup",
 )
+EXPECTED_STARTUP_SEQUENCE = (MODEL_ATTRACTOR_PREFLIGHT,) + EXPECTED_GATES
 _SESSION_SEAL = object()
 _BOOT_LOCK = RLock()
 _IN_PROCESS: StrongBootSession | None = None
@@ -108,6 +116,8 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
 
     completed: list[str] = []
     failures: list[str] = []
+
+    _run_model_attractor_preflight(failures)
 
     for name, automatic, getter in _gate_sequence():
         try:
@@ -173,6 +183,40 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
     _IN_PROCESS = session
     os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] = "complete"
     return session
+
+
+def _run_model_attractor_preflight(failures: list[str]) -> None:
+    """Require anti-compression proof before the ordinary startup gates.
+
+    The proof is deliberately not published as a kernel startup gate because the
+    kernel's five gate identities are part of an existing compatibility contract.
+    It is nevertheless mandatory: any failure is accumulated into strong-boot
+    failure state and the runtime kernel is never created.
+    """
+    name = MODEL_ATTRACTOR_PREFLIGHT
+    try:
+        validation = get_in_process_model_attractor_validation()
+        if validation is None:
+            issued = automatic_model_attractor_defense()
+            current = get_in_process_model_attractor_validation()
+            if current is None:
+                failures.append(f"{name}: in-process validation missing after preflight")
+                return
+            if issued is not None and current is not issued:
+                failures.append(
+                    f"{name}: preflight validation identity changed in-process"
+                )
+                return
+            validation = current
+    except SystemExit:
+        raise
+    except Exception as exc:
+        failures.append(f"{name}: {type(exc).__name__}: {exc}")
+        return
+
+    error = _validation_error(name, validation)
+    if error is not None:
+        failures.append(error)
 
 
 def require_strong_boot() -> StrongBootSession:
