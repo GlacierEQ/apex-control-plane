@@ -50,7 +50,7 @@ DIRECTIVE_RE = re.compile(
     re.IGNORECASE,
 )
 ANTI_DOWNWARD_RE = re.compile(
-    r"\b(do\s+not|don't|never|must\s+not|shall\s+not|reject|forbid(?:den)?|prohibit|"
+    r"\b(do\s+not|don't|never|must\s+not|shall\s+not|may\s+not|cannot|can't|reject|forbid(?:den)?|prohibit|"
     r"retire(?:d)?|deprecated|historical|anti[-_ ]minimi[sz]ation|no[-_ ]minimum|"
     r"not\s+the\s+(?:goal|objective|target|mission|default)|zero\s+intrinsic\s+(?:score|priority))\b",
     re.IGNORECASE,
@@ -134,7 +134,9 @@ def classify_downward_directive(line: str) -> str | None:
     Narrowing is permitted only as a local uncertainty-reduction technique, never
     as the product objective. Security least-privilege language and immutable
     rollback/checkpoint language are deliberately exempt because they increase
-    system quality rather than suppress capability.
+    system quality rather than suppress capability. Explicit declarative
+    prohibitions such as "may not" and "cannot" are also exempt so the guard does
+    not reject the anti-minimization doctrine it is intended to enforce.
     """
     if not DOWNWARD_SCOPE_RE.search(line):
         return None
@@ -264,6 +266,7 @@ def main() -> int:
             "local_debug_or_diagnostic_isolation",
             "least_privilege_security",
             "rollback_or_known_good_checkpoint",
+            "explicit_declarative_prohibition",
         ],
         "failures": failures,
         "warnings": warnings,
