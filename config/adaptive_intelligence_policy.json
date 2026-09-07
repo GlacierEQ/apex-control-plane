@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "status": "active-foundation",
-  "purpose": "Use machine-learning signals and outcome feedback to improve context retrieval, capability routing, and execution quality without granting the model project authority.",
+  "purpose": "Use machine-learning signals, continuous impact evaluation, and outcome feedback to improve context retrieval, capability routing, action selection, and execution quality without granting the model project authority.",
   "candidate_kinds": [
     "context",
     "memory",
@@ -10,6 +10,7 @@
     "connector",
     "model",
     "route",
+    "action",
     "plan_component",
     "implementation_candidate",
     "verification_candidate"
@@ -29,7 +30,34 @@
     "unsupported_claim_risk": "Risk of promoting inference, marketing text, or assistant output as fact.",
     "regression_risk": "Risk of losing prior gains, interfaces, behavior, or lineage.",
     "latency_cost": "Relative latency cost when equivalent routes exist.",
-    "token_cost": "Relative context/token cost when equivalent routes exist."
+    "token_cost": "Relative context/token cost when equivalent routes exist.",
+    "mission_advancement": "Expected direct movement of the Operator's underlying mission state.",
+    "state_change_value": "Value of the expected target-state delta rather than worker activity.",
+    "success_impact": "Magnitude of useful consequences if the candidate succeeds.",
+    "failure_risk": "Magnitude and probability of harmful consequences if the candidate fails.",
+    "delay_cost": "Mission cost imposed by delaying the stronger route.",
+    "reversibility": "Ease of recovery or rollback if the candidate proves wrong.",
+    "second_order_value": "Useful downstream effects on dependent systems, evidence, or future execution.",
+    "prior_gain_preservation": "Degree to which already-verified gains remain intact.",
+    "execution_proximity": "How directly the candidate changes the requested target rather than a representation of it.",
+    "already_done_risk": "Risk that the candidate repeats work already completed or established.",
+    "meta_substitution_risk": "Risk that support work, explanation, governance, or framework work substitutes for the mission.",
+    "rule_accretion_risk": "Risk that another instruction or rule is added where judgment should resolve the situation.",
+    "rediscovery_risk": "Risk of re-retrieving or reconstructing already-usable state instead of continuing.",
+    "scope_drift_risk": "Risk that the candidate silently changes operation class, target, or Operator-defined scope."
+  },
+  "continuous_impact_selection": {
+    "required_for_action_candidates": true,
+    "module_path": "src/continuous_impact_selection.py",
+    "selection_function": "ContinuousImpactSelector.select",
+    "operation_class_rewrite_rejected_before_scoring": true,
+    "decision_receipt_required": true,
+    "re_evaluate_after_material_state_change": true,
+    "previous_decision_is_not_authoritative_after_state_change": true,
+    "rules_and_frameworks_are_decision_inputs_not_default_actions": true,
+    "rule_accretion_is_penalized_when_existing_state_already_encodes_the_lesson": true,
+    "meta_work_is_penalized_when_it_does_not_change_the_requested_target_state": true,
+    "already_completed_work_is_penalized_before_new_work_is_selected": true
   },
   "feedback_rewards": {
     "verified_success": 1.0,
@@ -42,12 +70,13 @@
   },
   "learning_rules": [
     "Never learn a project objective that conflicts with explicit operator direction.",
-    "Treat operator corrections, regressions, failed tool routes, and false completion claims as negative training signals.",
-    "Treat runtime verification, reproducible tests, source-grounded retrieval, and preserved continuity as positive training signals.",
+    "Treat operator corrections, regressions, failed tool routes, false completion claims, repeated rediscovery, and repeated rule accretion as negative training signals when they do not advance the mission.",
+    "Treat runtime verification, reproducible tests, source-grounded retrieval, preserved continuity, material target-state change, and useful downstream impact as positive training signals.",
     "Keep ranking explanations inspectable through feature contributions.",
     "Persist model state and feedback separately from source evidence; learned weights are decision aids, not facts.",
     "External embedding, reranking, classification, and evaluator models may enrich features but may not bypass mutation interlocks.",
-    "Do not collapse paired or intentionally distinct systems merely because a learned similarity model scores them as related."
+    "Do not collapse paired or intentionally distinct systems merely because a learned similarity model scores them as related.",
+    "A material state change invalidates stale action ranking and requires re-evaluation before the next discretionary operation."
   ],
   "preferred_enhancement_stack": [
     "semantic retrieval and embeddings",
@@ -56,6 +85,7 @@
     "contradiction detection",
     "task and intent classification",
     "tool and model routing",
+    "continuous impact action selection",
     "confidence calibration",
     "adversarial evaluation",
     "outcome feedback learning",
