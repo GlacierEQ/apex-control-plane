@@ -40,7 +40,7 @@ on conflict (connector_key) do update set
   next_human_gate=excluded.next_human_gate,
   freshness_status=excluded.freshness_status,
   canonical_source_ref=excluded.canonical_source_ref,
-  metadata=excluded.metadata,
+  metadata=coalesce(connector_registry_v2.metadata,'{}'::jsonb) || excluded.metadata,
   updated_at=now();
 
 update public.connector_registry_v2
