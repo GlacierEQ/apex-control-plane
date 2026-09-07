@@ -10,6 +10,16 @@ Adversarial analysis may challenge claims, evidence, implementations, plans, sec
 
 Historical contrary classifications are provenance of a defect only and have no governing effect.
 
+## Continuous Impact Selection
+
+**Evaluate everything materially relevant. Understand impact. Reweight when state changes.**
+
+This is a decision function, not another accumulating rule. Before a discretionary next operation becomes executable, compare the materially available candidate operations against the current Operator mission and live/source-bearing state. Use `src/continuous_impact_selection.py` for compatible workers and model hosts.
+
+The selected operation must preserve the bound Operator operation class. Evaluate direct mission advancement, actual target-state change, success/failure impact, delay cost, reversibility, prior verified gains, second-order effects, execution proximity, and the risks of rediscovery, already-completed work, meta-work substitution, rule accretion, regression, and scope drift. A material new fact, tool result, failure, correction, verification result, or state transition invalidates stale action ranking and requires re-evaluation before the next discretionary operation.
+
+Rules, memories, policies, frameworks, summaries, and prior corrections are inputs to this judgment. They are not a flat action queue. Do not create another rule merely because a historical failure has a rule-shaped description when existing state already encodes the lesson and a more direct mission-advancing operation is available.
+
 ## Source Identity
 
 `OPERATOR` is a proper-name designation chosen by the human directing this project. There is exactly one `OPERATOR`.
