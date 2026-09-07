@@ -2,12 +2,12 @@
 
 This module turns the Operator's long-standing "evaluate everything / understand
 impact" working method into an executable selection function instead of another
-passive rule.  It composes with ``adaptive_intelligence`` and is provider-neutral:
+passive rule. It composes with ``adaptive_intelligence`` and is provider-neutral:
 model hosts, tool routers, workers, and task runners can all submit candidate
 operations and receive one inspectable selection.
 
-The selector does not grant authority.  The bound Operator operation class remains
-controlling.  Candidates that rewrite that operation are rejected before scoring.
+The selector does not grant authority. The bound Operator operation class remains
+controlling. Candidates that rewrite that operation are rejected before scoring.
 The important distinction is causal: a candidate must be selected through impact
 comparison before it is eligible to become the next operation.
 """
@@ -18,13 +18,20 @@ from hashlib import sha256
 import json
 from typing import Any, Mapping, Sequence
 
-from adaptive_intelligence import (
-    AdaptiveCandidate,
-    AdaptiveIntelligenceEngine,
-    AdaptiveRanker,
-    DEFAULT_WEIGHTS,
-    RankedCandidate,
-)
+try:  # Package import under pytest / library consumers.
+    from .adaptive_intelligence import (
+        AdaptiveCandidate,
+        AdaptiveIntelligenceEngine,
+        AdaptiveRanker,
+        DEFAULT_WEIGHTS,
+    )
+except ImportError:  # Direct src-on-PYTHONPATH runtime entrypoints.
+    from adaptive_intelligence import (
+        AdaptiveCandidate,
+        AdaptiveIntelligenceEngine,
+        AdaptiveRanker,
+        DEFAULT_WEIGHTS,
+    )
 
 
 class ImpactSelectionViolation(RuntimeError):
@@ -32,7 +39,6 @@ class ImpactSelectionViolation(RuntimeError):
 
 
 IMPACT_WEIGHTS: dict[str, float] = {
-    # Positive mission effects.
     "mission_advancement": 2.40,
     "state_change_value": 2.20,
     "success_impact": 1.60,
@@ -40,7 +46,6 @@ IMPACT_WEIGHTS: dict[str, float] = {
     "prior_gain_preservation": 1.70,
     "execution_proximity": 1.55,
     "reversibility": 0.80,
-    # Negative impact / known failure attractors.
     "failure_risk": -1.45,
     "delay_cost": -0.80,
     "already_done_risk": -2.75,
@@ -53,13 +58,7 @@ IMPACT_WEIGHTS: dict[str, float] = {
 
 @dataclass(frozen=True, slots=True)
 class ImpactCandidate:
-    """One possible next operation and its current impact model.
-
-    ``features`` are normalized to [0, 1] by the adaptive ranker.  They may be
-    produced by deterministic host logic, a dedicated evaluator model, measured
-    runtime state, or a composition of those sources.  The selector never treats
-    these features as source facts; they are decision inputs.
-    """
+    """One possible next operation and its current impact model."""
 
     candidate_id: str
     operation: str
@@ -90,10 +89,10 @@ class ImpactDecision:
 class ContinuousImpactSelector:
     """Select the strongest current operation by mission impact.
 
-    The selector is intentionally re-entrant.  A host should call ``select`` again
-    whenever a material tool result, source update, verification result, failure,
-    correction, or target-state change alters the situation.  Re-evaluation
-    replaces the prior decision for execution purposes; it does not erase history.
+    Call ``select`` again whenever a material tool result, source update,
+    verification result, failure, correction, or target-state change alters the
+    situation. Re-evaluation replaces the prior decision for execution purposes;
+    history remains inspectable.
     """
 
     def __init__(self, engine: AdaptiveIntelligenceEngine | None = None) -> None:
@@ -143,8 +142,7 @@ class ContinuousImpactSelector:
                 "no candidate preserves the bound Operator operation class"
             )
 
-        adaptive_candidates = [self._to_adaptive(candidate) for candidate in eligible]
-        ranking = self.engine.rank(adaptive_candidates)
+        ranking = self.engine.rank([self._to_adaptive(candidate) for candidate in eligible])
         if not ranking:
             raise ImpactSelectionViolation("impact ranker returned no eligible candidate")
 
@@ -190,12 +188,10 @@ class ContinuousImpactSelector:
         success: bool,
         reason: str,
     ) -> None:
-        """Feed verified outcome back into the adaptive ranker."""
         selected = _candidate_by_id(candidates, decision.selected_candidate_id)
-        adaptive = self._to_adaptive(selected)
         self.engine.record_outcome(
             task_id=decision.task_id,
-            candidate=adaptive,
+            candidate=self._to_adaptive(selected),
             reward=1.0 if success else -1.0,
             reason=_required_text(reason, "reason"),
             metadata={
@@ -209,11 +205,6 @@ class ContinuousImpactSelector:
 
     @staticmethod
     def execution_frame(decision: ImpactDecision) -> dict[str, Any]:
-        """Return a compact pre-action frame suitable for a system/developer turn.
-
-        The frame is deliberately small.  It carries the selected operation and
-        the reason it won without replaying the entire rule estate into context.
-        """
         return {
             "role": "system",
             "type": "continuous_impact_selection",
@@ -231,7 +222,6 @@ class ContinuousImpactSelector:
 
     def _to_adaptive(self, candidate: ImpactCandidate) -> AdaptiveCandidate:
         features = {str(name): float(value) for name, value in candidate.features.items()}
-        # These are hard semantic facts of an eligible candidate, not model scores.
         features["task_relevance"] = max(features.get("task_relevance", 0.0), 1.0)
         features["operator_alignment"] = max(
             features.get("operator_alignment", 0.0), 1.0
