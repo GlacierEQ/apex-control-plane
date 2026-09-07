@@ -15,7 +15,8 @@ insert into public.connector_registry_v2 (
   jsonb_build_object(
     'transport','mcp_streamable_http','protocol_version','2025-06-18',
     'smithery_required',false,'edge_function','apex-direct-mcp-fabric',
-    'plugins',jsonb_build_array('github.direct_mcp','notion.direct_mcp'),'tool_count',22
+    'plugins',jsonb_build_array('github.direct_mcp','notion.direct_mcp'),
+    'provider_tool_count',21,'fabric_tool_count',22
   )
 ),
 (
@@ -57,7 +58,7 @@ on conflict (connector_key) do update set
   next_human_gate=excluded.next_human_gate,
   freshness_status=excluded.freshness_status,
   canonical_source_ref=excluded.canonical_source_ref,
-  metadata=excluded.metadata,
+  metadata=coalesce(connector_registry_v2.metadata,'{}'::jsonb) || excluded.metadata,
   updated_at=now();
 
 update public.connector_registry_v2
