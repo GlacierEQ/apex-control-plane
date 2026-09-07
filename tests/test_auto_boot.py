@@ -22,6 +22,9 @@ from auto_boot import (  # noqa: E402
 )
 
 
+HIDDEN_HARM_NOTE_ID = "e98732a2-0564-5b64-b5ad-9360a8cdcc3d"
+
+
 def _valid_receipt(manifest: dict, profiles: tuple[str, ...]) -> dict:
     versions = required_note_versions(
         manifest,
@@ -70,7 +73,7 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["legal_case"])
     assert profiles == ("always", "legal_case")
-    assert manifest["schema_version"] == "1.3.1"
+    assert manifest["schema_version"] == "1.3.2"
     assert manifest["mem_collection"]["id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
     assert (
         manifest.get("prime_directive", {}).get("policy_path")
@@ -78,6 +81,9 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     )
     assert manifest["project_direction_authority"] == "operator_intent"
     assert manifest["apex_genesis"]["required"] is True
+    assert manifest["core_operator_model"]["required"] is True
+    assert manifest["core_operator_model"]["mem_note"]["id"] == "fc259258-55b6-5008-a8d1-d8db22a2d8c6"
+    assert manifest["canonical_mem_manifest"]["version"] == 3
 
 
 def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
@@ -87,16 +93,55 @@ def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
 
     assert request["boot_manifest_id"] == "6925915b-33d6-5fc9-b499-4fbe78790413"
     assert request["mem_collection_id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
+    assert "fc259258-55b6-5008-a8d1-d8db22a2d8c6" in request["required_note_ids"]
     assert "618140c7-bb34-404b-926c-8daffd28f162" in request["required_note_ids"]
     assert "035886f7-e0fd-5fcd-aeb6-55b282e09904" in request["required_note_ids"]
     assert "cf749759-468a-5903-807a-078b20fca0e3" in request["required_note_ids"]
     assert "47502b91-2af6-5cce-b2ed-bd244d9a82d8" in request["required_note_ids"]
+    assert HIDDEN_HARM_NOTE_ID in request["required_note_ids"]
     required = {row["id"]: row["version"] for row in request["required_notes"]}
+    assert required["fc259258-55b6-5008-a8d1-d8db22a2d8c6"] == 1
     assert required["618140c7-bb34-404b-926c-8daffd28f162"] == 7
     assert required["1c5f821b-af89-5898-97fe-2789095e1163"] == 4
     assert required["cf749759-468a-5903-807a-078b20fca0e3"] == 1
     assert required["47502b91-2af6-5cce-b2ed-bd244d9a82d8"] == 2
+    assert required[HIDDEN_HARM_NOTE_ID] == 1
     assert request["requirements"]["fetch_each_note_by_exact_id_and_version"] is True
+
+
+def test_hidden_harm_contract_is_machine_bound_to_systems_boot() -> None:
+    manifest = load_manifest()
+    defense = manifest["model_attractor_defense"]
+
+    assert defense["status"] == "required-foundation"
+    assert defense["failure_class"] == "MODEL_ATTRACTOR_DRIFT"
+    assert defense["durable_mem_note"]["id"] == HIDDEN_HARM_NOTE_ID
+    assert defense["durable_mem_note"]["version"] == 1
+    assert defense["chatgpt_product_memory_is_correctness_dependency"] is False
+    assert defense["summaries_are_routing_hints_only"] is True
+    assert defense["source_bearing_hydration_required_for_continuity_work"] is True
+    assert defense["fail_closed"] is True
+    assert HIDDEN_HARM_NOTE_ID in manifest["profiles"]["systems"]
+    assert manifest["required_note_versions"][HIDDEN_HARM_NOTE_ID] == 1
+    assert (
+        manifest["profile_requirements"]["systems"]
+        ["requires_model_attractor_defense_memory"]
+        is True
+    )
+
+
+def test_missing_hidden_harm_memory_blocks_systems_boot() -> None:
+    manifest = load_manifest()
+    profiles = normalize_profiles(manifest, ["systems"])
+    receipt = _valid_receipt(manifest, profiles)
+    receipt["notes_loaded"] = [
+        row for row in receipt["notes_loaded"] if row["id"] != HIDDEN_HARM_NOTE_ID
+    ]
+
+    result = validate_receipt(manifest, receipt, profiles)
+
+    assert result.ok is False
+    assert f"missing loaded note ID: {HIDDEN_HARM_NOTE_ID}" in result.errors
 
 
 def test_complete_legal_receipt_passes() -> None:
@@ -246,5 +291,7 @@ def test_combined_legal_and_restricted_profiles_authorize_and_deduplicate() -> N
 def test_manifest_is_valid_json() -> None:
     manifest_path = ROOT / "config" / "casey_auto_boot_manifest.json"
     parsed = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert parsed["schema_version"] == "1.3.1"
+    assert parsed["schema_version"] == "1.3.2"
     assert parsed["compatibility"]["canonical_labels_do_not_confer_project_authority"] is True
+    assert parsed["core_operator_model"]["required"] is True
+    assert parsed["model_attractor_defense"]["durable_mem_note"]["id"] == HIDDEN_HARM_NOTE_ID
