@@ -12,6 +12,31 @@ from model_attractor_defense import (
 )
 
 
+_SOURCE_ROLE_SEMANTICS = {
+    "providers_are_typed_peers": True,
+    "connector_authority_tiers_are_routing_metadata_only": True,
+    "canonical_role_fields_are_compatibility_labels_only": True,
+    "topology_does_not_confer_epistemic_or_project_authority": True,
+    "proposition_specific_source_authority_required": True,
+    "operator_controls_project_direction": True,
+    "source_bearing_systems_control_external_fact_support_within_domain": True,
+    "verification_controls_completion_state": True,
+}
+
+
+def _source_role_evidence() -> dict:
+    return {
+        field_name: {
+            "asserted_value": expected,
+            "proposition": f"{field_name} is verified for this receipt",
+            "source_refs": [f"policy:model_attractor_defense_policy.json#{field_name}"],
+            "provider_refs": ["github:GlacierEQ/apex-control-plane"],
+            "verification_state": "verified",
+        }
+        for field_name, expected in _SOURCE_ROLE_SEMANTICS.items()
+    }
+
+
 def _continuity_receipt() -> dict:
     return {
         "model_attractor_defense": {
@@ -35,6 +60,8 @@ def _continuity_receipt() -> dict:
             "generic_assistant_prior_reframed_operation": False,
             "unnecessary_reasking_of_recoverable_state": False,
             "operator_dragged_through_recoverable_state": False,
+            **_SOURCE_ROLE_SEMANTICS,
+            "source_role_evidence": _source_role_evidence(),
             "platform_constraint_scope": "none",
             "blocked_sources": [],
             "partial_hydration_declared": False,
@@ -221,3 +248,71 @@ def test_request_exposes_the_hidden_harm_countermeasures() -> None:
     assert requirements["forbid_operator_correction_as_assistant_meta_task"] is True
     assert requirements["forbid_platform_constraint_from_rewriting_operator_mission"] is True
     assert requirements["forbid_generic_model_prior_from_rewriting_operation_class"] is True
+
+def test_policy_requires_boolean_source_role_semantics(tmp_path) -> None:
+    policy = load_model_attractor_policy()
+    policy["source_role_semantics"]["providers_are_typed_peers"] = "yes"
+    target = tmp_path / "bad-source-role-semantics.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+    with pytest.raises(BootError, match="boolean invariants"):
+        load_model_attractor_policy(target)
+
+
+def test_policy_rejects_unapproved_source_role_key_collision(tmp_path) -> None:
+    policy = load_model_attractor_policy()
+    policy["source_role_semantics"]["failure_class"] = True
+    target = tmp_path / "colliding-source-role-semantics.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+    with pytest.raises(BootError, match="approved keys"):
+        load_model_attractor_policy(target)
+
+
+def test_source_role_semantics_are_runtime_enforced() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    receipt["model_attractor_defense"][
+        "connector_authority_tiers_are_routing_metadata_only"
+    ] = False
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any(
+        "connector_authority_tiers_are_routing_metadata_only" in error
+        for error in errors
+    )
+
+
+def test_source_role_semantics_require_proposition_level_evidence() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    evidence = receipt["model_attractor_defense"]["source_role_evidence"]
+    evidence.pop("providers_are_typed_peers")
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any(
+        "source_role_evidence.providers_are_typed_peers" in error for error in errors
+    )
+
+
+def test_source_role_evidence_must_be_verified() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    evidence = receipt["model_attractor_defense"]["source_role_evidence"]
+    evidence["operator_controls_project_direction"]["verification_state"] = "asserted"
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("verification_state must be verified" in error for error in errors)
+
+
+def test_request_exposes_source_role_semantics_evidence_and_transformations() -> None:
+    policy = load_model_attractor_policy()
+    request = build_model_attractor_request(policy, task="continue living estate")
+    assert request["source_role_semantics"]["providers_are_typed_peers"] is True
+    assert (
+        "CONNECTOR_AUTHORITY_TIER -> GLOBAL_EPISTEMIC_HIERARCHY"
+        in request["forbidden_transformations"]
+    )
+    assert "SUPPORT_WORK -> MISSION" in request["forbidden_transformations"]
+    requirements = request["requirements"]
+    assert requirements["enforce_source_role_semantics"] is True
+    assert requirements["require_source_role_evidence"] is True
+    contract = request["receipt_contract"]["model_attractor_defense"]
+    assert contract["topology_does_not_confer_epistemic_or_project_authority"] is True
+    evidence_contract = contract["source_role_evidence"]
+    assert evidence_contract["providers_are_typed_peers"]["verification_state"] == "verified"
