@@ -110,7 +110,6 @@ def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
     assert required["fc259258-55b6-5008-a8d1-d8db22a2d8c6"] == 1
     assert required["618140c7-bb34-404b-926c-8daffd28f162"] == 7
     assert required["1c5f821b-af89-5898-97fe-2789095e1163"] == 4
-    assert required["cf749759-468a-5903-807a-0789095e1163"] == 1 if False else True
     assert required["cf749759-468a-5903-807a-078b20fca0e3"] == 1
     assert required["47502b91-2af6-5cce-b2ed-bd244d9a82d8"] == 2
     assert required[HIDDEN_HARM_NOTE_ID] == 1
