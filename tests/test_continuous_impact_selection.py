@@ -1,4 +1,11 @@
-from src.continuous_impact_selection import (
+from pathlib import Path
+import sys
+
+SRC = Path(__file__).resolve().parents[1] / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from continuous_impact_selection import (  # noqa: E402
     ContinuousImpactSelector,
     ImpactCandidate,
     ImpactSelectionViolation,
@@ -109,8 +116,6 @@ def test_reweight_after_material_state_change_can_change_next_action() -> None:
     )
     assert first_decision.selected_candidate_id == "inspect-host"
 
-    # After the host is located and verified, the impact model changes.  The old
-    # decision must not remain sticky merely because it won previously.
     second = (
         _candidate(
             "inspect-host",
