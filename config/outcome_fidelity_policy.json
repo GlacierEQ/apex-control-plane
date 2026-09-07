@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0.0",
+  "name": "APEX Mission Outcome Fidelity Hard Lock",
+  "fail_closed": true,
+  "principle": "Assistant activity is not progress. Mutation work may complete only when the underlying mission state changes or every materially available internal route is exhausted to a genuine external boundary.",
+  "required_for_mutation": true,
+  "allowed_transition_kinds": [
+    "proved",
+    "disproved",
+    "attributed",
+    "quantified",
+    "acquired",
+    "corrected",
+    "closed",
+    "executed",
+    "filed",
+    "provider_state_changed",
+    "system_behavior_changed",
+    "genuine_external_boundary"
+  ],
+  "activity_only_transition_kinds": [
+    "artifact_created",
+    "ledger_created",
+    "matrix_created",
+    "summary_created",
+    "packet_created",
+    "index_created",
+    "commit_created",
+    "issue_updated",
+    "report_created",
+    "plan_created"
+  ],
+  "activity_only_evidence_prefixes": [
+    "artifact",
+    "ledger",
+    "matrix",
+    "summary",
+    "packet",
+    "report",
+    "plan",
+    "linear-update"
+  ],
+  "boundary_transition_kind": "genuine_external_boundary",
+  "state_transition_requires_distinct_before_after": true,
+  "state_transition_requires_evidence": true,
+  "boundary_requires_routes_exhausted": true,
+  "boundary_requires_reason": true,
+  "boundary_requires_evidence": true
+}
