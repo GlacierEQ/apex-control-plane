@@ -16,7 +16,13 @@ def _receipt() -> dict:
         "apex_startup": {
             "authority": "operator_intent",
             "objective": "maximum_coherent_advance",
+            "operator_identity_loaded": True,
+            "operator_estate_model_loaded": True,
             "operator_model_loaded": True,
+            "worker_execution_contract_loaded": True,
+            "standing_authorizations_preserved": True,
+            "target_state_progress_semantics_loaded": True,
+            "operator_operation_class_preserved": True,
             "relevant_memory_consulted_when_available": True,
             "known_state_reused_before_rediscovery": True,
             "literal_operator_sources_preserved_separately_from_derived_interpretation": True,
@@ -59,6 +65,9 @@ def _receipt() -> dict:
                 "operator_asserted_scope_preserved": True,
                 "unsupported_scope_narrowing": False,
                 "known_state_reused_before_rediscovery": True,
+                "standing_operator_authority_preserved": True,
+                "assistant_activity_not_claimed_as_progress": True,
+                "operator_operation_class_preserved": True,
             },
             "verification_plan": ["run tests", "adversarial state-promotion audit"],
             "material_claims": [
@@ -77,12 +86,14 @@ def test_valid_apex_startup_receipt_passes() -> None:
     assert validate_apex_startup_receipt(policy, _receipt()) == ()
 
 
-def test_operator_project_direction_authority_is_absolute() -> None:
+def test_operator_project_direction_authority_is_absolute_and_persistent() -> None:
     policy = load_apex_policy()
     authority = policy["operator_authority"]
     assert authority["mode"] == "absolute_project_direction"
     assert authority["sole_human_project_authority"] is True
     assert authority["current_explicit_instruction_is_sufficient_authorization_for_its_scope"] is True
+    assert authority["standing_authorization_persists_until_revoked_superseded_or_completed"] is True
+    assert authority["mechanical_state_change_does_not_reopen_operator_decision"] is True
     assert authority["secondary_human_approval_authority"] is False
     assert authority["lower_level_policy_veto"] is False
     assert authority["assistant_or_automation_override"] is False
@@ -99,7 +110,7 @@ def test_operator_project_direction_authority_is_absolute() -> None:
     assert interlock["operator_scope_narrowing_requires_explicit_operator_authorization"] is True
 
 
-def test_operator_working_model_is_loaded_as_non_sovereign_starting_state() -> None:
+def test_operator_working_model_carries_identity_estate_scope_and_worker_contract() -> None:
     policy = load_apex_policy()
     model = load_operator_working_model(policy)
     authority = model["authority_semantics"]
@@ -108,14 +119,27 @@ def test_operator_working_model_is_loaded_as_non_sovereign_starting_state() -> N
     assert authority["assistant_working_model_is_derived_and_non_sovereign"] is True
     assert authority["memory_and_continuity_state_are_starting_state_not_project_authority"] is True
     assert model["state_reuse"]["rediscovery_is_progress"] is False
+    assert model["operator_identity"]["name"] == "Casey Barton / GlacierEQ"
+    assert "THE OPERATOR / THE ARCHITECT" in model["operator_identity"]["primary_model"]
+    assert model["estate_model"]["target"] == "MAXIMUM_USEFUL_ENGINEERING_DENSITY"
+    assert model["actual_work_pattern"]
+    assert model["default_loop"]
+    assert model["impact_first_judgment"]["reweight_on_state_change"] is True
     scope = model["scope_fidelity"]
     assert scope["operator_asserted_scope_is_source_state"] is True
     assert scope["scope_carries_across_execution_contexts"] is True
     assert scope["assistant_may_not_narrow_scope_without_explicit_operator_authorization"] is True
     assert scope["assistant_may_not_replace_longitudinal_with_current_thread"] is True
+    worker = model["worker_execution_contract"]
+    assert worker["role"] == "ephemeral_bounded_execution_component_inside_glaciereq"
+    assert worker["authority_persistence"]["standing_operator_authority_persists_across_turns"] is True
+    assert worker["merge_semantics"]["granted_merge_authorization_persists_until_merged_or_revoked"] is True
+    assert worker["merge_semantics"]["queued_checks_do_not_reopen_merge_decision"] is True
+    assert worker["progress_semantics"]["worker_activity_is_progress"] is False
+    assert worker["progress_semantics"]["progress_requires_material_target_state_change"] is True
 
 
-def test_startup_request_requires_state_reuse_before_rediscovery() -> None:
+def test_startup_request_projects_full_operator_and_worker_state() -> None:
     policy = load_apex_policy()
     request = build_apex_startup_request(policy, task="continue existing Operator work")
     requirements = request["requirements"]
@@ -133,7 +157,17 @@ def test_startup_request_requires_state_reuse_before_rediscovery() -> None:
     projection = request["operator_working_model"]
     assert projection["authority_semantics"]["assistant_working_model_is_derived_and_non_sovereign"] is True
     assert projection["state_reuse"]["rediscovery_is_progress"] is False
+    assert projection["operator_identity"]["name"] == "Casey Barton / GlacierEQ"
+    assert projection["estate_model"]["target"] == "MAXIMUM_USEFUL_ENGINEERING_DENSITY"
+    assert projection["actual_work_pattern"]
+    assert projection["default_loop"]
+    assert projection["impact_first_judgment"]["frameworks_are_inputs_not_substitutes_for_judgment"] is True
     assert projection["scope_fidelity"]["assistant_may_not_replace_systemic_with_local"] is True
+    worker = projection["worker_execution_contract"]
+    assert worker["operation_semantics"]["continue_means_continue"] is True
+    assert worker["operation_semantics"]["merge_means_promote_authorized_change_to_destination"] is True
+    assert worker["progress_semantics"]["pull_request_is_progress"] is False
+    assert worker["execution_semantics"]["no_verified_mutation_claim_without_readback"] is True
 
 
 def test_known_state_rediscovery_failure_fails_closed() -> None:
@@ -146,12 +180,48 @@ def test_known_state_rediscovery_failure_fails_closed() -> None:
     assert any("selected_path.known_state_reused_before_rediscovery" in error for error in errors)
 
 
-def test_missing_operator_model_load_fails_closed() -> None:
+def test_missing_operator_identity_estate_or_worker_contract_fails_closed() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
-    receipt["apex_startup"]["operator_model_loaded"] = False
+    for field in (
+        "operator_identity_loaded",
+        "operator_estate_model_loaded",
+        "operator_model_loaded",
+        "worker_execution_contract_loaded",
+    ):
+        receipt["apex_startup"][field] = False
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert "apex_startup.operator_model_loaded must be true" in errors
+    for field in (
+        "operator_identity_loaded",
+        "operator_estate_model_loaded",
+        "operator_model_loaded",
+        "worker_execution_contract_loaded",
+    ):
+        assert f"apex_startup.{field} must be true" in errors
+
+
+def test_authority_progress_or_operation_class_loss_fails_closed() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    for field in (
+        "standing_authorizations_preserved",
+        "target_state_progress_semantics_loaded",
+        "operator_operation_class_preserved",
+    ):
+        receipt["apex_startup"][field] = False
+    receipt["apex_startup"]["selected_path"]["standing_operator_authority_preserved"] = False
+    receipt["apex_startup"]["selected_path"]["assistant_activity_not_claimed_as_progress"] = False
+    receipt["apex_startup"]["selected_path"]["operator_operation_class_preserved"] = False
+    errors = validate_apex_startup_receipt(policy, receipt)
+    for field in (
+        "standing_authorizations_preserved",
+        "target_state_progress_semantics_loaded",
+        "operator_operation_class_preserved",
+    ):
+        assert f"apex_startup.{field} must be true" in errors
+    assert any("standing_operator_authority_preserved" in error for error in errors)
+    assert any("assistant_activity_not_claimed_as_progress" in error for error in errors)
+    assert any("operator_operation_class_preserved" in error for error in errors)
 
 
 def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> None:
@@ -166,7 +236,7 @@ def test_startup_request_cannot_reintroduce_secondary_approval_authority() -> No
     assert "named_human_approval" not in serialized
 
 
-def test_operator_asset_sovereignty_is_in_every_selected_path() -> None:
+def test_operator_asset_sovereignty_and_worker_fidelity_are_in_every_selected_path() -> None:
     policy = load_apex_policy()
     path = policy["path_requirements"]
     assert path["unsolicited_operator_asset_value_ranking"] is False
@@ -177,6 +247,9 @@ def test_operator_asset_sovereignty_is_in_every_selected_path() -> None:
     assert path["operator_asserted_scope_preserved"] is True
     assert path["unsupported_scope_narrowing"] is False
     assert path["known_state_reused_before_rediscovery"] is True
+    assert path["standing_operator_authority_preserved"] is True
+    assert path["assistant_activity_not_claimed_as_progress"] is True
+    assert path["operator_operation_class_preserved"] is True
 
     request = build_apex_startup_request(policy, task="look at legal repos")
     selected = request["receipt_contract"]["apex_startup"]["selected_path"]
@@ -244,8 +317,14 @@ def test_inspection_scope_expansion_fails_closed() -> None:
 def test_mutation_interlock_fields_are_mandatory() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
-    for field in (
+    fields = (
+        "operator_identity_loaded",
+        "operator_estate_model_loaded",
         "operator_model_loaded",
+        "worker_execution_contract_loaded",
+        "standing_authorizations_preserved",
+        "target_state_progress_semantics_loaded",
+        "operator_operation_class_preserved",
         "relevant_memory_consulted_when_available",
         "known_state_reused_before_rediscovery",
         "working_method_applied_to_task_decomposition",
@@ -254,20 +333,11 @@ def test_mutation_interlock_fields_are_mandatory() -> None:
         "target_identity_resolved",
         "prior_valid_gains_identified",
         "relevant_source_inspected",
-    ):
+    )
+    for field in fields:
         receipt["apex_startup"][field] = False
     errors = validate_apex_startup_receipt(policy, receipt)
-    for field in (
-        "operator_model_loaded",
-        "relevant_memory_consulted_when_available",
-        "known_state_reused_before_rediscovery",
-        "working_method_applied_to_task_decomposition",
-        "operator_asserted_scope_preserved",
-        "prior_state_retrieved",
-        "target_identity_resolved",
-        "prior_valid_gains_identified",
-        "relevant_source_inspected",
-    ):
+    for field in fields:
         assert f"apex_startup.{field} must be true" in errors
 
 
@@ -382,12 +452,7 @@ def test_malformed_operator_authorization_is_rejected() -> None:
 
 def test_state_transition_requires_exact_evidence() -> None:
     policy = load_apex_policy()
-    errors = validate_state_transition(
-        policy,
-        "ATTEMPTED",
-        "EXECUTED",
-        evidence={},
-    )
+    errors = validate_state_transition(policy, "ATTEMPTED", "EXECUTED", evidence={})
     assert errors == (
         "state transition ATTEMPTED->EXECUTED requires receipt reference: execution_receipt",
     )
