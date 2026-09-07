@@ -1,11 +1,13 @@
 {
-  "schema_version": "1.3.3",
+  "schema_version": "1.4.0",
   "manifest_name": "Casey Continuity Auto-Boot + APEX Genesis",
   "project_direction_authority": "operator_intent",
   "state_evolution": "current_state_plus_verified_gain",
   "compatibility": {
     "canonical_labels_are_descriptive_only": true,
-    "canonical_labels_do_not_confer_project_authority": true
+    "canonical_labels_do_not_confer_project_authority": true,
+    "mem_collection_membership_does_not_confer_authority": true,
+    "mutable_mem_notes_use_stable_id_plus_version_policy": true
   },
   "core_operator_model": {
     "required": true,
@@ -13,21 +15,26 @@
     "mem_note": {
       "title": "CORE OPERATOR MODEL — CASEY BARTON / GLACIEREQ — 2026-09-06 HST",
       "id": "fc259258-55b6-5008-a8d1-d8db22a2d8c6",
-      "version": 1
+      "version": 2,
+      "version_mode": "at_least"
     },
     "anti_inversion": "Model Casey as THE OPERATOR / THE ARCHITECT of the living GlacierEQ estate. Rules and preferences are artifacts produced by the architect, not the primary model of the person.",
     "requires_identity_before_working_method": true,
-    "requires_estate_model_before_project_reduction": true
+    "requires_estate_model_before_project_reduction": true,
+    "preserve_established_operator_scope": true
   },
   "mem_collection": {
     "title": "00 AUTO BOOT — Casey Continuity Gate",
-    "id": "e9990f2e-affe-55b2-a402-1de35aeb1b73"
+    "id": "e9990f2e-affe-55b2-a402-1de35aeb1b73",
+    "semantics": "cross_cutting_routing_core_not_global_truth",
+    "expected_core_note_count": 7
   },
   "canonical_mem_manifest": {
-    "title": "000 AUTO-BOOT MANIFEST — CASEY CONTINUITY GATE — CANONICAL v1.0.0",
+    "title": "000 AUTO-BOOT ROUTING MANIFEST — CASEY CONTINUITY GATE — POLYCENTRIC v2.1 — 2026-09-06 HST",
     "id": "6925915b-33d6-5fc9-b499-4fbe78790413",
-    "version": 3,
-    "semantics": "historical_compatibility_locator_not_project_authority"
+    "version": 5,
+    "version_mode": "at_least",
+    "semantics": "historical_compatibility_locator_and_routing_contract_not_project_authority"
   },
   "apex_genesis": {
     "protocol_path": "APEX_ENFORCED_STARTUP.md",
@@ -100,7 +107,8 @@
     "durable_mem_note": {
       "title": "HIDDEN HARM / MODEL ATTRACTOR DRIFT — DURABLE OPERATOR CONTINUITY CONTRACT — 2026-09-06 HST",
       "id": "e98732a2-0564-5b64-b5ad-9360a8cdcc3d",
-      "version": 1
+      "version": 1,
+      "version_mode": "exact"
     },
     "chatgpt_product_memory_is_correctness_dependency": false,
     "summaries_are_routing_hints_only": true,
@@ -110,15 +118,12 @@
   "profiles": {
     "always": [
       "fc259258-55b6-5008-a8d1-d8db22a2d8c6",
-      "618140c7-bb34-404b-926c-8daffd28f162",
-      "774ac390-77d9-57be-adcf-3d830816b8bd",
-      "714910a8-14ae-50f5-9e2e-16566369edac",
-      "39447e48-0aeb-5c7a-91bc-7ab0bd40313f",
-      "87e3947e-5f7f-52a1-b1a0-38e30f60054f",
-      "63f1d7cd-9202-577a-8d0d-211c40a07606",
-      "b51f5cf3-9fbe-511c-a400-915f0f5dd8a0"
+      "54b47921-92c3-56b7-a4fa-de115e12d273",
+      "e98732a2-0564-5b64-b5ad-9360a8cdcc3d"
     ],
     "legal_case": [
+      "774ac390-77d9-57be-adcf-3d830816b8bd",
+      "714910a8-14ae-50f5-9e2e-16566369edac",
       "43a23b64-46eb-530c-9521-9787b038c53a",
       "07a207af-619c-5066-8c93-2a73968ba015",
       "aabad775-39e8-5b61-9f99-5c3bd3251d37",
@@ -133,26 +138,23 @@
       "a4cf7086-b558-52e1-8398-b699ce6d309a"
     ],
     "systems": [
-      "035886f7-e0fd-5fcd-aeb6-55b282e09904",
-      "1c5f821b-af89-5898-97fe-2789095e1163",
-      "0ff8b9aa-490c-5187-a495-61759a8bbe82",
-      "cf749759-468a-5903-807a-078b20fca0e3",
-      "47502b91-2af6-5cce-b2ed-bd244d9a82d8",
-      "e98732a2-0564-5b64-b5ad-9360a8cdcc3d"
+      "39447e48-0aeb-5c7a-91bc-7ab0bd40313f",
+      "63f1d7cd-9202-577a-8d0d-211c40a07606",
+      "035886f7-e0fd-5fcd-aeb6-55b282e09904"
     ],
     "separate_matter": [
       "9cb96498-23b3-501b-864b-a029d2e0f612"
     ]
   },
   "required_note_versions": {
-    "fc259258-55b6-5008-a8d1-d8db22a2d8c6": 1,
-    "618140c7-bb34-404b-926c-8daffd28f162": 7,
+    "fc259258-55b6-5008-a8d1-d8db22a2d8c6": 2,
+    "54b47921-92c3-56b7-a4fa-de115e12d273": 2,
+    "e98732a2-0564-5b64-b5ad-9360a8cdcc3d": 1,
+    "39447e48-0aeb-5c7a-91bc-7ab0bd40313f": 2,
+    "63f1d7cd-9202-577a-8d0d-211c40a07606": 7,
+    "035886f7-e0fd-5fcd-aeb6-55b282e09904": 5,
     "774ac390-77d9-57be-adcf-3d830816b8bd": 2,
     "714910a8-14ae-50f5-9e2e-16566369edac": 2,
-    "39447e48-0aeb-5c7a-91bc-7ab0bd40313f": 1,
-    "87e3947e-5f7f-52a1-b1a0-38e30f60054f": 1,
-    "63f1d7cd-9202-577a-8d0d-211c40a07606": 3,
-    "b51f5cf3-9fbe-511c-a400-915f0f5dd8a0": 1,
     "43a23b64-46eb-530c-9521-9787b038c53a": 2,
     "07a207af-619c-5066-8c93-2a73968ba015": 1,
     "aabad775-39e8-5b61-9f99-5c3bd3251d37": 1,
@@ -163,18 +165,34 @@
     "6e8499ba-e92e-5b95-9734-589deb648874": 1,
     "636af3f6-0cfe-55d7-9151-8ba0d621c60a": 1,
     "a4cf7086-b558-52e1-8398-b699ce6d309a": 1,
-    "035886f7-e0fd-5fcd-aeb6-55b282e09904": 1,
-    "1c5f821b-af89-5898-97fe-2789095e1163": 4,
-    "0ff8b9aa-490c-5187-a495-61759a8bbe82": 1,
-    "cf749759-468a-5903-807a-078b20fca0e3": 1,
-    "47502b91-2af6-5cce-b2ed-bd244d9a82d8": 2,
-    "e98732a2-0564-5b64-b5ad-9360a8cdcc3d": 1,
     "9cb96498-23b3-501b-864b-a029d2e0f612": 1
+  },
+  "note_version_modes": {
+    "fc259258-55b6-5008-a8d1-d8db22a2d8c6": "at_least",
+    "54b47921-92c3-56b7-a4fa-de115e12d273": "exact",
+    "e98732a2-0564-5b64-b5ad-9360a8cdcc3d": "exact",
+    "39447e48-0aeb-5c7a-91bc-7ab0bd40313f": "at_least",
+    "63f1d7cd-9202-577a-8d0d-211c40a07606": "at_least",
+    "035886f7-e0fd-5fcd-aeb6-55b282e09904": "at_least",
+    "774ac390-77d9-57be-adcf-3d830816b8bd": "at_least",
+    "714910a8-14ae-50f5-9e2e-16566369edac": "at_least",
+    "43a23b64-46eb-530c-9521-9787b038c53a": "at_least",
+    "07a207af-619c-5066-8c93-2a73968ba015": "at_least",
+    "aabad775-39e8-5b61-9f99-5c3bd3251d37": "at_least",
+    "16810f77-d8c7-5bc3-8f94-2ea1f93237cb": "at_least",
+    "d72c91b3-4e6e-5658-bc1c-073e64ba7775": "at_least",
+    "2924f088-4a6f-5a82-8588-e19749483467": "at_least",
+    "0ec6224d-88ee-5d99-a220-6a07bc24eeed": "at_least",
+    "6e8499ba-e92e-5b95-9734-589deb648874": "at_least",
+    "636af3f6-0cfe-55d7-9151-8ba0d621c60a": "at_least",
+    "a4cf7086-b558-52e1-8398-b699ce6d309a": "at_least",
+    "9cb96498-23b3-501b-864b-a029d2e0f612": "at_least"
   },
   "profile_requirements": {
     "always": {
       "requires_core_operator_model": true,
-      "requires_operator_identity_before_working_method": true
+      "requires_operator_identity_before_working_method": true,
+      "requires_hidden_harm_contract": true
     },
     "legal_case": {
       "requires_current_sources": true,
@@ -189,7 +207,9 @@
       "requires_adaptive_context_ranking": true,
       "requires_adaptive_tool_routing": true,
       "requires_failure_feedback": true,
-      "requires_model_attractor_defense_memory": true
+      "requires_model_attractor_defense_memory": true,
+      "forbids_global_provider_authority_rank": true,
+      "forbids_legal_payload_as_default_system_context": true
     },
     "separate_matter": {
       "requires_current_sources": true,
@@ -197,6 +217,19 @@
       "requires_adaptive_source_ranking": true
     }
   },
+  "optional_navigation_notes": [
+    "618140c7-bb34-404b-926c-8daffd28f162",
+    "1c5f821b-af89-5898-97fe-2789095e1163",
+    "87e3947e-5f7f-52a1-b1a0-38e30f60054f",
+    "b51f5cf3-9fbe-511c-a400-915f0f5dd8a0"
+  ],
+  "historical_receipt_notes": [
+    "0ff8b9aa-490c-5187-a495-61759a8bbe82",
+    "cf749759-468a-5903-807a-078b20fca0e3",
+    "d8ce58d9-4faa-5a98-b5e2-268f36c7bad7",
+    "47502b91-2af6-5cce-b2ed-bd244d9a82d8",
+    "ea07b04d-8fbb-5a50-b41e-8172648ee503"
+  ],
   "default_profiles": [
     "always",
     "systems"
@@ -210,21 +243,16 @@
     "verified",
     "not_relevant"
   ],
+  "resume_policy": {
+    "global_default_case_chain": false,
+    "continue_semantics": "resolve_active_thread_then_nearest_valid_executable_frontier",
+    "known_state_reuse_before_rediscovery": true,
+    "hydrate_only_material_delta": true
+  },
   "fail_closed": true,
   "security": {
     "never_embed_secrets": true,
     "restricted_child_profile_requires_explicit_authorization": true,
     "portable_projection_excludes_restricted_child_data": true
-  },
-  "resume_chain": [
-    "retrieve latest official 1FDV docket and verify Dockets 223–225",
-    "calculate live deadlines",
-    "open July 4 metadata audit",
-    "identify the seven motions",
-    "map opaque numbered PDFs",
-    "compare Dockets 193 and 201",
-    "reconstruct Docket 203, October 1, and Dockets 208/210",
-    "build proposition-to-source proof table",
-    "build strongest verified filing or referral artifact"
-  ]
+  }
 }
