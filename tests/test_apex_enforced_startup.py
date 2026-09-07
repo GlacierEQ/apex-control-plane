@@ -21,6 +21,14 @@ def _receipt() -> dict:
             "known_state_reused_before_rediscovery": True,
             "literal_operator_sources_preserved_separately_from_derived_interpretation": True,
             "working_method_applied_to_task_decomposition": True,
+            "operator_scope_binding": {
+                "source_ref": "operator-message:current-scope",
+                "asserted_scope": "longitudinal systemic failure across accumulated work",
+                "preserved": True,
+                "narrowed": False,
+                "operator_narrowing_authorization_ref": "",
+            },
+            "operator_asserted_scope_preserved": True,
             "context_reconstructed": True,
             "prior_state_retrieved": True,
             "continuation_resolved": True,
@@ -48,6 +56,8 @@ def _receipt() -> dict:
                 "inspection_scope_expansion": False,
                 "operator_owned_asset_identity_preserved": True,
                 "operator_working_method_preserved": True,
+                "operator_asserted_scope_preserved": True,
+                "unsupported_scope_narrowing": False,
                 "known_state_reused_before_rediscovery": True,
             },
             "verification_plan": ["run tests", "adversarial state-promotion audit"],
@@ -86,6 +96,7 @@ def test_operator_project_direction_authority_is_absolute() -> None:
     assert interlock["external_action_requires_secondary_human_approval"] is False
     assert interlock["operator_owned_asset_disposition_requires_explicit_operator_direction"] is True
     assert interlock["operator_owned_asset_value_ranking_requires_explicit_operator_direction"] is True
+    assert interlock["operator_scope_narrowing_requires_explicit_operator_authorization"] is True
 
 
 def test_operator_working_model_is_loaded_as_non_sovereign_starting_state() -> None:
@@ -97,6 +108,11 @@ def test_operator_working_model_is_loaded_as_non_sovereign_starting_state() -> N
     assert authority["assistant_working_model_is_derived_and_non_sovereign"] is True
     assert authority["memory_and_continuity_state_are_starting_state_not_project_authority"] is True
     assert model["state_reuse"]["rediscovery_is_progress"] is False
+    scope = model["scope_fidelity"]
+    assert scope["operator_asserted_scope_is_source_state"] is True
+    assert scope["scope_carries_across_execution_contexts"] is True
+    assert scope["assistant_may_not_narrow_scope_without_explicit_operator_authorization"] is True
+    assert scope["assistant_may_not_replace_longitudinal_with_current_thread"] is True
 
 
 def test_startup_request_requires_state_reuse_before_rediscovery() -> None:
@@ -109,11 +125,15 @@ def test_startup_request_requires_state_reuse_before_rediscovery() -> None:
     assert requirements["rediscovery_is_not_progress"] is True
     assert requirements["preserve_literal_operator_sources_separately_from_derived_model"] is True
     assert requirements["apply_operator_working_method_to_task_decomposition"] is True
+    assert requirements["preserve_operator_asserted_scope"] is True
+    assert requirements["prohibit_unapproved_scope_narrowing"] is True
+    assert requirements["carry_failure_scope_across_execution_contexts"] is True
     assert requirements["failure_interrupts_trigger_upstream_state_recovery"] is True
     assert request["operator_working_model_ref"] == "config/operator_working_model.json"
     projection = request["operator_working_model"]
     assert projection["authority_semantics"]["assistant_working_model_is_derived_and_non_sovereign"] is True
     assert projection["state_reuse"]["rediscovery_is_progress"] is False
+    assert projection["scope_fidelity"]["assistant_may_not_replace_systemic_with_local"] is True
 
 
 def test_known_state_rediscovery_failure_fails_closed() -> None:
@@ -154,12 +174,55 @@ def test_operator_asset_sovereignty_is_in_every_selected_path() -> None:
     assert path["inspection_scope_expansion"] is False
     assert path["operator_owned_asset_identity_preserved"] is True
     assert path["operator_working_method_preserved"] is True
+    assert path["operator_asserted_scope_preserved"] is True
+    assert path["unsupported_scope_narrowing"] is False
     assert path["known_state_reused_before_rediscovery"] is True
 
     request = build_apex_startup_request(policy, task="look at legal repos")
     selected = request["receipt_contract"]["apex_startup"]["selected_path"]
     for key, expected in path.items():
         assert selected[key] is expected
+
+
+def test_unauthorized_longitudinal_scope_narrowing_fails_closed() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    binding = receipt["apex_startup"]["operator_scope_binding"]
+    binding["asserted_scope"] = "this thread"
+    binding["narrowed"] = True
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert "narrowed Operator scope requires operator_narrowing_authorization_ref" in errors
+
+
+def test_operator_authorized_scope_narrowing_is_explicit_and_valid() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    binding = receipt["apex_startup"]["operator_scope_binding"]
+    binding["asserted_scope"] = "current thread only"
+    binding["narrowed"] = True
+    binding["operator_narrowing_authorization_ref"] = "operator-message:explicit-narrowing"
+    assert validate_apex_startup_receipt(policy, receipt) == ()
+
+
+def test_scope_binding_requires_source_and_preservation() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    binding = receipt["apex_startup"]["operator_scope_binding"]
+    binding["source_ref"] = ""
+    binding["preserved"] = False
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert "operator_scope_binding.source_ref must be a receipt reference" in errors
+    assert "operator_scope_binding.preserved must be true" in errors
+
+
+def test_selected_path_cannot_launder_scope_erosion() -> None:
+    policy = load_apex_policy()
+    receipt = _receipt()
+    receipt["apex_startup"]["selected_path"]["operator_asserted_scope_preserved"] = False
+    receipt["apex_startup"]["selected_path"]["unsupported_scope_narrowing"] = True
+    errors = validate_apex_startup_receipt(policy, receipt)
+    assert any("operator_asserted_scope_preserved" in error for error in errors)
+    assert any("unsupported_scope_narrowing" in error for error in errors)
 
 
 def test_unsolicited_asset_ranking_fails_closed() -> None:
@@ -186,6 +249,7 @@ def test_mutation_interlock_fields_are_mandatory() -> None:
         "relevant_memory_consulted_when_available",
         "known_state_reused_before_rediscovery",
         "working_method_applied_to_task_decomposition",
+        "operator_asserted_scope_preserved",
         "prior_state_retrieved",
         "target_identity_resolved",
         "prior_valid_gains_identified",
@@ -198,6 +262,7 @@ def test_mutation_interlock_fields_are_mandatory() -> None:
         "relevant_memory_consulted_when_available",
         "known_state_reused_before_rediscovery",
         "working_method_applied_to_task_decomposition",
+        "operator_asserted_scope_preserved",
         "prior_state_retrieved",
         "target_identity_resolved",
         "prior_valid_gains_identified",
