@@ -19,25 +19,35 @@ def _continuity_receipt() -> dict:
             "continuity_required": True,
             "current_operator_message_bound": True,
             "operator_mission_preserved": True,
+            "operator_operation_class_preserved": True,
+            "known_state_reuse_checked": True,
             "nearest_valid_continuation_checked": True,
             "abstraction_substitution_checked": True,
+            "mission_support_boundary_preserved": True,
             "memory_projection_treated_as_authority": False,
             "summary_substituted_for_state": False,
             "reconstruction_substituted_for_continuation": False,
             "plan_substituted_for_execution": False,
+            "support_work_substituted_for_mission": False,
+            "assistant_meta_task_substituted_for_operator_task": False,
             "global_canonicalization_without_operator_direction": False,
             "platform_constraint_reframed_mission": False,
             "generic_assistant_prior_reframed_operation": False,
             "unnecessary_reasking_of_recoverable_state": False,
+            "operator_dragged_through_recoverable_state": False,
             "platform_constraint_scope": "none",
             "blocked_sources": [],
             "partial_hydration_declared": False,
+            "operator_operation_class": "fix",
             "active_thread": "apex-control-plane anti-drift repair",
             "continuation_ref": "git:main@4f1ff56f49ca9f7a8541c85561cf2c05c12ecaff",
             "source_refs": [
                 "github:GlacierEQ/apex-control-plane/AGENT_SYSTEM_PROMPT.md",
                 "github:GlacierEQ/apex-control-plane/000_OPERATOR_TRUST_ROOT.md",
             ],
+            "known_state_reused": True,
+            "nearest_executable_frontier_identified": True,
+            "prior_verified_gains_preserved": True,
             "hydration_complete_for_material_state": True,
             "source_bearing_state_used": True,
             "polycentric_state_preserved": True,
@@ -58,9 +68,13 @@ def test_non_continuity_task_does_not_require_fake_source_hydration() -> None:
     row = receipt["model_attractor_defense"]
     row["continuity_required"] = False
     for field_name in (
+        "operator_operation_class",
         "active_thread",
         "continuation_ref",
         "source_refs",
+        "known_state_reused",
+        "nearest_executable_frontier_identified",
+        "prior_verified_gains_preserved",
         "hydration_complete_for_material_state",
         "source_bearing_state_used",
         "polycentric_state_preserved",
@@ -95,6 +109,52 @@ def test_reconstruction_cannot_replace_continuation() -> None:
     assert any("reconstruction_substituted_for_continuation" in error for error in errors)
 
 
+def test_support_work_cannot_replace_operator_mission() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    row = receipt["model_attractor_defense"]
+    row["support_work_substituted_for_mission"] = True
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("support_work_substituted_for_mission" in error for error in errors)
+
+
+def test_operator_correction_cannot_become_assistant_meta_task() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    row = receipt["model_attractor_defense"]
+    row["assistant_meta_task_substituted_for_operator_task"] = True
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("assistant_meta_task_substituted_for_operator_task" in error for error in errors)
+
+
+def test_operation_class_must_be_preserved() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    row = receipt["model_attractor_defense"]
+    row["operator_operation_class_preserved"] = False
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("operator_operation_class_preserved" in error for error in errors)
+
+
+def test_continuity_must_reuse_known_state_and_frontier() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    row = receipt["model_attractor_defense"]
+    row["known_state_reused"] = False
+    row["nearest_executable_frontier_identified"] = False
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("known_state_reused" in error for error in errors)
+    assert any("nearest_executable_frontier_identified" in error for error in errors)
+
+
+def test_continuity_must_preserve_prior_verified_gains() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    receipt["model_attractor_defense"]["prior_verified_gains_preserved"] = False
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("prior_verified_gains_preserved" in error for error in errors)
+
+
 def test_platform_constraint_may_not_rewrite_mission() -> None:
     policy = load_model_attractor_policy()
     receipt = _continuity_receipt()
@@ -110,6 +170,14 @@ def test_generic_assistant_prior_may_not_rewrite_operation() -> None:
     receipt["model_attractor_defense"]["generic_assistant_prior_reframed_operation"] = True
     errors = validate_model_attractor_receipt(policy, receipt)
     assert any("generic_assistant_prior_reframed_operation" in error for error in errors)
+
+
+def test_continuity_requires_operation_class() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    receipt["model_attractor_defense"]["operator_operation_class"] = ""
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("operator_operation_class" in error for error in errors)
 
 
 def test_continuity_requires_source_refs() -> None:
@@ -146,5 +214,10 @@ def test_request_exposes_the_hidden_harm_countermeasures() -> None:
     request = build_model_attractor_request(policy, task="continue living estate")
     requirements = request["requirements"]
     assert requirements["treat_memory_and_summaries_as_routing_hints_only"] is True
+    assert requirements["reuse_known_state_before_rediscovery"] is True
+    assert requirements["identify_nearest_executable_frontier_when_continuity_dependent"] is True
+    assert requirements["preserve_mission_support_boundary"] is True
+    assert requirements["forbid_support_work_as_mission_substitution"] is True
+    assert requirements["forbid_operator_correction_as_assistant_meta_task"] is True
     assert requirements["forbid_platform_constraint_from_rewriting_operator_mission"] is True
     assert requirements["forbid_generic_model_prior_from_rewriting_operation_class"] is True
