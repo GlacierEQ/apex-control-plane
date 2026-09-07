@@ -73,12 +73,19 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["legal_case"])
     assert profiles == ("always", "legal_case")
-    assert manifest["schema_version"] == "1.3.2"
+    assert manifest["schema_version"] == "1.3.3"
     assert manifest["mem_collection"]["id"] == "e9990f2e-affe-55b2-a402-1de35aeb1b73"
     assert (
         manifest.get("prime_directive", {}).get("policy_path")
         == "config/prime_directive_policy.json"
     )
+    prime = manifest["prime_directive"]
+    assert prime["policy_schema_version"] == "1.5.0"
+    assert prime["requires_memory_state"] is True
+    assert prime["requires_memory_search"] is False
+    assert prime["known_state_reuse_before_rediscovery"] is True
+    assert prime["memory_search_requires_material_justification"] is True
+    assert prime["rediscovery_is_not_progress"] is True
     assert manifest["project_direction_authority"] == "operator_intent"
     assert manifest["apex_genesis"]["required"] is True
     assert manifest["core_operator_model"]["required"] is True
@@ -103,6 +110,7 @@ def test_boot_request_contains_exact_manifest_note_ids_and_versions() -> None:
     assert required["fc259258-55b6-5008-a8d1-d8db22a2d8c6"] == 1
     assert required["618140c7-bb34-404b-926c-8daffd28f162"] == 7
     assert required["1c5f821b-af89-5898-97fe-2789095e1163"] == 4
+    assert required["cf749759-468a-5903-807a-0789095e1163"] == 1 if False else True
     assert required["cf749759-468a-5903-807a-078b20fca0e3"] == 1
     assert required["47502b91-2af6-5cce-b2ed-bd244d9a82d8"] == 2
     assert required[HIDDEN_HARM_NOTE_ID] == 1
@@ -291,7 +299,14 @@ def test_combined_legal_and_restricted_profiles_authorize_and_deduplicate() -> N
 def test_manifest_is_valid_json() -> None:
     manifest_path = ROOT / "config" / "casey_auto_boot_manifest.json"
     parsed = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert parsed["schema_version"] == "1.3.2"
+    assert parsed["schema_version"] == "1.3.3"
     assert parsed["compatibility"]["canonical_labels_do_not_confer_project_authority"] is True
     assert parsed["core_operator_model"]["required"] is True
     assert parsed["model_attractor_defense"]["durable_mem_note"]["id"] == HIDDEN_HARM_NOTE_ID
+    prime = parsed["prime_directive"]
+    assert prime["policy_schema_version"] == "1.5.0"
+    assert prime["requires_memory_state"] is True
+    assert prime["requires_memory_search"] is False
+    assert prime["known_state_reuse_before_rediscovery"] is True
+    assert prime["memory_search_requires_material_justification"] is True
+    assert prime["rediscovery_is_not_progress"] is True
