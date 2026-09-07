@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.5.0",
+  "schema_version": "1.6.0",
   "name": "APEX Enforced Startup",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
@@ -89,6 +89,8 @@
     "restore_operator_role": "principal_trust_root"
   },
   "required_startup_fields": [
+    "operator_identity_loaded",
+    "operator_estate_model_loaded",
     "operator_model_loaded",
     "relevant_memory_consulted_when_available",
     "known_state_reused_before_rediscovery",
@@ -156,6 +158,8 @@
   },
   "mutation_interlock": {
     "required_true_fields": [
+      "operator_identity_loaded",
+      "operator_estate_model_loaded",
       "operator_model_loaded",
       "relevant_memory_consulted_when_available",
       "known_state_reused_before_rediscovery",
