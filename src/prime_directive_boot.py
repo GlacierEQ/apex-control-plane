@@ -154,6 +154,21 @@ def _nonempty_text(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _structured_provenance(value: Any) -> tuple[str, str] | None:
+    """Return normalized (source class, locator) for explicit class:locator proof."""
+    if not _nonempty_text(value):
+        return None
+    raw = value.strip()
+    if ":" not in raw:
+        return None
+    source_class, locator = raw.split(":", 1)
+    source_class = source_class.strip()
+    locator = locator.strip()
+    if not source_class or not locator:
+        return None
+    return source_class, locator
+
+
 def _json_nonnegative_integer(value: Any) -> bool:
     return not isinstance(value, bool) and isinstance(value, int) and value >= 0
 
@@ -162,22 +177,33 @@ def _legacy_memory_state(receipt: Mapping[str, Any]) -> Mapping[str, Any] | None
     """Project legacy memory_search receipts into searched-mode compatibility state.
 
     Legacy receipts remain accepted so existing provider bridges do not break, but
-    they are explicitly classified as a search path caused by unavailable reusable
-    state. New requests emit only memory_state.
+    invalid legacy statuses remain invalid after projection instead of being
+    laundered into ``complete``. New requests emit only memory_state.
     """
     legacy = receipt.get("memory_search")
     if not isinstance(legacy, Mapping):
         return None
-    status = str(legacy.get("status", "")).strip().lower()
+
+    raw_status = legacy.get("status")
+    status = raw_status.strip().lower() if isinstance(raw_status, str) else ""
+    if status == "empty":
+        projected_status = "empty"
+    elif status in {"complete", "searched"}:
+        projected_status = "complete"
+    else:
+        projected_status = status
+
+    raw_tool = legacy.get("tool")
+    tool = raw_tool.strip() if isinstance(raw_tool, str) else ""
     hit_count = legacy.get("hit_count")
     return {
         "mode": "searched",
-        "status": "empty" if status == "empty" else "complete",
-        "source": f"legacy-memory-search:{str(legacy.get('tool', '')).strip() or 'unknown'}",
+        "status": projected_status,
+        "source": f"{tool}:legacy-memory-search" if tool else "",
         "item_count": hit_count,
         "known_state_available": False,
         "material_rediscovery_justification": "state_not_available_in_usable_form",
-        "tool": legacy.get("tool"),
+        "tool": raw_tool,
         "query": legacy.get("query"),
     }
 
@@ -202,12 +228,22 @@ def _validate_memory_state(
         errors.append("memory_state must be an object")
         return "", False
 
-    mode = str(row.get("mode", "")).strip().lower()
-    status = str(row.get("status", "")).strip().lower()
-    source = str(row.get("source", "")).strip()
+    raw_mode = row.get("mode")
+    raw_status = row.get("status")
+    raw_source = row.get("source")
+    raw_justification = row.get("material_rediscovery_justification")
+
+    mode = raw_mode.strip().lower() if isinstance(raw_mode, str) else ""
+    status = raw_status.strip().lower() if isinstance(raw_status, str) else ""
+    source = raw_source.strip() if isinstance(raw_source, str) else ""
+    provenance = _structured_provenance(raw_source)
     item_count = row.get("item_count")
     known_state_available = row.get("known_state_available")
-    justification = str(row.get("material_rediscovery_justification", "")).strip()
+    justification = (
+        raw_justification.strip()
+        if isinstance(raw_justification, str)
+        else ""
+    )
 
     allowed_modes = {
         str(value).strip().lower()
@@ -231,12 +267,16 @@ def _validate_memory_state(
         errors.append(
             "memory_state.status must be one of: " + ", ".join(sorted(allowed_statuses))
         )
-    if not source:
+    if not _nonempty_text(raw_source):
         errors.append("memory_state.source is required")
+    elif provenance is None:
+        errors.append("memory_state.source must use non-empty class:locator provenance")
     if not _json_nonnegative_integer(item_count):
         errors.append("memory_state.item_count must be a non-negative integer")
     if not isinstance(known_state_available, bool):
         errors.append("memory_state.known_state_available must be boolean")
+    if not isinstance(raw_justification, str):
+        errors.append("memory_state.material_rediscovery_justification must be a string")
 
     if mode == "reused":
         if status != "complete":
@@ -252,8 +292,13 @@ def _validate_memory_state(
         return mode, False
 
     if mode == "searched":
-        tool_name = _normalize_tool_name(row.get("tool"))
-        query = str(row.get("query", "")).strip()
+        raw_tool = row.get("tool")
+        raw_query = row.get("query")
+        tool_name = _normalize_tool_name(raw_tool) if isinstance(raw_tool, str) else ""
+        query = raw_query.strip() if isinstance(raw_query, str) else ""
+
+        if not isinstance(raw_tool, str):
+            errors.append("searched memory_state.tool must be a string")
         if not tool_name:
             errors.append("searched memory_state.tool is required")
         if tool_name and not _matches_alias(
@@ -262,8 +307,14 @@ def _validate_memory_state(
             errors.append("searched memory_state.tool is not an allowed tool alias")
         if tool_name and tool_name not in loaded_tool_names:
             errors.append("searched memory_state.tool must appear in loaded_tools")
+        if not isinstance(raw_query, str):
+            errors.append("searched memory_state.query must be a string")
         if not query:
             errors.append("searched memory_state.query is required")
+        if provenance is not None and tool_name:
+            source_class, _ = provenance
+            if _normalize_tool_name(source_class) != tool_name:
+                errors.append("searched memory_state.source class must match memory_state.tool")
         if not justification:
             errors.append(
                 "searched memory_state requires material_rediscovery_justification"
@@ -450,7 +501,7 @@ def build_prime_directive_boot_request(
     request["receipt_contract"].update(
         {
             "memory_state": (
-                "{mode:reused|searched,status:complete|empty,source:string,"
+                "{mode:reused|searched,status:complete|empty,source:class:locator,"
                 "item_count:integer,known_state_available:boolean,"
                 "material_rediscovery_justification:string,"
                 "tool?:string,query?:string}"
