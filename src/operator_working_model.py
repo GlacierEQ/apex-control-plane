@@ -48,6 +48,7 @@ def load_operator_working_model(policy: Mapping[str, Any]) -> dict[str, Any]:
         "name",
         "authority_semantics",
         "state_reuse",
+        "scope_fidelity",
         "working_patterns",
         "literal_operator_anchors",
         "failure_interrupt_vectors",
@@ -82,6 +83,27 @@ def load_operator_working_model(policy: Mapping[str, Any]) -> dict[str, Any]:
     if not str(state_reuse.get("rule", "")).strip():
         raise BootError("operator_working_model.state_reuse.rule must be non-empty")
 
+    scope_fidelity = value.get("scope_fidelity")
+    if not isinstance(scope_fidelity, Mapping):
+        raise BootError("operator working model scope_fidelity must be an object")
+    for field, expected in {
+        "operator_asserted_scope_is_source_state": True,
+        "scope_carries_across_execution_contexts": True,
+        "assistant_may_not_narrow_scope_without_explicit_operator_authorization": True,
+        "assistant_may_not_replace_systemic_with_local": True,
+        "assistant_may_not_replace_longitudinal_with_current_thread": True,
+        "assistant_may_not_introduce_partial_or_frequency_qualifiers_without_source_basis": True,
+        "operator_scope_correction_propagates_forward": True,
+    }.items():
+        _require_flag(scope_fidelity, field, expected, prefix="operator_working_model.scope_fidelity")
+    if not str(scope_fidelity.get("rule", "")).strip():
+        raise BootError("operator_working_model.scope_fidelity.rule must be non-empty")
+    examples = scope_fidelity.get("examples_of_forbidden_unbacked_narrowing")
+    if not isinstance(examples, list) or not any(str(item).strip() for item in examples):
+        raise BootError(
+            "operator_working_model.scope_fidelity.examples_of_forbidden_unbacked_narrowing must be non-empty"
+        )
+
     patterns = value.get("working_patterns")
     if not isinstance(patterns, Mapping) or not patterns:
         raise BootError("operator_working_model.working_patterns must be a non-empty object")
@@ -106,6 +128,7 @@ def load_operator_working_model(policy: Mapping[str, Any]) -> dict[str, Any]:
         "known_state_reused_before_rediscovery",
         "literal_operator_sources_preserved_separately_from_derived_interpretation",
         "working_method_applied_to_task_decomposition",
+        "operator_asserted_scope_preserved",
         "continuation_point_resolved",
         "rediscovery_if_performed_has_material_justification",
     ):
@@ -126,6 +149,7 @@ def public_operator_model_projection(model: Mapping[str, Any]) -> dict[str, Any]
         "schema_version": model.get("schema_version"),
         "authority_semantics": dict(model.get("authority_semantics", {})),
         "state_reuse": dict(model.get("state_reuse", {})),
+        "scope_fidelity": dict(model.get("scope_fidelity", {})),
         "working_patterns": dict(model.get("working_patterns", {})),
         "literal_operator_anchors": list(model.get("literal_operator_anchors", [])),
         "failure_interrupt_vectors": dict(model.get("failure_interrupt_vectors", {})),
