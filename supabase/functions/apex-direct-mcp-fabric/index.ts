@@ -7,7 +7,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_runtime_unavailabl
 
 type Json = Record<string, unknown>;
 type RpcId = string | number | null;
-type PluginKey = "github" | "notion" | "memory";
+type PluginKey = "github" | "notion" | "memory" | "runtime";
 
 const PLUGINS: Record<PluginKey, { key: string; server: string; endpoint: string; prefix: string }> = {
   github: {
@@ -27,6 +27,12 @@ const PLUGINS: Record<PluginKey, { key: string; server: string; endpoint: string
     server: "apex-direct-memory-mcp",
     endpoint: `${SUPABASE_URL}/functions/v1/apex-direct-memory-mcp`,
     prefix: "memory_",
+  },
+  runtime: {
+    key: "connector.runtime_mcp",
+    server: "apex-connector-tool-gateway",
+    endpoint: `${SUPABASE_URL}/functions/v1/apex-connector-tool-gateway`,
+    prefix: "connector_",
   },
 };
 
@@ -162,8 +168,8 @@ Deno.serve(async (req: Request) => {
     return response(ok(id, {
       protocolVersion: PROTOCOL_VERSION,
       capabilities: { tools: { listChanged: true } },
-      serverInfo: { name: "glaciereq-direct-mcp-fabric", version: "2.0.0" },
-      instructions: "GlacierEQ-owned direct MCP plugin fabric. Child MCP servers are authoritative for their own tool contracts. Current direct plugins: GitHub, Notion, Memory. Smithery is not required on these routes.",
+      serverInfo: { name: "glaciereq-direct-mcp-fabric", version: "3.0.0" },
+      instructions: "GlacierEQ-owned direct MCP plugin fabric. Child MCP servers are authoritative for their own tool contracts. Direct plugins: GitHub, Notion, Memory federation, and the governed Connector Runtime. Smithery is excluded from the Connector Runtime tool surface and is not required by the direct provider plugins.",
     }));
   }
 
