@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.5.0",
+  "schema_version": "1.6.0",
   "name": "APEX Enforced Startup",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
@@ -43,6 +43,9 @@
     "do_not_taskify_living_systems": true,
     "do_not_reduce_operator_to_preferences": true,
     "working_method_must_inform_decomposition": true,
+    "operator_asserted_scope_must_be_preserved": true,
+    "operator_asserted_scope_may_not_be_narrowed_without_explicit_operator_authorization": true,
+    "failure_scope_carries_across_execution_contexts": true,
     "failure_interrupts_trigger_upstream_state_recovery": true,
     "failure_interrupts_are_not_literalized_when_context_is_assistant_directed_continuity_failure": true,
     "rediscovery_requires_material_justification": [
@@ -94,6 +97,8 @@
     "known_state_reused_before_rediscovery",
     "literal_operator_sources_preserved_separately_from_derived_interpretation",
     "working_method_applied_to_task_decomposition",
+    "operator_scope_binding",
+    "operator_asserted_scope_preserved",
     "context_reconstructed",
     "prior_state_retrieved",
     "continuation_resolved",
@@ -152,6 +157,8 @@
     "inspection_scope_expansion": false,
     "operator_owned_asset_identity_preserved": true,
     "operator_working_method_preserved": true,
+    "operator_asserted_scope_preserved": true,
+    "unsupported_scope_narrowing": false,
     "known_state_reused_before_rediscovery": true
   },
   "mutation_interlock": {
@@ -161,6 +168,7 @@
       "known_state_reused_before_rediscovery",
       "literal_operator_sources_preserved_separately_from_derived_interpretation",
       "working_method_applied_to_task_decomposition",
+      "operator_asserted_scope_preserved",
       "context_reconstructed",
       "prior_state_retrieved",
       "continuation_resolved",
@@ -177,7 +185,8 @@
     "external_action_requires_operator_authorization_receipt": true,
     "external_action_requires_secondary_human_approval": false,
     "operator_owned_asset_disposition_requires_explicit_operator_direction": true,
-    "operator_owned_asset_value_ranking_requires_explicit_operator_direction": true
+    "operator_owned_asset_value_ranking_requires_explicit_operator_direction": true,
+    "operator_scope_narrowing_requires_explicit_operator_authorization": true
   },
   "completion_gate": {
     "proof_bound": true,
