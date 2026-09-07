@@ -3,8 +3,8 @@
 This layer sits above the existing continuity and Prime Directive proofs. It does
 not replace them. It binds those proofs to absolute OPERATOR project-direction
 authority, continuation, preserved prior gain, Operator-aligned coherent path
-selection, Operator asset sovereignty, and evidence-backed execution-state
-transitions.
+selection, Operator asset sovereignty, Operator-model state reuse, and
+evidence-backed execution-state transitions.
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from operator_working_model import load_operator_working_model, public_operator_model_projection
 from prime_directive_boot import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
@@ -62,6 +63,8 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         "schema_version",
         "authority",
         "operator_authority",
+        "operator_working_model_path",
+        "operator_model_state_reuse",
         "objective",
         "required_startup_fields",
         "execution_states",
@@ -96,6 +99,35 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
                 f"APEX operator_authority.{field_name} must be {expected!r}"
             )
 
+    state_reuse = value.get("operator_model_state_reuse")
+    if not isinstance(state_reuse, dict):
+        raise BootError("APEX operator_model_state_reuse must be an object")
+    required_state_reuse_flags = {
+        "required": True,
+        "working_model_is_derived_non_sovereign": True,
+        "current_operator_message_controls_current_mission": True,
+        "literal_operator_sources_outrank_working_model": True,
+        "relevant_memory_is_starting_state": True,
+        "known_state_must_be_reused_before_rediscovery": True,
+        "rediscovery_is_not_progress": True,
+        "historical_summaries_are_routing_hints_only": True,
+        "do_not_taskify_living_systems": True,
+        "do_not_reduce_operator_to_preferences": True,
+        "working_method_must_inform_decomposition": True,
+        "failure_interrupts_trigger_upstream_state_recovery": True,
+        "failure_interrupts_are_not_literalized_when_context_is_assistant_directed_continuity_failure": True,
+    }
+    for field_name, expected in required_state_reuse_flags.items():
+        if state_reuse.get(field_name) is not expected:
+            raise BootError(
+                f"APEX operator_model_state_reuse.{field_name} must be {expected!r}"
+            )
+    allowed_rediscovery = state_reuse.get("rediscovery_requires_material_justification")
+    if not isinstance(allowed_rediscovery, list) or not allowed_rediscovery:
+        raise BootError(
+            "APEX operator_model_state_reuse.rediscovery_requires_material_justification must be non-empty"
+        )
+
     interlock = value.get("mutation_interlock")
     if not isinstance(interlock, dict) or not isinstance(
         interlock.get("required_true_fields"), list
@@ -113,6 +145,10 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         raise BootError(
             "APEX operator-owned asset value ranking must remain Operator-directed"
         )
+
+    # Loading the referenced working model is part of policy validation. This makes
+    # an absent or authority-inverted model a boot defect rather than advisory prose.
+    load_operator_working_model(value)
     return value
 
 
@@ -302,6 +338,8 @@ def validate_apex_startup_receipt(
 
 
 def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[str, Any]:
+    operator_model = load_operator_working_model(policy)
+    operator_model_path = str(policy.get("operator_working_model_path", "")).strip()
     return {
         "request_type": "apex_genesis_enforced_startup",
         "schema_version": policy.get("schema_version"),
@@ -309,7 +347,16 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
         "authority": policy.get("authority"),
         "operator_authority": dict(policy.get("operator_authority", {})),
         "objective": policy.get("objective"),
+        "operator_working_model_ref": operator_model_path,
+        "operator_working_model": public_operator_model_projection(operator_model),
         "requirements": {
+            "load_operator_working_model_before_task_decomposition": True,
+            "consult_relevant_memory_when_available": True,
+            "reuse_known_state_before_rediscovery": True,
+            "rediscovery_is_not_progress": True,
+            "preserve_literal_operator_sources_separately_from_derived_model": True,
+            "apply_operator_working_method_to_task_decomposition": True,
+            "failure_interrupts_trigger_upstream_state_recovery": True,
             "context_before_mutation": True,
             "continuation_before_restart": True,
             "preserve_prior_valid_gains": True,
@@ -334,6 +381,12 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
             "apex_startup": {
                 "authority": "operator_intent",
                 "objective": "maximum_coherent_advance",
+                "operator_model_loaded": True,
+                "relevant_memory_consulted_when_available": True,
+                "known_state_reused_before_rediscovery": True,
+                "literal_operator_sources_preserved_separately_from_derived_interpretation": True,
+                "working_method_applied_to_task_decomposition": True,
+                "operator_working_model_ref": operator_model_path,
                 "context_reconstructed": True,
                 "prior_state_retrieved": True,
                 "continuation_resolved": True,
