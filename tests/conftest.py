@@ -3,7 +3,8 @@
 The Prime Directive ground-truth set is policy-defined and may expand when new
 startup authority surfaces become proof-bound. Older test helpers predated that
 policy expansion and hard-coded two files. This collection hook replaces only
-that stale helper with a policy-driven equivalent; production code is untouched.
+that stale ground-truth helper with a policy-driven equivalent while preserving
+the production reuse-before-rediscovery memory semantics.
 """
 from __future__ import annotations
 
@@ -17,12 +18,12 @@ def _patch_prime_directive_helper(module: ModuleType) -> None:
         return
 
     def _record_first_three_stages(enforcer: Any) -> None:
-        enforcer.record_tool_result(
-            "personal_context.search",
-            {"matches": [{"id": "memory-hit"}]},
-            arguments={"query": "task topic and user project context"},
-            call_id="mem-1",
-            success=True,
+        # The compatibility hook must not silently restore the old mandatory
+        # search behavior. The fixture already has relevant continuity state in
+        # process, so prove reuse with provenance instead of rediscovering it.
+        enforcer.record_memory_state_reuse(
+            source="pytest-fixture:known-continuity-state",
+            item_count=1,
         )
 
         policy = module.load_policy()
@@ -42,10 +43,9 @@ def _patch_prime_directive_helper(module: ModuleType) -> None:
         enforcer.record_tool_result(
             "api_tool.list_resources",
             {
-                "loaded_tools": [
-                    "personal_context.search",
-                    "GitHub.fetch_file",
-                    "api_tool.list_resources",
+                "resources": [
+                    {"name": "GitHub.fetch_file"},
+                    {"name": "api_tool.list_resources"},
                 ],
                 "gaps": [],
             },

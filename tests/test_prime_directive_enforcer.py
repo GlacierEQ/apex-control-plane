@@ -33,11 +33,35 @@ def _tool_call(name: str, arguments: object, call_id: str) -> dict:
     }
 
 
-def _valid_combined_validation(*, empty_memory: bool = False):
+def _valid_combined_validation(*, empty_memory: bool = False, reuse_memory: bool = True):
     manifest = load_manifest()
     policy = load_policy()
     profiles = normalize_profiles(manifest, ["systems"])
     versions = required_note_versions(manifest, profiles)
+    memory_state = (
+        {
+            "mode": "reused",
+            "status": "complete",
+            "source": "conversation-context:current-worker",
+            "item_count": 2,
+            "known_state_available": True,
+            "material_rediscovery_justification": "",
+        }
+        if reuse_memory and not empty_memory
+        else {
+            "mode": "searched",
+            "status": "empty" if empty_memory else "complete",
+            "source": "personal_context.search:current-task",
+            "item_count": 0 if empty_memory else 1,
+            "known_state_available": False,
+            "material_rediscovery_justification": "state_not_available_in_usable_form",
+            "tool": "personal_context.search",
+            "query": "current task and user project context",
+        }
+    )
+    loaded_tools = ["GitHub.fetch_file", "api_tool.list_resources"]
+    if memory_state["mode"] == "searched":
+        loaded_tools.append("personal_context.search")
     receipt = {
         "boot_manifest_id": manifest["canonical_mem_manifest"]["id"],
         "boot_manifest_version": manifest["canonical_mem_manifest"]["version"],
@@ -69,12 +93,7 @@ def _valid_combined_validation(*, empty_memory: bool = False):
         "next_material_action": "run startup tests",
         "boot_status": "complete",
         "blockers": [],
-        "memory_search": {
-            "tool": "personal_context.search",
-            "query": "current task and user project context",
-            "status": "empty" if empty_memory else "searched",
-            "hit_count": 0 if empty_memory else 1,
-        },
+        "memory_state": memory_state,
         "ground_truth_files_loaded": [
             {
                 "path": row["path"],
@@ -86,11 +105,7 @@ def _valid_combined_validation(*, empty_memory: bool = False):
         "tool_inventory": {
             "tool": "api_tool.list_resources",
             "status": "complete",
-            "loaded_tools": [
-                "personal_context.search",
-                "GitHub.fetch_file",
-                "api_tool.list_resources",
-            ],
+            "loaded_tools": loaded_tools,
             "gaps": [],
         },
     }
@@ -104,18 +119,9 @@ def _valid_combined_validation(*, empty_memory: bool = False):
 
 
 def _record_first_three_stages(enforcer: StartupGateEnforcer) -> None:
-    enforcer.intercept_llm_response(
-        _tool_call(
-            "personal_context.search",
-            {"query": "current task and user project context"},
-            "memory-1",
-        )
-    )
-    enforcer.record_tool_result(
-        "personal_context.search",
-        {"results": []},
-        call_id="memory-1",
-        success=True,
+    enforcer.record_memory_state_reuse(
+        source="conversation-context:current-worker",
+        item_count=2,
     )
 
     for call_id, path, content in (
@@ -157,10 +163,36 @@ def test_text_before_gate_is_replaced_with_hard_correction() -> None:
 
     assert result["type"] == "hard_correction"
     assert result["gate_passed"] is False
-    assert "memory_search" in result["missing_stages"]
+    assert "memory_state" in result["missing_stages"]
     assert "current_source_open" in result["missing_stages"]
     assert "receipt_validation" in result["missing_stages"]
-    assert "Do not apologize" in result["content"]
+    assert "Consult relevant already-available memory/continuity state first" in result["content"]
+
+
+def test_reused_memory_state_advances_without_search_tool_call() -> None:
+    enforcer = StartupGateEnforcer()
+    snapshot = enforcer.record_memory_state_reuse(
+        source="conversation-context:current-worker",
+        item_count=3,
+    )
+
+    assert snapshot.memory_search_complete is True
+    assert snapshot.memory_search_empty is False
+    assert snapshot.memory_state_mode == "reused"
+    assert "personal_context.search" not in snapshot.tools_invoked
+    assert "memory_state" not in snapshot.missing_stages
+    assert snapshot.gate_passed is False
+
+
+def test_reused_memory_state_requires_provenance_and_nonempty_state() -> None:
+    enforcer = StartupGateEnforcer()
+    with pytest.raises(GateViolation, match="provenance source"):
+        enforcer.record_memory_state_reuse(source="", item_count=2)
+    with pytest.raises(GateViolation, match="item_count>=1"):
+        enforcer.record_memory_state_reuse(
+            source="conversation-context:current-worker",
+            item_count=0,
+        )
 
 
 def test_pre_gate_tool_call_suppresses_all_provider_text_fields() -> None:
@@ -195,7 +227,7 @@ def test_nested_provider_text_is_suppressed_without_removing_tool_data() -> None
     assert result["output"][1]["name"] == "personal_context.search"
 
 
-def test_tool_call_without_successful_result_does_not_advance_gate() -> None:
+def test_search_call_without_successful_result_does_not_advance_memory_state() -> None:
     enforcer = StartupGateEnforcer()
     enforcer.intercept_llm_response(
         _tool_call("personal_context.search", {"query": "case"}, "memory-1")
@@ -208,6 +240,25 @@ def test_tool_call_without_successful_result_does_not_advance_gate() -> None:
     )
 
     assert snapshot.memory_search_complete is False
+    assert snapshot.memory_state_mode == ""
+    assert snapshot.gate_passed is False
+
+
+def test_successful_search_advances_memory_state_as_searched() -> None:
+    enforcer = StartupGateEnforcer()
+    enforcer.intercept_llm_response(
+        _tool_call("personal_context.search", {"query": "case"}, "memory-1")
+    )
+    snapshot = enforcer.record_tool_result(
+        "personal_context.search",
+        {"results": [{"id": "one"}]},
+        call_id="memory-1",
+        success=True,
+    )
+
+    assert snapshot.memory_search_complete is True
+    assert snapshot.memory_search_empty is False
+    assert snapshot.memory_state_mode == "searched"
     assert snapshot.gate_passed is False
 
 
@@ -225,6 +276,7 @@ def test_empty_memory_search_result_still_counts_as_searched() -> None:
 
     assert snapshot.memory_search_complete is True
     assert snapshot.memory_search_empty is True
+    assert snapshot.memory_state_mode == "searched"
     assert snapshot.gate_passed is False
 
 
@@ -290,6 +342,7 @@ def test_partial_startup_does_not_complete_documented_five_stage_gate() -> None:
     _record_first_three_stages(enforcer)
     snapshot = enforcer.snapshot()
 
+    assert snapshot.memory_state_mode == "reused"
     assert snapshot.gate_passed is False
     assert snapshot.current_source_complete is False
     assert snapshot.receipt_validation_complete is False
@@ -297,12 +350,13 @@ def test_partial_startup_does_not_complete_documented_five_stage_gate() -> None:
     assert "receipt_validation" in snapshot.missing_stages
 
 
-def test_sealed_combined_validation_completes_gate_and_allows_text() -> None:
+def test_sealed_reuse_validation_completes_gate_and_allows_text() -> None:
     enforcer = StartupGateEnforcer()
     _complete_gate(enforcer)
 
     snapshot = enforcer.snapshot()
     assert snapshot.gate_passed is True
+    assert snapshot.memory_state_mode == "reused"
     assert snapshot.current_source_complete is True
     assert snapshot.receipt_validation_complete is True
     result = enforcer.intercept_llm_response(
@@ -311,9 +365,11 @@ def test_sealed_combined_validation_completes_gate_and_allows_text() -> None:
     assert result["content"] == "Execution completed with receipts."
 
 
-def test_empty_memory_phrase_is_prepended_once_after_complete_gate() -> None:
+def test_empty_memory_phrase_is_prepended_once_only_after_searched_empty_state() -> None:
     enforcer = StartupGateEnforcer()
-    enforcer.attach_boot_validation(_valid_combined_validation(empty_memory=True))
+    enforcer.attach_boot_validation(
+        _valid_combined_validation(empty_memory=True, reuse_memory=False)
+    )
 
     first = enforcer.intercept_llm_response(
         {"role": "assistant", "content": "Execution continues."}
@@ -326,6 +382,15 @@ def test_empty_memory_phrase_is_prepended_once_after_complete_gate() -> None:
         "searched memory, no matching entry\n\nExecution continues."
     )
     assert second["content"] == "Second response."
+
+
+def test_reused_memory_never_emits_empty_search_phrase() -> None:
+    enforcer = StartupGateEnforcer()
+    enforcer.attach_boot_validation(_valid_combined_validation())
+    result = enforcer.intercept_llm_response(
+        {"role": "assistant", "content": "Continue from known state."}
+    )
+    assert result["content"] == "Continue from known state."
 
 
 def test_attach_boot_validation_rejects_forged_mapping() -> None:
@@ -394,8 +459,13 @@ def test_audit_log_never_contains_prompt_or_tool_arguments() -> None:
             "memory-1",
         )
     )
+    enforcer.record_memory_state_reuse(
+        source="conversation-context:private-state",
+        item_count=1,
+    )
     serialized = repr(enforcer.audit_events())
 
     assert "private task details" not in serialized
+    assert "private-state" not in serialized
     assert "arguments" not in serialized
     assert "content" not in serialized

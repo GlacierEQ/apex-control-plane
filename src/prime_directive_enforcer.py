@@ -1,9 +1,12 @@
 """GlacierEQ Prime Directive response middleware.
 
 This module blocks user-facing model text until the startup gate is proven.
-Tool calls are allowed through, but a stage advances only after a successful
-tool result is recorded. The module is provider-shape tolerant and stores no
-tool arguments or model content in its audit log.
+Relevant memory/continuity state must be consulted before text, but a fresh
+search is not mandatory: already-available state may be explicitly reused with
+provenance. Search tool calls remain valid when rediscovery is materially
+justified. Other tool calls are allowed through, but a stage advances only after
+a successful result is recorded. The module is provider-shape tolerant and
+stores no tool arguments or model content in its audit log.
 """
 from __future__ import annotations
 
@@ -39,6 +42,7 @@ class GateSnapshot:
     gate_passed: bool
     memory_search_complete: bool
     memory_search_empty: bool
+    memory_state_mode: str
     ground_truth_files_loaded: tuple[str, ...]
     tool_inventory_complete: bool
     current_source_complete: bool
@@ -53,8 +57,15 @@ class GateSnapshot:
 @dataclass(slots=True)
 class _MutableState:
     gate_passed: bool = False
+    # Compatibility field name: true now means the broader memory-state stage is
+    # complete, whether by reuse or by a materially justified search.
     memory_search_complete: bool = False
     memory_search_empty: bool = False
+    memory_state_mode: str = ""
+    # Provenance-backed reuse is a monotonic startup fact. Once established, a
+    # later retrieval or provider-side alias collision cannot downgrade the
+    # acquisition mode to `searched`.
+    memory_reuse_locked: bool = False
     empty_result_phrase_emitted: bool = False
     ground_truth_files_loaded: set[str] = field(default_factory=set)
     tool_inventory_complete: bool = False
@@ -120,6 +131,34 @@ class StartupGateEnforcer:
         with self._lock:
             return tuple(self._state.tools_invoked)
 
+    def record_memory_state_reuse(self, *, source: str, item_count: int) -> GateSnapshot:
+        """Prove that relevant already-available state was consulted and reused.
+
+        This is the non-tool-call path through the memory-state stage. The host
+        execution loop supplies a provenance-bearing source locator for state
+        already present in the worker/context. It may not use this method for an
+        empty or invented state projection.
+        """
+        with self._lock:
+            if self._state.terminal_blocked:
+                raise GateViolation("startup gate is terminally blocked")
+            if not isinstance(source, str) or not source.strip():
+                raise GateViolation("memory-state reuse requires a provenance source")
+            if isinstance(item_count, bool) or not isinstance(item_count, int) or item_count < 1:
+                raise GateViolation("memory-state reuse requires item_count>=1")
+            self._state.memory_search_complete = True
+            self._state.memory_search_empty = False
+            self._state.memory_state_mode = "reused"
+            self._state.memory_reuse_locked = True
+            self._audit(
+                "memory_state_reused",
+                source_type=source.split(":", 1)[0].strip() or "unknown",
+                item_count=item_count,
+                success=True,
+            )
+            self._complete_if_ready()
+            return self.snapshot()
+
     def intercept_llm_response(self, llm_output: Mapping[str, Any]) -> dict[str, Any]:
         """Return a tool-only message, allowed text, or a hard correction.
 
@@ -183,9 +222,15 @@ class StartupGateEnforcer:
             if normalized not in self._state.successful_tools:
                 self._state.successful_tools.append(normalized)
 
-            if self._matches_stage("memory_search", normalized):
+            if not self._state.memory_reuse_locked and self._is_memory_search_tool(normalized):
                 self._state.memory_search_complete = True
                 self._state.memory_search_empty = _result_is_empty_search(result)
+                self._state.memory_state_mode = "searched"
+                self._audit(
+                    "memory_state_searched",
+                    empty=self._state.memory_search_empty,
+                    success=True,
+                )
 
             if self._matches_stage("tool_inventory", normalized):
                 if _has_structured_inventory(result):
@@ -194,16 +239,24 @@ class StartupGateEnforcer:
             if self._matches_stage("ground_truth_read", normalized):
                 self._record_ground_truth(arguments=arguments, result=result)
 
+            # Reuse is monotonic. This defensive normalization keeps the internal
+            # compatibility fields consistent even if a future stage handler is
+            # extended in a way that touches memory-state projections.
+            if self._state.memory_reuse_locked:
+                self._state.memory_search_complete = True
+                self._state.memory_search_empty = False
+                self._state.memory_state_mode = "reused"
+
             self._complete_if_ready()
             return self.snapshot()
 
     def attach_boot_validation(self, validation: Any) -> GateSnapshot:
         """Attach a sealed combined receipt validation issued in this process.
 
-        A complete combined validation proves the memory search, ground-truth
-        bytes, loaded-tool inventory, current-source receipt, and receipt
-        validation stages. Arbitrary mappings and hand-built dataclasses are
-        rejected.
+        A complete combined validation proves the memory-state acquisition,
+        ground-truth bytes, loaded-tool inventory, current-source receipt, and
+        receipt-validation stages. Arbitrary mappings and hand-built dataclasses
+        are rejected.
         """
         from prime_directive_boot import is_authentic_validation
 
@@ -225,12 +278,22 @@ class StartupGateEnforcer:
             self._state.memory_search_empty = bool(
                 getattr(validation, "memory_search_empty", False)
             )
+            self._state.memory_state_mode = str(
+                getattr(validation, "memory_state_mode", "") or ""
+            ).strip().lower()
+            self._state.memory_reuse_locked = self._state.memory_state_mode == "reused"
+            if self._state.memory_reuse_locked:
+                self._state.memory_search_empty = False
             self._state.ground_truth_files_loaded.update(self._required_files)
             self._state.tool_inventory_complete = True
             self._state.current_source_complete = True
             self._state.receipt_validation_complete = True
             self._state.gate_passed = True
-            self._audit("gate_complete", source="sealed_combined_validation")
+            self._audit(
+                "gate_complete",
+                source="sealed_combined_validation",
+                memory_state_mode=self._effective_memory_state_mode(),
+            )
             return self.snapshot()
 
     def mark_gate_passed(self) -> GateSnapshot:
@@ -250,7 +313,10 @@ class StartupGateEnforcer:
             return GateSnapshot(
                 gate_passed=self._state.gate_passed,
                 memory_search_complete=self._state.memory_search_complete,
-                memory_search_empty=self._state.memory_search_empty,
+                memory_search_empty=(
+                    False if self._state.memory_reuse_locked else self._state.memory_search_empty
+                ),
+                memory_state_mode=self._effective_memory_state_mode(),
                 ground_truth_files_loaded=tuple(
                     sorted(self._state.ground_truth_files_loaded)
                 ),
@@ -300,6 +366,15 @@ class StartupGateEnforcer:
             elif target_matches:
                 self._audit("ground_truth_hash_mismatch", file=path, success=False)
 
+    def _is_memory_search_tool(self, tool_name: str) -> bool:
+        """Match only explicit memory-search tools; no generic suffix inference."""
+        return tool_name in self._aliases.get("memory_search", set())
+
+    def _effective_memory_state_mode(self) -> str:
+        if self._state.memory_reuse_locked:
+            return "reused"
+        return self._state.memory_state_mode
+
     def _matches_stage(self, stage: str, tool_name: str) -> bool:
         aliases = self._aliases.get(stage, set())
         if tool_name in aliases:
@@ -314,7 +389,7 @@ class StartupGateEnforcer:
     def _missing_stages(self) -> list[str]:
         missing: list[str] = []
         if not self._state.memory_search_complete:
-            missing.append("memory_search")
+            missing.append("memory_state")
         missing_files = sorted(set(self._required_files) - self._state.ground_truth_files_loaded)
         if missing_files:
             missing.append("ground_truth_read:" + ",".join(missing_files))
@@ -328,7 +403,9 @@ class StartupGateEnforcer:
 
     def _enforce_empty_memory_phrase(self, output: Mapping[str, Any]) -> dict[str, Any]:
         if (
-            not self._state.memory_search_empty
+            self._state.memory_reuse_locked
+            or self._effective_memory_state_mode() != "searched"
+            or not self._state.memory_search_empty
             or self._state.empty_result_phrase_emitted
         ):
             return dict(output)
@@ -360,8 +437,12 @@ class StartupGateEnforcer:
         self._audit("hard_correction", trigger=trigger, success=False)
         numbered = []
         for index, stage in enumerate(self._missing_stages(), start=1):
-            if stage == "memory_search":
-                instruction = "Run memory_search on the task topic and user/project context."
+            if stage == "memory_state":
+                instruction = (
+                    "Consult relevant already-available memory/continuity state first. "
+                    "Record provenance-bearing reuse when usable state exists; search "
+                    "only when rediscovery is materially justified."
+                )
             elif stage.startswith("ground_truth_read:"):
                 files = stage.split(":", 1)[1]
                 instruction = f"Read and hash-verify the missing ground-truth file(s): {files}."
@@ -380,7 +461,8 @@ class StartupGateEnforcer:
                 "SYSTEM OVERRIDE: FATAL PRIME DIRECTIVE VIOLATION. "
                 "You attempted to emit text before the STARTUP GATE completed. "
                 "Do not apologize. Do not output conversational text. "
-                "Output the required tool calls now.\n" + "\n".join(numbered)
+                "Complete the required state-acquisition/proof stages now.\n"
+                + "\n".join(numbered)
             ),
             "missing_stages": self._missing_stages(),
             "gate_passed": False,

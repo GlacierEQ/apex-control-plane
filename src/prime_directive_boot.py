@@ -1,9 +1,12 @@
 """Prime Directive augmentation for the Casey continuity auto-boot gate.
 
-The base continuity validator proves exact Mem notes, current sources, lanes,
-deadlines, and repository receipts. This module adds startup behavior proof: a
-memory search was executed, pinned ground-truth files were read and verified
-against active bytes, and the worker enumerated its loaded tools.
+The base continuity validator proves exact continuity notes, current sources,
+lanes, deadlines, and repository receipts. This module adds startup behavior
+proof without forcing redundant rediscovery: relevant memory/continuity state
+must be consulted, and may be satisfied either by provenance-bearing reuse of
+already-available state or by a materially justified search. Pinned ground-truth
+files are still read and verified against active bytes, and the worker still
+proves its loaded-tool inventory.
 """
 from __future__ import annotations
 
@@ -37,6 +40,7 @@ class PrimeDirectiveBootValidation:
     profiles: tuple[str, ...]
     errors: tuple[str, ...]
     memory_search_empty: bool
+    memory_state_mode: str
     _seal: object = field(repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -56,6 +60,7 @@ def _issue_validation(
     profiles: Sequence[str],
     errors: Sequence[str],
     memory_search_empty: bool = False,
+    memory_state_mode: str = "",
 ) -> PrimeDirectiveBootValidation:
     return PrimeDirectiveBootValidation(
         ok=ok,
@@ -63,6 +68,7 @@ def _issue_validation(
         profiles=tuple(profiles),
         errors=tuple(errors),
         memory_search_empty=memory_search_empty,
+        memory_state_mode=str(memory_state_mode or "").strip().lower(),
         _seal=_VALIDATION_SEAL,
     )
 
@@ -144,6 +150,138 @@ def _source_locator(value: str) -> str:
     return value.split(":", 1)[1].strip() if ":" in value else ""
 
 
+def _nonempty_text(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _json_nonnegative_integer(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, int) and value >= 0
+
+
+def _legacy_memory_state(receipt: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """Project legacy memory_search receipts into searched-mode compatibility state.
+
+    Legacy receipts remain accepted so existing provider bridges do not break, but
+    they are explicitly classified as a search path caused by unavailable reusable
+    state. New requests emit only memory_state.
+    """
+    legacy = receipt.get("memory_search")
+    if not isinstance(legacy, Mapping):
+        return None
+    status = str(legacy.get("status", "")).strip().lower()
+    hit_count = legacy.get("hit_count")
+    return {
+        "mode": "searched",
+        "status": "empty" if status == "empty" else "complete",
+        "source": f"legacy-memory-search:{str(legacy.get('tool', '')).strip() or 'unknown'}",
+        "item_count": hit_count,
+        "known_state_available": False,
+        "material_rediscovery_justification": "state_not_available_in_usable_form",
+        "tool": legacy.get("tool"),
+        "query": legacy.get("query"),
+    }
+
+
+def _memory_state(receipt: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    row = receipt.get("memory_state")
+    if isinstance(row, Mapping):
+        return row
+    return _legacy_memory_state(receipt)
+
+
+def _validate_memory_state(
+    policy: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+    loaded_tool_names: set[str],
+    errors: list[str],
+) -> tuple[str, bool]:
+    """Validate reuse-first memory acquisition and return (mode, searched_empty)."""
+    requirements = policy.get("receipt_requirements", {})
+    row = _memory_state(receipt)
+    if not isinstance(row, Mapping):
+        errors.append("memory_state must be an object")
+        return "", False
+
+    mode = str(row.get("mode", "")).strip().lower()
+    status = str(row.get("status", "")).strip().lower()
+    source = str(row.get("source", "")).strip()
+    item_count = row.get("item_count")
+    known_state_available = row.get("known_state_available")
+    justification = str(row.get("material_rediscovery_justification", "")).strip()
+
+    allowed_modes = {
+        str(value).strip().lower()
+        for value in requirements.get("memory_state_modes", ("reused", "searched"))
+    }
+    allowed_statuses = {
+        str(value).strip().lower()
+        for value in requirements.get("memory_state_statuses", ("complete", "empty"))
+    }
+    allowed_justifications = {
+        str(value).strip()
+        for value in requirements.get("rediscovery_material_justifications", ())
+        if str(value).strip()
+    }
+
+    if mode not in allowed_modes:
+        errors.append(
+            "memory_state.mode must be one of: " + ", ".join(sorted(allowed_modes))
+        )
+    if status not in allowed_statuses:
+        errors.append(
+            "memory_state.status must be one of: " + ", ".join(sorted(allowed_statuses))
+        )
+    if not source:
+        errors.append("memory_state.source is required")
+    if not _json_nonnegative_integer(item_count):
+        errors.append("memory_state.item_count must be a non-negative integer")
+    if not isinstance(known_state_available, bool):
+        errors.append("memory_state.known_state_available must be boolean")
+
+    if mode == "reused":
+        if status != "complete":
+            errors.append("reused memory_state requires status=complete")
+        if _json_nonnegative_integer(item_count) and item_count < 1:
+            errors.append("reused memory_state requires item_count>=1")
+        if known_state_available is not True:
+            errors.append("reused memory_state requires known_state_available=true")
+        if justification:
+            errors.append(
+                "reused memory_state must not claim a rediscovery justification"
+            )
+        return mode, False
+
+    if mode == "searched":
+        tool_name = _normalize_tool_name(row.get("tool"))
+        query = str(row.get("query", "")).strip()
+        if not tool_name:
+            errors.append("searched memory_state.tool is required")
+        if tool_name and not _matches_alias(
+            tool_name, _stage_aliases(policy, "memory_search")
+        ):
+            errors.append("searched memory_state.tool is not an allowed tool alias")
+        if tool_name and tool_name not in loaded_tool_names:
+            errors.append("searched memory_state.tool must appear in loaded_tools")
+        if not query:
+            errors.append("searched memory_state.query is required")
+        if not justification:
+            errors.append(
+                "searched memory_state requires material_rediscovery_justification"
+            )
+        elif allowed_justifications and justification not in allowed_justifications:
+            errors.append(
+                "memory_state.material_rediscovery_justification must be one of: "
+                + ", ".join(sorted(allowed_justifications))
+            )
+        if status == "empty" and _json_nonnegative_integer(item_count) and item_count != 0:
+            errors.append("empty searched memory_state requires item_count=0")
+        if status == "complete" and _json_nonnegative_integer(item_count) and item_count == 0:
+            errors.append("searched memory_state with item_count=0 requires status=empty")
+        return mode, status == "empty" and item_count == 0
+
+    return mode, False
+
+
 def validate_prime_directive_receipt(
     policy: Mapping[str, Any],
     receipt: Mapping[str, Any],
@@ -186,34 +324,7 @@ def validate_prime_directive_receipt(
         if inventory_tool and inventory_tool not in loaded_tool_names:
             errors.append("tool_inventory.tool must appear in loaded_tools")
 
-    memory = receipt.get("memory_search")
-    if not isinstance(memory, Mapping):
-        errors.append("memory_search must be an object")
-    else:
-        memory_tool = _normalize_tool_name(memory.get("tool"))
-        query = str(memory.get("query", "")).strip()
-        status = str(memory.get("status", "")).strip().lower()
-        allowed = set(requirements.get("memory_search_statuses", ()))
-        if not memory_tool:
-            errors.append("memory_search.tool is required")
-        if not _matches_alias(memory_tool, _stage_aliases(policy, "memory_search")):
-            errors.append("memory_search.tool is not an allowed tool alias")
-        if memory_tool and memory_tool not in loaded_tool_names:
-            errors.append("memory_search.tool must appear in loaded_tools")
-        if not query:
-            errors.append("memory_search.query is required")
-        if status not in allowed:
-            errors.append(
-                "memory_search.status must be one of: " + ", ".join(sorted(allowed))
-            )
-        hit_count = memory.get("hit_count")
-        if isinstance(hit_count, bool) or not isinstance(hit_count, int):
-            errors.append("memory_search.hit_count must be a non-negative integer")
-        else:
-            if hit_count < 0:
-                errors.append("memory_search.hit_count must be a non-negative integer")
-            if status == "empty" and hit_count != 0:
-                errors.append("empty memory_search requires hit_count=0")
+    _validate_memory_state(policy, receipt, loaded_tool_names, errors)
 
     expected_files = {
         str(row["path"]): str(row["sha256"]).lower()
@@ -321,7 +432,10 @@ def build_prime_directive_boot_request(
     }
     request["requirements"].update(
         {
-            "run_memory_search_before_text": True,
+            "consult_relevant_memory_state_before_text": True,
+            "reuse_known_state_before_rediscovery": True,
+            "memory_search_only_when_materially_justified": True,
+            "rediscovery_is_not_progress": True,
             "read_and_hash_verify_ground_truth_files": True,
             "enumerate_loaded_tools": True,
             "open_current_task_sources": True,
@@ -335,9 +449,11 @@ def build_prime_directive_boot_request(
     )
     request["receipt_contract"].update(
         {
-            "memory_search": (
-                "{tool:string,query:string,status:complete|searched|empty,"
-                "hit_count:integer}"
+            "memory_state": (
+                "{mode:reused|searched,status:complete|empty,source:string,"
+                "item_count:integer,known_state_available:boolean,"
+                "material_rediscovery_justification:string,"
+                "tool?:string,query?:string}"
             ),
             "ground_truth_files_loaded": (
                 "array[{path:string,sha256:string,source:string}]"
@@ -375,11 +491,17 @@ def validate_combined_receipt(
             repo_root=repo_root,
         )
     )
-    memory = receipt.get("memory_search")
+    memory = _memory_state(receipt)
+    memory_mode = (
+        str(memory.get("mode", "")).strip().lower()
+        if isinstance(memory, Mapping)
+        else ""
+    )
     memory_search_empty = (
         isinstance(memory, Mapping)
+        and memory_mode == "searched"
         and str(memory.get("status", "")).strip().lower() == "empty"
-        and memory.get("hit_count") == 0
+        and memory.get("item_count") == 0
     )
     return _issue_validation(
         ok=not errors,
@@ -387,6 +509,7 @@ def validate_combined_receipt(
         profiles=profiles,
         errors=errors,
         memory_search_empty=memory_search_empty,
+        memory_state_mode=memory_mode,
     )
 
 
@@ -471,6 +594,7 @@ def automatic_prime_directive_boot() -> PrimeDirectiveBootValidation | None:
             profiles=profiles,
             errors=validation.errors,
             memory_search_empty=validation.memory_search_empty,
+            memory_state_mode=validation.memory_state_mode,
         )
         os.environ["CASEY_BOOT_STATUS"] = "degraded"
         os.environ["GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS"] = "degraded"
