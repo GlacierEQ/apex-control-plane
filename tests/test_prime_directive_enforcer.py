@@ -20,6 +20,12 @@ PROMPT_CONTENT = (ROOT / "AGENT_SYSTEM_PROMPT.md").read_text(encoding="utf-8")
 
 
 def _tool_call(name: str, arguments: object, call_id: str) -> dict:
+    if name == "personal_context.search" and isinstance(arguments, dict):
+        arguments = dict(arguments)
+        arguments.setdefault(
+            "material_rediscovery_justification",
+            "state_not_available_in_usable_form",
+        )
     return {
         "role": "assistant",
         "content": "I will explain this first.",
@@ -122,6 +128,7 @@ def _record_first_three_stages(enforcer: StartupGateEnforcer) -> None:
     enforcer.record_memory_state_reuse(
         source="conversation-context:current-worker",
         item_count=2,
+        known_state_available=True,
     )
 
     for call_id, path, content in (
@@ -174,6 +181,7 @@ def test_reused_memory_state_advances_without_search_tool_call() -> None:
     snapshot = enforcer.record_memory_state_reuse(
         source="conversation-context:current-worker",
         item_count=3,
+        known_state_available=True,
     )
 
     assert snapshot.memory_search_complete is True
@@ -187,12 +195,81 @@ def test_reused_memory_state_advances_without_search_tool_call() -> None:
 def test_reused_memory_state_requires_provenance_and_nonempty_state() -> None:
     enforcer = StartupGateEnforcer()
     with pytest.raises(GateViolation, match="provenance source"):
-        enforcer.record_memory_state_reuse(source="", item_count=2)
+        enforcer.record_memory_state_reuse(
+            source="", item_count=2, known_state_available=True
+        )
     with pytest.raises(GateViolation, match="item_count>=1"):
         enforcer.record_memory_state_reuse(
             source="conversation-context:current-worker",
             item_count=0,
+            known_state_available=True,
         )
+
+
+def test_reused_memory_state_requires_structured_locator_and_available_state() -> None:
+    enforcer = StartupGateEnforcer()
+    with pytest.raises(GateViolation, match="structured class:locator"):
+        enforcer.record_memory_state_reuse(
+            source="invented-projection",
+            item_count=2,
+            known_state_available=True,
+        )
+    with pytest.raises(GateViolation, match="known_state_available=true"):
+        enforcer.record_memory_state_reuse(
+            source="conversation-context:current-worker",
+            item_count=2,
+            known_state_available=False,
+        )
+
+
+def test_successful_search_without_material_reason_does_not_advance() -> None:
+    enforcer = StartupGateEnforcer()
+    payload = _tool_call(
+        "personal_context.search",
+        {
+            "query": "case",
+            "material_rediscovery_justification": "",
+        },
+        "memory-1",
+    )
+    enforcer.intercept_llm_response(payload)
+
+    with pytest.raises(GateViolation, match="material_rediscovery_justification"):
+        enforcer.record_tool_result(
+            "personal_context.search",
+            {"results": [{"id": "one"}]},
+            call_id="memory-1",
+            success=True,
+        )
+
+    snapshot = enforcer.snapshot()
+    assert snapshot.memory_search_complete is False
+    assert snapshot.memory_state_mode == ""
+
+
+def test_successful_search_with_unknown_material_reason_does_not_advance() -> None:
+    enforcer = StartupGateEnforcer()
+    payload = _tool_call(
+        "personal_context.search",
+        {
+            "query": "case",
+            "material_rediscovery_justification": "because_search_is_easy",
+        },
+        "memory-1",
+    )
+    enforcer.intercept_llm_response(payload)
+
+    with pytest.raises(GateViolation, match="is not allowed"):
+        enforcer.record_tool_result(
+            "personal_context.search",
+            {"results": [{"id": "one"}]},
+            call_id="memory-1",
+            success=True,
+        )
+
+    snapshot = enforcer.snapshot()
+    assert snapshot.memory_search_complete is False
+    assert snapshot.memory_state_mode == ""
 
 
 def test_pre_gate_tool_call_suppresses_all_provider_text_fields() -> None:
@@ -462,6 +539,7 @@ def test_audit_log_never_contains_prompt_or_tool_arguments() -> None:
     enforcer.record_memory_state_reuse(
         source="conversation-context:private-state",
         item_count=1,
+        known_state_available=True,
     )
     serialized = repr(enforcer.audit_events())
 
