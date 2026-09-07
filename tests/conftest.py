@@ -20,10 +20,12 @@ def _patch_prime_directive_helper(module: ModuleType) -> None:
     def _record_first_three_stages(enforcer: Any) -> None:
         # The compatibility hook must not silently restore the old mandatory
         # search behavior. The fixture already has relevant continuity state in
-        # process, so prove reuse with provenance instead of rediscovering it.
+        # process, so prove reuse with explicit structured provenance and known
+        # state availability instead of rediscovering it.
         enforcer.record_memory_state_reuse(
             source="pytest-fixture:known-continuity-state",
             item_count=1,
+            known_state_available=True,
         )
 
         policy = module.load_policy()
