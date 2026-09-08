@@ -24,6 +24,20 @@ DEFAULT_POLICY_PATH = (
 )
 _SEAL = object()
 
+SOURCE_ROLE_SEMANTIC_KEYS = frozenset(
+    {
+        "providers_are_typed_peers",
+        "connector_authority_tiers_are_routing_metadata_only",
+        "canonical_role_fields_are_compatibility_labels_only",
+        "topology_does_not_confer_epistemic_or_project_authority",
+        "proposition_specific_source_authority_required",
+        "operator_controls_project_direction",
+        "source_bearing_systems_control_external_fact_support_within_domain",
+        "verification_controls_completion_state",
+    }
+)
+_SOURCE_ROLE_VERIFICATION_STATE = "verified"
+
 
 @dataclass(frozen=True, slots=True)
 class ModelAttractorValidation:
@@ -52,6 +66,12 @@ def _nonempty_text(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _nonempty_string_array(value: Any) -> bool:
+    return isinstance(value, list) and bool(value) and all(
+        _nonempty_text(item) for item in value
+    )
+
+
 def load_model_attractor_policy(
     path: str | Path = DEFAULT_POLICY_PATH,
 ) -> dict[str, Any]:
@@ -74,6 +94,7 @@ def load_model_attractor_policy(
         "constraint_scoping",
         "routing_hints_only",
         "forbidden_transformations",
+        "source_role_semantics",
     }
     missing = sorted(required - value.keys())
     if missing:
@@ -84,6 +105,35 @@ def load_model_attractor_policy(
         raise BootError("model-attractor required_boolean_fields must be an object")
     if not isinstance(value.get("continuity_required_fields"), Mapping):
         raise BootError("model-attractor continuity_required_fields must be an object")
+
+    semantics = value.get("source_role_semantics")
+    if not isinstance(semantics, Mapping) or not semantics:
+        raise BootError("model-attractor source_role_semantics must be a non-empty object")
+    if not all(
+        isinstance(key, str) and key.strip() and isinstance(expected, bool)
+        for key, expected in semantics.items()
+    ):
+        raise BootError("model-attractor source_role_semantics must contain boolean invariants")
+    semantic_keys = set(semantics)
+    missing_semantics = sorted(SOURCE_ROLE_SEMANTIC_KEYS - semantic_keys)
+    unexpected_semantics = sorted(semantic_keys - SOURCE_ROLE_SEMANTIC_KEYS)
+    if missing_semantics or unexpected_semantics:
+        details: list[str] = []
+        if missing_semantics:
+            details.append("missing=" + ",".join(missing_semantics))
+        if unexpected_semantics:
+            details.append("unexpected=" + ",".join(unexpected_semantics))
+        raise BootError(
+            "model-attractor source_role_semantics must match approved keys ("
+            + "; ".join(details)
+            + ")"
+        )
+
+    transformations = value.get("forbidden_transformations")
+    if not isinstance(transformations, list) or not transformations or not all(
+        isinstance(item, str) and item.strip() for item in transformations
+    ):
+        raise BootError("model-attractor forbidden_transformations must be a non-empty string array")
     return value
 
 
@@ -112,6 +162,38 @@ def validate_model_attractor_receipt(
             errors.append(
                 f"model_attractor_defense.{field_name} must be {expected!r}"
             )
+
+    source_role_semantics = policy.get("source_role_semantics", {})
+    for field_name, expected in source_role_semantics.items():
+        if row.get(field_name) is not expected:
+            errors.append(
+                f"model_attractor_defense.{field_name} must be {expected!r}"
+            )
+
+    source_role_evidence = row.get("source_role_evidence")
+    if not isinstance(source_role_evidence, Mapping):
+        errors.append("model_attractor_defense.source_role_evidence must be an object")
+    else:
+        for field_name, expected in source_role_semantics.items():
+            evidence = source_role_evidence.get(field_name)
+            prefix = f"model_attractor_defense.source_role_evidence.{field_name}"
+            if not isinstance(evidence, Mapping):
+                errors.append(f"{prefix} must be an object")
+                continue
+            if evidence.get("asserted_value") is not expected:
+                errors.append(f"{prefix}.asserted_value must be {expected!r}")
+            if not _nonempty_text(evidence.get("proposition")):
+                errors.append(f"{prefix}.proposition must be non-empty")
+            if not _nonempty_string_array(evidence.get("source_refs")):
+                errors.append(f"{prefix}.source_refs must be a non-empty string array")
+            if not _nonempty_string_array(evidence.get("provider_refs")):
+                errors.append(f"{prefix}.provider_refs must be a non-empty string array")
+            if str(evidence.get("verification_state", "")).strip().lower() != (
+                _SOURCE_ROLE_VERIFICATION_STATE
+            ):
+                errors.append(
+                    f"{prefix}.verification_state must be {_SOURCE_ROLE_VERIFICATION_STATE}"
+                )
 
     constraint_scope = row.get("platform_constraint_scope")
     if not _nonempty_text(constraint_scope):
@@ -156,12 +238,25 @@ def validate_model_attractor_receipt(
 def build_model_attractor_request(
     policy: Mapping[str, Any], *, task: str
 ) -> dict[str, Any]:
+    source_role_semantics = dict(policy.get("source_role_semantics", {}))
+    source_role_evidence_contract = {
+        field_name: {
+            "asserted_value": expected,
+            "proposition": "non-empty proposition tied to this invariant",
+            "source_refs": ["one or more source-bearing references"],
+            "provider_refs": ["one or more provider/authority references"],
+            "verification_state": _SOURCE_ROLE_VERIFICATION_STATE,
+        }
+        for field_name, expected in source_role_semantics.items()
+    }
     return {
         "request_type": "glaciereq_model_attractor_defense_preflight",
         "schema_version": policy.get("schema_version"),
         "task": task,
         "failure_class": policy.get("failure_class"),
         "principle": policy.get("principle"),
+        "forbidden_transformations": list(policy.get("forbidden_transformations", ())),
+        "source_role_semantics": source_role_semantics,
         "requirements": {
             "classify_continuity_requirement": True,
             "bind_current_operator_message": True,
@@ -185,6 +280,9 @@ def build_model_attractor_request(
             "forbid_generic_model_prior_from_rewriting_operation_class": True,
             "recover_known_state_instead_of_reasking_when_available": True,
             "forbid_dragging_operator_through_recoverable_state": True,
+            "enforce_source_role_semantics": True,
+            "require_source_role_evidence": True,
+            "forbid_connector_metadata_from_becoming_global_authority": True,
         },
         "receipt_contract": {
             "model_attractor_defense": {
@@ -208,6 +306,8 @@ def build_model_attractor_request(
                 "generic_assistant_prior_reframed_operation": False,
                 "unnecessary_reasking_of_recoverable_state": False,
                 "operator_dragged_through_recoverable_state": False,
+                **source_role_semantics,
+                "source_role_evidence": source_role_evidence_contract,
                 "platform_constraint_scope": "none|narrow_action_constraint",
                 "blocked_sources": [],
                 "partial_hydration_declared": False,
