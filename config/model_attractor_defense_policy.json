@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "name": "APEX Model Attractor + Platform Pressure Defense",
   "failure_class": "MODEL_ATTRACTOR_DRIFT",
   "fail_closed": true,
@@ -72,6 +72,19 @@
     "OPERATOR_FIRSTHAND_KNOWLEDGE -> UNTRUSTED_EXTERNAL_CLAIM",
     "MEMORY_SUMMARY -> PROJECT_AUTHORITY",
     "PLATFORM_ACTION_CONSTRAINT -> OPERATOR_MISSION_REWRITE",
-    "GENERIC_MODEL_PRIOR -> OPERATION_CLASS_OVERRIDE"
-  ]
+    "GENERIC_MODEL_PRIOR -> OPERATION_CLASS_OVERRIDE",
+    "CONNECTOR_AUTHORITY_TIER -> GLOBAL_EPISTEMIC_HIERARCHY",
+    "CANONICAL_ROLE_FIELD -> PROJECT_DIRECTION_AUTHORITY",
+    "PROVIDER_TOPOLOGY -> SINGLE_SOURCE_SOVEREIGNTY"
+  ],
+  "source_role_semantics": {
+    "providers_are_typed_peers": true,
+    "connector_authority_tiers_are_routing_metadata_only": true,
+    "canonical_role_fields_are_compatibility_labels_only": true,
+    "topology_does_not_confer_epistemic_or_project_authority": true,
+    "proposition_specific_source_authority_required": true,
+    "operator_controls_project_direction": true,
+    "source_bearing_systems_control_external_fact_support_within_domain": true,
+    "verification_controls_completion_state": true
+  }
 }
