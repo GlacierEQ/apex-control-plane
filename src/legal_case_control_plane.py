@@ -11,6 +11,11 @@ from typing import Any
 
 EXPECTED_BINDING_SCHEMA = "apex.legal-case-control-plane.v1"
 EXPECTED_CASEBUILDER_HEALTH_SCHEMA = "casebuilder4000.control-plane-health.v1"
+EXPECTED_CASE_POLICY_SCHEMA = "apex.jack-casebuilder-case-policy.v1"
+
+CASE_POLICY_FILENAMES = {
+    "1FDV-23-0001009": "jack_casebuilder_1fdv_policy.json",
+}
 
 
 class LegalCaseControlPlaneError(ValueError):
@@ -21,6 +26,105 @@ def load_binding(path: str | Path) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     validate_binding(payload)
     return payload
+
+
+def load_case_policy(path: str | Path) -> dict[str, Any]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    validate_case_policy(payload)
+    return payload
+
+
+def load_case_policy_for_case(
+    config_dir: str | Path,
+    case_id: str,
+) -> dict[str, Any]:
+    """Resolve and validate the runtime policy for one registered legal matter."""
+    filename = CASE_POLICY_FILENAMES.get(case_id)
+    if filename is None:
+        raise LegalCaseControlPlaneError(
+            f"no Jack Casebuilder runtime policy registered for {case_id!r}"
+        )
+    policy = load_case_policy(Path(config_dir) / filename)
+    if policy.get("case_id") != case_id:
+        raise LegalCaseControlPlaneError(
+            f"case policy identity mismatch: requested {case_id!r}, "
+            f"loaded {policy.get('case_id')!r}"
+        )
+    return policy
+
+
+def validate_case_policy(policy: dict[str, Any]) -> None:
+    errors: list[str] = []
+    if policy.get("schema") != EXPECTED_CASE_POLICY_SCHEMA:
+        errors.append(f"schema={policy.get('schema')!r}")
+    if policy.get("status") != "ACTIVE":
+        errors.append("case policy must be ACTIVE")
+    if policy.get("case_id") != "1FDV-23-0001009":
+        errors.append("1FDV case identity binding missing")
+    if policy.get("engine") != "JACK_THE_RIPPER_CASEBUILDER":
+        errors.append("Jack Casebuilder engine binding missing")
+
+    authority = policy.get("authority", {})
+    if authority.get("case_state_repository") != "GlacierEQ/apex-legal-case":
+        errors.append("apex-legal-case authority binding missing")
+    if authority.get("lifecycle_does_not_promote_truth_class") is not True:
+        errors.append("case-policy truth-class non-promotion invariant missing")
+    if authority.get("external_fact_rule") != (
+        "authenticated native / official records control external fact"
+    ):
+        errors.append("native/official external-fact authority rule missing")
+
+    controls = policy.get("runtime_controls", {})
+    required_true_controls = {
+        "preserve_lossless_detail",
+        "event_date_law_required",
+        "adverse_evidence_required_before_promotion",
+        "gap_becomes_evidence_acquisition_target",
+        "unknown_actor_becomes_discovery_target",
+        "filing_state_requires_external_receipt",
+        "substantial_run_requires_write_and_readback",
+        "preserve_contradictions_and_supersession",
+    }
+    for control in sorted(required_true_controls):
+        if controls.get(control) is not True:
+            errors.append(f"required runtime control missing: {control}")
+    if controls.get("reconstruct_from_scratch") is not False:
+        errors.append("continuity invariant must prohibit reconstruction from scratch")
+
+    projections = policy.get("projection_targets", {})
+    for peer in ("github", "supabase", "notion", "dropbox"):
+        if peer not in projections:
+            errors.append(f"required projection peer missing: {peer}")
+    airtable = projections.get("airtable", {})
+    if airtable.get("status") != "BLOCKED_429_MONTHLY_API_LIMIT":
+        errors.append("Airtable degradation state not preserved")
+    if airtable.get("failure_is_nonfatal_to_independent_peers") is not True:
+        errors.append("peer isolation invariant missing for Airtable degradation")
+
+    quarantine = {
+        row.get("id"): row
+        for row in policy.get("quarantine", [])
+        if isinstance(row, dict)
+    }
+    for quarantine_id in ("JACK-Q-001", "JACK-Q-002"):
+        row = quarantine.get(quarantine_id)
+        if not row or row.get("state") != "QUARANTINED":
+            errors.append(f"required quarantine missing: {quarantine_id}")
+
+    peer_mesh = policy.get("peer_mesh", {})
+    if peer_mesh.get("master_controller") is not False:
+        errors.append("peer mesh must not appoint a master controller")
+    if peer_mesh.get("case_truth_authority_remains_with_case_state") is not True:
+        errors.append("case truth authority boundary missing")
+    if peer_mesh.get("cross_peer_mutations_preserve_provenance") is not True:
+        errors.append("cross-peer provenance invariant missing")
+    if peer_mesh.get("failed_peer_blocks_only_dependent_work") is not True:
+        errors.append("peer failure isolation invariant missing")
+    if peer_mesh.get("provider_native_receipt_controls_external_execution_claim") is not True:
+        errors.append("provider receipt execution-claim invariant missing")
+
+    if errors:
+        raise LegalCaseControlPlaneError("; ".join(errors))
 
 
 def validate_binding(binding: dict[str, Any]) -> None:
