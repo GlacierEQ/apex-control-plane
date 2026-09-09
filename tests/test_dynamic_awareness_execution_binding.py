@@ -57,18 +57,22 @@ def test_external_gate_is_preflight_not_executor() -> None:
     gate = _text(GATE)
     assert 'mutation_capability: false' in gate
     assert '"EVALUATE_CURRENT_REALITY"' in gate
+    assert '"EVALUATE_CURRENT_RELEVANT_REALITY"' in gate
     assert '"DO_NOT_EXECUTE_CURRENT_ACTION"' in gate
     assert '"CURRENT_ACTION_MAY_PROCEED"' in gate
     assert "record_control_plane_action_awareness_v1" in gate
+    assert "control_plane_action_awareness_v2" in gate
     assert "send_email" not in gate
 
 
 def test_operator_context_surfaces_material_delta() -> None:
     impact = _text(IMPACT)
-    assert "get_control_plane_action_awareness_v1" in impact
+    assert "get_control_plane_action_awareness_v2" in impact
     assert "must_re_evaluate_before_mutation" in impact
+    assert "newer_soft_context_present" in impact
     assert "stale_cached_intent_is_not_execution_authority" in impact
     assert "action_rules_are_not_substitute_for_current_state" in impact
+    assert "soft_context_is_visible_but_nonblocking" in impact
 
 
 def test_documentation_preserves_rule_compression_intent() -> None:
