@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "name": "APEX Operator Source Authority Contract",
+  "fail_closed": true,
+  "personalization": {
+    "status": "mandatory_user_authority_input",
+    "highest_user_authority_layer": true,
+    "load_before_task_interpretation": true,
+    "optional_context": false,
+    "summary_may_override": false,
+    "memory_gap_may_demote": false,
+    "tool_or_widget_may_redefine_mission": false,
+    "fresh_model_inference_may_supersede": false
+  },
+  "source_state": {
+    "operator_words_are_source_state": true,
+    "source_layer_verbatim": true,
+    "summaries_are_derived_only": true,
+    "summaries_may_impersonate_source": false,
+    "summaries_may_replace_operator_words": false,
+    "derived_state_requires_source_lineage": true,
+    "contradictions_must_be_preserved": true,
+    "compression_may_erase_distinctions": false,
+    "compression_may_merge_actors_events_or_truth_states": false,
+    "historical_wording_may_be_normalized": false
+  },
+  "organization": {
+    "evidence_integrity_controls": true,
+    "beneficial_reorganization_allowed": true,
+    "old_path_is_not_immutable_authority": true,
+    "location_changes_require_lineage_preservation": true,
+    "empty_scaffolding_is_not_organization": true,
+    "decorative_directories_are_not_progress": true
+  },
+  "forbidden": [
+    "personalization treated as optional context",
+    "summary impersonates source state",
+    "summary silently replaces operator wording",
+    "retrieval failure demotes operator authority",
+    "tool or widget redefines operator mission",
+    "fresh model inference supersedes operator source state",
+    "source wording normalized without explicit Operator instruction",
+    "empty scaffold represented as completed organization"
+  ]
+}
