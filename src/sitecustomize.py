@@ -50,6 +50,7 @@ def _should_boot() -> bool:
         "apex_strong_boot.py",
         "operator_fidelity_lock.py",
         "operator_fidelity_preflight.py",
+        "operator_source_authority.py",
         "notion_continuity_gate.py",
         "prime_directive_boot.py",
         "prime_directive_enforcer.py",
@@ -113,6 +114,13 @@ if _entrypoint_name() == "control_plane_runtime.py" and not _is_pytest_startup()
 
 if _should_boot():
     try:
+        # Source/personalization authority is validated before any task-bearing
+        # runtime boot so summaries, memory projections, tools, or fresh model
+        # inference cannot become a substitute authority layer.
+        from operator_source_authority import enforce_operator_source_authority
+
+        enforce_operator_source_authority()
+
         from apex_strong_boot import apply_strongest_boot
 
         APEX_STRONG_BOOT_SESSION = apply_strongest_boot()
