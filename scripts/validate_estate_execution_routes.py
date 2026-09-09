@@ -10,6 +10,7 @@ from typing import Any
 
 DEFAULT_REGISTRY = Path(__file__).resolve().parents[1] / "config" / "estate_execution_routes.json"
 ALLOWED_ROUTES = {
+    "compute_fabric",
     "buildkite_verified_execution",
     "public_action_face",
     "connector_worker_fabric",
@@ -21,6 +22,10 @@ ALLOWED_MIGRATION_STATES = {
     "canary_ready",
     "dual_run_verification",
     "target_verified",
+    "source_schedule_contained",
+    "blocked_backend_not_promoted",
+    "blocked_provider_auth",
+    "blocked_event_subscription_proof",
     "source_disabled",
     "complete",
 }
@@ -28,9 +33,15 @@ REQUIRED_ROUTING_LAWS = {
     "no_verified_delta_no_success",
     "do_not_disable_current_route_until_target_route_is_proven",
     "do_not_auto_admit_repositories_to_public_action_face",
+    "do_not_promote_unverified_compute_backends",
     "destructive_provider_mutation_requires_explicit_operator_authorization",
     "private_github_actions_is_not_the_estate_scheduler",
     "failure_reporting_must_not_depend_on_the_same_failed_execution_substrate",
+}
+BLOCKED_STATES = {
+    "blocked_backend_not_promoted",
+    "blocked_provider_auth",
+    "blocked_event_subscription_proof",
 }
 
 
@@ -83,6 +94,8 @@ def validate_registry(data: dict[str, Any]) -> list[str]:
         state = workload.get("migration_state")
         if state not in ALLOWED_MIGRATION_STATES:
             errors.append(f"{prefix}.migration_state has unknown state: {state!r}")
+        if state in BLOCKED_STATES and not workload.get("blocking_condition"):
+            errors.append(f"{prefix} blocked state requires blocking_condition")
 
         verification = workload.get("terminal_verification")
         if not isinstance(verification, list) or not verification:
@@ -106,6 +119,18 @@ def validate_registry(data: dict[str, Any]) -> list[str]:
             if workload.get("catalog_admission") != "explicit":
                 errors.append(
                     f"{prefix} public_action_face target requires catalog_admission='explicit'"
+                )
+
+        if target_route == "compute_fabric":
+            if not workload.get("execution_class"):
+                errors.append(f"{prefix} compute_fabric target requires execution_class")
+            if state == "blocked_backend_not_promoted" and not workload.get("preferred_backend"):
+                errors.append(
+                    f"{prefix} blocked compute route requires preferred_backend"
+                )
+            if state in {"target_verified", "source_disabled", "complete"} and workload.get("backend_promoted") is not True:
+                errors.append(
+                    f"{prefix} compute target cannot be verified before backend_promoted=true"
                 )
 
         if target_route == "private_github_actions_exception":
