@@ -29,7 +29,6 @@ async function authorized(req: Request) {
     });
     if (!error && data === true) return true;
   }
-
   const bearer = (req.headers.get("authorization") ?? "")
     .replace(/^Bearer\s+/i, "")
     .trim();
@@ -40,7 +39,6 @@ async function resolveAction(body: Record<string, unknown>) {
   const actionId = String(body.action_id ?? "").trim();
   const actionKey = String(body.action_key ?? "").trim();
   if (!actionId && !actionKey) throw new Error("action_id or action_key required");
-
   let q = db
     .from("control_plane_action_outbox")
     .select(
@@ -77,14 +75,12 @@ Deno.serve(async (req) => {
       { headers },
     );
   }
-
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ ok: false, error: "method_not_allowed" }), {
       status: 405,
       headers,
     });
   }
-
   if (!(await authorized(req))) {
     return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), {
       status: 401,
@@ -113,7 +109,6 @@ Deno.serve(async (req) => {
           !Array.isArray(body.evaluation)
           ? body.evaluation
           : {};
-
       const { data, error } = await db.rpc(
         "record_control_plane_action_awareness_v1",
         {
@@ -134,6 +129,13 @@ Deno.serve(async (req) => {
     const currentReality = current.dispatch_reevaluation_required === false;
     const evaluationAllows = current.execution_valid !== false;
     const canExecute = attemptable && currentReality && evaluationAllows;
+    const nextSemanticStep = current.dispatch_reevaluation_required
+      ? "EVALUATE_CURRENT_RELEVANT_REALITY"
+      : current.execution_valid === false
+      ? "DO_NOT_EXECUTE_CURRENT_ACTION"
+      : attemptable
+      ? "CURRENT_ACTION_MAY_PROCEED"
+      : "ACTION_NOT_IN_EXECUTABLE_STATE";
 
     return new Response(
       JSON.stringify({
@@ -143,13 +145,10 @@ Deno.serve(async (req) => {
         awareness: current,
         evaluation_receipt: receipt,
         can_execute: canExecute,
-        next_semantic_step: current.dispatch_reevaluation_required
-          ? "EVALUATE_CURRENT_RELEVANT_REALITY"
-          : current.execution_valid === false
-          ? "DO_NOT_EXECUTE_CURRENT_ACTION"
-          : attemptable
-          ? "CURRENT_ACTION_MAY_PROCEED"
-          : "ACTION_NOT_IN_EXECUTABLE_STATE",
+        next_semantic_step: nextSemanticStep,
+        legacy_next_semantic_step: current.dispatch_reevaluation_required
+          ? "EVALUATE_CURRENT_REALITY"
+          : nextSemanticStep,
         newer_soft_context_exists: current.newer_soft_context_exists === true,
         principle:
           "current relevant source-bearing state outranks cached action intent; unrelated context remains visible without blocking",
