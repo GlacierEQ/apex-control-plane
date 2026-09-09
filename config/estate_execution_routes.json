@@ -1,0 +1,173 @@
+{
+  "schema_version": "1.0.0",
+  "name": "GlacierEQ Estate Execution Route Registry",
+  "status": "active",
+  "authority_boundary": {
+    "operator": "determines mission direction and authorizes external/destructive mutations",
+    "apex_control_plane": "binds execution intent, route policy, verification requirements, and receipts",
+    "akos": "provides provenance-bound observation and epistemic support",
+    "buildkite": "executes and reports operator-directed private/general workloads",
+    "public_action_face": "executes explicitly catalog-admitted governed GitHub workloads",
+    "connector_worker_fabric": "executes provider-native event/sync operations under connector policy",
+    "github_actions_private": "exception-only compatibility route; never the default scheduler"
+  },
+  "route_definitions": {
+    "buildkite_verified_execution": {
+      "purpose": "private CI, deterministic validation, long-running compute, recurring training, and general execution",
+      "requires_exact_source": true,
+      "requires_receipt": true,
+      "requires_terminal_readback": true
+    },
+    "public_action_face": {
+      "purpose": "explicitly admitted governed GitHub workloads through public GitHub-hosted execution, OIDC, Keymaster, and short-lived repository-scoped credentials",
+      "catalog_admission": "explicit_only",
+      "requires_exact_source": true,
+      "requires_receipt": true,
+      "requires_terminal_readback": true
+    },
+    "connector_worker_fabric": {
+      "purpose": "provider-native sync, webhook, polling, inventory, and mutation work with idempotency, leases, provider identity, and receipts",
+      "destructive_requires_operator_approval": true,
+      "requires_receipt": true,
+      "requires_terminal_readback": true
+    },
+    "private_github_actions_exception": {
+      "purpose": "temporary compatibility or narrowly justified private GitHub-hosted execution",
+      "default_allowed": false,
+      "requires_exception_reason": true,
+      "requires_expiry_or_review": true,
+      "requires_receipt": true
+    },
+    "none": {
+      "purpose": "repository or artifact has no active execution requirement"
+    }
+  },
+  "routing_laws": [
+    "selection_is_not_authority",
+    "routing_is_not_sovereignty",
+    "no_verified_delta_no_success",
+    "do_not_disable_current_route_until_target_route_is_proven",
+    "do_not_auto_admit_repositories_to_public_action_face",
+    "destructive_provider_mutation_requires_explicit_operator_authorization",
+    "private_github_actions_is_not_the_estate_scheduler",
+    "failure_reporting_must_not_depend_on_the_same_failed_execution_substrate",
+    "preserve_provider_native_identity_and_receipts"
+  ],
+  "initial_reconciliation": [
+    {
+      "workload_id": "mega-skills.validate-hierarchy",
+      "repository": "GlacierEQ/mega-skills",
+      "workflow_path": ".github/workflows/validate-hierarchy.yml",
+      "workflow_name": "Validate Mega Skills Hierarchy",
+      "operation_class": "deterministic_validation",
+      "current_route": "private_github_actions_exception",
+      "target_route": "buildkite_verified_execution",
+      "migration_state": "route_selected_unmigrated",
+      "destructive": false,
+      "operator_approval_required": false,
+      "reason": "Seven deterministic Python validation/test lanes plus an aggregate gate; no provider mutation requirement.",
+      "terminal_verification": [
+        "exact_source_checkout",
+        "all_validation_lanes_terminal",
+        "receipt",
+        "github_exact_sha_projection",
+        "readback"
+      ]
+    },
+    {
+      "workload_id": "art.perpetual-training",
+      "repository": "GlacierEQ/ART",
+      "workflow_path": ".github/workflows/perpetual-training.yml",
+      "workflow_name": "APEX Perpetual Agent Training",
+      "operation_class": "long_running_recurring_compute",
+      "current_route": "private_github_actions_exception",
+      "target_route": "buildkite_verified_execution",
+      "migration_state": "route_selected_unmigrated",
+      "destructive": false,
+      "operator_approval_required": false,
+      "reason": "Recurring up-to-180-minute training workload with external model/cloud credentials; private GitHub Actions is a poor scheduler/compute substrate.",
+      "terminal_verification": [
+        "exact_source_checkout",
+        "training_result",
+        "artifact_or_metric_receipt",
+        "readback"
+      ]
+    },
+    {
+      "workload_id": "fileboss.onedrive-inventory-audit",
+      "repository": "GlacierEQ/FILEBOSS",
+      "workflow_path": ".github/workflows/onedrive-auto-sync.yml",
+      "workflow_name": "OneDrive Evidence Inventory and Explicit Control",
+      "operation_class": "provider_inventory_and_audit",
+      "current_route": "private_github_actions_exception",
+      "target_route": "connector_worker_fabric",
+      "migration_state": "route_selected_unmigrated",
+      "destructive": false,
+      "operator_approval_required": false,
+      "reason": "The scheduled 30-minute path is provider-native OneDrive inventory/audit work and belongs in the existing connector/event worker fabric.",
+      "terminal_verification": [
+        "provider_identity",
+        "delta_or_full_inventory_receipt",
+        "sharing_audit_receipt",
+        "readback"
+      ]
+    },
+    {
+      "workload_id": "fileboss.onedrive-explicit-mutation",
+      "repository": "GlacierEQ/FILEBOSS",
+      "workflow_path": ".github/workflows/onedrive-auto-sync.yml",
+      "workflow_name": "OneDrive Evidence Inventory and Explicit Control",
+      "operation_class": "provider_destructive_mutation",
+      "current_route": "private_github_actions_exception",
+      "target_route": "connector_worker_fabric",
+      "migration_state": "route_selected_unmigrated",
+      "destructive": true,
+      "operator_approval_required": true,
+      "reason": "Revoke/delete operations require exact provider IDs, explicit typed approval, least-privilege write credentials, mutation receipt, and provider readback.",
+      "terminal_verification": [
+        "operator_authorization_reference",
+        "exact_provider_object_identity",
+        "mutation_receipt",
+        "provider_readback"
+      ]
+    },
+    {
+      "workload_id": "pro-apex-fs-commander.notion-sync",
+      "repository": "GlacierEQ/Pro-apex-fs-commander",
+      "workflow_path": ".github/workflows/notion-sync-worker.yml",
+      "workflow_name": "Notion Sync Worker Loop",
+      "operation_class": "provider_sync_worker",
+      "current_route": "private_github_actions_exception",
+      "target_route": "connector_worker_fabric",
+      "migration_state": "route_selected_unmigrated",
+      "destructive": false,
+      "operator_approval_required": false,
+      "reason": "A 15-minute Notion queue worker is provider/runtime work, not CI; the estate already has Notion brokers, event routing, sync orchestration, and connector workers.",
+      "terminal_verification": [
+        "provider_identity",
+        "queue_claim_or_cursor",
+        "sync_receipt",
+        "readback"
+      ]
+    },
+    {
+      "workload_id": "z-backup-legal-orchestrator.failure-self-report",
+      "repository": "GlacierEQ/Z-BACKUP-APEX-LEGAL-WARFARE-ORCHESTRATOR",
+      "workflow_path": ".github/workflows/apex-self-report.yml",
+      "workflow_name": "APEX Self-Report on Failure",
+      "operation_class": "failure_event_projection",
+      "current_route": "private_github_actions_exception",
+      "target_route": "connector_worker_fabric",
+      "migration_state": "route_selected_unmigrated",
+      "destructive": false,
+      "operator_approval_required": false,
+      "reason": "A failure reporter triggered by workflow_run must not rely on the same GitHub Actions admission substrate whose failure it reports; use webhook/event ingestion and deduplicated incident projection.",
+      "terminal_verification": [
+        "root_failure_correlation",
+        "deduplicated_incident_receipt",
+        "notification_projection",
+        "readback"
+      ]
+    }
+  ]
+}
