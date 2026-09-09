@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "status": "ACTIVE",
+  "principle": "Backend Ops owns HOW GlacierEQ knows, connects, routes, executes, verifies, and recovers. GlacierEQ owns WHAT the estate knows and is acting upon. Provider-native and source-bearing peers retain authority for their own bytes and receipts.",
+  "planes": {
+    "control": {
+      "project_name": "supabase-backend-ops",
+      "project_ref": "dyhprklicgewmrimecey",
+      "role": "CONNECTOR_CONTROL_AND_COGNITIVE_CAPABILITY_PLANE",
+      "owns": [
+        "kernel_and_operator_control_contracts",
+        "epistemology",
+        "connector_registry_and_tools",
+        "provider_routing",
+        "runtime_configuration",
+        "retry_idempotency_recovery",
+        "execution_receipts",
+        "memory_architecture_and_routing",
+        "model_and_compute_routing",
+        "critical_repository_bindings",
+        "capability_graphs_and_pipelines"
+      ],
+      "does_not_own": [
+        "case_facts_and_allegations",
+        "personal_memory_payloads",
+        "job_application_records",
+        "substantive_case_positions",
+        "evidence_source_bytes",
+        "provider_native_message_bodies_as_authoritative_data"
+      ],
+      "runtime_tables": {
+        "authority": "public.estate_plane_authority_v1",
+        "control_artifacts": "public.control_plane_artifacts_v1",
+        "critical_repositories": "public.critical_repository_bindings_v1"
+      }
+    },
+    "mission": {
+      "project_name": "supabase-glaciereq",
+      "project_ref": "kjebemdgvjvuutzvhbtp",
+      "role": "MISSION_DATA_AND_SUBSTANTIVE_KNOWLEDGE_PLANE",
+      "owns": [
+        "case_and_matter_state",
+        "facts_propositions_contradictions",
+        "evidence_and_source_bindings",
+        "personal_and_life_data",
+        "memory_payloads_and_substantive_memory",
+        "job_applications_and_employer_intelligence",
+        "mission_objectives_and_positions",
+        "communications_and_case_action_state",
+        "provider_observations_bound_to_missions"
+      ],
+      "does_not_own": [
+        "global_kernel_authority",
+        "global_epistemology_authority",
+        "connector_registry_and_tool_definitions",
+        "provider_route_policy",
+        "runtime_retry_idempotency_policy",
+        "critical_repository_activation_bindings"
+      ],
+      "runtime_tables": {
+        "authority": "public.estate_plane_authority_v1",
+        "case_scoped_instruction_view": "public.mission_instruction_artifacts_v1",
+        "legacy_global_projection_view": "public.legacy_global_control_artifact_projection_v1"
+      }
+    }
+  },
+  "source_authority": {
+    "github": "code, schemas, migrations, versioned behavioral contracts",
+    "provider_native_systems": "provider execution state, message/send/delivery receipts, source bytes",
+    "supabase_backend_ops": "live resolved capability/control/runtime projection",
+    "supabase_glaciereq": "live substantive mission/data projection"
+  },
+  "cross_plane_rules": [
+    "Mission objects may request capabilities but do not own connector implementations.",
+    "Control-plane execution may carry bounded provenance-bearing mission projections but must not promote them into substantive truth.",
+    "Global behavioral authority belongs in Backend Ops; case-scoped strategy and instructions remain mission data.",
+    "Existing GlacierEQ global instruction rows are preserved as legacy provenance projections and are not deleted during cutover.",
+    "No provider-native source is replaced by a Supabase projection.",
+    "No hidden platform system or developer prompt is claimed, reconstructed, or stored as GlacierEQ-controlled authority; only Operator-controlled behavioral artifacts and explicit source references belong in the control plane."
+  ],
+  "critical_repository_roles": {
+    "GlacierEQ/apex-control-plane": ["kernel", "operator_contracts", "execution_semantics", "anti_hidden_harm"],
+    "GlacierEQ/aspen-grove-core": ["boot_protocol", "memory_and_context_routing", "runtime_continuity"],
+    "GlacierEQ/Genius-Mastery": ["capability_forge", "instruction_engineering", "progress_protocol", "case_position_mastery"],
+    "GlacierEQ/mega-skills": ["skills", "combo_skills", "mega_skills", "capability_sources"],
+    "GlacierEQ/AKOS": ["epistemology", "operational_cognition", "methodologies"],
+    "GlacierEQ/mastermind": ["reasoning_composition", "operator_impact_first_projection"]
+  },
+  "cutover": {
+    "backend_ops_migration": "establish_canonical_control_plane_v1",
+    "backend_ops_security_migration": "explicit_control_plane_client_deny_v1",
+    "glaciereq_migration": "establish_canonical_mission_data_plane_v1",
+    "glaciereq_security_migration": "fix_mission_plane_view_security_v1",
+    "destructive_moves": false,
+    "legacy_rows_preserved": true
+  }
+}
