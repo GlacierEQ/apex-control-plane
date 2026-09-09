@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "status": "ACTIVE",
   "principle": "Backend Ops owns HOW GlacierEQ knows, connects, routes, executes, verifies, and recovers. GlacierEQ owns WHAT the estate knows and is acting upon. Provider-native and source-bearing peers retain authority for their own bytes and receipts.",
   "planes": {
@@ -18,6 +18,7 @@
         "memory_architecture_and_routing",
         "model_and_compute_routing",
         "critical_repository_bindings",
+        "capability_repository_fabric",
         "capability_graphs_and_pipelines"
       ],
       "does_not_own": [
@@ -31,7 +32,10 @@
       "runtime_tables": {
         "authority": "public.estate_plane_authority_v1",
         "control_artifacts": "public.control_plane_artifacts_v1",
-        "critical_repositories": "public.critical_repository_bindings_v1"
+        "critical_repositories": "public.critical_repository_bindings_v1",
+        "capability_repositories": "public.capability_repository_registry_v1",
+        "capability_repository_links": "public.capability_repository_links_v1",
+        "capability_repository_summary": "public.capability_repository_summary_v1"
       }
     },
     "mission": {
@@ -64,16 +68,51 @@
       }
     }
   },
+  "capability_repository_fabric": {
+    "discovery_authority": "supabase-backend-ops Repo Atlas latest observed snapshot, derived from GitHub provider state",
+    "source_authority": "GitHub",
+    "registry_policy": "link repositories and observed SHAs; do not copy repository source into Supabase or promote discovery candidates into runtime authority without evidence",
+    "current_registry": {
+      "total_sha_bound_repositories": 209,
+      "confirmed": 13,
+      "reference": 4,
+      "discovered_candidates": 192,
+      "explicit_capability_links": 14
+    },
+    "core_bound_repositories": {
+      "GlacierEQ/Omni_Engine": "omni_cognitive_engine",
+      "GlacierEQ/omni-engine": "omni_engine_variant",
+      "GlacierEQ/Omni_Engine_MCP": "omni_engine_mcp_adapter",
+      "GlacierEQ/computer-user": "computer_use_runtime",
+      "GlacierEQ/computer-user-storage": "computer_use_state_storage",
+      "GlacierEQ/UDC": "desktop_commander_runtime",
+      "GlacierEQ/everything-mcp-server": "everything_mcp_server",
+      "GlacierEQ/glaciereq-mcp-stack": "glaciereq_mcp_router",
+      "GlacierEQ/mcp-master-server": "mcp_master_server",
+      "GlacierEQ/mega-mcp": "mcp_of_mcps_orchestrator",
+      "GlacierEQ/mcp-tool-belt": "mcp_tool_belt",
+      "GlacierEQ/MCP-OMNI-PLATFORM": "mcp_omni_platform",
+      "GlacierEQ/unified-memory-mcp": "unified_memory_mcp"
+    },
+    "reference_bound_repositories": {
+      "GlacierEQ/mcp-gateway": "mcp_gateway_reference",
+      "GlacierEQ/MCP-MASTER-OMNI-GRID": "mcp_omni_grid",
+      "GlacierEQ/mcp-playwright": "browser_automation_mcp_reference",
+      "GlacierEQ/Windows-MCP": "windows_computer_use_mcp_reference"
+    }
+  },
   "source_authority": {
-    "github": "code, schemas, migrations, versioned behavioral contracts",
+    "github": "code, schemas, migrations, repository heads, versioned behavioral contracts",
     "provider_native_systems": "provider execution state, message/send/delivery receipts, source bytes",
-    "supabase_backend_ops": "live resolved capability/control/runtime projection",
+    "supabase_backend_ops": "live resolved capability/control/runtime projection and repository linkage",
     "supabase_glaciereq": "live substantive mission/data projection"
   },
   "cross_plane_rules": [
     "Mission objects may request capabilities but do not own connector implementations.",
     "Control-plane execution may carry bounded provenance-bearing mission projections but must not promote them into substantive truth.",
     "Global behavioral authority belongs in Backend Ops; case-scoped strategy and instructions remain mission data.",
+    "Capability repositories remain GitHub source authority; Backend Ops stores discovery, classification, active SHA bindings, relationships, runtime status and receipts.",
+    "A discovered capability repository is not automatically an active runtime implementation; confirmation requires source/runtime evidence.",
     "Existing GlacierEQ global instruction rows are preserved as legacy provenance projections and are not deleted during cutover.",
     "No provider-native source is replaced by a Supabase projection.",
     "No hidden platform system or developer prompt is claimed, reconstructed, or stored as GlacierEQ-controlled authority; only Operator-controlled behavioral artifacts and explicit source references belong in the control plane."
@@ -89,6 +128,7 @@
   "cutover": {
     "backend_ops_migration": "establish_canonical_control_plane_v1",
     "backend_ops_security_migration": "explicit_control_plane_client_deny_v1",
+    "capability_repository_migration": "establish_capability_repository_registry_v1",
     "glaciereq_migration": "establish_canonical_mission_data_plane_v1",
     "glaciereq_security_migration": "fix_mission_plane_view_security_v1",
     "destructive_moves": false,
