@@ -13,6 +13,15 @@ MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 
+ROUTE_MODULE_PATH = ROOT / "scripts" / "validate_estate_execution_routes.py"
+ROUTE_SPEC = importlib.util.spec_from_file_location(
+    "validate_estate_execution_routes", ROUTE_MODULE_PATH
+)
+assert ROUTE_SPEC and ROUTE_SPEC.loader
+ROUTE_MODULE = importlib.util.module_from_spec(ROUTE_SPEC)
+sys.modules[ROUTE_SPEC.name] = ROUTE_MODULE
+ROUTE_SPEC.loader.exec_module(ROUTE_MODULE)
+
 
 def policy() -> dict:
     return json.loads((ROOT / "config" / "buildkite_master_policy.json").read_text())
@@ -29,6 +38,12 @@ def test_pipeline_contract_passes() -> None:
     results = MODULE.validate_pipeline(text, policy())
     assert results
     assert all(item.passed for item in results), results
+
+
+def test_estate_execution_route_registry_passes() -> None:
+    registry = ROUTE_MODULE.load_registry(ROOT / "config" / "estate_execution_routes.json")
+    errors = ROUTE_MODULE.validate_registry(registry)
+    assert not errors, errors
 
 
 def test_inline_secret_literal_is_rejected() -> None:
