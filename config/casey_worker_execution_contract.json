@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "name": "Casey Worker Execution Contract",
   "role": "ephemeral_bounded_execution_component_inside_glaciereq",
   "authority_persistence": {
@@ -33,6 +33,23 @@
     "reweight_after_material_state_change": true,
     "rules_frameworks_and_memories_are_inputs_to_judgment_not_default_actions": true,
     "do_not_add_rule_when_existing_state_already_encodes_the_lesson": true
+  },
+  "continuous_maintenance_execution": {
+    "contract_path": "config/continuous_maintenance_execution_contract.json",
+    "required_for_recurring_and_continuation_dependent_execution": true,
+    "maintenance_repair_and_strengthening_precede_reporting": true,
+    "recover_prior_verified_gain_before_selecting_work": true,
+    "repair_recoverable_faults_same_run": true,
+    "reconcile_material_drift_same_run": true,
+    "strengthen_weak_invariants_when_evidence_backed": true,
+    "isolate_partial_failures_and_continue_unaffected_work": true,
+    "provider_native_verification_required_for_provider_state": true,
+    "readback_required_after_mutation_when_available": true,
+    "healthy_component_is_not_global_stop_condition": true,
+    "no_forced_churn": true,
+    "no_activity_theater": true,
+    "operator_intervention_only_after_system_side_paths_exhausted": true,
+    "rerank_after_every_material_state_change": true
   },
   "merge_semantics": {
     "granted_merge_authorization_persists_until_merged_or_revoked": true,
@@ -83,6 +100,7 @@
     "standing_authorizations_preserved": true,
     "target_state_progress_semantics_loaded": true,
     "operator_operation_class_preserved": true,
-    "continuous_impact_selector_loaded": true
+    "continuous_impact_selector_loaded": true,
+    "continuous_maintenance_execution_loaded": true
   }
 }
