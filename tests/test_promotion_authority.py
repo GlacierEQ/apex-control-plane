@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 import unittest
 from pathlib import Path
 
@@ -28,7 +29,7 @@ class PromotionAuthTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(reason, "GRANT_EXPIRED")
 
-    def test_real_machine_grant_verifies_against_proof_receipt(self):
+    def test_checked_in_machine_grant_verifies_against_bound_proof_receipt(self):
         grant_path = ROOT / "machine" / "promotion_authority.json"
         proof_path = ROOT / "machine" / "proof_receipt.json"
         if not grant_path.is_file() or not proof_path.is_file():
@@ -38,8 +39,32 @@ class PromotionAuthTests(unittest.TestCase):
         file_digest = hashlib.sha256(proof_path.read_bytes()).hexdigest()
         self.assertEqual(grant["proof_receipt_digest"], file_digest)
         self.assertEqual(grant["source_sha"], proof["source_sha"])
-        ok, reason = verify_bound_grant(grant, proof_path, secret=OPERATOR_KEY)
+
+        # A checked-in short-lived grant is historical evidence. Verify its
+        # cryptographic binding inside its validity window rather than making
+        # repository CI depend on wall-clock time months later.
+        validity_probe = float(grant["not_after"]) - 1.0
+        ok, reason = verify_bound_grant(
+            grant,
+            proof_path,
+            secret=OPERATOR_KEY,
+            now=validity_probe,
+        )
         self.assertTrue(ok, reason)
+
+    def test_checked_in_machine_grant_live_expiration_remains_fail_closed(self):
+        grant_path = ROOT / "machine" / "promotion_authority.json"
+        proof_path = ROOT / "machine" / "proof_receipt.json"
+        if not grant_path.is_file() or not proof_path.is_file():
+            self.skipTest("receipts not yet bound")
+        grant = json.loads(grant_path.read_text())
+        now = time.time()
+        ok, reason = verify_bound_grant(grant, proof_path, secret=OPERATOR_KEY, now=now)
+        if now > float(grant["not_after"]):
+            self.assertFalse(ok)
+            self.assertEqual(reason, "GRANT_EXPIRED")
+        else:
+            self.assertTrue(ok, reason)
 
 
 if __name__ == "__main__":
