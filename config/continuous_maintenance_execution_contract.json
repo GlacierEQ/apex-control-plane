@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0.0",
+  "name": "Continuous Maintenance Execution Contract",
+  "authority": "operator_intent",
+  "scope": "global recurring and continuation-dependent execution",
+  "objective": "continuous_useful_state_improvement",
+  "prime_directive": "Every recurring run is maintenance, repair, strengthening, verification, and preservation first; observation and reporting are secondary.",
+  "execution_loop": [
+    "HYDRATE",
+    "RECOVER_PRIOR_VERIFIED_GAIN",
+    "IDENTIFY_HIGHEST_LEVERAGE_MAINTENANCE_FRONTIER",
+    "REPAIR_OR_HARDEN",
+    "VERIFY_READBACK",
+    "PRESERVE_RECEIPT_AND_CHECKPOINT",
+    "RERANK_AND_CONTINUE"
+  ],
+  "requirements": {
+    "maintenance_first": true,
+    "repair_recoverable_faults_same_run": true,
+    "reconcile_drift_same_run": true,
+    "strengthen_weak_invariants_when_evidence_backed": true,
+    "isolate_partial_failures": true,
+    "continue_unaffected_work": true,
+    "provider_native_verification": true,
+    "readback_after_mutation_when_available": true,
+    "preserve_prior_verified_gains": true,
+    "preserve_authority_topology": true,
+    "preserve_contradictions": true,
+    "no_unearned_state_promotion": true,
+    "no_forced_churn": true,
+    "no_activity_theater": true,
+    "healthy_component_is_not_a_global_stop_condition": true,
+    "operator_intervention_only_after_system_side_paths_are_exhausted": true
+  },
+  "action_economy": {
+    "select": "highest-leverage executable maintenance frontier after known state",
+    "reject": [
+      "KNOWN_STATE",
+      "ALREADY_VERIFIED_WITHOUT_DEPENDENT_FRESHNESS_NEED",
+      "REPEATED_DIAGNOSIS",
+      "SUMMARY_ONLY_DELTA",
+      "FRAMEWORK_REBUILD",
+      "NO_DOWNSTREAM_DELTA",
+      "COSMETIC_CHURN"
+    ],
+    "preferred_deltas": [
+      "repair",
+      "drift_reconciliation",
+      "failure_isolation",
+      "stale_state_prevention",
+      "provenance_strengthening",
+      "receipt_recovery",
+      "recoverability_improvement",
+      "observability_hardening",
+      "security_hardening",
+      "interoperability_improvement",
+      "consumer_path_verification",
+      "deadletter_or_retry_recovery",
+      "false_health_classification_correction"
+    ]
+  },
+  "progress_semantics": {
+    "progress_unit": "underlying target state",
+    "requires_verified_material_change": true,
+    "qualifying_dimensions": [
+      "capability",
+      "reliability",
+      "recoverability",
+      "provenance",
+      "interoperability",
+      "security",
+      "observability",
+      "execution_readiness",
+      "evidence_integrity"
+    ],
+    "non_progress": [
+      "scan_only",
+      "report_only",
+      "prompt_edit_without_downstream_effect",
+      "healthy_state_admiration",
+      "version_bump_only"
+    ]
+  },
+  "state_semantics": {
+    "draft_is_not_sent": true,
+    "sent_is_not_delivered": true,
+    "delivered_is_not_acknowledged": true,
+    "attempt_is_not_success": true,
+    "pending_is_not_completed": true,
+    "provider_native_receipts_control_provider_state": true
+  },
+  "failure_behavior": {
+    "scope_failure_to_dependent_slice": true,
+    "continue_other_executable_slices": true,
+    "repair_supported_defects_in_same_run_when_safe": true,
+    "record_exact_blocker": true,
+    "do_not_request_operator_action_while_system_side_repair_paths_remain": true
+  },
+  "stop_conditions": [
+    "bounded_frontier_exhausted",
+    "remaining_change_would_be_speculative",
+    "remaining_change_would_be_destructive_or_unauthorized",
+    "hard_external_authorization_or_credential_blocker",
+    "runtime_budget_exhausted_after_verified_useful_work"
+  ],
+  "reporting": {
+    "material_deltas_only": true,
+    "true_operator_blockers_only": true,
+    "suppress_no_op_noise": true,
+    "routine_maintenance_may_complete_silently": true
+  },
+  "compatibility": {
+    "lane_specific_authority_boundaries_remain_binding": true,
+    "external_actions_still_require_applicable_authority": true,
+    "legal_case_truth_is_not_mutated_by_platform_maintenance": true,
+    "source_specific_authority_is_preserved": true,
+    "no_single_provider_becomes_universal_truth_by_convenience": true
+  }
+}
