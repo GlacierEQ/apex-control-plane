@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "db/migrations/20260909_control_plane_relevance_aware_awareness_v2_1.sql"
 DEDUP = ROOT / "db/migrations/20260909_control_plane_awareness_projection_dedup_v2_2.sql"
+HARDENING = ROOT / "db/migrations/20260911151918_harden_relevance_aware_awareness_v2_4.sql"
 GATE = ROOT / "supabase/functions/execution-awareness-gate/index.ts"
 IMPACT = ROOT / "supabase/functions/operator-impact-context/index.ts"
 
@@ -49,6 +50,14 @@ def test_projection_events_cannot_manufacture_relevance() -> None:
     assert "projection text cannot manufacture new relevance" in sql
 
 
+def test_target_matching_uses_normalized_token_boundaries_not_raw_substrings() -> None:
+    sql = _text(HARDENING)
+    assert "strpos(' '||haystack||' ',' '||target_system||' ')>0" in sql
+    assert "strpos(' '||haystack||' ',' '||target_ref||' ')>0" in sql
+    assert "strpos(haystack,target_system)>0" not in sql
+    assert "strpos(haystack,target_ref)>0" not in sql
+
+
 def test_claim_uses_v2_and_admits_only_nonapproval_ready_work() -> None:
     sql = _text(BASE)
     claim = sql.split(
@@ -77,17 +86,41 @@ def test_explicit_attempt_uses_relevance_aware_fence() -> None:
     assert "awareness_relevance_model" in begin_attempt
 
 
+def test_awareness_projection_preserves_causal_source_identity() -> None:
+    sql = _text(HARDENING)
+    for marker in (
+        "newer_hard_sources",
+        "newer_soft_sources",
+        "'source_kind',s.source_kind",
+        "'source_id',s.source_id",
+        "'source_ref',s.source_ref",
+        "'source_at',s.source_at",
+        "'relevance_reason',s.relevance_reason",
+    ):
+        assert marker in sql
+
+
 def test_internal_reconciler_is_structural_not_substantive() -> None:
-    sql = _text(BASE)
+    sql = _text(BASE) + "\n" + _text(HARDENING)
+    assert "a.action_type='OPERATOR_ALERT'" in sql
+    assert "public.apex_connector_incidents" in sql
+    assert "no_substantive_domain_judgment" in sql
+    assert "STRUCTURAL_CONNECTOR_INCIDENT_STATE" in sql
+    assert "CRIMINAL_REFERRAL" not in sql
+    assert "LEGAL_REFERRAL" not in sql
+
+
+def test_internal_reconciler_locks_incident_before_certifying_state() -> None:
+    sql = _text(HARDENING)
     reconcile = sql.split(
         "create or replace function public.reconcile_control_plane_internal_awareness_v2", 1
     )[1]
-    assert "a.action_type='OPERATOR_ALERT'" in reconcile
-    assert "public.apex_connector_incidents" in reconcile
-    assert "no_substantive_domain_judgment" in reconcile
-    assert "STRUCTURAL_CONNECTOR_INCIDENT_STATE" in reconcile
-    assert "CRIMINAL_REFERRAL" not in reconcile
-    assert "LEGAL_REFERRAL" not in reconcile
+    lock = reconcile.index("where i.id=r.incident_id")
+    evaluation = reconcile.index("v_valid:=v_resolved_at is null")
+    receipt = reconcile.index("record_control_plane_action_awareness_v1")
+    assert "for update" in reconcile[lock:evaluation]
+    assert lock < evaluation < receipt
+    assert "incident_state_locked_during_evaluation',true" in reconcile
 
 
 def test_internal_awareness_reconciliation_is_continuous() -> None:
@@ -109,7 +142,7 @@ def test_runtime_consumers_use_v2_contract() -> None:
 
 
 def test_relevance_model_has_no_case_specific_hardcoding() -> None:
-    sql = _text(BASE) + "\n" + _text(DEDUP)
+    sql = _text(BASE) + "\n" + _text(DEDUP) + "\n" + _text(HARDENING)
     for forbidden in (
         "NEX-JBPHH-2026-08-14",
         "1FDV-23-0001009",
