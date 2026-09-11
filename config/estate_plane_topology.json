@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.2",
+  "schema_version": "1.3",
   "status": "ACTIVE",
-  "principle": "Backend Ops and GlacierEQ are scoped peer planes in a polycentric estate. Backend Ops owns connector/control/cognitive capability state within its domain; GlacierEQ owns mission/substantive state within its domain; provider-native and other source-bearing peers retain authority for their own bytes, execution state, and receipts. No plane becomes universal truth by convenience.",
+  "principle": "Backend Ops and GlacierEQ are scoped peer planes in a polycentric estate. Backend Ops owns connector/control/cognitive capability state within its domain; GlacierEQ maintains mission/substantive operational projections and working state within its domain; source-bearing case repositories, Operator firsthand records, provider-native systems, evidence artifacts, and other qualified peers retain proposition-specific authority for the facts and bytes they actually bear. No plane becomes universal truth by convenience or topology.",
   "planes": {
     "control": {
       "project_name": "supabase-backend-ops",
@@ -23,6 +23,7 @@
       ],
       "does_not_own": [
         "case_facts_and_allegations",
+        "operator_firsthand_testimony",
         "personal_memory_payloads",
         "job_application_records",
         "substantive_case_positions",
@@ -41,10 +42,10 @@
     "mission": {
       "project_name": "supabase-glaciereq",
       "project_ref": "kjebemdgvjvuutzvhbtp",
-      "role": "MISSION_DATA_AND_SUBSTANTIVE_KNOWLEDGE_PLANE",
-      "owns": [
-        "case_and_matter_state",
-        "facts_propositions_contradictions",
+      "role": "MISSION_DATA_AND_SUBSTANTIVE_OPERATIONAL_PROJECTION_PLANE",
+      "projects_and_operates": [
+        "case_and_matter_runtime_state",
+        "provenance_bound_fact_proposition_and_contradiction_projections",
         "evidence_and_source_bindings",
         "personal_and_life_data",
         "memory_payloads_and_substantive_memory",
@@ -54,6 +55,10 @@
         "provider_observations_bound_to_missions"
       ],
       "does_not_own": [
+        "operator_firsthand_testimony",
+        "source_bound_case_graph_authority",
+        "provider_native_evidence_bytes",
+        "external_source_factual_authority",
         "global_kernel_authority",
         "global_epistemology_authority",
         "connector_registry_and_tool_definitions",
@@ -101,20 +106,25 @@
     }
   },
   "source_authority": {
+    "operator_firsthand": "Operator-authored firsthand observations, testimony, intent, objectives, and corrections within their scope",
+    "case_repositories": "versioned source-bound case graphs, allegations, legal propositions, provenance and case-specific contracts within their scope",
     "github": "code, schemas, migrations, repository heads, versioned behavioral contracts",
     "provider_native_systems": "provider execution state, message/send/delivery receipts, source bytes",
+    "evidence_artifacts": "native source bytes and provenance-bound extracted propositions within their evidentiary scope",
     "supabase_backend_ops": "live scoped capability/control/runtime projection and repository linkage",
-    "supabase_glaciereq": "live scoped substantive mission/data projection"
+    "supabase_glaciereq": "live scoped mission/runtime projection and interoperable substantive working state"
   },
   "cross_plane_rules": [
     "Mission objects may request capabilities but do not own connector implementations.",
     "Control-plane execution may carry bounded provenance-bearing mission projections but must not promote them into substantive truth.",
+    "GlacierEQ mission tables may operationalize case facts, propositions, contradictions, evidence bindings, and actions, but projection or storage location does not displace the proposition-specific authority of Operator firsthand records, source-bound case repositories, provider-native records, or native evidence artifacts.",
     "Global behavioral contracts within GlacierEQ-controlled infrastructure belong in Backend Ops; case-scoped strategy and instructions remain mission data.",
     "Capability repositories remain GitHub source authority; Backend Ops stores discovery, classification, active SHA bindings, relationships, runtime status and receipts.",
     "A discovered capability repository is not automatically an active runtime implementation; confirmation requires source/runtime evidence.",
     "Mutable inventory counts and health state are runtime observations, not versioned topology authority.",
     "Existing GlacierEQ global instruction rows are preserved as legacy provenance projections and are not deleted during cutover.",
     "No provider-native source is replaced by a Supabase projection.",
+    "No source-bearing case repository is replaced by a Supabase projection merely because the projection is operationally convenient.",
     "No hidden platform system or developer prompt is claimed, reconstructed, or stored as GlacierEQ-controlled authority; only Operator-controlled behavioral artifacts and explicit source references belong in the control plane."
   ],
   "critical_repository_roles": {
