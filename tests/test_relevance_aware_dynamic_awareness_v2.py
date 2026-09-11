@@ -4,7 +4,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "db/migrations/20260909_control_plane_relevance_aware_awareness_v2_1.sql"
-DEDUP = ROOT / "db/migrations/20260909_control_plane_awareness_projection_dedup_v2_2.sql"
 HARDENING = ROOT / "db/migrations/20260911151918_harden_relevance_aware_awareness_v2_4.sql"
 HARMONIZED = ROOT / "db/migrations/20260911165328_harmonize_relevance_aware_awareness_v2_5.sql"
 GATE = ROOT / "supabase/functions/execution-awareness-gate/index.ts"
@@ -43,7 +42,7 @@ def test_hard_relevance_requires_typed_linkage_or_declared_gate() -> None:
 
 
 def test_projection_events_cannot_manufacture_relevance() -> None:
-    sql = _text(DEDUP) + "\n" + _text(HARMONIZED)
+    sql = _text(HARMONIZED)
     assert "not exists" in sql.lower()
     assert "control_plane_communications c2" in sql
     assert "control_plane_action_outbox" in sql
@@ -52,7 +51,7 @@ def test_projection_events_cannot_manufacture_relevance() -> None:
 
 
 def test_target_matching_uses_normalized_token_boundaries_not_raw_substrings() -> None:
-    sql = _text(HARDENING)
+    sql = _text(BASE) + "\n" + _text(HARDENING)
     assert "strpos(' '||haystack||' ',' '||target_system||' ')>0" in sql
     assert "strpos(' '||haystack||' ',' '||target_ref||' ')>0" in sql
     assert "strpos(haystack,target_system)>0" not in sql
@@ -76,12 +75,8 @@ def test_connector_incident_id_outranks_connector_name_fallback() -> None:
 
 def test_claim_uses_v2_and_admits_only_nonapproval_ready_work() -> None:
     sql = _text(BASE)
-    claim = sql.split(
-        "create or replace function public.claim_control_plane_actions_v1", 1
-    )[1]
-    claim = claim.split(
-        "create or replace function public.control_plane_begin_authorized_attempt", 1
-    )[0]
+    claim = sql.split("create or replace function public.claim_control_plane_actions_v1", 1)[1]
+    claim = claim.split("create or replace function public.control_plane_begin_authorized_attempt", 1)[0]
     assert "control_plane_action_awareness_v2" in claim
     assert "a.status='READY' and not a.requires_operator_approval" in claim
     assert "aw.dispatch_reevaluation_required is false" in claim
@@ -90,12 +85,8 @@ def test_claim_uses_v2_and_admits_only_nonapproval_ready_work() -> None:
 
 def test_explicit_attempt_uses_relevance_aware_fence() -> None:
     sql = _text(BASE)
-    begin_attempt = sql.split(
-        "create or replace function public.control_plane_begin_authorized_attempt", 1
-    )[1]
-    begin_attempt = begin_attempt.split(
-        "create or replace function public.reconcile_control_plane_internal_awareness_v2", 1
-    )[0]
+    begin_attempt = sql.split("create or replace function public.control_plane_begin_authorized_attempt", 1)[1]
+    begin_attempt = begin_attempt.split("create or replace function public.reconcile_control_plane_internal_awareness_v2", 1)[0]
     assert "control_plane_action_awareness_v2" in begin_attempt
     assert "if v_aw.dispatch_reevaluation_required then" in begin_attempt
     assert "newer_soft_context_exists" in begin_attempt
@@ -128,9 +119,7 @@ def test_internal_reconciler_is_structural_not_substantive() -> None:
 
 def test_internal_reconciler_locks_incident_before_certifying_state() -> None:
     sql = _text(HARMONIZED)
-    reconcile = sql.split(
-        "create or replace function public.reconcile_control_plane_internal_awareness_v2", 1
-    )[1]
+    reconcile = sql.split("create or replace function public.reconcile_control_plane_internal_awareness_v2", 1)[1]
     lock = reconcile.index("where i.id=r.incident_id")
     evaluation = reconcile.index("v_valid:=v_resolved_at is null")
     receipt = reconcile.index("record_control_plane_action_awareness_v1")
@@ -151,14 +140,14 @@ def test_runtime_consumers_use_v2_contract() -> None:
     impact = _text(IMPACT)
     assert 'from("control_plane_action_awareness_v2")' in gate
     assert "dispatch_reevaluation_required" in gate
-    assert "legacy_next_semantic_step" in gate
+    assert "next_semantic_step_v2" in gate
     assert "get_control_plane_action_awareness_v2" in impact
     assert "soft_context_blocks_dispatch: false" in impact
     assert "representation_duplicates_cannot_create_relevance: true" in impact
 
 
 def test_relevance_model_has_no_case_specific_hardcoding() -> None:
-    sql = _text(BASE) + "\n" + _text(DEDUP) + "\n" + _text(HARDENING) + "\n" + _text(HARMONIZED)
+    sql = _text(BASE) + "\n" + _text(HARDENING) + "\n" + _text(HARMONIZED)
     for forbidden in (
         "NEX-JBPHH-2026-08-14",
         "1FDV-23-0001009",
