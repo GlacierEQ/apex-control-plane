@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "db/migrations/20260909_control_plane_relevance_aware_awareness_v2_1.sql"
 DEDUP = ROOT / "db/migrations/20260909_control_plane_awareness_projection_dedup_v2_2.sql"
 HARDENING = ROOT / "db/migrations/20260911151918_harden_relevance_aware_awareness_v2_4.sql"
+HARMONIZED = ROOT / "db/migrations/20260911165328_harmonize_relevance_aware_awareness_v2_5.sql"
 GATE = ROOT / "supabase/functions/execution-awareness-gate/index.ts"
 IMPACT = ROOT / "supabase/functions/operator-impact-context/index.ts"
 
@@ -25,7 +26,7 @@ def test_v2_separates_hard_relevance_from_soft_context() -> None:
 
 
 def test_hard_relevance_requires_typed_linkage_or_declared_gate() -> None:
-    sql = _text(BASE)
+    sql = _text(BASE) + "\n" + _text(HARMONIZED)
     for marker in (
         "EXPLICIT_ACTION_LINK",
         "PROVIDER_MESSAGE_LINK",
@@ -42,12 +43,12 @@ def test_hard_relevance_requires_typed_linkage_or_declared_gate() -> None:
 
 
 def test_projection_events_cannot_manufacture_relevance() -> None:
-    sql = _text(DEDUP)
+    sql = _text(DEDUP) + "\n" + _text(HARMONIZED)
     assert "not exists" in sql.lower()
     assert "control_plane_communications c2" in sql
     assert "control_plane_action_outbox" in sql
     assert "control_plane_obligations" in sql
-    assert "projection text cannot manufacture new relevance" in sql
+    assert "c2.source_system=e.source_system" in sql
 
 
 def test_target_matching_uses_normalized_token_boundaries_not_raw_substrings() -> None:
@@ -56,6 +57,21 @@ def test_target_matching_uses_normalized_token_boundaries_not_raw_substrings() -
     assert "strpos(' '||haystack||' ',' '||target_ref||' ')>0" in sql
     assert "strpos(haystack,target_system)>0" not in sql
     assert "strpos(haystack,target_ref)>0" not in sql
+
+
+def test_explicit_links_and_global_gates_cross_case_boundaries() -> None:
+    sql = _text(HARMONIZED)
+    assert "or c.metadata->>'action_id'=a.id::text" in sql
+    assert "or e.payload->>'action_id'=a.id::text" in sql
+    assert "or lower(coalesce(e.payload->>'global_execution_gate','')) in ('true','1','yes')" in sql
+    assert "or o.metadata->>'action_key'=a.action_key" in sql
+
+
+def test_connector_incident_id_outranks_connector_name_fallback() -> None:
+    sql = _text(HARMONIZED)
+    assert "coalesce(nullif(a.payload->>'incident_id',''),'')=''" in sql
+    assert "i.id::text=a.payload->>'incident_id'" in sql
+    assert "lower(i.connector)=lower" in sql
 
 
 def test_claim_uses_v2_and_admits_only_nonapproval_ready_work() -> None:
@@ -101,7 +117,7 @@ def test_awareness_projection_preserves_causal_source_identity() -> None:
 
 
 def test_internal_reconciler_is_structural_not_substantive() -> None:
-    sql = _text(BASE) + "\n" + _text(HARDENING)
+    sql = _text(BASE) + "\n" + _text(HARDENING) + "\n" + _text(HARMONIZED)
     assert "a.action_type='OPERATOR_ALERT'" in sql
     assert "public.apex_connector_incidents" in sql
     assert "no_substantive_domain_judgment" in sql
@@ -111,7 +127,7 @@ def test_internal_reconciler_is_structural_not_substantive() -> None:
 
 
 def test_internal_reconciler_locks_incident_before_certifying_state() -> None:
-    sql = _text(HARDENING)
+    sql = _text(HARMONIZED)
     reconcile = sql.split(
         "create or replace function public.reconcile_control_plane_internal_awareness_v2", 1
     )[1]
@@ -142,7 +158,7 @@ def test_runtime_consumers_use_v2_contract() -> None:
 
 
 def test_relevance_model_has_no_case_specific_hardcoding() -> None:
-    sql = _text(BASE) + "\n" + _text(DEDUP) + "\n" + _text(HARDENING)
+    sql = _text(BASE) + "\n" + _text(DEDUP) + "\n" + _text(HARDENING) + "\n" + _text(HARMONIZED)
     for forbidden in (
         "NEX-JBPHH-2026-08-14",
         "1FDV-23-0001009",
