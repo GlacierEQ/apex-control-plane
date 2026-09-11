@@ -1,0 +1,147 @@
+{
+  "schema_version": "1.3",
+  "status": "ACTIVE",
+  "principle": "Backend Ops and GlacierEQ are scoped peer planes in a polycentric estate. Backend Ops owns connector/control/cognitive capability state within its domain; GlacierEQ maintains mission/substantive operational projections and working state within its domain; source-bearing case repositories, Operator firsthand records, provider-native systems, evidence artifacts, and other qualified peers retain proposition-specific authority for the facts and bytes they actually bear. No plane becomes universal truth by convenience or topology.",
+  "planes": {
+    "control": {
+      "project_name": "supabase-backend-ops",
+      "project_ref": "dyhprklicgewmrimecey",
+      "role": "CONNECTOR_CONTROL_AND_COGNITIVE_CAPABILITY_PLANE",
+      "owns": [
+        "kernel_and_operator_control_contracts",
+        "epistemology",
+        "connector_registry_and_tools",
+        "provider_routing",
+        "runtime_configuration",
+        "retry_idempotency_recovery",
+        "execution_receipts",
+        "memory_architecture_and_routing",
+        "model_and_compute_routing",
+        "critical_repository_bindings",
+        "capability_repository_fabric",
+        "capability_graphs_and_pipelines"
+      ],
+      "does_not_own": [
+        "case_facts_and_allegations",
+        "operator_firsthand_testimony",
+        "personal_memory_payloads",
+        "job_application_records",
+        "substantive_case_positions",
+        "evidence_source_bytes",
+        "provider_native_message_bodies_as_authoritative_data"
+      ],
+      "runtime_tables": {
+        "authority": "public.estate_plane_authority_v1",
+        "control_artifacts": "public.control_plane_artifacts_v1",
+        "critical_repositories": "public.critical_repository_bindings_v1",
+        "capability_repositories": "public.capability_repository_registry_v1",
+        "capability_repository_links": "public.capability_repository_links_v1",
+        "capability_repository_summary": "public.capability_repository_summary_v1"
+      }
+    },
+    "mission": {
+      "project_name": "supabase-glaciereq",
+      "project_ref": "kjebemdgvjvuutzvhbtp",
+      "role": "MISSION_DATA_AND_SUBSTANTIVE_OPERATIONAL_PROJECTION_PLANE",
+      "projects_and_operates": [
+        "case_and_matter_runtime_state",
+        "provenance_bound_fact_proposition_and_contradiction_projections",
+        "evidence_and_source_bindings",
+        "personal_and_life_data",
+        "memory_payloads_and_substantive_memory",
+        "job_applications_and_employer_intelligence",
+        "mission_objectives_and_positions",
+        "communications_and_case_action_state",
+        "provider_observations_bound_to_missions"
+      ],
+      "does_not_own": [
+        "operator_firsthand_testimony",
+        "source_bound_case_graph_authority",
+        "provider_native_evidence_bytes",
+        "external_source_factual_authority",
+        "global_kernel_authority",
+        "global_epistemology_authority",
+        "connector_registry_and_tool_definitions",
+        "provider_route_policy",
+        "runtime_retry_idempotency_policy",
+        "critical_repository_activation_bindings"
+      ],
+      "runtime_tables": {
+        "authority": "public.estate_plane_authority_v1",
+        "case_scoped_instruction_view": "public.mission_instruction_artifacts_v1",
+        "legacy_global_projection_view": "public.legacy_global_control_artifact_projection_v1"
+      }
+    }
+  },
+  "capability_repository_fabric": {
+    "discovery_authority": "supabase-backend-ops Repo Atlas latest observed snapshot, derived from GitHub provider state",
+    "source_authority": "GitHub",
+    "registry_policy": "Link repositories and observed SHAs; do not copy repository source into Supabase or promote discovery candidates into runtime authority without evidence.",
+    "dynamic_observation_contract": {
+      "runtime_view": "supabase-backend-ops.public.capability_repository_summary_v1",
+      "mutable_counts_are_not_versioned_authority": true,
+      "fresh_read_required_for_current_inventory_claims": true,
+      "versioned_config_records_roles_and_query_surfaces_not_live_counts": true
+    },
+    "core_bound_repositories": {
+      "GlacierEQ/Omni_Engine": "omni_cognitive_engine",
+      "GlacierEQ/omni-engine": "omni_engine_variant",
+      "GlacierEQ/Omni_Engine_MCP": "omni_engine_mcp_adapter",
+      "GlacierEQ/computer-user": "computer_use_runtime",
+      "GlacierEQ/computer-user-storage": "computer_use_state_storage",
+      "GlacierEQ/UDC": "desktop_commander_runtime",
+      "GlacierEQ/everything-mcp-server": "everything_mcp_server",
+      "GlacierEQ/glaciereq-mcp-stack": "glaciereq_mcp_router",
+      "GlacierEQ/mcp-master-server": "mcp_master_server",
+      "GlacierEQ/mega-mcp": "mcp_of_mcps_orchestrator",
+      "GlacierEQ/mcp-tool-belt": "mcp_tool_belt",
+      "GlacierEQ/MCP-OMNI-PLATFORM": "mcp_omni_platform",
+      "GlacierEQ/unified-memory-mcp": "unified_memory_mcp"
+    },
+    "reference_bound_repositories": {
+      "GlacierEQ/mcp-gateway": "mcp_gateway_reference",
+      "GlacierEQ/MCP-MASTER-OMNI-GRID": "mcp_omni_grid",
+      "GlacierEQ/mcp-playwright": "browser_automation_mcp_reference",
+      "GlacierEQ/Windows-MCP": "windows_computer_use_mcp_reference"
+    }
+  },
+  "source_authority": {
+    "operator_firsthand": "Operator-authored firsthand observations, testimony, intent, objectives, and corrections within their scope",
+    "case_repositories": "versioned source-bound case graphs, allegations, legal propositions, provenance and case-specific contracts within their scope",
+    "github": "code, schemas, migrations, repository heads, versioned behavioral contracts",
+    "provider_native_systems": "provider execution state, message/send/delivery receipts, source bytes",
+    "evidence_artifacts": "native source bytes and provenance-bound extracted propositions within their evidentiary scope",
+    "supabase_backend_ops": "live scoped capability/control/runtime projection and repository linkage",
+    "supabase_glaciereq": "live scoped mission/runtime projection and interoperable substantive working state"
+  },
+  "cross_plane_rules": [
+    "Mission objects may request capabilities but do not own connector implementations.",
+    "Control-plane execution may carry bounded provenance-bearing mission projections but must not promote them into substantive truth.",
+    "GlacierEQ mission tables may operationalize case facts, propositions, contradictions, evidence bindings, and actions, but projection or storage location does not displace the proposition-specific authority of Operator firsthand records, source-bound case repositories, provider-native records, or native evidence artifacts.",
+    "Global behavioral contracts within GlacierEQ-controlled infrastructure belong in Backend Ops; case-scoped strategy and instructions remain mission data.",
+    "Capability repositories remain GitHub source authority; Backend Ops stores discovery, classification, active SHA bindings, relationships, runtime status and receipts.",
+    "A discovered capability repository is not automatically an active runtime implementation; confirmation requires source/runtime evidence.",
+    "Mutable inventory counts and health state are runtime observations, not versioned topology authority.",
+    "Existing GlacierEQ global instruction rows are preserved as legacy provenance projections and are not deleted during cutover.",
+    "No provider-native source is replaced by a Supabase projection.",
+    "No source-bearing case repository is replaced by a Supabase projection merely because the projection is operationally convenient.",
+    "No hidden platform system or developer prompt is claimed, reconstructed, or stored as GlacierEQ-controlled authority; only Operator-controlled behavioral artifacts and explicit source references belong in the control plane."
+  ],
+  "critical_repository_roles": {
+    "GlacierEQ/apex-control-plane": ["kernel", "operator_contracts", "execution_semantics", "anti_hidden_harm"],
+    "GlacierEQ/aspen-grove-core": ["boot_protocol", "memory_and_context_routing", "runtime_continuity"],
+    "GlacierEQ/Genius-Mastery": ["capability_forge", "instruction_engineering", "progress_protocol", "case_position_mastery"],
+    "GlacierEQ/mega-skills": ["skills", "combo_skills", "mega_skills", "capability_sources"],
+    "GlacierEQ/AKOS": ["epistemology", "operational_cognition", "methodologies"],
+    "GlacierEQ/mastermind": ["reasoning_composition", "operator_impact_first_projection"]
+  },
+  "cutover": {
+    "backend_ops_migration": "establish_canonical_control_plane_v1",
+    "backend_ops_security_migration": "explicit_control_plane_client_deny_v1",
+    "capability_repository_migration": "establish_capability_repository_registry_v1",
+    "glaciereq_migration": "establish_canonical_mission_data_plane_v1",
+    "glaciereq_security_migration": "fix_mission_plane_view_security_v1",
+    "destructive_moves": false,
+    "legacy_rows_preserved": true
+  }
+}

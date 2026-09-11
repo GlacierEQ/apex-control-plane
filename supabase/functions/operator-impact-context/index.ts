@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       .order("repo_name", { ascending: true })
       .order("observation_kind", { ascending: true })
       .limit(200),
-    supabase.rpc("get_control_plane_action_awareness_v1", {
+    supabase.rpc("get_control_plane_action_awareness_v2", {
       p_case_id: caseId,
       p_action_id: actionId,
       p_limit: 50,
@@ -126,8 +126,11 @@ Deno.serve(async (req) => {
     observed_at: new Date().toISOString(),
     actions: [],
     actions_requiring_reevaluation: 0,
+    actions_with_new_soft_context: 0,
+    relevance_model: "explicit-link-target-global-gate-v2",
   };
   const reevaluationCount = Number(awareness.actions_requiring_reevaluation ?? 0);
+  const softContextCount = Number(awareness.actions_with_new_soft_context ?? 0);
 
   return new Response(JSON.stringify({
     status: "ok",
@@ -142,7 +145,11 @@ Deno.serve(async (req) => {
       requested_action_id: actionId,
       executor,
       must_re_evaluate_before_mutation: reevaluationCount > 0,
-      semantic_basis: "current source-bearing state outranks cached action intent",
+      newer_soft_context_present: softContextCount > 0,
+      semantic_basis:
+        "current relevant source-bearing state outranks cached action intent; unrelated context remains visible without blocking",
+      hard_source_changes_block_dispatch: true,
+      soft_context_blocks_dispatch: false,
     },
     repo_runtime: {
       authority: "qualified_projection_only",
@@ -160,7 +167,8 @@ Deno.serve(async (req) => {
       process_ready_actions_idempotently: true,
       capture_external_receipts_before_completion: true,
       recompute_on_new_communication_or_obligation: true,
-      reevaluate_when_newer_source_state_exists: true,
+      reevaluate_when_newer_relevant_source_state_exists: true,
+      preserve_unrelated_new_context_without_false_blocking: true,
       stale_cached_intent_is_not_execution_authority: true,
       surface_connector_incidents: true,
       use_only_fresh_qualified_repo_runtime_state: true,
@@ -169,10 +177,13 @@ Deno.serve(async (req) => {
       authority: "operator_context_plus_continuous_control_plane",
       protected_instructions_overridden: false,
       dynamic_awareness_is_primary_runtime_context: true,
+      relevance_model: awareness.relevance_model ?? "explicit-link-target-global-gate-v2",
       reweight_on_material_change: true,
       checkpoint_is_execution_state: true,
       repo_runtime_is_projection_not_repository_authority: true,
       action_rules_are_not_substitute_for_current_state: true,
+      soft_context_is_visible_but_nonblocking: true,
+      representation_duplicates_cannot_create_relevance: true,
     },
   }), {
     headers: {
