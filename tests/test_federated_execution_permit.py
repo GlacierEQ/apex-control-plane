@@ -9,6 +9,21 @@ def sql(path: Path) -> str:
     return path.read_text()
 
 
+def test_surviving_permit_migration_contains_required_harvested_substrate():
+    source = sql(BASE)
+    for marker in (
+        "create table if not exists public.continuity_case_execution_plans_v1",
+        "create table if not exists public.continuity_case_execution_plan_actions_v1",
+        "add column if not exists execution_guard",
+        "add column if not exists plan_action_id",
+        "continuity_case_plan_gate_v1",
+        "continuity_preflight_outbound_v3",
+        "continuity_bind_outbound_to_plan_v1",
+        "continuity_start_outbound_v1",
+    ):
+        assert marker in source
+
+
 def test_permit_binds_both_execution_domains():
     source = sql(BASE) + "\n" + sql(HARDENING)
     assert "backend_execution_guard_not_ready" in source
