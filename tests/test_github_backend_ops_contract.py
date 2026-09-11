@@ -177,5 +177,5 @@ def test_control_plane_health_is_service_role_only():
 def test_unbound_desktop_commander_is_not_claimable():
     m = manifest()
     worker = m["workers"]["glacier_desktop_commander"]
-    assert worker["status"] == "source_ready_unbound"
+    assert worker["status"] == "source_runtime_hardened_device_unbound"
     assert worker["selection_enabled"] is False
