@@ -8,6 +8,7 @@ continuation point, or source topology.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -22,6 +23,7 @@ from prime_directive_boot import receipt_from_environment
 DEFAULT_POLICY_PATH = (
     Path(__file__).resolve().parents[1] / "config" / "model_attractor_defense_policy.json"
 )
+_REPO_ROOT = Path(__file__).resolve().parents[1]
 _SEAL = object()
 
 SOURCE_ROLE_SEMANTIC_KEYS = frozenset(
@@ -84,6 +86,132 @@ def _nonempty_string_array(value: Any) -> bool:
     return isinstance(value, list) and bool(value) and all(
         _nonempty_text(item) for item in value
     )
+
+
+def _sha256_bytes(value: bytes) -> str:
+    return "sha256:" + hashlib.sha256(value).hexdigest()
+
+
+def _resolve_local_source(source_ref: str) -> tuple[Path, bytes]:
+    """Resolve source refs whose bytes are independently available to this runtime.
+
+    Receipt-provided labels are not accepted as proof. Only repository-local
+    source refs are eligible for a recomputable semantic binding here.
+    """
+    if not _nonempty_text(source_ref):
+        raise ValueError("source_ref must be non-empty")
+
+    locator = source_ref.split("#", 1)[0].strip()
+    if locator.startswith("policy:"):
+        relative = Path("config") / locator[len("policy:") :]
+    elif locator.startswith("repo:"):
+        relative = Path(locator[len("repo:") :])
+    else:
+        raise ValueError(
+            "source_ref must use a recomputable local scheme (policy: or repo:)"
+        )
+
+    resolved = (_REPO_ROOT / relative).resolve()
+    try:
+        resolved.relative_to(_REPO_ROOT)
+    except ValueError as exc:
+        raise ValueError("source_ref escapes repository root") from exc
+    if not resolved.is_file():
+        raise ValueError(f"source_ref does not resolve to a file: {source_ref}")
+    return resolved, resolved.read_bytes()
+
+
+def build_local_source_binding(source_ref: str) -> dict[str, str]:
+    """Build a binding whose digest the validator will recompute independently."""
+    _, payload = _resolve_local_source(source_ref)
+    return {
+        "source_ref": source_ref,
+        "source_sha256": _sha256_bytes(payload),
+    }
+
+
+def _validate_source_role_bindings(
+    *,
+    field_name: str,
+    expected: bool,
+    evidence: Mapping[str, Any],
+    prefix: str,
+) -> tuple[str, ...]:
+    errors: list[str] = []
+    source_refs = evidence.get("source_refs")
+    bindings = evidence.get("source_bindings")
+    if not _nonempty_string_array(source_refs):
+        return ()
+    if not isinstance(bindings, list) or not bindings:
+        return (f"{prefix}.source_bindings must be a non-empty array",)
+
+    verified_binding = False
+    for index, binding in enumerate(bindings):
+        binding_prefix = f"{prefix}.source_bindings[{index}]"
+        if not isinstance(binding, Mapping):
+            errors.append(f"{binding_prefix} must be an object")
+            continue
+
+        source_ref = binding.get("source_ref")
+        if not _nonempty_text(source_ref):
+            errors.append(f"{binding_prefix}.source_ref must be non-empty")
+            continue
+        if source_ref not in source_refs:
+            errors.append(
+                f"{binding_prefix}.source_ref must match an entry in source_refs"
+            )
+            continue
+        if not source_ref.startswith("policy:"):
+            errors.append(
+                f"{binding_prefix}.source_ref must bind source-role semantics to policy source"
+            )
+            continue
+
+        fragment = source_ref.split("#", 1)[1] if "#" in source_ref else ""
+        if fragment != field_name:
+            errors.append(
+                f"{binding_prefix}.source_ref fragment must be {field_name}"
+            )
+            continue
+
+        try:
+            _, payload = _resolve_local_source(source_ref)
+        except ValueError as exc:
+            errors.append(f"{binding_prefix}.source_ref is not recomputable: {exc}")
+            continue
+
+        expected_digest = _sha256_bytes(payload)
+        if binding.get("source_sha256") != expected_digest:
+            errors.append(
+                f"{binding_prefix}.source_sha256 does not match source bytes"
+            )
+            continue
+
+        try:
+            source_document = json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            errors.append(
+                f"{binding_prefix}.source_ref must resolve to valid UTF-8 JSON policy"
+            )
+            continue
+        source_semantics = source_document.get("source_role_semantics")
+        if not isinstance(source_semantics, Mapping):
+            errors.append(
+                f"{binding_prefix}.source_ref lacks source_role_semantics"
+            )
+            continue
+        if source_semantics.get(field_name) is not expected:
+            errors.append(
+                f"{binding_prefix}.source_ref does not support asserted_value {expected!r}"
+            )
+            continue
+        verified_binding = True
+
+    if not verified_binding:
+        errors.append(
+            f"{prefix} has no independently recomputable source binding"
+        )
+    return tuple(errors)
 
 
 def _validate_boolean_semantics(
@@ -226,6 +354,14 @@ def validate_model_attractor_receipt(
                 errors.append(
                     f"{prefix}.verification_state must be {_SOURCE_ROLE_VERIFICATION_STATE}"
                 )
+            errors.extend(
+                _validate_source_role_bindings(
+                    field_name=field_name,
+                    expected=expected,
+                    evidence=evidence,
+                    prefix=prefix,
+                )
+            )
 
     constraint_scope = row.get("platform_constraint_scope")
     if not _nonempty_text(constraint_scope):
@@ -292,8 +428,16 @@ def build_model_attractor_request(
         field_name: {
             "asserted_value": expected,
             "proposition": "non-empty proposition tied to this invariant",
-            "source_refs": ["one or more source-bearing references"],
+            "source_refs": [
+                f"policy:model_attractor_defense_policy.json#{field_name}"
+            ],
             "provider_refs": ["one or more provider/authority references"],
+            "source_bindings": [
+                {
+                    "source_ref": f"policy:model_attractor_defense_policy.json#{field_name}",
+                    "source_sha256": "sha256:<64 hex recomputed from source bytes>",
+                }
+            ],
             "verification_state": _SOURCE_ROLE_VERIFICATION_STATE,
         }
         for field_name, expected in source_role_semantics.items()
@@ -343,6 +487,7 @@ def build_model_attractor_request(
             "enforce_derivative_representation_semantics": True,
             "enforce_source_role_semantics": True,
             "require_source_role_evidence": True,
+            "require_recomputable_source_role_bindings": True,
             "forbid_connector_metadata_from_becoming_global_authority": True,
         },
         "receipt_contract": {
