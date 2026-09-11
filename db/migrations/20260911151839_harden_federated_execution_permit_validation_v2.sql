@@ -1,9 +1,6 @@
 -- Harden federated execution permits against stale authorization, expired/changed
 -- context packets, expired-permit reuse, and concurrent double consumption.
 
-alter table public.continuity_federated_execution_permits_v1
-  drop constraint if exists continuity_federated_executio_action_id_packet_snapshot_has_key;
-
 create index if not exists continuity_federated_permits_identity_idx
   on public.continuity_federated_execution_permits_v1(
     action_id, packet_snapshot_hash, global_frontier_hash,
@@ -31,6 +28,8 @@ declare
   v_permit public.continuity_federated_execution_permits_v1%rowtype;
   v_ttl integer:=greatest(30,least(coalesce(p_ttl_seconds,300),600));
   v_plan_gate jsonb;
+  v_checkpointed_awareness_ref text;
+  v_checkpointed_awareness_watermark timestamptz;
 begin
   if p_expected_global_frontier_hash is null or p_expected_global_frontier_hash !~ '^[0-9a-f]{64}$' then
     raise exception 'invalid_global_frontier_hash';
@@ -77,6 +76,16 @@ begin
     raise exception 'primary_awareness_older_than_global_frontier_checkpoint';
   end if;
 
+  v_checkpointed_awareness_ref:=nullif(trim(coalesce(p.metadata->>'primary_awareness_receipt_ref','')),'');
+  begin
+    v_checkpointed_awareness_watermark:=nullif(trim(coalesce(p.metadata->>'primary_awareness_source_watermark_at','')),'')::timestamptz;
+  exception when others then
+    raise exception 'primary_awareness_checkpoint_invalid';
+  end;
+  if v_checkpointed_awareness_ref is null or v_checkpointed_awareness_watermark is null then raise exception 'primary_awareness_receipt_not_checkpointed'; end if;
+  if v_checkpointed_awareness_ref is distinct from trim(p_primary_awareness_receipt_ref) then raise exception 'primary_awareness_receipt_mismatch'; end if;
+  if v_checkpointed_awareness_watermark is distinct from p_primary_awareness_source_watermark_at then raise exception 'primary_awareness_watermark_mismatch'; end if;
+
   select pmt.* into v_permit
   from public.continuity_federated_execution_permits_v1 pmt
   where pmt.action_id=a.action_id
@@ -101,7 +110,7 @@ begin
       a.action_id,a.plan_action_id,a.packet_id,cp.snapshot_hash,
       p.last_snapshot_hash,p.last_watermark_at,
       trim(p_primary_awareness_receipt_ref),p_primary_awareness_source_watermark_at,
-      now()+make_interval(secs=>v_ttl),trim(p_issuer),coalesce(p_detail,'{}'::jsonb)
+      least(cp.expires_at,now()+make_interval(secs=>v_ttl)),trim(p_issuer),coalesce(p_detail,'{}'::jsonb)
     ) returning * into v_permit;
 
     insert into public.continuity_federated_execution_permit_receipts_v1(
@@ -149,6 +158,8 @@ declare
   v_plan_gate jsonb;
   consumed boolean:=false;
   revoked boolean:=false;
+  v_checkpointed_awareness_ref text;
+  v_checkpointed_awareness_watermark timestamptz;
 begin
   select * into pmt
   from public.continuity_federated_execution_permits_v1
@@ -193,6 +204,17 @@ begin
   if not found or peer.sync_status<>'healthy' then return jsonb_build_object('ready',false,'reason','global_frontier_peer_not_healthy'); end if;
   if peer.last_snapshot_hash is distinct from pmt.global_frontier_hash then return jsonb_build_object('ready',false,'reason','global_frontier_advanced_or_changed'); end if;
   if peer.last_watermark_at is null or peer.last_watermark_at < now()-interval '15 minutes' then return jsonb_build_object('ready',false,'reason','global_frontier_checkpoint_stale'); end if;
+  if pmt.primary_awareness_source_watermark_at < peer.last_watermark_at then return jsonb_build_object('ready',false,'reason','primary_awareness_older_than_global_frontier_checkpoint'); end if;
+
+  v_checkpointed_awareness_ref:=nullif(trim(coalesce(peer.metadata->>'primary_awareness_receipt_ref','')),'');
+  begin
+    v_checkpointed_awareness_watermark:=nullif(trim(coalesce(peer.metadata->>'primary_awareness_source_watermark_at','')),'')::timestamptz;
+  exception when others then
+    return jsonb_build_object('ready',false,'reason','primary_awareness_checkpoint_invalid');
+  end;
+  if v_checkpointed_awareness_ref is null or v_checkpointed_awareness_watermark is null then return jsonb_build_object('ready',false,'reason','primary_awareness_receipt_not_checkpointed'); end if;
+  if v_checkpointed_awareness_ref is distinct from pmt.primary_awareness_receipt_ref then return jsonb_build_object('ready',false,'reason','primary_awareness_receipt_mismatch'); end if;
+  if v_checkpointed_awareness_watermark is distinct from pmt.primary_awareness_source_watermark_at then return jsonb_build_object('ready',false,'reason','primary_awareness_watermark_mismatch'); end if;
 
   insert into public.continuity_federated_execution_permit_receipts_v1(permit_id,action_id,receipt_type,outcome,detail)
   values(pmt.permit_id,pmt.action_id,'VALIDATED','READY_FOR_PROVIDER_DISPATCH',jsonb_build_object('validated_at',now()))
