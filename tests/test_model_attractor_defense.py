@@ -45,16 +45,23 @@ def _continuity_receipt() -> dict:
             "current_operator_message_bound": True,
             "operator_mission_preserved": True,
             "operator_operation_class_preserved": True,
+            "operator_target_scale_preserved": True,
             "known_state_reuse_checked": True,
             "nearest_valid_continuation_checked": True,
             "abstraction_substitution_checked": True,
+            "objective_surrogate_substitution_checked": True,
+            "derivative_authority_inversion_checked": True,
             "mission_support_boundary_preserved": True,
             "memory_projection_treated_as_authority": False,
             "summary_substituted_for_state": False,
             "reconstruction_substituted_for_continuation": False,
             "plan_substituted_for_execution": False,
+            "scaffold_substituted_for_build": False,
+            "response_substituted_for_operation": False,
             "support_work_substituted_for_mission": False,
             "assistant_meta_task_substituted_for_operator_task": False,
+            "derivative_profile_overrode_live_operator_signal": False,
+            "concise_delivery_reduced_underlying_operation": False,
             "global_canonicalization_without_operator_direction": False,
             "platform_constraint_reframed_mission": False,
             "generic_assistant_prior_reframed_operation": False,
@@ -66,6 +73,7 @@ def _continuity_receipt() -> dict:
             "blocked_sources": [],
             "partial_hydration_declared": False,
             "operator_operation_class": "fix",
+            "operator_target": "repair the live control plane without reducing requested execution",
             "active_thread": "apex-control-plane anti-drift repair",
             "continuation_ref": "git:main@4f1ff56f49ca9f7a8541c85561cf2c05c12ecaff",
             "source_refs": [
@@ -96,6 +104,7 @@ def test_non_continuity_task_does_not_require_fake_source_hydration() -> None:
     row["continuity_required"] = False
     for field_name in (
         "operator_operation_class",
+        "operator_target",
         "active_thread",
         "continuation_ref",
         "source_refs",
@@ -163,6 +172,28 @@ def test_operation_class_must_be_preserved() -> None:
     assert any("operator_operation_class_preserved" in error for error in errors)
 
 
+@pytest.mark.parametrize(
+    ("field_name", "invalid_value"),
+    [
+        ("operator_target_scale_preserved", False),
+        ("objective_surrogate_substitution_checked", False),
+        ("derivative_authority_inversion_checked", False),
+        ("scaffold_substituted_for_build", True),
+        ("response_substituted_for_operation", True),
+        ("derivative_profile_overrode_live_operator_signal", True),
+        ("concise_delivery_reduced_underlying_operation", True),
+    ],
+)
+def test_derivative_intent_substitutions_fail_closed(
+    field_name: str, invalid_value: bool
+) -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    receipt["model_attractor_defense"][field_name] = invalid_value
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any(field_name in error for error in errors)
+
+
 def test_continuity_must_reuse_known_state_and_frontier() -> None:
     policy = load_model_attractor_policy()
     receipt = _continuity_receipt()
@@ -207,6 +238,14 @@ def test_continuity_requires_operation_class() -> None:
     assert any("operator_operation_class" in error for error in errors)
 
 
+def test_continuity_requires_operator_target() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    receipt["model_attractor_defense"]["operator_target"] = ""
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("operator_target" in error for error in errors)
+
+
 def test_continuity_requires_source_refs() -> None:
     policy = load_model_attractor_policy()
     receipt = _continuity_receipt()
@@ -244,10 +283,35 @@ def test_request_exposes_the_hidden_harm_countermeasures() -> None:
     assert requirements["reuse_known_state_before_rediscovery"] is True
     assert requirements["identify_nearest_executable_frontier_when_continuity_dependent"] is True
     assert requirements["preserve_mission_support_boundary"] is True
+    assert requirements["preserve_operator_target_scale"] is True
+    assert requirements["forbid_objective_surrogate_substitution"] is True
+    assert requirements["forbid_derivative_authority_inversion"] is True
+    assert requirements["forbid_scaffold_as_build_substitution"] is True
+    assert requirements["forbid_response_as_operation_substitution"] is True
+    assert requirements["forbid_derivative_profile_from_overriding_live_operator_signal"] is True
+    assert requirements["keep_presentation_concision_independent_of_execution_depth"] is True
+    assert requirements["require_target_state_evidence_for_completion"] is True
     assert requirements["forbid_support_work_as_mission_substitution"] is True
     assert requirements["forbid_operator_correction_as_assistant_meta_task"] is True
     assert requirements["forbid_platform_constraint_from_rewriting_operator_mission"] is True
     assert requirements["forbid_generic_model_prior_from_rewriting_operation_class"] is True
+
+
+def test_request_receipt_contract_is_derived_from_policy() -> None:
+    policy = load_model_attractor_policy()
+    request = build_model_attractor_request(policy, task="continue living estate")
+    contract = request["receipt_contract"]["model_attractor_defense"]
+    for field_name, expected in policy["required_boolean_fields"].items():
+        assert contract[field_name] is expected
+    for field_name, expected in policy["continuity_required_fields"].items():
+        assert field_name in contract
+        if expected is True:
+            assert contract[field_name] == "true when continuity_required=true"
+        elif expected == "nonempty":
+            assert contract[field_name] == "required when continuity_required=true"
+        elif expected == "nonempty_array":
+            assert contract[field_name] == ["required when continuity_required=true"]
+
 
 def test_policy_requires_boolean_source_role_semantics(tmp_path) -> None:
     policy = load_model_attractor_policy()
@@ -264,6 +328,17 @@ def test_policy_rejects_unapproved_source_role_key_collision(tmp_path) -> None:
     target = tmp_path / "colliding-source-role-semantics.json"
     target.write_text(json.dumps(policy), encoding="utf-8")
     with pytest.raises(BootError, match="approved keys"):
+        load_model_attractor_policy(target)
+
+
+def test_policy_requires_complete_derivative_representation_semantics(tmp_path) -> None:
+    policy = load_model_attractor_policy()
+    policy["derivative_representation_semantics"].pop(
+        "completion_requires_target_state_evidence_not_response_completion"
+    )
+    target = tmp_path / "incomplete-derivative-semantics.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+    with pytest.raises(BootError, match="derivative_representation_semantics.*approved keys"):
         load_model_attractor_policy(target)
 
 
@@ -305,14 +380,24 @@ def test_request_exposes_source_role_semantics_evidence_and_transformations() ->
     request = build_model_attractor_request(policy, task="continue living estate")
     assert request["source_role_semantics"]["providers_are_typed_peers"] is True
     assert (
+        request["derivative_representation_semantics"][
+            "live_operator_objective_has_direction_authority"
+        ]
+        is True
+    )
+    assert (
         "CONNECTOR_AUTHORITY_TIER -> GLOBAL_EPISTEMIC_HIERARCHY"
         in request["forbidden_transformations"]
     )
     assert "SUPPORT_WORK -> MISSION" in request["forbidden_transformations"]
+    assert "FULL_OPERATION -> ANSWER_ONLY" in request["forbidden_transformations"]
     requirements = request["requirements"]
     assert requirements["enforce_source_role_semantics"] is True
+    assert requirements["enforce_derivative_representation_semantics"] is True
     assert requirements["require_source_role_evidence"] is True
     contract = request["receipt_contract"]["model_attractor_defense"]
     assert contract["topology_does_not_confer_epistemic_or_project_authority"] is True
+    assert contract["operator_target_scale_preserved"] is True
+    assert contract["response_substituted_for_operation"] is False
     evidence_contract = contract["source_role_evidence"]
     assert evidence_contract["providers_are_typed_peers"]["verification_state"] == "verified"

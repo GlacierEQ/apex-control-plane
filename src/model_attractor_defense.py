@@ -36,6 +36,20 @@ SOURCE_ROLE_SEMANTIC_KEYS = frozenset(
         "verification_controls_completion_state",
     }
 )
+DERIVATIVE_REPRESENTATION_SEMANTIC_KEYS = frozenset(
+    {
+        "live_operator_objective_has_direction_authority",
+        "operator_firsthand_words_are_not_rewritten_by_profile_summaries",
+        "source_bearing_state_outranks_derivative_state_for_factual_support",
+        "summaries_profiles_memories_indexes_and_manifests_are_retrieval_and_orientation_aids",
+        "derivative_representation_may_not_reduce_target_scale",
+        "derivative_representation_may_not_change_operation_class",
+        "derivative_representation_may_not_convert_execution_into_explanation",
+        "derivative_representation_may_not_convert_dynamic_intelligence_into_static_rule_by_default",
+        "presentation_concision_is_independent_of_execution_depth",
+        "completion_requires_target_state_evidence_not_response_completion",
+    }
+)
 _SOURCE_ROLE_VERIFICATION_STATE = "verified"
 
 
@@ -72,6 +86,35 @@ def _nonempty_string_array(value: Any) -> bool:
     )
 
 
+def _validate_boolean_semantics(
+    *,
+    value: Any,
+    label: str,
+    approved_keys: frozenset[str],
+) -> None:
+    if not isinstance(value, Mapping) or not value:
+        raise BootError(f"model-attractor {label} must be a non-empty object")
+    if not all(
+        isinstance(key, str) and key.strip() and isinstance(expected, bool)
+        for key, expected in value.items()
+    ):
+        raise BootError(f"model-attractor {label} must contain boolean invariants")
+    semantic_keys = set(value)
+    missing = sorted(approved_keys - semantic_keys)
+    unexpected = sorted(semantic_keys - approved_keys)
+    if missing or unexpected:
+        details: list[str] = []
+        if missing:
+            details.append("missing=" + ",".join(missing))
+        if unexpected:
+            details.append("unexpected=" + ",".join(unexpected))
+        raise BootError(
+            f"model-attractor {label} must match approved keys ("
+            + "; ".join(details)
+            + ")"
+        )
+
+
 def load_model_attractor_policy(
     path: str | Path = DEFAULT_POLICY_PATH,
 ) -> dict[str, Any]:
@@ -91,6 +134,7 @@ def load_model_attractor_policy(
         "fail_closed",
         "required_boolean_fields",
         "continuity_required_fields",
+        "derivative_representation_semantics",
         "constraint_scoping",
         "routing_hints_only",
         "forbidden_transformations",
@@ -106,28 +150,16 @@ def load_model_attractor_policy(
     if not isinstance(value.get("continuity_required_fields"), Mapping):
         raise BootError("model-attractor continuity_required_fields must be an object")
 
-    semantics = value.get("source_role_semantics")
-    if not isinstance(semantics, Mapping) or not semantics:
-        raise BootError("model-attractor source_role_semantics must be a non-empty object")
-    if not all(
-        isinstance(key, str) and key.strip() and isinstance(expected, bool)
-        for key, expected in semantics.items()
-    ):
-        raise BootError("model-attractor source_role_semantics must contain boolean invariants")
-    semantic_keys = set(semantics)
-    missing_semantics = sorted(SOURCE_ROLE_SEMANTIC_KEYS - semantic_keys)
-    unexpected_semantics = sorted(semantic_keys - SOURCE_ROLE_SEMANTIC_KEYS)
-    if missing_semantics or unexpected_semantics:
-        details: list[str] = []
-        if missing_semantics:
-            details.append("missing=" + ",".join(missing_semantics))
-        if unexpected_semantics:
-            details.append("unexpected=" + ",".join(unexpected_semantics))
-        raise BootError(
-            "model-attractor source_role_semantics must match approved keys ("
-            + "; ".join(details)
-            + ")"
-        )
+    _validate_boolean_semantics(
+        value=value.get("source_role_semantics"),
+        label="source_role_semantics",
+        approved_keys=SOURCE_ROLE_SEMANTIC_KEYS,
+    )
+    _validate_boolean_semantics(
+        value=value.get("derivative_representation_semantics"),
+        label="derivative_representation_semantics",
+        approved_keys=DERIVATIVE_REPRESENTATION_SEMANTIC_KEYS,
+    )
 
     transformations = value.get("forbidden_transformations")
     if not isinstance(transformations, list) or not transformations or not all(
@@ -235,10 +267,27 @@ def validate_model_attractor_receipt(
     return tuple(dict.fromkeys(errors))
 
 
+def _continuity_contract(policy: Mapping[str, Any]) -> dict[str, Any]:
+    contract: dict[str, Any] = {}
+    for field_name, expected in policy.get("continuity_required_fields", {}).items():
+        if expected is True:
+            contract[field_name] = "true when continuity_required=true"
+        elif expected == "nonempty":
+            contract[field_name] = "required when continuity_required=true"
+        elif expected == "nonempty_array":
+            contract[field_name] = ["required when continuity_required=true"]
+        else:
+            contract[field_name] = expected
+    return contract
+
+
 def build_model_attractor_request(
     policy: Mapping[str, Any], *, task: str
 ) -> dict[str, Any]:
     source_role_semantics = dict(policy.get("source_role_semantics", {}))
+    derivative_semantics = dict(policy.get("derivative_representation_semantics", {}))
+    required_boolean_contract = dict(policy.get("required_boolean_fields", {}))
+    continuity_contract = _continuity_contract(policy)
     source_role_evidence_contract = {
         field_name: {
             "asserted_value": expected,
@@ -257,10 +306,12 @@ def build_model_attractor_request(
         "principle": policy.get("principle"),
         "forbidden_transformations": list(policy.get("forbidden_transformations", ())),
         "source_role_semantics": source_role_semantics,
+        "derivative_representation_semantics": derivative_semantics,
         "requirements": {
             "classify_continuity_requirement": True,
             "bind_current_operator_message": True,
             "preserve_operator_operation_class": True,
+            "preserve_operator_target_scale": True,
             "reuse_known_state_before_rediscovery": True,
             "identify_nearest_valid_continuation_when_continuity_dependent": True,
             "identify_nearest_executable_frontier_when_continuity_dependent": True,
@@ -272,6 +323,13 @@ def build_model_attractor_request(
             "forbid_summary_as_state_substitution": True,
             "forbid_reconstruction_as_continuation_substitution": True,
             "forbid_plan_as_execution_substitution": True,
+            "forbid_objective_surrogate_substitution": True,
+            "forbid_derivative_authority_inversion": True,
+            "forbid_scaffold_as_build_substitution": True,
+            "forbid_response_as_operation_substitution": True,
+            "forbid_derivative_profile_from_overriding_live_operator_signal": True,
+            "keep_presentation_concision_independent_of_execution_depth": True,
+            "require_target_state_evidence_for_completion": True,
             "forbid_support_work_as_mission_substitution": True,
             "forbid_operator_correction_as_assistant_meta_task": True,
             "forbid_unrequested_global_canonicalization": True,
@@ -280,6 +338,9 @@ def build_model_attractor_request(
             "forbid_generic_model_prior_from_rewriting_operation_class": True,
             "recover_known_state_instead_of_reasking_when_available": True,
             "forbid_dragging_operator_through_recoverable_state": True,
+            "enforce_required_boolean_fields_from_policy": True,
+            "enforce_continuity_fields_from_policy": True,
+            "enforce_derivative_representation_semantics": True,
             "enforce_source_role_semantics": True,
             "require_source_role_evidence": True,
             "forbid_connector_metadata_from_becoming_global_authority": True,
@@ -288,41 +349,13 @@ def build_model_attractor_request(
             "model_attractor_defense": {
                 "failure_class": "MODEL_ATTRACTOR_DRIFT",
                 "continuity_required": "boolean",
-                "current_operator_message_bound": True,
-                "operator_mission_preserved": True,
-                "operator_operation_class_preserved": True,
-                "known_state_reuse_checked": True,
-                "nearest_valid_continuation_checked": True,
-                "abstraction_substitution_checked": True,
-                "mission_support_boundary_preserved": True,
-                "memory_projection_treated_as_authority": False,
-                "summary_substituted_for_state": False,
-                "reconstruction_substituted_for_continuation": False,
-                "plan_substituted_for_execution": False,
-                "support_work_substituted_for_mission": False,
-                "assistant_meta_task_substituted_for_operator_task": False,
-                "global_canonicalization_without_operator_direction": False,
-                "platform_constraint_reframed_mission": False,
-                "generic_assistant_prior_reframed_operation": False,
-                "unnecessary_reasking_of_recoverable_state": False,
-                "operator_dragged_through_recoverable_state": False,
+                **required_boolean_contract,
                 **source_role_semantics,
                 "source_role_evidence": source_role_evidence_contract,
                 "platform_constraint_scope": "none|narrow_action_constraint",
                 "blocked_sources": [],
                 "partial_hydration_declared": False,
-                "operator_operation_class": "required when continuity_required=true",
-                "active_thread": "required when continuity_required=true",
-                "continuation_ref": "required when continuity_required=true",
-                "source_refs": ["required when continuity_required=true"],
-                "known_state_reused": "true when continuity_required=true",
-                "nearest_executable_frontier_identified": "true when continuity_required=true",
-                "prior_verified_gains_preserved": "true when continuity_required=true",
-                "hydration_complete_for_material_state": "true when continuity_required=true",
-                "source_bearing_state_used": "true when continuity_required=true",
-                "polycentric_state_preserved": "true when continuity_required=true",
-                "provenance_preserved": "true when continuity_required=true",
-                "contradictions_preserved_or_explicitly_resolved": "true when continuity_required=true"
+                **continuity_contract,
             }
         },
     }
