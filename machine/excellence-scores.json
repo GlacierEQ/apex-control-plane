@@ -10,11 +10,17 @@
       "grade": "A"
     },
     "company_fit": {
-      "score": 0.0
+      "score": 0
     },
-    "canonical_confidence": {
-      "score": 0.0,
-      "role": "PROMOTED_LEAF"
+    "mesh_contribution": {
+      "score": 0,
+      "role": "PEER_NODE",
+      "measures": [
+        "connectivity",
+        "interoperability",
+        "bidirectional_value",
+        "provenance_quality"
+      ]
     }
   }
 }

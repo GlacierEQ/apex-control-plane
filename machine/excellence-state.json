@@ -9,9 +9,6 @@
     "PROBLEM_VERIFIED": {
       "status": "PENDING"
     },
-    "TARGET_CONTRACT_FROZEN": {
-      "status": "PENDING"
-    },
     "DONOR_PLAN_RESOLVED": {
       "status": "PENDING"
     },
@@ -36,19 +33,22 @@
     "AUTHORITY_BOUND": {
       "status": "PENDING"
     },
-    "CANONICAL_POSITION_RESOLVED": {
-      "status": "PENDING"
-    },
     "EVOLUTION_CURSOR_DEFINED": {
       "status": "PASS",
       "at": "2026-08-10T06:12Z",
       "evidence": "honest non-PROMOTED; cursor defined"
+    },
+    "MESH_TOPOLOGY_DISCOVERABLE": {
+      "status": "PENDING"
+    },
+    "PEER_INTEROP_VERIFIED": {
+      "status": "PENDING"
     }
   },
   "history": [],
   "contract_ref": "machine/target-contract.json",
   "scores_ref": "machine/excellence-scores.json",
-  "evolution_cursor": "next:canonical_position_only_if_estate_role_resolved",
+  "evolution_cursor": "next:discover_peers_link_capabilities_verify_bidirectional_value",
   "wave": {
     "id": "ELITE-ESTATE-SCHEMA-MIGRATE-2026-08-10",
     "proof_ok": false,
@@ -66,5 +66,12 @@
     "reason": "schema migrate: PROMOTED XOR gap-receipt",
     "blocker": "TESTS_FAIL",
     "rule": "PROMOTED XOR gap-receipt"
+  },
+  "mesh_model": {
+    "topology": "evolving",
+    "node_role": "peer",
+    "canonical_center": false,
+    "minimum_core": false,
+    "fixed_boundary": false
   }
 }

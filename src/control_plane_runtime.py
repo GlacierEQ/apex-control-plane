@@ -2,14 +2,14 @@
 """APEX CASEBRAIN control plane.
 
 A standard-library-only reference runtime for deterministic case-event ingestion,
-timeline calculation, threat-signal triage, bounded recommendations, worker
+timeline calculation, threat-signal triage, graph-composable recommendations, peer
 routing, and immutable audit receipts.
 
 Design constraints:
-- One truth, many projections.
+- Many source-grounded claims, graph-linked projections.
 - Facts, allegations, inferences, and recommendations never collapse together.
 - Threat signals never authorize external action.
-- Connector presence is not runtime proof.
+- Connector presence is a mesh relationship; action authority is checked at the action edge.
 - Secrets are referenced by environment-variable name, never embedded.
 """
 from __future__ import annotations
