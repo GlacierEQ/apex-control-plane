@@ -1,10 +1,46 @@
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
+
 import pytest
 
 import operator_fidelity_lock as lock
 from operator_fidelity_lock import validate_operator_fidelity_lock
 from operator_fidelity_preflight import digest_operator_words
+
+FIXTURE_PATH = Path(__file__).parent / "fixtures" / "operator_source_fixture.txt"
+
+
+def _sha256_ref(payload: bytes) -> str:
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _source_bindings(words: list[str]) -> list[dict]:
+    source = FIXTURE_PATH.read_bytes()
+    bindings: list[dict] = []
+    cursor = 0
+    for index, word in enumerate(words):
+        encoded = word.encode("utf-8")
+        start = source.index(encoded, cursor)
+        end = start + len(encoded)
+        cursor = end
+        bindings.append(
+            {
+                "literal_index": index,
+                "proposition_id": f"test-operator-proposition-{index}",
+                "source_kind": "operator_message",
+                "source_ref": f"file:{FIXTURE_PATH.name}",
+                "source_sha256": _sha256_ref(source),
+                "span_start_byte": start,
+                "span_end_byte": end,
+                "span_sha256": _sha256_ref(source[start:end]),
+                "temporal_context": "synthetic-test-fixture-only",
+                "contradiction_state": "active",
+                "verification_state": "source_resolved",
+            }
+        )
+    return bindings
 
 
 def _receipt() -> dict:
@@ -14,6 +50,7 @@ def _receipt() -> dict:
         "Powerful code elite excellence",
         "Function before governance; governance serves function",
     ]
+    lock.os.environ["GLACIEREQ_OPERATOR_SOURCE_ROOT"] = str(FIXTURE_PATH.parent)
     return {
         "operator_fidelity": {
             "failure_class": "INSTRUCTION_DISPLACEMENT",
@@ -33,6 +70,7 @@ def _receipt() -> dict:
             "humanized_engineering_standard_applied": True,
             "operator_words_digest": digest_operator_words(*words),
             "literal_constraints": words,
+            "operator_source_bindings": _source_bindings(words),
             "correction_present": True,
             "objective_function_reassessed": True,
             "corrections_applied": ["restore upward functional objective"],
@@ -139,6 +177,63 @@ def test_digest_is_cryptographically_bound_to_literal_constraints() -> None:
     receipt["operator_fidelity"]["literal_constraints"][1] = "look sideways"
     errors = validate_operator_fidelity_lock(receipt)
     assert any("not bound to literal_constraints" in error for error in errors)
+
+
+def test_source_binding_is_required_even_when_receipt_digest_is_self_consistent() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"].pop("operator_source_bindings")
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("independently bind every literal constraint" in error for error in errors)
+
+
+def test_forged_span_digest_is_rejected() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["operator_source_bindings"][0]["span_sha256"] = (
+        "sha256:" + "0" * 64
+    )
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("span_sha256 does not match" in error for error in errors)
+
+
+def test_source_span_must_exactly_equal_literal_constraint() -> None:
+    receipt = _receipt()
+    binding = receipt["operator_fidelity"]["operator_source_bindings"][1]
+    binding["span_start_byte"] = 0
+    binding["span_end_byte"] = len(
+        receipt["operator_fidelity"]["literal_constraints"][0].encode("utf-8")
+    )
+    source = FIXTURE_PATH.read_bytes()
+    binding["span_sha256"] = _sha256_ref(
+        source[binding["span_start_byte"] : binding["span_end_byte"]]
+    )
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("does not exactly equal literal_constraints[1]" in error for error in errors)
+
+
+def test_derivative_working_model_cannot_authorize_verbatim_operator_words() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["operator_source_bindings"][0]["source_kind"] = (
+        "working_model"
+    )
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("derivative" in error and "cannot authorize" in error for error in errors)
+
+
+def test_retrieval_failure_is_unresolved_readback_not_evidence_absence(monkeypatch) -> None:
+    receipt = _receipt()
+    monkeypatch.delenv("GLACIEREQ_OPERATOR_SOURCE_ROOT", raising=False)
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("source readback unresolved" in error for error in errors)
+    assert not any("no evidence" in error.lower() for error in errors)
+
+
+def test_superseded_source_cannot_silently_remain_authoritative() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["operator_source_bindings"][0][
+        "contradiction_state"
+    ] = "superseded"
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("superseded/conflicted source" in error for error in errors)
 
 
 def test_durable_context_anchor_is_required() -> None:
