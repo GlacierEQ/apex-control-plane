@@ -64,6 +64,7 @@ jobs:
             src/model_attractor_defense.py \
             src/operator_fidelity_lock.py \
             src/operator_fidelity_preflight.py \
+            src/operator_source_binding_contract.py \
             src/apex_strong_boot.py \
             src/control_plane.py \
             src/sitecustomize.py

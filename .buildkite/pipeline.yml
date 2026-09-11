@@ -59,6 +59,7 @@ steps:
         src/model_attractor_defense.py \
         src/operator_fidelity_lock.py \
         src/operator_fidelity_preflight.py \
+        src/operator_source_binding_contract.py \
         src/control_plane.py \
         src/sitecustomize.py \
         scripts/reconcile_mastermind_buildkite.py
