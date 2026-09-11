@@ -4,6 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FEDERATED = ROOT / "db/migrations/20260911151025_federated_execution_permit_service_role_least_privilege_v1.sql"
+FEDERATED_DENY = ROOT / "db/migrations/20260911151437_federated_execution_permit_explicit_client_deny_v1.sql"
 INGEST = ROOT / "db/migrations/20260911151307_harden_continuity_ingest_processing_receipts_append_only_v1.sql"
 
 
@@ -20,6 +21,15 @@ def test_federated_permit_service_role_has_only_required_table_privileges() -> N
     assert "grant delete" not in sql
     assert "grant update" not in sql
     assert "grant truncate" not in sql
+
+
+def test_federated_permit_tables_have_explicit_client_deny_policies() -> None:
+    sql = _sql(FEDERATED_DENY)
+    assert "continuity_federated_execution_permits_client_deny_v1" in sql
+    assert "continuity_federated_execution_permit_receipts_client_deny_v1" in sql
+    assert sql.count("to anon, authenticated") == 2
+    assert sql.count("using (false)") == 2
+    assert sql.count("with check (false)") == 2
 
 
 def test_ingest_receipts_are_directly_read_only_for_service_role() -> None:
