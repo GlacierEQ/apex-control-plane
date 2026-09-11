@@ -29,7 +29,6 @@ async function authorized(req: Request) {
     });
     if (!error && data === true) return true;
   }
-
   const bearer = (req.headers.get("authorization") ?? "")
     .replace(/^Bearer\s+/i, "")
     .trim();
@@ -40,7 +39,6 @@ async function resolveAction(body: Record<string, unknown>) {
   const actionId = String(body.action_id ?? "").trim();
   const actionKey = String(body.action_key ?? "").trim();
   if (!actionId && !actionKey) throw new Error("action_id or action_key required");
-
   let q = db
     .from("control_plane_action_outbox")
     .select(
@@ -54,7 +52,7 @@ async function resolveAction(body: Record<string, unknown>) {
 
 async function awareness(actionId: string) {
   const { data, error } = await db
-    .from("control_plane_action_awareness_v1")
+    .from("control_plane_action_awareness_v2")
     .select("*")
     .eq("action_id", actionId)
     .single();
@@ -69,20 +67,20 @@ Deno.serve(async (req) => {
         ok: true,
         service: "execution-awareness-gate",
         contract:
-          "hydrate -> evaluate impact -> publish awareness receipt -> execute only from current reality",
+          "hydrate -> evaluate relevant impact -> publish awareness receipt when needed -> execute only from current relevant reality",
+        awareness_model: "explicit-link-target-global-gate-v2",
+        soft_context_blocks_dispatch: false,
         mutation_capability: false,
       }),
       { headers },
     );
   }
-
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ ok: false, error: "method_not_allowed" }), {
       status: 405,
       headers,
     });
   }
-
   if (!(await authorized(req))) {
     return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), {
       status: 401,
@@ -111,7 +109,6 @@ Deno.serve(async (req) => {
           !Array.isArray(body.evaluation)
           ? body.evaluation
           : {};
-
       const { data, error } = await db.rpc(
         "record_control_plane_action_awareness_v1",
         {
@@ -129,9 +126,16 @@ Deno.serve(async (req) => {
     const attemptable = ["READY", "APPROVED", "FAILED"].includes(
       String(action.status),
     );
-    const currentReality = current.newer_source_state_exists === false;
+    const currentReality = current.dispatch_reevaluation_required === false;
     const evaluationAllows = current.execution_valid !== false;
     const canExecute = attemptable && currentReality && evaluationAllows;
+    const nextSemanticStep = current.dispatch_reevaluation_required
+      ? "EVALUATE_CURRENT_RELEVANT_REALITY"
+      : current.execution_valid === false
+      ? "DO_NOT_EXECUTE_CURRENT_ACTION"
+      : attemptable
+      ? "CURRENT_ACTION_MAY_PROCEED"
+      : "ACTION_NOT_IN_EXECUTABLE_STATE";
 
     return new Response(
       JSON.stringify({
@@ -141,14 +145,15 @@ Deno.serve(async (req) => {
         awareness: current,
         evaluation_receipt: receipt,
         can_execute: canExecute,
-        next_semantic_step: current.newer_source_state_exists
+        next_semantic_step: nextSemanticStep,
+        legacy_next_semantic_step: current.dispatch_reevaluation_required
           ? "EVALUATE_CURRENT_REALITY"
-          : current.execution_valid === false
-          ? "DO_NOT_EXECUTE_CURRENT_ACTION"
-          : attemptable
-          ? "CURRENT_ACTION_MAY_PROCEED"
-          : "ACTION_NOT_IN_EXECUTABLE_STATE",
-        principle: "current source-bearing state outranks cached action intent",
+          : nextSemanticStep,
+        newer_soft_context_exists: current.newer_soft_context_exists === true,
+        principle:
+          "current relevant source-bearing state outranks cached action intent; unrelated context remains visible without blocking",
+        relevance_model:
+          current.relevance_model ?? "explicit-link-target-global-gate-v2",
       }),
       { headers },
     );
