@@ -1,0 +1,49 @@
+name: Jack Casebuilder Control
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/jack_casebuilder_control.py"
+      - "tests/test_jack_casebuilder_control.py"
+      - "apex_control_plane.json"
+      - ".github/workflows/jack-casebuilder-control.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jack_casebuilder_control.py"
+      - "tests/test_jack_casebuilder_control.py"
+      - "apex_control_plane.json"
+      - ".github/workflows/jack-casebuilder-control.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Compile Jack control surfaces
+        run: python -m py_compile src/jack_casebuilder_control.py src/control_plane.py
+
+      - name: Validate control-plane registry
+        run: python -m json.tool apex_control_plane.json >/dev/null
+
+      - name: Run Jack Casebuilder control tests
+        run: |
+          python -m pip install --upgrade pytest
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:.             python -m pytest -q tests/test_jack_casebuilder_control.py
