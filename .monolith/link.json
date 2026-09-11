@@ -1,0 +1,28 @@
+{
+  "assets": {
+    "agents-perfect-instruct": "unification/AGENTS_PERFECT_INSTRUCT.md",
+    "consumer-agents-block": "unification/CONSUMER_AGENTS_BLOCK.md",
+    "mega-skill-catalog": "catalog/mega_skills.json",
+    "mega-skills": "skills/mega-*/SKILL.md",
+    "readme-perfect-instruct": "unification/README_PERFECT_INSTRUCT.md"
+  },
+  "contract": {
+    "local_precedence": [
+      "operator_instruction",
+      "repository_native_truth_and_domain_instructions",
+      "monolith_shared_package",
+      "tool_defaults"
+    ],
+    "managed_block": "AGENTS.md",
+    "preserve_local_content": true,
+    "readback_required": true
+  },
+  "schema": "glaciereq.monolith.link.v1",
+  "upstream": {
+    "branch": "main",
+    "package": "monolith-unification",
+    "package_version": "1.0.0",
+    "repository": "GlacierEQ/monolith",
+    "source_commit": "9bc2e9487fc641ce8f847ef05fc3abcef4a892aa"
+  }
+}
