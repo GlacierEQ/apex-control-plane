@@ -10,7 +10,7 @@ alter table public.continuity_ingest_queue_v1
 
 create table if not exists public.continuity_ingest_processing_receipts_v1 (
   receipt_id uuid primary key default gen_random_uuid(),
-  ingest_id uuid not null references public.continuity_ingest_queue_v1(ingest_id) on delete cascade,
+  ingest_id uuid not null references public.continuity_ingest_queue_v1(ingest_id) on delete restrict,
   worker_id text not null,
   from_state text not null,
   to_state text not null,
@@ -19,6 +19,14 @@ create table if not exists public.continuity_ingest_processing_receipts_v1 (
   detail jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+
+-- Existing runtimes may have created the FK with ON DELETE CASCADE. Preserve the
+-- receipt ledger by upgrading that relationship in place.
+alter table public.continuity_ingest_processing_receipts_v1
+  drop constraint if exists continuity_ingest_processing_receipts_v1_ingest_id_fkey;
+alter table public.continuity_ingest_processing_receipts_v1
+  add constraint continuity_ingest_processing_receipts_v1_ingest_id_fkey
+  foreign key (ingest_id) references public.continuity_ingest_queue_v1(ingest_id) on delete restrict;
 
 alter table public.continuity_ingest_processing_receipts_v1 enable row level security;
 create index if not exists continuity_ingest_processing_receipts_v1_ingest_idx
