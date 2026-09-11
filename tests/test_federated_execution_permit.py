@@ -22,6 +22,7 @@ def test_surviving_permit_migration_contains_required_harvested_substrate():
         "continuity_start_outbound_v1",
     ):
         assert marker in source
+    assert "unique(action_id,packet_snapshot_hash,global_frontier_hash,primary_awareness_receipt_ref)" not in source
 
 
 def test_permit_binds_both_execution_domains():
@@ -34,17 +35,25 @@ def test_permit_binds_both_execution_domains():
     assert "continuity_case_plan_gate_v1(a.action_id)" in source
 
 
-def test_permit_is_short_lived_and_action_specific():
-    source = sql(BASE) + "\n" + sql(HARDENING)
+def test_primary_awareness_must_be_checkpointed_not_caller_asserted():
+    source = sql(HARDENING)
+    assert "primary_awareness_receipt_ref" in source
+    assert "primary_awareness_source_watermark_at" in source
+    assert "primary_awareness_receipt_not_checkpointed" in source
+    assert "primary_awareness_receipt_mismatch" in source
+    assert "primary_awareness_watermark_mismatch" in source
+    assert "p.metadata->>'primary_awareness_receipt_ref'" in source
+    assert "peer.metadata->>'primary_awareness_receipt_ref'" in source
+
+
+def test_permit_lifetime_is_capped_by_context_packet():
+    source = sql(HARDENING)
     assert "p_ttl_seconds integer default 300" in source
     assert "least(coalesce(p_ttl_seconds,300),600)" in source
-    assert "permit_action_mismatch" in source
-    assert "plan_action_changed" in source
-    assert "packet_changed" in source
-    assert "global_frontier_advanced_or_changed" in source
+    assert "least(cp.expires_at,now()+make_interval(secs=>v_ttl))" in source
 
 
-def test_validation_rechecks_current_plan_and_packet_state():
+def test_validation_rechecks_current_plan_packet_frontier_and_awareness():
     source = sql(HARDENING)
     assert "continuity_case_plan_gate_v1(a.action_id)" in source
     assert "context_packet_expired" in source
@@ -52,15 +61,15 @@ def test_validation_rechecks_current_plan_and_packet_state():
     assert "cp.snapshot_hash is distinct from pmt.packet_snapshot_hash" in source
     assert "where packet_id=pmt.packet_id" in source
     assert "for share" in source
+    assert "pmt.primary_awareness_source_watermark_at < peer.last_watermark_at" in source
 
 
-def test_expired_permit_identity_can_issue_new_generation():
-    source = sql(HARDENING)
-    assert "drop constraint if exists continuity_federated_executio_action_id_packet_snapshot_has_key" in source
+def test_expired_or_consumed_permit_identity_can_issue_new_generation():
+    source = sql(BASE) + "\n" + sql(HARDENING)
     assert "pmt.expires_at>now()" in source
     assert "receipt_type in ('CONSUMED','REVOKED')" in source
-    assert "if not found then" in source
     assert "insert into public.continuity_federated_execution_permits_v1" in source
+    assert "unique(action_id,packet_snapshot_hash,global_frontier_hash,primary_awareness_receipt_ref)" not in source
 
 
 def test_provider_dispatch_permit_is_atomically_single_use():
@@ -75,8 +84,6 @@ def test_provider_dispatch_permit_is_atomically_single_use():
     assert "'consumption_receipt_id',v_receipt" in source
 
 
-def test_staged_binding_does_not_silently_break_existing_adapters():
-    source = sql(BASE)
-    assert "'mode','staged_adapter_binding'" in source
-    assert "'provider_adapter_enforcement','pending_explicit_adapter_binding'" in source
-    assert "Provider adapters may claim globally current execution only" in source
+def test_staged_binding_fails_closed_until_awareness_projection_exists():
+    source = sql(HARDENING)
+    assert "primary_awareness_receipt_not_checkpointed" in source
