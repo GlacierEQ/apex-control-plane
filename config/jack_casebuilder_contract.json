@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0.0",
+  "subsystem": "jack_casebuilder_allegation_forge",
+  "prime_directive": "TURN EVERY MATERIAL EVENT INTO A PROPOSITION THAT CAN BE PROVEN, ATTACKED, STRENGTHENED, AND USED.",
+  "owners": {
+    "control": "GlacierEQ/apex-control-plane",
+    "dispatch": "GlacierEQ/mastermind",
+    "knowledge": "GlacierEQ/AKOS",
+    "execution": "GlacierEQ/computer-user"
+  },
+  "proof_states": [
+    "verified",
+    "corroborated",
+    "supported",
+    "reported",
+    "inferred",
+    "hypothesis",
+    "contradicted",
+    "disproven",
+    "quarantined"
+  ],
+  "element_states": [
+    "proven",
+    "supported",
+    "disputed",
+    "missing"
+  ],
+  "promotion_states": [
+    "raw",
+    "structured",
+    "sourced",
+    "corroborated",
+    "element_mapped",
+    "defense_tested",
+    "hardened",
+    "pleading_ready",
+    "referral_ready",
+    "trial_ready"
+  ],
+  "invariants": {
+    "source_lineage_required": true,
+    "unknown_actor_becomes_discovery_target": true,
+    "no_loose_allegations": true,
+    "mental_state_requires_evidence": true,
+    "damages_require_causation": true,
+    "promotion_requires_proof": true,
+    "contradiction_is_not_automatic_fraud": true
+  }
+}
