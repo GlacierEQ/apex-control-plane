@@ -31,6 +31,13 @@ def test_pipeline_contract_passes() -> None:
     assert all(item.passed for item in results), results
 
 
+def test_buildkite_source_fidelity_covers_model_attractor_defense() -> None:
+    text = (ROOT / ".buildkite" / "pipeline.yml").read_text()
+    assert "config/model_attractor_defense_policy.json" in text
+    assert "src/model_attractor_defense.py" in text
+    assert "tests/test_model_attractor_defense.py" in text
+
+
 def test_inline_secret_literal_is_rejected() -> None:
     text = """
 steps:
