@@ -7,5 +7,12 @@
   "mac": "425854b1f655aa4ce2f0e865c224bce315edd540f9e70f2b81aa8c5da90a300b",
   "issuer": "local_operator_promotion_authority",
   "verified": true,
-  "secret_ref": "src/promotion_authority.py::LOCAL_OPERATOR_SECRET"
+  "secret_ref": "src/promotion_authority.py::LOCAL_OPERATOR_SECRET",
+  "authority_scope": "attestation_only",
+  "can_block_execution": false,
+  "can_override_operator": false,
+  "can_define_project_hierarchy": false,
+  "runtime_effect": "none",
+  "failure_effect": "telemetry_and_repair_only",
+  "law_ref": "GlacierEQ/AKOS:specs/AKOS-LAW-022_VERIFICATION_NON_SOVEREIGNTY.md"
 }

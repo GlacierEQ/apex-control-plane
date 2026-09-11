@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 
 # Reference local operator secret (NOT production). Documented for re-verification.
-LOCAL_OPERATOR_SECRET = b"glaciereq-local-operator-promotion-authority-v1"
+LOCAL_OPERATOR_SECRET = b"glaciereq-local-operator-promotion-authority-v1"\nPROMOTION_AUTHORITY_SCOPE = "attestation_only"\nPROMOTION_GRANT_CAN_BLOCK_EXECUTION = False\nPROMOTION_GRANT_CAN_OVERRIDE_OPERATOR = False\nPROMOTION_GRANT_CAN_DEFINE_PROJECT_HIERARCHY = False
 
 
 def _digest(obj: object) -> str:
