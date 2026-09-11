@@ -168,8 +168,7 @@ create table if not exists public.continuity_federated_execution_permits_v1(
   issuer text not null,
   detail jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
-  check(expires_at > issued_at),
-  unique(action_id,packet_snapshot_hash,global_frontier_hash,primary_awareness_receipt_ref)
+  check(expires_at > issued_at)
 );
 
 create table if not exists public.continuity_federated_execution_permit_receipts_v1(
