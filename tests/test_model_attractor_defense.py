@@ -6,6 +6,7 @@ import pytest
 
 from auto_boot import BootError
 from model_attractor_defense import (
+    build_local_source_binding,
     build_model_attractor_request,
     load_model_attractor_policy,
     validate_model_attractor_receipt,
@@ -25,16 +26,18 @@ _SOURCE_ROLE_SEMANTICS = {
 
 
 def _source_role_evidence() -> dict:
-    return {
-        field_name: {
+    evidence = {}
+    for field_name, expected in _SOURCE_ROLE_SEMANTICS.items():
+        source_ref = f"policy:model_attractor_defense_policy.json#{field_name}"
+        evidence[field_name] = {
             "asserted_value": expected,
             "proposition": f"{field_name} is verified for this receipt",
-            "source_refs": [f"policy:model_attractor_defense_policy.json#{field_name}"],
+            "source_refs": [source_ref],
             "provider_refs": ["github:GlacierEQ/apex-control-plane"],
+            "source_bindings": [build_local_source_binding(source_ref)],
             "verification_state": "verified",
         }
-        for field_name, expected in _SOURCE_ROLE_SEMANTICS.items()
-    }
+    return evidence
 
 
 def _continuity_receipt() -> dict:
@@ -295,6 +298,7 @@ def test_request_exposes_the_hidden_harm_countermeasures() -> None:
     assert requirements["forbid_operator_correction_as_assistant_meta_task"] is True
     assert requirements["forbid_platform_constraint_from_rewriting_operator_mission"] is True
     assert requirements["forbid_generic_model_prior_from_rewriting_operation_class"] is True
+    assert requirements["require_recomputable_source_role_bindings"] is True
 
 
 def test_request_receipt_contract_is_derived_from_policy() -> None:
@@ -375,6 +379,38 @@ def test_source_role_evidence_must_be_verified() -> None:
     assert any("verification_state must be verified" in error for error in errors)
 
 
+def test_verified_label_without_source_binding_fails_closed() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    evidence = receipt["model_attractor_defense"]["source_role_evidence"]
+    evidence["operator_controls_project_direction"].pop("source_bindings")
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("source_bindings must be a non-empty array" in error for error in errors)
+
+
+def test_forged_source_digest_cannot_self_certify_semantics() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    evidence = receipt["model_attractor_defense"]["source_role_evidence"]
+    binding = evidence["operator_controls_project_direction"]["source_bindings"][0]
+    binding["source_sha256"] = "sha256:" + ("0" * 64)
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("source_sha256 does not match source bytes" in error for error in errors)
+    assert any("no independently recomputable source binding" in error for error in errors)
+
+
+def test_binding_must_point_to_the_exact_semantic_fragment() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    evidence = receipt["model_attractor_defense"]["source_role_evidence"]
+    item = evidence["operator_controls_project_direction"]
+    wrong_ref = "policy:model_attractor_defense_policy.json#providers_are_typed_peers"
+    item["source_refs"] = [wrong_ref]
+    item["source_bindings"] = [build_local_source_binding(wrong_ref)]
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("source_ref fragment must be operator_controls_project_direction" in error for error in errors)
+
+
 def test_request_exposes_source_role_semantics_evidence_and_transformations() -> None:
     policy = load_model_attractor_policy()
     request = build_model_attractor_request(policy, task="continue living estate")
@@ -395,9 +431,11 @@ def test_request_exposes_source_role_semantics_evidence_and_transformations() ->
     assert requirements["enforce_source_role_semantics"] is True
     assert requirements["enforce_derivative_representation_semantics"] is True
     assert requirements["require_source_role_evidence"] is True
+    assert requirements["require_recomputable_source_role_bindings"] is True
     contract = request["receipt_contract"]["model_attractor_defense"]
     assert contract["topology_does_not_confer_epistemic_or_project_authority"] is True
     assert contract["operator_target_scale_preserved"] is True
     assert contract["response_substituted_for_operation"] is False
     evidence_contract = contract["source_role_evidence"]
     assert evidence_contract["providers_are_typed_peers"]["verification_state"] == "verified"
+    assert evidence_contract["providers_are_typed_peers"]["source_bindings"]
