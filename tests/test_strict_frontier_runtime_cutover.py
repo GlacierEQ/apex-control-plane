@@ -61,21 +61,20 @@ def test_strong_boot_runs_model_attractor_only_after_strict_frontier_authorizes(
     failures: list[str] = []
     strict = FrontierAuthorizationResult(True, "frontier_authorized", ())
     validation = SimpleNamespace(ok=True, status="complete")
+    state = {"value": None}
     calls: list[str] = []
 
     monkeypatch.setattr(boot, "validate_runtime_strict_frontier", lambda: strict)
     monkeypatch.setattr(
-        boot, "get_in_process_model_attractor_validation", lambda: None
+        boot, "get_in_process_model_attractor_validation", lambda: state["value"]
     )
 
     def automatic():
         calls.append("model-attractor")
+        state["value"] = validation
         return validation
 
     monkeypatch.setattr(boot, "automatic_model_attractor_defense", automatic)
-    monkeypatch.setattr(
-        boot, "get_in_process_model_attractor_validation", lambda: validation
-    )
     boot._run_model_attractor_preflight(failures)
     assert failures == []
     assert calls == ["model-attractor"]
