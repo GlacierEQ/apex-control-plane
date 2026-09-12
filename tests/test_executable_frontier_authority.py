@@ -51,6 +51,21 @@ def _fixture() -> tuple[dict, dict[str, bytes]]:
         "target": target,
         "frontier_action": frontier_action,
         "required_execution_claim_ids": [],
+        "dependency_basis": [
+            {
+                "basis_id": "basis:operator-current",
+                "source_ref": "source:operator-current",
+                "source_kind": "operator_message",
+                "source_sha256": _sha256(source),
+                "span_start_byte": start,
+                "span_end_byte": end,
+                "span_sha256": _sha256(source[start:end]),
+                "temporal_context": "2026-09-11 current Operator run",
+                "contradiction_state": "active",
+                "superseded_by": None,
+                "verification_state": "source_resolved",
+            }
+        ],
         "verifier_ref": "independent:test-dependency-completeness-verifier",
     }
     completeness_bytes = json.dumps(
@@ -209,7 +224,6 @@ def test_frontier_receipt_cannot_be_its_own_entailment_verifier() -> None:
     )
     assert result.ok is False
     assert any("cannot self-certify" in error for error in result.errors)
-
 
 
 def test_dependency_completeness_evidence_is_required_even_for_empty_dependency_set() -> None:
