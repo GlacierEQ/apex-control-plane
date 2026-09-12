@@ -11,9 +11,9 @@ retirement, or other disposition.
 """
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields
 from enum import Enum
-from typing import Mapping
 
 CONTRACT_ID = "JTR-RELENTLESS-EXECUTION-v1"
 CONTRACT_VERSION = "1.3.0"
@@ -43,6 +43,7 @@ _VERIFIED_OR_STRONGER = {
     "DEPLOYED",
     "OBSERVED_IN_OPERATION",
 }
+ExecutionEvidenceValidator = Callable[[Mapping[str, object]], None]
 
 
 class Status(str, Enum):
@@ -182,8 +183,49 @@ def _validate_action_state(row: Mapping[str, object], index: int) -> None:
         )
 
 
-def validate_receipt(receipt: Mapping[str, object]) -> None:
-    """Reject structurally incomplete or logically false execution receipts."""
+def _validate_complete_execution_authority(
+    actions: list[object],
+    *,
+    execution_evidence_validator: ExecutionEvidenceValidator | None,
+) -> None:
+    """Require independent provider evidence before Jack may admit COMPLETE.
+
+    ``provider_receipt`` and ``readback_receipts`` remain routing hints.  They do
+    not prove execution.  The validator is injected from a provider-evidence
+    boundary so this gate never accepts its own receipt as execution authority.
+    """
+    if execution_evidence_validator is None:
+        raise ValueError(
+            "COMPLETE requires independent execution evidence validator; "
+            "provider_receipt/readback_receipts are routing-only"
+        )
+
+    verified_claims = 0
+    for index, row in enumerate(actions):
+        if not isinstance(row, Mapping):
+            continue
+        state = str(row.get("state", "")).strip().upper()
+        if row.get("executed") is not True or state not in _EXECUTED_OR_STRONGER:
+            continue
+        evidence = row.get("execution_evidence")
+        if not isinstance(evidence, Mapping):
+            raise ValueError(
+                f"actions_executed[{index}] COMPLETE claim requires execution_evidence; "
+                "provider_receipt is routing-only"
+            )
+        execution_evidence_validator(evidence)
+        verified_claims += 1
+
+    if verified_claims == 0:
+        raise ValueError("COMPLETE requires independently verified execution evidence")
+
+
+def validate_receipt(
+    receipt: Mapping[str, object],
+    *,
+    execution_evidence_validator: ExecutionEvidenceValidator | None = None,
+) -> None:
+    """Reject structurally incomplete, self-certified, or logically false receipts."""
     if receipt.get("contract_id") != CONTRACT_ID:
         raise ValueError("wrong or missing contract_id")
     if receipt.get("contract_version") != CONTRACT_VERSION:
@@ -276,6 +318,12 @@ def validate_receipt(receipt: Mapping[str, object]) -> None:
         raise ValueError("EXECUTING requires every preflight gate")
     if status is Status.BLOCKED and not normalized_blockers:
         raise ValueError("BLOCKED requires at least one exact blocker")
+
+    if status is Status.COMPLETE:
+        _validate_complete_execution_authority(
+            actions,
+            execution_evidence_validator=execution_evidence_validator,
+        )
 
 
 def assert_completion(g: GateState) -> None:
