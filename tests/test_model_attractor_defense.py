@@ -9,7 +9,10 @@ from pathlib import Path
 import pytest
 
 from auto_boot import BootError
-from executable_frontier_authority import derive_frontier_id
+from executable_frontier_authority import (
+    build_entailment_attestation,
+    derive_frontier_id,
+)
 from model_attractor_defense import (
     build_local_source_binding,
     build_model_attractor_request,
@@ -73,13 +76,23 @@ def _frontier_authority_fixture() -> tuple[dict, str]:
         "target": target,
         "frontier_action": action,
         "proposition_ids": [proposition_id],
-        "verifier_ref": "independent:test-model-attractor-entailment",
+        "verifier_ref": "verifier:test-model-attractor",
+        "verification_method": "hmac-sha256",
+        "verification_state": "verified",
     }
+    verifier_material = b"test-model-attractor-verifier-material"
+    evidence["attestation"] = build_entailment_attestation(
+        evidence, key=verifier_material
+    )
     evidence_bytes = json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode(
         "utf-8"
     )
     (root / "frontier-entailment.json").write_bytes(evidence_bytes)
+    verifier_root = root / "verifiers"
+    verifier_root.mkdir()
+    (verifier_root / "test-model-attractor").write_bytes(verifier_material)
     os.environ["GLACIEREQ_FRONTIER_SOURCE_ROOT"] = str(root)
+    os.environ["GLACIEREQ_FRONTIER_VERIFIER_ROOT"] = str(verifier_root)
     return (
         {
             "frontier_id": frontier_id,
@@ -619,4 +632,25 @@ def test_request_contract_requires_frontier_authority_for_continuity() -> None:
         ]
         is True
     )
+    assert (
+        request["requirements"][
+            "require_cryptographically_attested_independent_entailment_verifier"
+        ]
+        is True
+    )
     assert "frontier_authority" in request["receipt_contract"]
+    entailment_contract = request["receipt_contract"]["frontier_authority"][
+        "entailment_verifications"
+    ][0]
+    assert "verifier_ref" in entailment_contract
+    assert "verification_method" in entailment_contract
+    assert "attestation" in entailment_contract
+
+
+def test_frontier_verifier_readback_failure_stays_unresolved() -> None:
+    policy = load_model_attractor_policy()
+    receipt = _continuity_receipt()
+    verifier_root = Path(os.environ["GLACIEREQ_FRONTIER_VERIFIER_ROOT"])
+    (verifier_root / "test-model-attractor").unlink()
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("verifier readback unresolved" in error for error in errors)
