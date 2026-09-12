@@ -1,10 +1,10 @@
 """Fail-closed authority for enumerating execution dependencies.
 
 Dependency completeness cannot be established by a verifier merely asserting that
-its own declared set is complete. This boundary requires a separately resolved,
-hashed enumeration artifact whose inputs and candidate claim identities are bound
-to the executable frontier. The enumerator is therefore an explicit authority
-surface rather than an uninspectable semantic judgment embedded in a receipt.
+its own declared set is complete. This boundary requires separately resolved,
+hashed input artifacts and deterministically derives execution-claim identities
+from those bytes. The enumerator's candidate list is checked against that derived
+set, so an AI-generated enumeration cannot silently omit or invent dependencies.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Any
 
 SourceResolver = Callable[[str], bytes]
+_EXECUTION_CLAIM_PREFIX = "execution:"
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,7 +35,9 @@ def _sha256(payload: bytes) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
-def _resolve(resolver: SourceResolver, ref: Any, *, prefix: str) -> tuple[bytes | None, str | None]:
+def _resolve(
+    resolver: SourceResolver, ref: Any, *, prefix: str
+) -> tuple[bytes | None, str | None]:
     if not _nonempty(ref):
         return None, f"{prefix}.source_ref must be non-empty"
     try:
@@ -46,6 +49,33 @@ def _resolve(resolver: SourceResolver, ref: Any, *, prefix: str) -> tuple[bytes 
     return payload, None
 
 
+def _collect_execution_claim_ids(value: Any, found: set[str]) -> None:
+    """Recursively collect execution claim identities from structured source data."""
+    if isinstance(value, str):
+        if value.startswith(_EXECUTION_CLAIM_PREFIX) and value.strip() == value:
+            found.add(value)
+        return
+    if isinstance(value, Mapping):
+        for nested in value.values():
+            _collect_execution_claim_ids(nested, found)
+        return
+    if isinstance(value, list):
+        for nested in value:
+            _collect_execution_claim_ids(nested, found)
+
+
+def _derive_claim_ids_from_input_bytes(
+    payload: bytes, *, prefix: str
+) -> tuple[set[str], str | None]:
+    try:
+        parsed = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return set(), f"{prefix} must resolve to UTF-8 JSON for deterministic dependency derivation"
+    found: set[str] = set()
+    _collect_execution_claim_ids(parsed, found)
+    return found, None
+
+
 def validate_dependency_enumeration(
     artifact: Mapping[str, Any],
     *,
@@ -53,7 +83,7 @@ def validate_dependency_enumeration(
     expected_frontier_id: str,
     declared_execution_claim_ids: Sequence[str],
 ) -> DependencyEnumerationResult:
-    """Validate an independently materialized execution-dependency enumeration."""
+    """Validate enumeration against dependencies derived from independently read inputs."""
     errors: list[str] = []
     prefix = "frontier_authority.dependency_enumeration"
 
@@ -62,12 +92,17 @@ def validate_dependency_enumeration(
     )
     if resolution_error:
         return DependencyEnumerationResult(
-            False, "DEPENDENCY_ENUMERATION_READBACK_UNRESOLVED", (), (resolution_error,)
+            False,
+            "DEPENDENCY_ENUMERATION_READBACK_UNRESOLVED",
+            (),
+            (resolution_error,),
         )
     assert source_bytes is not None
 
     if artifact.get("evidence_sha256") != _sha256(source_bytes):
-        errors.append(f"{prefix}.evidence_sha256 does not match independently resolved bytes")
+        errors.append(
+            f"{prefix}.evidence_sha256 does not match independently resolved bytes"
+        )
 
     try:
         evidence = json.loads(source_bytes.decode("utf-8"))
@@ -87,7 +122,9 @@ def validate_dependency_enumeration(
         )
 
     if evidence.get("frontier_id") != expected_frontier_id:
-        errors.append(f"{prefix}.evidence.frontier_id must equal the derived frontier_id")
+        errors.append(
+            f"{prefix}.evidence.frontier_id must equal the derived frontier_id"
+        )
 
     enumerator_ref = evidence.get("enumerator_ref")
     if not _nonempty(enumerator_ref):
@@ -98,7 +135,9 @@ def validate_dependency_enumeration(
         "assistant_summary",
         "dependency_completeness_verification",
     }:
-        errors.append(f"{prefix}.evidence.enumerator_ref cannot self-certify dependency discovery")
+        errors.append(
+            f"{prefix}.evidence.enumerator_ref cannot self-certify dependency discovery"
+        )
 
     enumerator_version = evidence.get("enumerator_version")
     if not _nonempty(enumerator_version):
@@ -106,29 +145,47 @@ def validate_dependency_enumeration(
 
     input_refs = evidence.get("input_refs")
     input_hashes = evidence.get("input_sha256")
-    if not isinstance(input_refs, list) or not input_refs or not all(_nonempty(item) for item in input_refs):
-        errors.append(f"{prefix}.evidence.input_refs must be a non-empty array of source refs")
+    deterministic_required: set[str] = set()
+    if (
+        not isinstance(input_refs, list)
+        or not input_refs
+        or not all(_nonempty(item) for item in input_refs)
+    ):
+        errors.append(
+            f"{prefix}.evidence.input_refs must be a non-empty array of source refs"
+        )
     elif len(input_refs) != len(set(input_refs)):
         errors.append(f"{prefix}.evidence.input_refs must be unique")
 
     if not isinstance(input_hashes, Mapping):
-        errors.append(f"{prefix}.evidence.input_sha256 must map every input ref to its hash")
+        errors.append(
+            f"{prefix}.evidence.input_sha256 must map every input ref to its hash"
+        )
     elif isinstance(input_refs, list):
         if set(input_hashes) != set(input_refs):
             errors.append(f"{prefix}.evidence.input_sha256 must exactly cover input_refs")
         for ref in input_refs:
             if not _nonempty(ref):
                 continue
-            payload, input_error = _resolve(resolver, ref, prefix=f"{prefix}.input[{ref}]")
+            input_prefix = f"{prefix}.input[{ref}]"
+            payload, input_error = _resolve(resolver, ref, prefix=input_prefix)
             if input_error:
                 errors.append(input_error)
                 continue
             assert payload is not None
             if input_hashes.get(ref) != _sha256(payload):
-                errors.append(f"{prefix}.evidence.input_sha256[{ref!r}] does not match resolved bytes")
+                errors.append(
+                    f"{prefix}.evidence.input_sha256[{ref!r}] does not match resolved bytes"
+                )
+            derived, derivation_error = _derive_claim_ids_from_input_bytes(
+                payload, prefix=input_prefix
+            )
+            if derivation_error:
+                errors.append(derivation_error)
+            deterministic_required.update(derived)
 
     candidates = evidence.get("candidate_execution_claim_ids")
-    required: tuple[str, ...] = ()
+    candidate_required: tuple[str, ...] = ()
     if not isinstance(candidates, list) or not all(_nonempty(item) for item in candidates):
         errors.append(
             f"{prefix}.evidence.candidate_execution_claim_ids must be an array of non-empty strings"
@@ -136,15 +193,29 @@ def validate_dependency_enumeration(
     else:
         normalized = [str(item) for item in candidates]
         if len(normalized) != len(set(normalized)):
-            errors.append(f"{prefix}.evidence.candidate_execution_claim_ids must be unique")
-        required = tuple(sorted(normalized))
-        if sorted(declared_execution_claim_ids) != list(required):
             errors.append(
-                f"{prefix}.evidence.candidate_execution_claim_ids proves declared execution_claim_ids are incomplete or substituted"
+                f"{prefix}.evidence.candidate_execution_claim_ids must be unique"
             )
+        candidate_required = tuple(sorted(normalized))
+        derived_required = tuple(sorted(deterministic_required))
+        if candidate_required != derived_required:
+            errors.append(
+                f"{prefix}.evidence.candidate_execution_claim_ids must exactly equal dependencies deterministically derived from resolved inputs"
+            )
+
+    required = tuple(sorted(deterministic_required))
+    if sorted(declared_execution_claim_ids) != list(required):
+        errors.append(
+            f"{prefix}.resolved inputs prove declared execution_claim_ids are incomplete or substituted"
+        )
 
     if errors:
         return DependencyEnumerationResult(
-            False, "DEPENDENCY_ENUMERATION_UNRESOLVED", required, tuple(dict.fromkeys(errors))
+            False,
+            "DEPENDENCY_ENUMERATION_UNRESOLVED",
+            required,
+            tuple(dict.fromkeys(errors)),
         )
-    return DependencyEnumerationResult(True, "DEPENDENCY_ENUMERATION_VERIFIED", required, ())
+    return DependencyEnumerationResult(
+        True, "DEPENDENCY_ENUMERATION_VERIFIED", required, ()
+    )
