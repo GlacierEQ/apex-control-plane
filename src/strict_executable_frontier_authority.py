@@ -1,10 +1,11 @@
 """Composite executable-frontier authority with mandatory dependency enumeration.
 
 This boundary composes the existing source/entailment/execution-lineage frontier
-validator with the independently materialized execution-dependency enumerator and
-material-input collector attestation. Consumers can migrate to this entry point
-without weakening existing frontier authority while closing self-attested
-completeness and collector-identity gaps.
+validator with the independently materialized execution-dependency enumerator,
+material-input collector attestation, and content-addressed verifier identity.
+Consumers can migrate to this entry point without weakening existing frontier
+authority while closing self-attested completeness, collector-identity, and
+verifier-label spoofing gaps.
 """
 
 from __future__ import annotations
@@ -19,12 +20,13 @@ from executable_frontier_authority import (
 )
 from execution_dependency_enumerator_authority import validate_dependency_enumeration
 from material_input_collector_authority import validate_material_input_collector_authority
+from verifier_identity_authority import validate_verifier_identity_authority
 
 
 def validate_strict_executable_frontier_authority(
     receipt: Mapping[str, Any], *, resolver: SourceResolver
 ) -> FrontierAuthorizationResult:
-    """Authorize only when base, enumeration, and collector authority agree."""
+    """Authorize only when base, enumeration, collector, and verifier identity agree."""
     base = validate_executable_frontier_authority(receipt, resolver=resolver)
     if not base.ok:
         return base
@@ -94,6 +96,21 @@ def validate_strict_executable_frontier_authority(
                     [
                         f"frontier_authority.material_input_collector_attestation: {error}"
                         for error in collector_result.errors
+                    ]
+                )
+            ),
+        )
+
+    verifier_result = validate_verifier_identity_authority(row, resolver=resolver)
+    if not verifier_result.ok:
+        return FrontierAuthorizationResult(
+            False,
+            "frontier_authorization_unresolved",
+            tuple(
+                dict.fromkeys(
+                    [
+                        f"frontier_authority.verifier_identity_attestation: {error}"
+                        for error in verifier_result.errors
                     ]
                 )
             ),
