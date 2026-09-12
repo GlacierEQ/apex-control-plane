@@ -32,7 +32,11 @@ from operator_fidelity_preflight import (
     load_operator_fidelity_policy,
     validate_operator_fidelity_receipt,
 )
-from operator_source_binding_contract import validate_operator_source_binding_shape
+from operator_source_binding_contract import (
+    SourceReadbackUnresolved,
+    validate_operator_source_binding_shape,
+    verify_source_span_binding,
+)
 from prime_directive_boot import receipt_from_environment
 
 _SEAL = object()
@@ -118,6 +122,14 @@ def _resolve_operator_source(source_ref: str) -> tuple[bytes | None, str | None]
         return None, f"operator source readback unresolved: {exc.__class__.__name__}"
 
 
+def _operator_source_resolver(source_ref: str) -> bytes:
+    source_bytes, resolution_error = _resolve_operator_source(source_ref)
+    if resolution_error is not None:
+        raise SourceReadbackUnresolved(resolution_error)
+    assert source_bytes is not None
+    return source_bytes
+
+
 def _validate_operator_source_bindings(
     row: Mapping[str, Any], constraints: Sequence[str]
 ) -> tuple[str, ...]:
@@ -128,49 +140,24 @@ def _validate_operator_source_bindings(
     errors: list[str] = []
     bindings = row["operator_source_bindings"]
     assert isinstance(bindings, list)
-
     for position, binding in enumerate(bindings):
         assert isinstance(binding, Mapping)
         literal_index = binding["literal_index"]
         assert isinstance(literal_index, int) and not isinstance(literal_index, bool)
         prefix = f"operator_fidelity.operator_source_bindings[{position}]"
-
-        source_ref = str(binding["source_ref"]).strip()
-        source_bytes, resolution_error = _resolve_operator_source(source_ref)
-        if resolution_error is not None:
-            errors.append(f"{prefix}.{resolution_error}")
-            continue
-        assert source_bytes is not None
-
-        if binding.get("source_sha256") != _sha256_ref(source_bytes):
-            errors.append(
-                f"{prefix}.source_sha256 does not match independently resolved source bytes"
-            )
-
-        span_start = binding["span_start_byte"]
-        span_end = binding["span_end_byte"]
-        assert isinstance(span_start, int) and not isinstance(span_start, bool)
-        assert isinstance(span_end, int) and not isinstance(span_end, bool)
-        if span_end > len(source_bytes):
-            errors.append(f"{prefix}.span byte range is invalid for resolved source")
-            continue
-
-        span = source_bytes[span_start:span_end]
-        if binding.get("span_sha256") != _sha256_ref(span):
-            errors.append(
-                f"{prefix}.span_sha256 does not match independently resolved source span"
-            )
-
-        try:
-            span_text = span.decode("utf-8")
-        except UnicodeDecodeError:
-            errors.append(f"{prefix}.source span must be valid UTF-8")
-            continue
-        if span_text != constraints[literal_index]:
+        verification = verify_source_span_binding(
+            binding,
+            resolver=_operator_source_resolver,
+            prefix=prefix,
+        )
+        errors.extend(verification.errors)
+        if (
+            verification.span_text is not None
+            and verification.span_text != constraints[literal_index]
+        ):
             errors.append(
                 f"{prefix} resolved source span does not exactly equal literal_constraints[{literal_index}]"
             )
-
     return tuple(dict.fromkeys(errors))
 
 
