@@ -25,16 +25,27 @@ def _receipt_and_sources():
         "provider:history": b'{"verified":["execution:alpha"]}',
         "source:continuation": b'{"depends_on":["execution:beta"]}',
     }
+    manifest = {
+        "frontier_id": frontier_id,
+        "collector_ref": "independent:material-input-collector:v1",
+        "input_refs": sorted(inputs),
+    }
+    manifest_bytes = json.dumps(
+        manifest, sort_keys=True, separators=(",", ":")
+    ).encode()
     evidence = {
         "frontier_id": frontier_id,
         "enumerator_ref": "independent:dependency-enumerator:v1",
         "enumerator_version": "1",
+        "input_manifest_ref": "evidence:material-input-manifest",
+        "input_manifest_sha256": _sha256(manifest_bytes),
         "input_refs": sorted(inputs),
         "input_sha256": {ref: _sha256(payload) for ref, payload in inputs.items()},
         "candidate_execution_claim_ids": claim_ids,
     }
     encoded = json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode()
     sources = dict(inputs)
+    sources["evidence:material-input-manifest"] = manifest_bytes
     sources["evidence:dependency-enumeration"] = encoded
     receipt = {
         "frontier_authority": {
@@ -88,6 +99,17 @@ def test_omitted_claim_rejected_after_base_authority_passes() -> None:
 def test_input_readback_failure_stays_unresolved() -> None:
     receipt, sources = _receipt_and_sources()
     del sources["source:continuation"]
+    with patch("strict_executable_frontier_authority.validate_executable_frontier_authority", _base_authorized):
+        result = validate_strict_executable_frontier_authority(
+            receipt, resolver=_resolver(sources)
+        )
+    assert result.ok is False
+    assert any("readback unresolved" in error for error in result.errors)
+
+
+def test_material_input_manifest_readback_failure_stays_unresolved() -> None:
+    receipt, sources = _receipt_and_sources()
+    del sources["evidence:material-input-manifest"]
     with patch("strict_executable_frontier_authority.validate_executable_frontier_authority", _base_authorized):
         result = validate_strict_executable_frontier_authority(
             receipt, resolver=_resolver(sources)

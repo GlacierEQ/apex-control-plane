@@ -5,6 +5,11 @@ its own declared set is complete. This boundary requires separately resolved,
 hashed input artifacts and deterministically derives execution-claim identities
 from those bytes. The enumerator's candidate list is checked against that derived
 set, so an AI-generated enumeration cannot silently omit or invent dependencies.
+
+The input universe is separately authority-bound: the enumeration must resolve a
+hashed manifest whose input_refs exactly match the enumerator inputs. This keeps
+the enumerator from silently deleting an entire material input before dependency
+derivation begins.
 """
 
 from __future__ import annotations
@@ -17,6 +22,13 @@ from typing import Any
 
 SourceResolver = Callable[[str], bytes]
 _EXECUTION_CLAIM_PREFIX = "execution:"
+_FORBIDDEN_COLLECTOR_REFS = {
+    "frontier_receipt",
+    "execution_receipt",
+    "assistant_summary",
+    "dependency_completeness_verification",
+    "dependency_enumeration",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +88,63 @@ def _derive_claim_ids_from_input_bytes(
     return found, None
 
 
+def _validate_input_manifest(
+    evidence: Mapping[str, Any],
+    *,
+    resolver: SourceResolver,
+    expected_frontier_id: str,
+    input_refs: Sequence[str],
+    enumeration_evidence_ref: str,
+) -> tuple[str, ...]:
+    errors: list[str] = []
+    prefix = "frontier_authority.dependency_enumeration.input_manifest"
+    manifest_ref = evidence.get("input_manifest_ref")
+    manifest_sha256 = evidence.get("input_manifest_sha256")
+    payload, resolution_error = _resolve(resolver, manifest_ref, prefix=prefix)
+    if resolution_error:
+        return (resolution_error,)
+    assert payload is not None
+
+    if manifest_ref == enumeration_evidence_ref:
+        errors.append(f"{prefix}.source_ref cannot equal dependency enumeration evidence_ref")
+    if manifest_sha256 != _sha256(payload):
+        errors.append(f"{prefix}.input_manifest_sha256 does not match resolved bytes")
+
+    try:
+        manifest = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return tuple(errors + [f"{prefix}.source_ref must resolve to UTF-8 JSON"])
+    if not isinstance(manifest, Mapping):
+        return tuple(errors + [f"{prefix} must resolve to an object"])
+
+    if manifest.get("frontier_id") != expected_frontier_id:
+        errors.append(f"{prefix}.frontier_id must equal the derived frontier_id")
+
+    collector_ref = manifest.get("collector_ref")
+    if not _nonempty(collector_ref):
+        errors.append(f"{prefix}.collector_ref must be non-empty")
+    if collector_ref in _FORBIDDEN_COLLECTOR_REFS:
+        errors.append(f"{prefix}.collector_ref cannot self-certify material input discovery")
+
+    manifest_refs = manifest.get("input_refs")
+    if (
+        not isinstance(manifest_refs, list)
+        or not manifest_refs
+        or not all(_nonempty(item) for item in manifest_refs)
+    ):
+        errors.append(f"{prefix}.input_refs must be a non-empty array of source refs")
+    else:
+        normalized = [str(item) for item in manifest_refs]
+        if len(normalized) != len(set(normalized)):
+            errors.append(f"{prefix}.input_refs must be unique")
+        if sorted(normalized) != sorted(input_refs):
+            errors.append(
+                f"{prefix}.input_refs must exactly match dependency enumeration input_refs"
+            )
+
+    return tuple(dict.fromkeys(errors))
+
+
 def validate_dependency_enumeration(
     artifact: Mapping[str, Any],
     *,
@@ -87,8 +156,9 @@ def validate_dependency_enumeration(
     errors: list[str] = []
     prefix = "frontier_authority.dependency_enumeration"
 
+    evidence_ref = artifact.get("evidence_ref")
     source_bytes, resolution_error = _resolve(
-        resolver, artifact.get("evidence_ref"), prefix=prefix
+        resolver, evidence_ref, prefix=prefix
     )
     if resolution_error:
         return DependencyEnumerationResult(
@@ -129,12 +199,7 @@ def validate_dependency_enumeration(
     enumerator_ref = evidence.get("enumerator_ref")
     if not _nonempty(enumerator_ref):
         errors.append(f"{prefix}.evidence.enumerator_ref must be non-empty")
-    if enumerator_ref in {
-        "frontier_receipt",
-        "execution_receipt",
-        "assistant_summary",
-        "dependency_completeness_verification",
-    }:
+    if enumerator_ref in _FORBIDDEN_COLLECTOR_REFS:
         errors.append(
             f"{prefix}.evidence.enumerator_ref cannot self-certify dependency discovery"
         )
@@ -146,6 +211,7 @@ def validate_dependency_enumeration(
     input_refs = evidence.get("input_refs")
     input_hashes = evidence.get("input_sha256")
     deterministic_required: set[str] = set()
+    normalized_input_refs: list[str] = []
     if (
         not isinstance(input_refs, list)
         or not input_refs
@@ -156,6 +222,20 @@ def validate_dependency_enumeration(
         )
     elif len(input_refs) != len(set(input_refs)):
         errors.append(f"{prefix}.evidence.input_refs must be unique")
+        normalized_input_refs = [str(item) for item in input_refs]
+    else:
+        normalized_input_refs = [str(item) for item in input_refs]
+
+    if normalized_input_refs and _nonempty(evidence_ref):
+        errors.extend(
+            _validate_input_manifest(
+                evidence,
+                resolver=resolver,
+                expected_frontier_id=expected_frontier_id,
+                input_refs=normalized_input_refs,
+                enumeration_evidence_ref=str(evidence_ref),
+            )
+        )
 
     if not isinstance(input_hashes, Mapping):
         errors.append(
