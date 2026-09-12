@@ -14,24 +14,30 @@ Design constraints:
 """
 from __future__ import annotations
 
+import json
+import time
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime
 from enum import Enum
 from hashlib import sha256
-import json
-import time
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 from uuid import uuid4
 
 from approved_operation_bridge import (
     ApprovedConnectorAction,
     ConnectorExecutionReceipt,
+    ProviderEvidenceResolver,
     action_audit_scope,
     execution_receipt_audit_details,
     validate_approved_action_request,
     validate_execution_receipt,
 )
-from connector_receipts import ConnectorReadReceipt, receipt_audit_details, validate_read_receipt
+from connector_receipts import (
+    ConnectorReadReceipt,
+    receipt_audit_details,
+    validate_read_receipt,
+)
 
 ENVELOPE_VERSION = "1.0.0"
 CASE_EVENT_SCHEMA_ID = "urn:casebrain:schema:case-event:1.0.0"
@@ -665,6 +671,7 @@ class CaseBrainOrchestrator:
         catalog: Any,
         *,
         now: datetime | None = None,
+        evidence_resolver: ProviderEvidenceResolver | None = None,
     ) -> dict[str, Any]:
         """Admit a completed exact-approved provider action without provider content.
 
@@ -681,7 +688,9 @@ class CaseBrainOrchestrator:
         if prior_scope is not None and prior_scope != action.approval_scope_sha256:
             raise ValueError("connector action idempotency key collision with different approval scope")
 
-        receipt = validate_execution_receipt(receipt_payload, action)
+        receipt = validate_execution_receipt(
+            receipt_payload, action, evidence_resolver=evidence_resolver
+        )
         input_sha256 = canonical_sha256(receipt_payload)
         prior_receipt = self.connector_execution_receipt_index.get(receipt.execution_receipt_id)
         if prior_receipt is not None:
@@ -692,6 +701,7 @@ class CaseBrainOrchestrator:
                 "execution_receipt_id": receipt.execution_receipt_id,
                 "action_request_id": action.action_request_id,
                 "external_action_authorized": True,
+                "evidence_verification_state": receipt.evidence_verification_state,
             }
 
         self.connector_action_idempotency_index[action.idempotency_key] = action.approval_scope_sha256
@@ -720,6 +730,7 @@ class CaseBrainOrchestrator:
             "operation": action.operation,
             "result_state": receipt.result_state,
             "external_action_authorized": True,
+            "evidence_verification_state": receipt.evidence_verification_state,
         }
 
     def call_connector(
