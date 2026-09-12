@@ -575,6 +575,12 @@ def build_model_attractor_request(
                 "operation_class": "must equal model_attractor_defense.operator_operation_class",
                 "target": "must equal model_attractor_defense.operator_target",
                 "frontier_action": "exact executable action authorized by source propositions",
+                "execution_claim_ids": ["all materially relied-upon execution claim identities"],
+                "execution_lineage_records": ["current provider-resolved lineage for each declared claim"],
+                "dependency_completeness_verification": {
+                    "evidence_ref": "file:<independent dependency-completeness artifact>",
+                    "evidence_sha256": "sha256:<resolved dependency-completeness bytes>",
+                },
                 "source_bindings": [
                     {
                         "proposition_id": "stable proposition identity",

@@ -83,10 +83,22 @@ def _fixture() -> tuple[dict, dict[str, bytes], str]:
     }
     entailment_bytes = json.dumps(entailment, sort_keys=True, separators=(",", ":")).encode()
 
+    completeness = {
+        "frontier_id": frontier_id,
+        "verdict": "complete",
+        "operation_class": operation_class,
+        "target": target,
+        "frontier_action": frontier_action,
+        "required_execution_claim_ids": [claim_id],
+        "verifier_ref": "independent:test-dependency-completeness-verifier",
+    }
+    completeness_bytes = json.dumps(completeness, sort_keys=True, separators=(",", ":")).encode()
+
     sources = {
         "source:operator-current": operator_source,
         "provider:github:commit:9117bc58": provider_bytes,
         "evidence:frontier-entailment": entailment_bytes,
+        "evidence:dependency-completeness": completeness_bytes,
     }
     receipt = {
         "frontier_authority": {
@@ -113,6 +125,10 @@ def _fixture() -> tuple[dict, dict[str, bytes], str]:
                     "verification_state": "source_resolved",
                 }
             ],
+            "dependency_completeness_verification": {
+                "evidence_ref": "evidence:dependency-completeness",
+                "evidence_sha256": _sha256(completeness_bytes),
+            },
             "entailment_verifications": [
                 {
                     "evidence_ref": "evidence:frontier-entailment",
