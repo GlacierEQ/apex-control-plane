@@ -29,6 +29,7 @@ from operator_source_binding_contract import verify_source_span_binding
 SourceResolver = Callable[[str], bytes]
 
 _ENTAILED = "entailed"
+_COMPLETE = "complete"
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,6 +153,77 @@ def _validate_execution_dependencies(
     if sorted(resolved_ids) != sorted(execution_claim_ids):
         errors.append(
             "frontier_authority.execution_lineage_records must exactly match execution_claim_ids"
+        )
+    return tuple(dict.fromkeys(errors))
+
+
+
+def _validate_dependency_completeness_artifact(
+    artifact: Mapping[str, Any],
+    *,
+    resolver: SourceResolver,
+    expected_frontier_id: str,
+    execution_claim_ids: Sequence[str],
+    operation_class: str,
+    target: str,
+    frontier_action: str,
+) -> tuple[str, ...]:
+    """Prove that the declared execution dependency set is complete, including empty sets."""
+    errors: list[str] = []
+    prefix = "frontier_authority.dependency_completeness_verification"
+    source_bytes, resolution_error = _resolve(
+        resolver, artifact.get("evidence_ref"), prefix=prefix
+    )
+    if resolution_error:
+        return (resolution_error,)
+    assert source_bytes is not None
+
+    if artifact.get("evidence_sha256") != _sha256(source_bytes):
+        errors.append(
+            f"{prefix}.evidence_sha256 does not match independently resolved bytes"
+        )
+    try:
+        evidence = json.loads(source_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        errors.append(f"{prefix}.evidence_ref must resolve to UTF-8 JSON")
+        return tuple(errors)
+    if not isinstance(evidence, Mapping):
+        errors.append(f"{prefix}.evidence must be an object")
+        return tuple(errors)
+
+    expected = {
+        "frontier_id": expected_frontier_id,
+        "verdict": _COMPLETE,
+        "operation_class": operation_class,
+        "target": target,
+        "frontier_action": frontier_action,
+    }
+    for key, value in expected.items():
+        if evidence.get(key) != value:
+            errors.append(f"{prefix}.evidence.{key} must equal {value!r}")
+
+    required_ids = evidence.get("required_execution_claim_ids")
+    if not isinstance(required_ids, list) or not all(_nonempty(item) for item in required_ids):
+        errors.append(
+            f"{prefix}.evidence.required_execution_claim_ids must be an array of non-empty strings"
+        )
+    else:
+        normalized_required = [str(item) for item in required_ids]
+        if len(normalized_required) != len(set(normalized_required)):
+            errors.append(
+                f"{prefix}.evidence.required_execution_claim_ids must be unique"
+            )
+        if sorted(normalized_required) != sorted(execution_claim_ids):
+            errors.append(
+                f"{prefix}.evidence.required_execution_claim_ids proves declared execution_claim_ids are incomplete or substituted"
+            )
+
+    verifier_ref = evidence.get("verifier_ref")
+    if not _nonempty(verifier_ref):
+        errors.append(f"{prefix}.evidence.verifier_ref must be non-empty")
+    if verifier_ref in {"frontier_receipt", "execution_receipt", "assistant_summary"}:
+        errors.append(
+            f"{prefix}.evidence.verifier_ref cannot self-certify dependency completeness"
         )
     return tuple(dict.fromkeys(errors))
 
@@ -311,6 +383,24 @@ def validate_executable_frontier_authority(
             errors.append(
                 "frontier_authority.continuation_ref must equal the derived frontier_id"
             )
+
+    completeness = row.get("dependency_completeness_verification")
+    if not isinstance(completeness, Mapping):
+        errors.append(
+            "frontier_authority.dependency_completeness_verification must contain independent evidence"
+        )
+    elif expected_frontier_id:
+        errors.extend(
+            _validate_dependency_completeness_artifact(
+                completeness,
+                resolver=resolver,
+                expected_frontier_id=expected_frontier_id,
+                execution_claim_ids=execution_claim_ids,
+                operation_class=str(operation_class),
+                target=str(target),
+                frontier_action=str(frontier_action),
+            )
+        )
 
     verifications = row.get("entailment_verifications")
     if not isinstance(verifications, list) or not verifications:

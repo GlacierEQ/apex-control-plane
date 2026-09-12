@@ -44,9 +44,22 @@ def _fixture() -> tuple[dict, dict[str, bytes]]:
     entailment_bytes = json.dumps(
         entailment, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
+    completeness = {
+        "frontier_id": frontier_id,
+        "verdict": "complete",
+        "operation_class": operation_class,
+        "target": target,
+        "frontier_action": frontier_action,
+        "required_execution_claim_ids": [],
+        "verifier_ref": "independent:test-dependency-completeness-verifier",
+    }
+    completeness_bytes = json.dumps(
+        completeness, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
     sources = {
         "source:operator-current": source,
         "evidence:frontier-entailment": entailment_bytes,
+        "evidence:dependency-completeness": completeness_bytes,
     }
     receipt = {
         "frontier_authority": {
@@ -71,6 +84,10 @@ def _fixture() -> tuple[dict, dict[str, bytes]]:
                     "verification_state": "source_resolved",
                 }
             ],
+            "dependency_completeness_verification": {
+                "evidence_ref": "evidence:dependency-completeness",
+                "evidence_sha256": _sha256(completeness_bytes),
+            },
             "entailment_verifications": [
                 {
                     "evidence_ref": "evidence:frontier-entailment",
@@ -192,3 +209,36 @@ def test_frontier_receipt_cannot_be_its_own_entailment_verifier() -> None:
     )
     assert result.ok is False
     assert any("cannot self-certify" in error for error in result.errors)
+
+
+
+def test_dependency_completeness_evidence_is_required_even_for_empty_dependency_set() -> None:
+    receipt, sources = _fixture()
+    receipt["frontier_authority"].pop("dependency_completeness_verification")
+    result = validate_executable_frontier_authority(receipt, resolver=_resolver(sources))
+    assert result.ok is False
+    assert any("dependency_completeness_verification" in error for error in result.errors)
+
+
+def test_omitted_material_execution_dependency_is_rejected() -> None:
+    receipt, sources = _fixture()
+    evidence = json.loads(sources["evidence:dependency-completeness"].decode("utf-8"))
+    evidence["required_execution_claim_ids"] = ["execution:material-prior-state"]
+    evidence_bytes = json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    sources["evidence:dependency-completeness"] = evidence_bytes
+    receipt["frontier_authority"]["dependency_completeness_verification"]["evidence_sha256"] = _sha256(evidence_bytes)
+    result = validate_executable_frontier_authority(receipt, resolver=_resolver(sources))
+    assert result.ok is False
+    assert any("incomplete or substituted" in error for error in result.errors)
+
+
+def test_frontier_receipt_cannot_self_certify_dependency_completeness() -> None:
+    receipt, sources = _fixture()
+    evidence = json.loads(sources["evidence:dependency-completeness"].decode("utf-8"))
+    evidence["verifier_ref"] = "frontier_receipt"
+    evidence_bytes = json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    sources["evidence:dependency-completeness"] = evidence_bytes
+    receipt["frontier_authority"]["dependency_completeness_verification"]["evidence_sha256"] = _sha256(evidence_bytes)
+    result = validate_executable_frontier_authority(receipt, resolver=_resolver(sources))
+    assert result.ok is False
+    assert any("cannot self-certify dependency completeness" in error for error in result.errors)
