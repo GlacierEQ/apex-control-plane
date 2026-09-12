@@ -151,7 +151,7 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
-      python3 scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
+      "$$PYTHON_BIN" scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
       test -s artifacts/buildkite/genius-reconciliation.json
       buildkite-agent meta-data set genius-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/genius-reconciliation.json | cut -d ' ' -f 1)"
       git diff --exit-code
@@ -181,7 +181,7 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
-      python3 scripts/reconcile_mastermind_buildkite.py 2>&1 | tee artifacts/buildkite/mastermind-reconciliation.log
+      "$$PYTHON_BIN" scripts/reconcile_mastermind_buildkite.py 2>&1 | tee artifacts/buildkite/mastermind-reconciliation.log
       test -s artifacts/buildkite/mastermind-reconciliation.json
       test -s artifacts/buildkite/mastermind-reconciliation.json.sha256
       shasum -a 256 -c artifacts/buildkite/mastermind-reconciliation.json.sha256
@@ -232,7 +232,7 @@ steps:
         )
       fi
 
-      python3 scripts/verify_buildkite_evidence_chain.py \
+      "$$PYTHON_BIN" scripts/verify_buildkite_evidence_chain.py \
         --expected-commit "$BUILDKITE_COMMIT" \
         --branch "$BUILDKITE_BRANCH" \
         --build-id "$$build_id" \
