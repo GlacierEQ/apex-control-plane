@@ -38,6 +38,105 @@ def load_reconciler():
     return module
 
 
+def desired_telecom_pipeline(module, cluster_id: str) -> dict:
+    return {
+        "name": TELECOM_SPEC["name"],
+        "slug": TELECOM_SPEC["slug"],
+        "description": "GlacierEQ Telecommunications domain CI",
+        "repository": TELECOM_SPEC["repository"],
+        "cluster_id": cluster_id,
+        "configuration": module.PIPELINE_UPLOAD_CONFIGURATION,
+        "default_branch": TELECOM_BRANCH,
+        "branch_configuration": None,
+        "cancel_running_branch_builds": bool(
+            module.REGISTRY["superseded_build_policy"]["cancel_running_branch_builds"]
+        ),
+        "skip_queued_branch_builds": bool(
+            module.REGISTRY["superseded_build_policy"]["skip_queued_branch_builds"]
+        ),
+        "visibility": "private",
+        "provider_settings": {
+            "build_branches": True,
+            "build_pull_requests": True,
+            "build_pull_request_forks": False,
+            "build_tags": False,
+            "publish_commit_status": True,
+            "publish_commit_status_per_step": True,
+        },
+    }
+
+
+def reconcile_telecom_pipeline(api, module, pipelines: list[dict], cluster_id: str):
+    existing = module.find_existing_pipeline(pipelines, TELECOM_SPEC)
+    desired = desired_telecom_pipeline(module, cluster_id)
+    org_path = f"/organizations/{urllib.parse.quote(module.ORG)}"
+    if existing is None:
+        created = api.request("POST", f"{org_path}/pipelines", desired)
+        if not isinstance(created, dict) or not created.get("slug"):
+            raise RuntimeError("Buildkite returned no Telecom pipeline slug")
+        pipelines.append(created)
+        return created, "CREATED"
+    slug = str(existing["slug"])
+    updated = api.request(
+        "PATCH",
+        f"{org_path}/pipelines/{urllib.parse.quote(slug)}",
+        desired,
+    )
+    if not isinstance(updated, dict):
+        raise RuntimeError("invalid Telecom Buildkite pipeline update response")
+    return updated, "RECONCILED"
+
+
+def verify_telecom_pipeline_readback(pipeline: dict, module, cluster_id: str) -> None:
+    desired = desired_telecom_pipeline(module, cluster_id)
+    failures: list[str] = []
+    if module.normalize_repository(pipeline.get("repository")) != module.normalize_repository(
+        TELECOM_SPEC["repository"]
+    ):
+        failures.append("repository")
+    if str(pipeline.get("cluster_id") or "") != cluster_id:
+        failures.append("cluster_id")
+    if pipeline.get("default_branch") != TELECOM_BRANCH:
+        failures.append("default_branch")
+    if str(pipeline.get("description") or "") != desired["description"]:
+        failures.append("description")
+    for key in ("cancel_running_branch_builds", "skip_queued_branch_builds"):
+        if bool(pipeline.get(key)) != bool(desired[key]):
+            failures.append(key)
+    if "buildkite-agent pipeline upload" not in str(pipeline.get("configuration") or ""):
+        failures.append("configuration")
+    if failures:
+        raise RuntimeError(
+            "Telecom Buildkite pipeline readback mismatch: " + ", ".join(failures)
+        )
+
+
+def trigger_telecom_build(api, module, slug: str) -> dict:
+    payload = {
+        "commit": TELECOM_COMMIT,
+        "branch": TELECOM_BRANCH,
+        "clean_checkout": True,
+        "message": "APEX: verify Telecom on Buildkite",
+        "env": {
+            "APEX_EXECUTION_SURFACE": "buildkite",
+            "APEX_TELECOM_BOOTSTRAP": "api-v1",
+        },
+        "meta_data": {
+            "apex_mission": "telecom-ci-bootstrap",
+            "source_repository": TELECOM_SPEC["github_repository"],
+            "source_commit": TELECOM_COMMIT,
+        },
+    }
+    path = (
+        f"/organizations/{urllib.parse.quote(module.ORG)}/pipelines/"
+        f"{urllib.parse.quote(slug)}/builds"
+    )
+    result = api.request("POST", path, payload)
+    if not isinstance(result, dict) or result.get("number") is None:
+        raise RuntimeError("Buildkite returned no Telecom build receipt")
+    return result
+
+
 def await_build(api, module, slug: str, number: int) -> dict:
     policy = module.REGISTRY["verification_policy"]
     success = {str(value) for value in policy["build_success_states"]}
@@ -80,8 +179,6 @@ def write_receipt(data: dict) -> None:
 
 def main() -> int:
     module = load_reconciler()
-    module.DEFAULT_BRANCH = TELECOM_BRANCH
-
     token, token_source = module.resolve_buildkite_token()
     api = module.BuildkiteAPI(token)
     token_meta = module.inspect_api_token(api)
@@ -89,24 +186,17 @@ def main() -> int:
     org_path = f"/organizations/{urllib.parse.quote(module.ORG)}"
     pipelines = module.list_all(api, f"{org_path}/pipelines")
 
-    pipeline, mutation = module.reconcile_pipeline(
-        api, pipelines, TELECOM_SPEC, cluster_id
+    pipeline, mutation = reconcile_telecom_pipeline(
+        api, module, pipelines, cluster_id
     )
     slug = str(pipeline["slug"])
     webhook = module.ensure_webhook(api, slug)
     readback = api.request("GET", f"{org_path}/pipelines/{urllib.parse.quote(slug)}")
     if not isinstance(readback, dict):
         raise RuntimeError("Telecom Buildkite pipeline readback failed")
-    module.verify_pipeline_readback(readback, TELECOM_SPEC, cluster_id)
+    verify_telecom_pipeline_readback(readback, module, cluster_id)
 
-    build = module.trigger_build(
-        api,
-        slug,
-        TELECOM_SPEC["github_repository"],
-        TELECOM_COMMIT,
-    )
-    if not isinstance(build, dict) or build.get("number") is None:
-        raise RuntimeError("Telecom Buildkite trigger returned no build number")
+    build = trigger_telecom_build(api, module, slug)
     module.verify_returned_build_commit(build, TELECOM_COMMIT)
     terminal = await_build(api, module, slug, int(build["number"]))
 
