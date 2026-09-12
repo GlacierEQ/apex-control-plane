@@ -24,27 +24,8 @@ jobs:
           from pathlib import Path
           path = Path('tests/test_model_attractor_defense.py')
           text = path.read_text()
-          old = '''        "required_execution_claim_ids": [],
-        "verifier_ref": "independent:test-dependency-completeness-verifier",
-'''
-          new = '''        "required_execution_claim_ids": [],
-        "dependency_basis": [
-            {
-                "basis_id": "basis:model-attractor-operator-source",
-                "source_ref": "file:operator-source.txt",
-                "source_kind": "operator_message",
-                "source_sha256": _sha256(source),
-                "span_start_byte": start,
-                "span_end_byte": end,
-                "span_sha256": _sha256(source[start:end]),
-                "temporal_context": "synthetic runtime integration test",
-                "contradiction_state": "active",
-                "superseded_by": None,
-                "verification_state": "source_resolved",
-            }
-        ],
-        "verifier_ref": "independent:test-dependency-completeness-verifier",
-'''
+          old = '        "required_execution_claim_ids": [],\n        "verifier_ref": "independent:test-dependency-completeness-verifier",\n'
+          new = '        "required_execution_claim_ids": [],\n        "dependency_basis": [\n            {\n                "basis_id": "basis:model-attractor-operator-source",\n                "source_ref": "file:operator-source.txt",\n                "source_kind": "operator_message",\n                "source_sha256": _sha256(source),\n                "span_start_byte": start,\n                "span_end_byte": end,\n                "span_sha256": _sha256(source[start:end]),\n                "temporal_context": "synthetic runtime integration test",\n                "contradiction_state": "active",\n                "superseded_by": None,\n                "verification_state": "source_resolved",\n            }\n        ],\n        "verifier_ref": "independent:test-dependency-completeness-verifier",\n'
           if old not in text:
               raise SystemExit('target fixture block not found')
           path.write_text(text.replace(old, new, 1))
