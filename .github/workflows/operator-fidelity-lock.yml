@@ -17,6 +17,7 @@ on:
       - "tests/test_anti_minimization_compiler.py"
       - "tests/test_model_attractor_defense.py"
       - "tests/test_operator_fidelity_lock.py"
+      - "tests/test_operator_source_binding_contract.py"
       - "tests/test_operator_fidelity_preflight.py"
       - "tests/test_apex_strong_boot.py"
       - ".github/workflows/operator-fidelity-lock.yml"
@@ -36,6 +37,7 @@ on:
       - "tests/test_anti_minimization_compiler.py"
       - "tests/test_model_attractor_defense.py"
       - "tests/test_operator_fidelity_lock.py"
+      - "tests/test_operator_source_binding_contract.py"
       - "tests/test_operator_fidelity_preflight.py"
       - "tests/test_apex_strong_boot.py"
       - ".github/workflows/operator-fidelity-lock.yml"
@@ -64,6 +66,7 @@ jobs:
             src/model_attractor_defense.py \
             src/operator_fidelity_lock.py \
             src/operator_fidelity_preflight.py \
+            src/operator_source_binding_contract.py \
             src/apex_strong_boot.py \
             src/control_plane.py \
             src/sitecustomize.py
@@ -74,6 +77,7 @@ jobs:
             tests/test_anti_minimization_compiler.py \
             tests/test_model_attractor_defense.py \
             tests/test_operator_fidelity_lock.py \
+            tests/test_operator_source_binding_contract.py \
             tests/test_operator_fidelity_preflight.py \
             tests/test_apex_strong_boot.py
 

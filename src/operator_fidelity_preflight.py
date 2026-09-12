@@ -7,6 +7,7 @@ scope, governance-first behavior, permission loops, capability reduction,
 unsolicited Operator-asset valuation or disposition, inspection-scope
 expansion, or textual minimization hidden behind compliant booleans.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -19,11 +20,17 @@ from pathlib import Path
 from typing import Any
 
 from anti_minimization_compiler import inspect_execution_text, supported_rule_codes
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from auto_boot import BootError
+from operator_source_binding_contract import (
+    operator_source_binding_receipt_contract,
+    validate_operator_source_binding_shape,
+)
 from prime_directive_boot import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
-    Path(__file__).resolve().parents[1] / "config" / "operator_fidelity_runtime_policy.json"
+    Path(__file__).resolve().parents[1]
+    / "config"
+    / "operator_fidelity_runtime_policy.json"
 )
 _SEAL = object()
 
@@ -37,7 +44,9 @@ class OperatorFidelityValidation:
 
     def __post_init__(self) -> None:
         if self._seal is not _SEAL:
-            raise TypeError("validation must be issued by the operator-fidelity enforcer")
+            raise TypeError(
+                "validation must be issued by the operator-fidelity enforcer"
+            )
 
 
 _IN_PROCESS: OperatorFidelityValidation | None = None
@@ -89,7 +98,9 @@ def load_operator_fidelity_policy(
 
     asset_sovereignty = value.get("operator_asset_sovereignty")
     if not isinstance(asset_sovereignty, Mapping):
-        raise BootError("operator-fidelity operator_asset_sovereignty must be an object")
+        raise BootError(
+            "operator-fidelity operator_asset_sovereignty must be an object"
+        )
     required_asset_flags = {
         "look_inspect_list_inventory_map_are_observation_only": True,
         "asset_value_ranking_requires_explicit_operator_request": True,
@@ -132,9 +143,7 @@ def load_operator_fidelity_policy(
             details.append("policy-only=" + ",".join(missing_in_compiler))
         if missing_in_policy:
             details.append("compiler-only=" + ",".join(missing_in_policy))
-        raise BootError(
-            "operator-fidelity semantic rule drift: " + "; ".join(details)
-        )
+        raise BootError("operator-fidelity semantic rule drift: " + "; ".join(details))
 
     engineering = value.get("pro_code_elite_humanized_engineering")
     if not isinstance(engineering, Mapping) or engineering.get("required") is not True:
@@ -216,16 +225,20 @@ def validate_operator_fidelity_receipt(
             errors.append(f"operator_fidelity.{field_name} must be non-empty")
 
     if not _is_sha256_ref(row.get("operator_words_digest")):
-        errors.append(
-            "operator_fidelity.operator_words_digest must be sha256:<64 hex>"
-        )
+        errors.append("operator_fidelity.operator_words_digest must be sha256:<64 hex>")
 
     literal_constraints = row.get("literal_constraints")
-    if not isinstance(literal_constraints, list) or not any(
-        _nonempty_text(value) for value in literal_constraints
+    if (
+        not isinstance(literal_constraints, list)
+        or not literal_constraints
+        or not all(_nonempty_text(value) for value in literal_constraints)
     ):
         errors.append(
-            "operator_fidelity.literal_constraints must contain exact or resolved operator constraints"
+            "operator_fidelity.literal_constraints must contain only non-empty exact or resolved operator constraints"
+        )
+    else:
+        errors.extend(
+            validate_operator_source_binding_shape(row, tuple(literal_constraints))
         )
 
     corrections = row.get("corrections_applied")
@@ -316,6 +329,12 @@ def build_operator_fidelity_request(
         "direction": policy.get("direction"),
         "requirements": {
             "read_literal_operator_words": True,
+            "bind_literal_operator_words_to_independently_resolved_source_spans": True,
+            "require_one_source_binding_per_literal_constraint": True,
+            "reject_derivative_sources_for_verbatim_fidelity": True,
+            "preserve_proposition_temporal_and_contradiction_state": True,
+            "treat_source_retrieval_failure_as_unresolved_not_evidence_absence": True,
+            "source_bytes_must_come_from_operator_source_root_not_receipt": True,
             "bind_explicit_prohibitions": True,
             "load_relevant_corrections": True,
             "check_instruction_displacement": True,
@@ -353,6 +372,7 @@ def build_operator_fidelity_request(
                 "humanized_engineering_standard_applied": True,
                 "operator_words_digest": "sha256:<64 hex over exact/resolved operator words>",
                 "literal_constraints": ["exact or resolved operator constraint"],
+                "operator_source_bindings": operator_source_binding_receipt_contract(),
                 "correction_present": "boolean",
                 "objective_function_reassessed": "true when correction_present=true",
                 "corrections_applied": ["how the correction changed execution"],
@@ -370,7 +390,10 @@ def _continue_operator_fidelity(
     *,
     request: Mapping[str, Any],
 ) -> OperatorFidelityValidation:
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
+    from startup_continuation import (
+        emit_startup_continuation,
+        record_startup_continuation,
+    )
 
     continuation = record_startup_continuation(
         "operator_fidelity_preflight",

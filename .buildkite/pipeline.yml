@@ -18,14 +18,17 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
-      python3 scripts/validate_buildkite_master.py \
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
+      "$$PYTHON_BIN" scripts/validate_buildkite_master.py \
         --emit-receipt artifacts/buildkite/buildkite-master-validation.json
-      python3 -m py_compile \
+      "$$PYTHON_BIN" -m py_compile \
         scripts/validate_buildkite_master.py \
         scripts/buildkite_master_inventory.py \
         scripts/reconcile_buildkite_github_status.py \
         scripts/reconcile_genius_buildkite.py \
-        scripts/reconcile_mastermind_buildkite.py
+        scripts/reconcile_mastermind_buildkite.py \
+        scripts/verify_buildkite_evidence_chain.py
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/buildkite-master-validation.json
@@ -49,7 +52,10 @@ steps:
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
       git diff --exit-code
-      python3 -m venv .buildkite-venv
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
+      "$$PYTHON_BIN" --version
+      "$$PYTHON_BIN" -m venv .buildkite-venv
       .buildkite-venv/bin/python -m pip install --upgrade pip
       .buildkite-venv/bin/python -m pip install -r requirements.txt pytest
       .buildkite-venv/bin/python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
@@ -59,6 +65,7 @@ steps:
         src/model_attractor_defense.py \
         src/operator_fidelity_lock.py \
         src/operator_fidelity_preflight.py \
+        src/operator_source_binding_contract.py \
         src/control_plane.py \
         src/sitecustomize.py \
         scripts/reconcile_mastermind_buildkite.py
@@ -70,6 +77,7 @@ steps:
         tests/test_buildkite_master_inventory.py \
         tests/test_buildkite_github_status.py \
         tests/test_reconcile_genius_buildkite.py \
+        tests/test_verify_buildkite_evidence_chain.py \
         --junitxml=artifacts/buildkite/operator-fidelity.xml \
         2>&1 | tee artifacts/buildkite/operator-fidelity.log
       buildkite-agent meta-data set operator-fidelity-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/operator-fidelity.xml | cut -d ' ' -f 1)"
@@ -94,7 +102,9 @@ steps:
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
-      python3 -m venv .buildkite-venv
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
+      "$$PYTHON_BIN" -m venv .buildkite-venv
       .buildkite-venv/bin/python -m pip install --upgrade pip
       .buildkite-venv/bin/python -m pip install -r requirements.txt ruff mypy pytest
       .buildkite-venv/bin/ruff check \
@@ -145,7 +155,9 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
-      python3 scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
+      "$$PYTHON_BIN" scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
       test -s artifacts/buildkite/genius-reconciliation.json
       buildkite-agent meta-data set genius-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/genius-reconciliation.json | cut -d ' ' -f 1)"
       git diff --exit-code
@@ -175,7 +187,9 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
-      python3 scripts/reconcile_mastermind_buildkite.py 2>&1 | tee artifacts/buildkite/mastermind-reconciliation.log
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
+      "$$PYTHON_BIN" scripts/reconcile_mastermind_buildkite.py 2>&1 | tee artifacts/buildkite/mastermind-reconciliation.log
       test -s artifacts/buildkite/mastermind-reconciliation.json
       test -s artifacts/buildkite/mastermind-reconciliation.json.sha256
       shasum -a 256 -c artifacts/buildkite/mastermind-reconciliation.json.sha256
@@ -194,54 +208,50 @@ steps:
       - registry-audit
       - genius-reconcile
       - mastermind-reconcile
-    timeout_in_minutes: 5
+    timeout_in_minutes: 8
     agents:
       queue: macos-self
       os: macos
     command: |
       set -euo pipefail
-      mkdir -p artifacts/buildkite
-      actual="$(git rev-parse HEAD)"
+      mkdir -p artifacts/buildkite/upstream
+      actual="$$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
-      operator_fidelity_sha="$$(buildkite-agent meta-data get operator-fidelity-junit-sha256)"
-      registry_audit_sha="$(buildkite-agent meta-data get registry-audit-junit-sha256)"
+      build_id="$BUILDKITE_BUILD_ID"
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
+
+      operator_fidelity_sha="$$(buildkite-agent meta-data get operator-fidelity-junit-sha256 --build "$$build_id")"
+      registry_audit_sha="$$(buildkite-agent meta-data get registry-audit-junit-sha256 --build "$$build_id")"
+      buildkite-agent artifact download "artifacts/buildkite/operator-fidelity.xml" artifacts/buildkite/upstream --step source-fidelity --build "$$build_id"
+      buildkite-agent artifact download "artifacts/buildkite/registry-audit.xml" artifacts/buildkite/upstream --step registry-audit --build "$$build_id"
+
+      evidence_args=(
+        --evidence "operator_fidelity=source-fidelity:artifacts/buildkite/upstream/artifacts/buildkite/operator-fidelity.xml:$$operator_fidelity_sha"
+        --evidence "registry_audit=registry-audit:artifacts/buildkite/upstream/artifacts/buildkite/registry-audit.xml:$$registry_audit_sha"
+      )
+
       if [ "$BUILDKITE_BRANCH" = "main" ]; then
-        genius_reconciliation_sha="$(buildkite-agent meta-data get genius-reconciliation-sha256)"
-        mastermind_reconciliation_sha="$(buildkite-agent meta-data get mastermind-reconciliation-sha256)"
-        printf '%s  %s\n%s  %s\n%s  %s\n%s  %s\n' \
-          "$operator_fidelity_sha" "operator-fidelity.xml" \
-          "$registry_audit_sha" "registry-audit.xml" \
-          "$genius_reconciliation_sha" "genius-reconciliation.json" \
-          "$mastermind_reconciliation_sha" "mastermind-reconciliation.json" \
-          > artifacts/buildkite/SHA256SUMS
-      else
-        printf '%s  %s\n%s  %s\n' \
-          "$operator_fidelity_sha" "operator-fidelity.xml" \
-          "$registry_audit_sha" "registry-audit.xml" \
-          > artifacts/buildkite/SHA256SUMS
+        genius_reconciliation_sha="$$(buildkite-agent meta-data get genius-reconciliation-sha256 --build "$$build_id")"
+        mastermind_reconciliation_sha="$$(buildkite-agent meta-data get mastermind-reconciliation-sha256 --build "$$build_id")"
+        buildkite-agent artifact download "artifacts/buildkite/genius-reconciliation.json" artifacts/buildkite/upstream --step genius-reconcile --build "$$build_id"
+        buildkite-agent artifact download "artifacts/buildkite/mastermind-reconciliation.json" artifacts/buildkite/upstream --step mastermind-reconcile --build "$$build_id"
+        evidence_args+=(
+          --evidence "genius_reconciliation=genius-reconcile:artifacts/buildkite/upstream/artifacts/buildkite/genius-reconciliation.json:$$genius_reconciliation_sha"
+          --evidence "mastermind_reconciliation=mastermind-reconcile:artifacts/buildkite/upstream/artifacts/buildkite/mastermind-reconciliation.json:$$mastermind_reconciliation_sha"
+        )
       fi
-      python3 - <<'PY' > artifacts/buildkite/verified-ci-receipt.json
-      import datetime
-      import json
-      import os
-      import subprocess
-      receipt = {
-          "schema": "glaciereq.apex-control-plane.buildkite.v1",
-          "status": "PASS",
-          "commit": subprocess.check_output(
-              ["git", "rev-parse", "HEAD"], text=True
-          ).strip(),
-          "branch": os.environ.get("BUILDKITE_BRANCH"),
-          "build_id": os.environ.get("BUILDKITE_BUILD_ID"),
-          "build_number": os.environ.get("BUILDKITE_BUILD_NUMBER"),
-          "pipeline": os.environ.get("BUILDKITE_PIPELINE_SLUG"),
-          "generated_at": datetime.datetime.now(datetime.timezone.utc)
-          .replace(microsecond=0)
-          .isoformat(),
-      }
-      print(json.dumps(receipt, indent=2, sort_keys=True))
-      PY
+
+      "$$PYTHON_BIN" scripts/verify_buildkite_evidence_chain.py \
+        --expected-commit "$BUILDKITE_COMMIT" \
+        --branch "$BUILDKITE_BRANCH" \
+        --build-id "$$build_id" \
+        --build-number "$BUILDKITE_BUILD_NUMBER" \
+        --pipeline "$BUILDKITE_PIPELINE_SLUG" \
+        --output artifacts/buildkite/verified-ci-receipt.json \
+        --sums-output artifacts/buildkite/SHA256SUMS \
+        "$${evidence_args[@]}"
       git diff --exit-code
     artifact_paths:
-      - artifacts/buildkite/SHA256SUMS
       - artifacts/buildkite/verified-ci-receipt.json
+      - artifacts/buildkite/SHA256SUMS

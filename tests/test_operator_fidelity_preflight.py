@@ -14,6 +14,27 @@ from operator_fidelity_preflight import (
 )
 
 
+def _source_bindings(words: tuple[str, ...]) -> list[dict]:
+    bindings: list[dict] = []
+    for index, word in enumerate(words):
+        bindings.append(
+            {
+                "literal_index": index,
+                "proposition_id": f"preflight-test-proposition-{index}",
+                "source_kind": "operator_message",
+                "source_ref": "file:operator-history.txt",
+                "source_sha256": "sha256:" + "1" * 64,
+                "span_start_byte": 0,
+                "span_end_byte": len(word.encode("utf-8")),
+                "span_sha256": "sha256:" + "2" * 64,
+                "temporal_context": "synthetic-preflight-shape-test",
+                "contradiction_state": "active",
+                "verification_state": "source_resolved",
+            }
+        )
+    return bindings
+
+
 def _receipt() -> dict:
     words = (
         "Context first hard work second answer last",
@@ -39,6 +60,7 @@ def _receipt() -> dict:
             "humanized_engineering_standard_applied": True,
             "operator_words_digest": digest_operator_words(*words),
             "literal_constraints": list(words),
+            "operator_source_bindings": _source_bindings(words),
             "correction_present": True,
             "objective_function_reassessed": True,
             "corrections_applied": [
@@ -115,6 +137,55 @@ def test_request_contract_can_satisfy_current_policy() -> None:
         assert contract[field_name] is True
     for field_name, expected in policy["selected_path_requirements"].items():
         assert contract["selected_path"][field_name] is expected
+    bindings = contract["operator_source_bindings"]
+    assert isinstance(bindings, list) and len(bindings) == 1
+    binding = bindings[0]
+    assert binding["verification_state"] == "source_resolved"
+    assert "operator_message" in binding["source_kind"]
+    assert (
+        request["requirements"][
+            "bind_literal_operator_words_to_independently_resolved_source_spans"
+        ]
+        is True
+    )
+    assert (
+        request["requirements"][
+            "treat_source_retrieval_failure_as_unresolved_not_evidence_absence"
+        ]
+        is True
+    )
+
+
+def test_preflight_requires_source_binding_for_each_literal() -> None:
+    policy = load_operator_fidelity_policy()
+    receipt = _receipt()
+    receipt["operator_fidelity"].pop("operator_source_bindings")
+    errors = validate_operator_fidelity_receipt(policy, receipt)
+    assert any(
+        "independently bind every literal constraint" in error for error in errors
+    )
+
+
+def test_preflight_rejects_derivative_source_as_verbatim_authority() -> None:
+    policy = load_operator_fidelity_policy()
+    receipt = _receipt()
+    receipt["operator_fidelity"]["operator_source_bindings"][0]["source_kind"] = (
+        "working_model"
+    )
+    errors = validate_operator_fidelity_receipt(policy, receipt)
+    assert any(
+        "derivative" in error and "cannot authorize" in error for error in errors
+    )
+
+
+def test_preflight_rejects_malformed_source_digest() -> None:
+    policy = load_operator_fidelity_policy()
+    receipt = _receipt()
+    receipt["operator_fidelity"]["operator_source_bindings"][0]["source_sha256"] = (
+        "sha256:not-real"
+    )
+    errors = validate_operator_fidelity_receipt(policy, receipt)
+    assert any("source_sha256 must be sha256" in error for error in errors)
 
 
 def test_operator_asset_sovereignty_is_machine_bound() -> None:
@@ -133,7 +204,9 @@ def test_operator_asset_sovereignty_is_machine_bound() -> None:
 def test_unsolicited_operator_asset_ranking_blocks() -> None:
     policy = load_operator_fidelity_policy()
     receipt = _receipt()
-    receipt["operator_fidelity"]["selected_path"]["unsolicited_operator_asset_value_ranking"] = True
+    receipt["operator_fidelity"]["selected_path"][
+        "unsolicited_operator_asset_value_ranking"
+    ] = True
     errors = validate_operator_fidelity_receipt(policy, receipt)
     assert any("unsolicited_operator_asset_value_ranking" in error for error in errors)
 
@@ -141,7 +214,9 @@ def test_unsolicited_operator_asset_ranking_blocks() -> None:
 def test_operator_asset_disposition_without_scope_blocks() -> None:
     policy = load_operator_fidelity_policy()
     receipt = _receipt()
-    receipt["operator_fidelity"]["selected_path"]["unsolicited_operator_asset_disposition"] = True
+    receipt["operator_fidelity"]["selected_path"][
+        "unsolicited_operator_asset_disposition"
+    ] = True
     errors = validate_operator_fidelity_receipt(policy, receipt)
     assert any("unsolicited_operator_asset_disposition" in error for error in errors)
 
