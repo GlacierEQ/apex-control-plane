@@ -1,9 +1,8 @@
 """Fail-closed runtime preflight for strict executable-frontier authority.
 
-This module is deliberately small: it adapts the provider/source-backed boot
-receipt into the strict frontier authority boundary without creating a new
-source of truth.  Source bytes remain outside the receipt and are resolved from
-the explicitly mounted frontier source root.
+Generic source bytes and provider-native readback bytes resolve through separate
+roots. A provider-looking URI in the generic source root cannot authorize
+provider execution.
 """
 from __future__ import annotations
 
@@ -17,36 +16,56 @@ from strict_executable_frontier_authority import (
 )
 
 
+def _resolve_beneath(root_value: str, relative: str, *, label: str) -> bytes:
+    if not root_value.strip():
+        raise FileNotFoundError(f"{label} root is not set")
+    root = Path(root_value).expanduser().resolve()
+    resolved = (root / relative).resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"{label} reference escapes root") from exc
+    return resolved.read_bytes()
+
+
 def _resolve_frontier_source(source_ref: str) -> bytes:
     if not isinstance(source_ref, str) or not source_ref.strip():
         raise ValueError("frontier source_ref must be non-empty")
     if not source_ref.startswith("file:"):
         raise ValueError("frontier source_ref must use file: scheme")
-
-    root_value = os.getenv("GLACIEREQ_FRONTIER_SOURCE_ROOT", "").strip()
-    if not root_value:
-        raise FileNotFoundError("GLACIEREQ_FRONTIER_SOURCE_ROOT is not set")
-    root = Path(root_value).expanduser().resolve()
     relative = source_ref.removeprefix("file:").lstrip("/")
     if not relative:
         raise ValueError("frontier source_ref is empty")
+    return _resolve_beneath(
+        os.getenv("GLACIEREQ_FRONTIER_SOURCE_ROOT", ""),
+        relative,
+        label="frontier source",
+    )
 
-    resolved = (root / relative).resolve()
-    try:
-        resolved.relative_to(root)
-    except ValueError as exc:
-        raise ValueError("frontier source_ref escapes source root") from exc
-    return resolved.read_bytes()
+
+def _resolve_provider_readback(provider: str, source_ref: str) -> bytes:
+    if not isinstance(provider, str) or not provider.strip():
+        raise ValueError("provider must be non-empty")
+    if not isinstance(source_ref, str) or not source_ref.strip():
+        raise ValueError("provider source_ref must be non-empty")
+    prefix = f"provider://{provider}/"
+    if not source_ref.startswith(prefix):
+        raise ValueError("provider source_ref does not match provider trust root")
+    relative = source_ref.removeprefix(prefix).lstrip("/")
+    if not relative:
+        raise ValueError("provider source_ref is empty")
+    provider_root = Path(
+        os.getenv("GLACIEREQ_PROVIDER_READBACK_ROOT", "")
+    ).expanduser()
+    return _resolve_beneath(
+        str(provider_root / provider),
+        relative,
+        label=f"provider readback {provider}",
+    )
 
 
 def validate_runtime_strict_frontier() -> FrontierAuthorizationResult:
-    """Require the live boot receipt to pass strict frontier authority.
-
-    Missing receipts are unresolved rather than silently downgraded to an empty
-    dependency set.  The strict validator then composes source binding,
-    entailment, current execution lineage, dependency-completeness evidence, and
-    independently materialized dependency enumeration.
-    """
+    """Require the live boot receipt to pass strict frontier authority."""
     receipt = receipt_from_environment()
     if receipt is None:
         return FrontierAuthorizationResult(
@@ -57,4 +76,5 @@ def validate_runtime_strict_frontier() -> FrontierAuthorizationResult:
     return validate_strict_executable_frontier_authority(
         receipt,
         resolver=_resolve_frontier_source,
+        provider_resolver=_resolve_provider_readback,
     )
