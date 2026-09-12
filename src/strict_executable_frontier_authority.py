@@ -1,9 +1,10 @@
 """Composite executable-frontier authority with mandatory dependency enumeration.
 
 This boundary composes the existing source/entailment/execution-lineage frontier
-validator with the independently materialized execution-dependency enumerator.
-Consumers can migrate to this entry point without weakening the existing
-frontier authority while closing the self-attested completeness gap.
+validator with the independently materialized execution-dependency enumerator and
+material-input collector attestation. Consumers can migrate to this entry point
+without weakening existing frontier authority while closing self-attested
+completeness and collector-identity gaps.
 """
 
 from __future__ import annotations
@@ -17,12 +18,13 @@ from executable_frontier_authority import (
     validate_executable_frontier_authority,
 )
 from execution_dependency_enumerator_authority import validate_dependency_enumeration
+from material_input_collector_authority import validate_material_input_collector_authority
 
 
 def validate_strict_executable_frontier_authority(
     receipt: Mapping[str, Any], *, resolver: SourceResolver
 ) -> FrontierAuthorizationResult:
-    """Authorize only when base frontier authority and dependency enumeration agree."""
+    """Authorize only when base, enumeration, and collector authority agree."""
     base = validate_executable_frontier_authority(receipt, resolver=resolver)
     if not base.ok:
         return base
@@ -60,13 +62,13 @@ def validate_strict_executable_frontier_authority(
             ("frontier_authority.execution_claim_ids must be an array",),
         )
 
-    result = validate_dependency_enumeration(
+    enumeration_result = validate_dependency_enumeration(
         enumeration,
         resolver=resolver,
         expected_frontier_id=frontier_id,
         declared_execution_claim_ids=execution_claim_ids,
     )
-    if not result.ok:
+    if not enumeration_result.ok:
         return FrontierAuthorizationResult(
             False,
             "frontier_authorization_unresolved",
@@ -74,7 +76,24 @@ def validate_strict_executable_frontier_authority(
                 dict.fromkeys(
                     [
                         f"frontier_authority.dependency_enumeration: {error}"
-                        for error in result.errors
+                        for error in enumeration_result.errors
+                    ]
+                )
+            ),
+        )
+
+    collector_result = validate_material_input_collector_authority(
+        row, resolver=resolver
+    )
+    if not collector_result.ok:
+        return FrontierAuthorizationResult(
+            False,
+            "frontier_authorization_unresolved",
+            tuple(
+                dict.fromkeys(
+                    [
+                        f"frontier_authority.material_input_collector_attestation: {error}"
+                        for error in collector_result.errors
                     ]
                 )
             ),
