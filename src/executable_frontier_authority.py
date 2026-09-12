@@ -5,6 +5,11 @@ branch that runtime execution follows. This module separates frontier selection
 from frontier authorization by requiring independently resolved source spans
 plus an independently resolved entailment artifact.
 
+When a frontier depends on prior execution claims, those claim identities are
+part of the frontier identity and each claim must reacquire present authority
+through execution-evidence lineage reconciliation. Historical VERIFIED state is
+never accepted as a substitute for current provider readback.
+
 The receipt never supplies authoritative source bytes. Callers provide a
 resolver that returns bytes for source references; validation recomputes every
 hash and exact span before accepting the frontier.
@@ -18,6 +23,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from execution_evidence_lineage import reconcile_execution_lineage
 from operator_source_binding_contract import verify_source_span_binding
 
 SourceResolver = Callable[[str], bytes]
@@ -53,13 +59,15 @@ def derive_frontier_id(
     target: str,
     frontier_action: str,
     proposition_ids: Sequence[str],
+    execution_claim_ids: Sequence[str] = (),
 ) -> str:
-    """Derive the frontier identity from material authorization inputs."""
+    """Derive frontier identity from source propositions and execution dependencies."""
     payload = {
         "operation_class": operation_class,
         "target": target,
         "frontier_action": frontier_action,
         "proposition_ids": sorted(proposition_ids),
+        "execution_claim_ids": sorted(execution_claim_ids),
     }
     return "frontier:" + _canonical_digest(payload).removeprefix("sha256:")
 
@@ -104,12 +112,57 @@ def _validate_direction_binding(
     return tuple(dict.fromkeys(errors))
 
 
+def _validate_execution_dependencies(
+    records: Any,
+    *,
+    execution_claim_ids: Sequence[str],
+    resolver: SourceResolver,
+) -> tuple[str, ...]:
+    """Require every declared execution dependency to reacquire current authority."""
+    if not execution_claim_ids:
+        if records not in (None, []):
+            return (
+                "frontier_authority.execution_lineage_records must be empty when no execution_claim_ids are declared",
+            )
+        return ()
+
+    if not isinstance(records, list) or not records:
+        return (
+            "frontier_authority.execution_lineage_records must contain current lineage for every execution_claim_id",
+        )
+
+    errors: list[str] = []
+    resolved_ids: list[str] = []
+    for index, record in enumerate(records):
+        prefix = f"frontier_authority.execution_lineage_records[{index}]"
+        if not isinstance(record, Mapping):
+            errors.append(f"{prefix} must be an object")
+            continue
+        result = reconcile_execution_lineage(record, resolver=resolver)
+        if result.execution_claim_id:
+            resolved_ids.append(result.execution_claim_id)
+        if not result.authoritative:
+            errors.append(
+                f"{prefix} is not currently authoritative: {result.truth_state}"
+            )
+            errors.extend(f"{prefix}: {error}" for error in result.errors)
+
+    if len(resolved_ids) != len(set(resolved_ids)):
+        errors.append("frontier_authority execution lineage claim ids must be unique")
+    if sorted(resolved_ids) != sorted(execution_claim_ids):
+        errors.append(
+            "frontier_authority.execution_lineage_records must exactly match execution_claim_ids"
+        )
+    return tuple(dict.fromkeys(errors))
+
+
 def _validate_entailment_artifact(
     artifact: Mapping[str, Any],
     *,
     resolver: SourceResolver,
     expected_frontier_id: str,
     proposition_ids: Sequence[str],
+    execution_claim_ids: Sequence[str],
     operation_class: str,
     target: str,
     frontier_action: str,
@@ -155,6 +208,13 @@ def _validate_entailment_artifact(
         errors.append(
             f"{prefix}.evidence.proposition_ids must exactly match bound propositions"
         )
+    evidence_execution_ids = evidence.get("execution_claim_ids", [])
+    if not isinstance(evidence_execution_ids, list) or sorted(evidence_execution_ids) != sorted(
+        execution_claim_ids
+    ):
+        errors.append(
+            f"{prefix}.evidence.execution_claim_ids must exactly match bound execution dependencies"
+        )
     verifier_ref = evidence.get("verifier_ref")
     if not _nonempty(verifier_ref):
         errors.append(f"{prefix}.evidence.verifier_ref must be non-empty")
@@ -168,7 +228,7 @@ def _validate_entailment_artifact(
 def validate_executable_frontier_authority(
     receipt: Mapping[str, Any], *, resolver: SourceResolver
 ) -> FrontierAuthorizationResult:
-    """Authorize an executable frontier only from independently resolved evidence."""
+    """Authorize a frontier only from current source and execution evidence."""
     errors: list[str] = []
     row = receipt.get("frontier_authority")
     if not isinstance(row, Mapping):
@@ -210,6 +270,27 @@ def validate_executable_frontier_authority(
         if len(proposition_ids) != len(set(proposition_ids)):
             errors.append("frontier_authority proposition_ids must be unique")
 
+    execution_claim_ids_raw = row.get("execution_claim_ids", [])
+    if not isinstance(execution_claim_ids_raw, list) or not all(
+        _nonempty(item) for item in execution_claim_ids_raw
+    ):
+        errors.append(
+            "frontier_authority.execution_claim_ids must be an array of non-empty strings"
+        )
+        execution_claim_ids: list[str] = []
+    else:
+        execution_claim_ids = [str(item) for item in execution_claim_ids_raw]
+        if len(execution_claim_ids) != len(set(execution_claim_ids)):
+            errors.append("frontier_authority execution_claim_ids must be unique")
+
+    errors.extend(
+        _validate_execution_dependencies(
+            row.get("execution_lineage_records"),
+            execution_claim_ids=execution_claim_ids,
+            resolver=resolver,
+        )
+    )
+
     if not (
         _nonempty(operation_class) and _nonempty(target) and _nonempty(frontier_action)
     ):
@@ -220,6 +301,7 @@ def validate_executable_frontier_authority(
             target=str(target),
             frontier_action=str(frontier_action),
             proposition_ids=proposition_ids,
+            execution_claim_ids=execution_claim_ids,
         )
         if row.get("frontier_id") != expected_frontier_id:
             errors.append(
@@ -248,6 +330,7 @@ def validate_executable_frontier_authority(
                     resolver=resolver,
                     expected_frontier_id=expected_frontier_id,
                     proposition_ids=proposition_ids,
+                    execution_claim_ids=execution_claim_ids,
                     operation_class=str(operation_class),
                     target=str(target),
                     frontier_action=str(frontier_action),
