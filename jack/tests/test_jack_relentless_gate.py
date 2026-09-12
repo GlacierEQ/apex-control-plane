@@ -31,6 +31,7 @@ def _receipt(gates: dict[str, bool], status: str, blockers=None):
                 "action": "write",
                 "target": "existing topology",
                 "provider_receipt": "git:commit",
+                "execution_evidence": {"fixture": "independent-provider-evidence"},
                 "executed": True,
                 "verified": True,
                 "state": "VERIFIED",
@@ -47,6 +48,10 @@ def _receipt(gates: dict[str, bool], status: str, blockers=None):
         "resolved_blockers": [],
         "next_material_action": "resume next Operator-aligned unresolved delta",
     }
+
+
+def _accept_fixture_evidence(evidence):
+    assert evidence == {"fixture": "independent-provider-evidence"}
 
 
 def test_all_true_is_complete():
@@ -233,8 +238,21 @@ def test_receipt_rejects_complete_without_verification_receipt():
         raise AssertionError("COMPLETE without verification receipt was accepted")
 
 
-def test_receipt_accepts_consistent_complete():
-    validate_receipt(_receipt(_all_true(), "COMPLETE"))
+def test_complete_cannot_self_certify_from_string_receipts():
+    try:
+        validate_receipt(_receipt(_all_true(), "COMPLETE"))
+    except ValueError as exc:
+        assert "independent execution evidence validator" in str(exc)
+        assert "routing-only" in str(exc)
+    else:
+        raise AssertionError("COMPLETE self-certified from receipt strings")
+
+
+def test_receipt_accepts_consistent_complete_with_independent_authority():
+    validate_receipt(
+        _receipt(_all_true(), "COMPLETE"),
+        execution_evidence_validator=_accept_fixture_evidence,
+    )
 
 
 def test_receipt_accepts_current_blocker_only_as_blocked():
