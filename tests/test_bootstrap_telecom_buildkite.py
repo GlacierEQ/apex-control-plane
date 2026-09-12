@@ -29,6 +29,15 @@ def test_telecom_pipeline_identity_is_explicit() -> None:
     assert target["role"] == "telecommunications-domain"
 
 
+def test_desired_pipeline_preserves_telecom_domain_authority() -> None:
+    reconciler = mod.load_reconciler()
+    desired = mod.desired_telecom_pipeline(reconciler, "cluster-123")
+    assert desired["description"] == "GlacierEQ Telecommunications domain CI"
+    assert "Genius" not in desired["description"]
+    assert desired["default_branch"] == mod.TELECOM_BRANCH
+    assert desired["repository"] == mod.TELECOM_SPEC["repository"]
+
+
 def test_receipt_path_is_credential_free_artifact_location() -> None:
     assert mod.RECEIPT_PATH == ROOT / "artifacts" / "buildkite" / "telecom-bootstrap.json"
     assert mod.RECEIPT_SHA_PATH.name == "telecom-bootstrap.json.sha256"
