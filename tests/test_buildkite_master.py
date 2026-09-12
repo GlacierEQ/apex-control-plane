@@ -38,8 +38,13 @@ def test_buildkite_source_fidelity_covers_model_attractor_defense() -> None:
     assert "tests/test_model_attractor_defense.py" in text
 
 
-def test_evidence_scripts_use_pinned_python_runtime() -> None:
+def test_evidence_scripts_use_worker_local_pinned_python_runtime() -> None:
     text = (ROOT / ".buildkite" / "pipeline.yml").read_text()
+    assert 'PYTHON_BIN: "python3.12"' in text
+    assert 'PYTHON_BIN: "/usr/local/bin/python3.12"' not in text
+    assert 'PYTHON_BIN: "/opt/homebrew/bin/python3.12"' not in text
+    assert 'command -v "$$PYTHON_BIN"' in text
+    assert "sys.version_info[:2] == (3, 12)" in text
     critical_scripts = (
         "scripts/reconcile_genius_buildkite.py",
         "scripts/reconcile_mastermind_buildkite.py",
