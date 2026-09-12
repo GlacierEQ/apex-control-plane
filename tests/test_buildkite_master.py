@@ -54,15 +54,28 @@ def test_evidence_scripts_use_worker_local_verified_python_runtime() -> None:
         assert f"python3 {script}" not in text
 
 
-def test_python_resolver_probes_worker_local_candidates_and_fails_typed() -> None:
+def test_python_resolver_discovers_worker_capabilities_and_fails_typed() -> None:
     text = (ROOT / "scripts" / "resolve_python312.sh").read_text()
     assert "GLACIEREQ_PYTHON312" in text
+    assert "command -v python3.12" in text
+    assert "brew --prefix python@3.12" in text
+    assert "pyenv which python3.12" in text
+    assert "mise which python@3.12" in text
+    assert "asdf which python3.12" in text
     assert "/opt/homebrew/bin/python3.12" in text
     assert "/usr/local/bin/python3.12" in text
-    assert "command -v python3.12" in text
+    assert "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12" in text
     assert "sys.version_info[:2] == (3, 12)" in text
     assert "PYTHON_RUNTIME_UNRESOLVED" in text
     assert "exit 78" in text
+
+
+def test_python_resolver_treats_discovery_as_hint_not_authority() -> None:
+    text = (ROOT / "scripts" / "resolve_python312.sh").read_text()
+    assert "[ -x \"$candidate\" ]" in text
+    assert "sys.version_info[:2] == (3, 12)" in text
+    assert "os.path.realpath(sys.executable)" in text
+    assert "seen=" in text
 
 
 def test_inline_secret_literal_is_rejected() -> None:
