@@ -90,6 +90,21 @@ def _fixture() -> tuple[dict, dict[str, bytes], str]:
         "target": target,
         "frontier_action": frontier_action,
         "required_execution_claim_ids": [claim_id],
+        "dependency_basis": [
+            {
+                "basis_id": "basis:provider-readback",
+                "source_ref": "provider:github:commit:9117bc58",
+                "source_kind": "provider_api_readback",
+                "source_sha256": _sha256(provider_bytes),
+                "span_start_byte": 0,
+                "span_end_byte": len(provider_bytes),
+                "span_sha256": _sha256(provider_bytes),
+                "temporal_context": "current provider readback",
+                "contradiction_state": "active",
+                "superseded_by": None,
+                "verification_state": "source_resolved",
+            }
+        ],
         "verifier_ref": "independent:test-dependency-completeness-verifier",
     }
     completeness_bytes = json.dumps(completeness, sort_keys=True, separators=(",", ":")).encode()
