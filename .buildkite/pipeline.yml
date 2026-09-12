@@ -5,9 +5,6 @@ env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PYTHONUNBUFFERED: "1"
   PYTHONDONTWRITEBYTECODE: "1"
-  # Worker-local command resolution avoids promoting one macOS agent's
-  # Homebrew prefix into estate-wide truth while retaining the Python 3.12 pin.
-  PYTHON_BIN: "python3.12"
 
 steps:
   - label: ":kite: Buildkite master contract"
@@ -21,8 +18,8 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
-      command -v "$$PYTHON_BIN"
-      "$$PYTHON_BIN" -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
       "$$PYTHON_BIN" scripts/validate_buildkite_master.py \
         --emit-receipt artifacts/buildkite/buildkite-master-validation.json
       "$$PYTHON_BIN" -m py_compile \
@@ -55,8 +52,9 @@ steps:
       actual="$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
       git diff --exit-code
-      command -v "$$PYTHON_BIN"
-      "$$PYTHON_BIN" -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
+      "$$PYTHON_BIN" --version
       "$$PYTHON_BIN" -m venv .buildkite-venv
       .buildkite-venv/bin/python -m pip install --upgrade pip
       .buildkite-venv/bin/python -m pip install -r requirements.txt pytest
@@ -104,8 +102,8 @@ steps:
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
-      command -v "$$PYTHON_BIN"
-      "$$PYTHON_BIN" -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
       "$$PYTHON_BIN" -m venv .buildkite-venv
       .buildkite-venv/bin/python -m pip install --upgrade pip
       .buildkite-venv/bin/python -m pip install -r requirements.txt ruff mypy pytest
@@ -157,8 +155,8 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
-      command -v "$$PYTHON_BIN"
-      "$$PYTHON_BIN" -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
       "$$PYTHON_BIN" scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
       test -s artifacts/buildkite/genius-reconciliation.json
       buildkite-agent meta-data set genius-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/genius-reconciliation.json | cut -d ' ' -f 1)"
@@ -189,8 +187,8 @@ steps:
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
       test "$actual" = "$BUILDKITE_COMMIT"
-      command -v "$$PYTHON_BIN"
-      "$$PYTHON_BIN" -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
       "$$PYTHON_BIN" scripts/reconcile_mastermind_buildkite.py 2>&1 | tee artifacts/buildkite/mastermind-reconciliation.log
       test -s artifacts/buildkite/mastermind-reconciliation.json
       test -s artifacts/buildkite/mastermind-reconciliation.json.sha256
@@ -220,8 +218,8 @@ steps:
       actual="$$(git rev-parse HEAD)"
       test "$$actual" = "$BUILDKITE_COMMIT"
       build_id="$BUILDKITE_BUILD_ID"
-      command -v "$$PYTHON_BIN"
-      "$$PYTHON_BIN" -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
 
       operator_fidelity_sha="$$(buildkite-agent meta-data get operator-fidelity-junit-sha256 --build "$$build_id")"
       registry_audit_sha="$$(buildkite-agent meta-data get registry-audit-junit-sha256 --build "$$build_id")"
