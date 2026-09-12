@@ -23,6 +23,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from dependency_basis_authority import validate_dependency_basis
 from execution_evidence_lineage import reconcile_execution_lineage
 from operator_source_binding_contract import verify_source_span_binding
 
@@ -157,7 +158,6 @@ def _validate_execution_dependencies(
     return tuple(dict.fromkeys(errors))
 
 
-
 def _validate_dependency_completeness_artifact(
     artifact: Mapping[str, Any],
     *,
@@ -168,7 +168,7 @@ def _validate_dependency_completeness_artifact(
     target: str,
     frontier_action: str,
 ) -> tuple[str, ...]:
-    """Prove that the declared execution dependency set is complete, including empty sets."""
+    """Prove the declared execution dependency set is complete and source-grounded."""
     errors: list[str] = []
     prefix = "frontier_authority.dependency_completeness_verification"
     source_bytes, resolution_error = _resolve(
@@ -190,6 +190,16 @@ def _validate_dependency_completeness_artifact(
     if not isinstance(evidence, Mapping):
         errors.append(f"{prefix}.evidence must be an object")
         return tuple(errors)
+
+    basis_result = validate_dependency_basis(evidence, resolver=resolver)
+    if not basis_result.authoritative:
+        errors.append(
+            f"{prefix}.evidence.dependency_basis is not authoritative: {basis_result.status}"
+        )
+        errors.extend(
+            f"{prefix}.evidence.dependency_basis: {error}"
+            for error in basis_result.errors
+        )
 
     expected = {
         "frontier_id": expected_frontier_id,
