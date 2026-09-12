@@ -54,11 +54,13 @@ def _resolve_provider_readback(provider: str, source_ref: str) -> bytes:
     relative = source_ref.removeprefix(prefix).lstrip("/")
     if not relative:
         raise ValueError("provider source_ref is empty")
-    provider_root = Path(
-        os.getenv("GLACIEREQ_PROVIDER_READBACK_ROOT", "")
-    ).expanduser()
+
+    provider_root_value = os.getenv("GLACIEREQ_PROVIDER_READBACK_ROOT", "")
+    if not provider_root_value.strip():
+        raise FileNotFoundError("provider readback root is not set")
+    provider_root = Path(provider_root_value).expanduser().resolve() / provider
     return _resolve_beneath(
-        str(provider_root / provider),
+        str(provider_root),
         relative,
         label=f"provider readback {provider}",
     )
