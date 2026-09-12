@@ -119,6 +119,19 @@ jobs:
             tests/test_runtime_execution_guard.py \
             tests/test_control_plane.py
 
+      - name: Prove strict frontier blocks before model-attractor without receipt
+        shell: bash
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python - <<'PY'
+          from apex_strong_boot import _run_model_attractor_preflight
+
+          failures = []
+          _run_model_attractor_preflight(failures)
+          assert failures == [
+              "strict_executable_frontier_authority: strict frontier preflight requires a boot receipt"
+          ], failures
+          PY
+
       - name: Prove runtime entrypoint fails closed without receipts
         shell: bash
         run: |
@@ -128,7 +141,8 @@ jobs:
           set -e
           test "$status" -eq 78
           test ! -s /tmp/strong.out
-          grep -q 'strict_executable_frontier_authority' /tmp/strong.err
+          grep -q 'glaciereq_notion_continuity_preflight' /tmp/strong.err
+          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/strong.err
 
       - name: Prove strict Python auto-boot preserves blocked exit code
         shell: bash
@@ -142,7 +156,8 @@ jobs:
           set -e
           test "$status" -eq 78
           test ! -s /tmp/site.out
-          grep -q 'strict_executable_frontier_authority' /tmp/site.err
+          grep -q 'glaciereq_notion_continuity_preflight' /tmp/site.err
+          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/site.err
 
       - name: Prove legacy runtime cannot bypass verified boundary
         shell: bash
