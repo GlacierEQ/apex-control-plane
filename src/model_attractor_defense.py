@@ -6,6 +6,7 @@ it proves that any higher-priority constraint is scoped to the constrained
 action and has not silently rewritten the Operator mission, operation class,
 continuation point, or source topology.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -18,10 +19,13 @@ from pathlib import Path
 from typing import Any
 
 from auto_boot import BootError
+from executable_frontier_authority import validate_executable_frontier_authority
 from prime_directive_boot import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
-    Path(__file__).resolve().parents[1] / "config" / "model_attractor_defense_policy.json"
+    Path(__file__).resolve().parents[1]
+    / "config"
+    / "model_attractor_defense_policy.json"
 )
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _SEAL = object()
@@ -70,7 +74,9 @@ class ModelAttractorValidation:
 _IN_PROCESS: ModelAttractorValidation | None = None
 
 
-def _issue(ok: bool, status: str, errors: Sequence[str] = ()) -> ModelAttractorValidation:
+def _issue(
+    ok: bool, status: str, errors: Sequence[str] = ()
+) -> ModelAttractorValidation:
     return ModelAttractorValidation(ok, status, tuple(errors), _SEAL)
 
 
@@ -83,8 +89,10 @@ def _nonempty_text(value: Any) -> bool:
 
 
 def _nonempty_string_array(value: Any) -> bool:
-    return isinstance(value, list) and bool(value) and all(
-        _nonempty_text(item) for item in value
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(_nonempty_text(item) for item in value)
     )
 
 
@@ -130,6 +138,71 @@ def build_local_source_binding(source_ref: str) -> dict[str, str]:
     }
 
 
+def _resolve_frontier_source(source_ref: str) -> bytes:
+    """Resolve frontier evidence from a private, explicitly mounted source root.
+
+    The receipt supplies only a locator. Source bytes remain external to the
+    receipt so frontier authorization cannot self-certify its own evidence.
+    """
+    if not _nonempty_text(source_ref) or not source_ref.startswith("file:"):
+        raise ValueError("frontier source_ref must use file: scheme")
+    root_value = os.getenv("GLACIEREQ_FRONTIER_SOURCE_ROOT", "").strip()
+    if not root_value:
+        raise FileNotFoundError("GLACIEREQ_FRONTIER_SOURCE_ROOT is not set")
+    root = Path(root_value).expanduser().resolve()
+    relative = source_ref.removeprefix("file:").lstrip("/")
+    if not relative:
+        raise ValueError("frontier source_ref is empty")
+    resolved = (root / relative).resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("frontier source_ref escapes source root") from exc
+    return resolved.read_bytes()
+
+
+def _validate_frontier_alignment(
+    row: Mapping[str, Any], receipt: Mapping[str, Any]
+) -> tuple[str, ...]:
+    """Bind model-attractor continuity claims to independent frontier authority."""
+    errors: list[str] = []
+    result = validate_executable_frontier_authority(
+        receipt, resolver=_resolve_frontier_source
+    )
+    if not result.ok:
+        errors.extend(f"model_attractor_defense.{error}" for error in result.errors)
+        return tuple(dict.fromkeys(errors))
+
+    frontier = receipt.get("frontier_authority")
+    assert isinstance(frontier, Mapping)
+    alignments = (
+        ("operator_operation_class", "operation_class"),
+        ("operator_target", "target"),
+        ("continuation_ref", "continuation_ref"),
+    )
+    for model_field, frontier_field in alignments:
+        if row.get(model_field) != frontier.get(frontier_field):
+            errors.append(
+                f"model_attractor_defense.{model_field} must equal frontier_authority.{frontier_field}"
+            )
+
+    model_sources = row.get("source_refs")
+    if isinstance(model_sources, list):
+        bound_refs = {
+            str(binding.get("source_ref"))
+            for binding in frontier.get("source_bindings", ())
+            if isinstance(binding, Mapping)
+            and _nonempty_text(binding.get("source_ref"))
+        }
+        missing = sorted(ref for ref in bound_refs if ref not in model_sources)
+        if missing:
+            errors.append(
+                "model_attractor_defense.source_refs must include every frontier source_ref: "
+                + ", ".join(missing)
+            )
+    return tuple(dict.fromkeys(errors))
+
+
 def _validate_source_role_bindings(
     *,
     field_name: str,
@@ -169,9 +242,7 @@ def _validate_source_role_bindings(
 
         fragment = source_ref.split("#", 1)[1] if "#" in source_ref else ""
         if fragment != field_name:
-            errors.append(
-                f"{binding_prefix}.source_ref fragment must be {field_name}"
-            )
+            errors.append(f"{binding_prefix}.source_ref fragment must be {field_name}")
             continue
 
         try:
@@ -182,9 +253,7 @@ def _validate_source_role_bindings(
 
         expected_digest = _sha256_bytes(payload)
         if binding.get("source_sha256") != expected_digest:
-            errors.append(
-                f"{binding_prefix}.source_sha256 does not match source bytes"
-            )
+            errors.append(f"{binding_prefix}.source_sha256 does not match source bytes")
             continue
 
         try:
@@ -196,9 +265,7 @@ def _validate_source_role_bindings(
             continue
         source_semantics = source_document.get("source_role_semantics")
         if not isinstance(source_semantics, Mapping):
-            errors.append(
-                f"{binding_prefix}.source_ref lacks source_role_semantics"
-            )
+            errors.append(f"{binding_prefix}.source_ref lacks source_role_semantics")
             continue
         if source_semantics.get(field_name) is not expected:
             errors.append(
@@ -208,9 +275,7 @@ def _validate_source_role_bindings(
         verified_binding = True
 
     if not verified_binding:
-        errors.append(
-            f"{prefix} has no independently recomputable source binding"
-        )
+        errors.append(f"{prefix} has no independently recomputable source binding")
     return tuple(errors)
 
 
@@ -290,10 +355,14 @@ def load_model_attractor_policy(
     )
 
     transformations = value.get("forbidden_transformations")
-    if not isinstance(transformations, list) or not transformations or not all(
-        isinstance(item, str) and item.strip() for item in transformations
+    if (
+        not isinstance(transformations, list)
+        or not transformations
+        or not all(isinstance(item, str) and item.strip() for item in transformations)
     ):
-        raise BootError("model-attractor forbidden_transformations must be a non-empty string array")
+        raise BootError(
+            "model-attractor forbidden_transformations must be a non-empty string array"
+        )
     return value
 
 
@@ -305,9 +374,10 @@ def validate_model_attractor_receipt(
     if not isinstance(row, Mapping):
         return ("model_attractor_defense must be an object",)
 
-    if str(row.get("failure_class", "")).strip().upper() != str(
-        policy.get("failure_class", "")
-    ).strip().upper():
+    if (
+        str(row.get("failure_class", "")).strip().upper()
+        != str(policy.get("failure_class", "")).strip().upper()
+    ):
         errors.append(
             "model_attractor_defense.failure_class must be "
             + str(policy.get("failure_class"))
@@ -319,16 +389,12 @@ def validate_model_attractor_receipt(
 
     for field_name, expected in policy.get("required_boolean_fields", {}).items():
         if row.get(field_name) is not expected:
-            errors.append(
-                f"model_attractor_defense.{field_name} must be {expected!r}"
-            )
+            errors.append(f"model_attractor_defense.{field_name} must be {expected!r}")
 
     source_role_semantics = policy.get("source_role_semantics", {})
     for field_name, expected in source_role_semantics.items():
         if row.get(field_name) is not expected:
-            errors.append(
-                f"model_attractor_defense.{field_name} must be {expected!r}"
-            )
+            errors.append(f"model_attractor_defense.{field_name} must be {expected!r}")
 
     source_role_evidence = row.get("source_role_evidence")
     if not isinstance(source_role_evidence, Mapping):
@@ -347,7 +413,9 @@ def validate_model_attractor_receipt(
             if not _nonempty_string_array(evidence.get("source_refs")):
                 errors.append(f"{prefix}.source_refs must be a non-empty string array")
             if not _nonempty_string_array(evidence.get("provider_refs")):
-                errors.append(f"{prefix}.provider_refs must be a non-empty string array")
+                errors.append(
+                    f"{prefix}.provider_refs must be a non-empty string array"
+                )
             if str(evidence.get("verification_state", "")).strip().lower() != (
                 _SOURCE_ROLE_VERIFICATION_STATE
             ):
@@ -365,7 +433,9 @@ def validate_model_attractor_receipt(
 
     constraint_scope = row.get("platform_constraint_scope")
     if not _nonempty_text(constraint_scope):
-        errors.append("model_attractor_defense.platform_constraint_scope must be non-empty")
+        errors.append(
+            "model_attractor_defense.platform_constraint_scope must be non-empty"
+        )
     elif constraint_scope.strip().lower() not in {"none", "narrow_action_constraint"}:
         errors.append(
             "model_attractor_defense.platform_constraint_scope must be none or narrow_action_constraint"
@@ -375,25 +445,33 @@ def validate_model_attractor_receipt(
     if not isinstance(blocked_sources, list) or not all(
         _nonempty_text(item) for item in blocked_sources
     ):
-        errors.append("model_attractor_defense.blocked_sources must be an array of non-empty strings")
+        errors.append(
+            "model_attractor_defense.blocked_sources must be an array of non-empty strings"
+        )
 
     if continuity_required is True:
-        for field_name, expected in policy.get("continuity_required_fields", {}).items():
+        for field_name, expected in policy.get(
+            "continuity_required_fields", {}
+        ).items():
             value = row.get(field_name)
             if expected is True and value is not True:
                 errors.append(f"model_attractor_defense.{field_name} must be true")
             elif expected == "nonempty" and not _nonempty_text(value):
                 errors.append(f"model_attractor_defense.{field_name} must be non-empty")
-            elif expected == "nonempty_array":
-                if not isinstance(value, list) or not any(_nonempty_text(item) for item in value):
-                    errors.append(
-                        f"model_attractor_defense.{field_name} must contain at least one source reference"
-                    )
+            elif expected == "nonempty_array" and (
+                not isinstance(value, list)
+                or not any(_nonempty_text(item) for item in value)
+            ):
+                errors.append(
+                    f"model_attractor_defense.{field_name} must contain at least one source reference"
+                )
 
         if blocked_sources and row.get("partial_hydration_declared") is not True:
             errors.append(
                 "model_attractor_defense.partial_hydration_declared must be true when blocked_sources is non-empty"
             )
+
+        errors.extend(_validate_frontier_alignment(row, receipt))
     elif continuity_required is False:
         if row.get("hydration_complete_for_material_state") not in {True, False, None}:
             errors.append(
@@ -428,9 +506,7 @@ def build_model_attractor_request(
         field_name: {
             "asserted_value": expected,
             "proposition": "non-empty proposition tied to this invariant",
-            "source_refs": [
-                f"policy:model_attractor_defense_policy.json#{field_name}"
-            ],
+            "source_refs": [f"policy:model_attractor_defense_policy.json#{field_name}"],
             "provider_refs": ["one or more provider/authority references"],
             "source_bindings": [
                 {
@@ -459,6 +535,8 @@ def build_model_attractor_request(
             "reuse_known_state_before_rediscovery": True,
             "identify_nearest_valid_continuation_when_continuity_dependent": True,
             "identify_nearest_executable_frontier_when_continuity_dependent": True,
+            "require_independently_authorized_executable_frontier_when_continuity_dependent": True,
+            "bind_model_attractor_continuation_to_frontier_identity": True,
             "hydrate_material_source_bearing_state_when_continuity_dependent": True,
             "preserve_prior_verified_gains_when_continuity_dependent": True,
             "treat_memory_and_summaries_as_routing_hints_only": True,
@@ -491,6 +569,35 @@ def build_model_attractor_request(
             "forbid_connector_metadata_from_becoming_global_authority": True,
         },
         "receipt_contract": {
+            "frontier_authority": {
+                "frontier_id": "derived from operation_class,target,frontier_action,proposition_ids",
+                "continuation_ref": "must equal derived frontier_id",
+                "operation_class": "must equal model_attractor_defense.operator_operation_class",
+                "target": "must equal model_attractor_defense.operator_target",
+                "frontier_action": "exact executable action authorized by source propositions",
+                "source_bindings": [
+                    {
+                        "proposition_id": "stable proposition identity",
+                        "proposition_text": "exact UTF-8 source span",
+                        "source_kind": "operator_message|operator_file|operator_record",
+                        "source_ref": "file:<path beneath GLACIEREQ_FRONTIER_SOURCE_ROOT>",
+                        "source_sha256": "sha256:<resolved source bytes>",
+                        "span_start_byte": "integer",
+                        "span_end_byte": "integer",
+                        "span_sha256": "sha256:<exact source span>",
+                        "temporal_context": "source temporal context",
+                        "contradiction_state": "active|resolved_consistent",
+                        "superseded_by": None,
+                        "verification_state": "source_resolved",
+                    }
+                ],
+                "entailment_verifications": [
+                    {
+                        "evidence_ref": "file:<independent entailment artifact>",
+                        "evidence_sha256": "sha256:<resolved entailment bytes>",
+                    }
+                ],
+            },
             "model_attractor_defense": {
                 "failure_class": "MODEL_ATTRACTOR_DRIFT",
                 "continuity_required": "boolean",
@@ -501,7 +608,7 @@ def build_model_attractor_request(
                 "blocked_sources": [],
                 "partial_hydration_declared": False,
                 **continuity_contract,
-            }
+            },
         },
     }
 
@@ -509,7 +616,10 @@ def build_model_attractor_request(
 def _continue_model_attractor(
     errors: Sequence[str], *, request: Mapping[str, Any]
 ) -> ModelAttractorValidation:
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
+    from startup_continuation import (
+        emit_startup_continuation,
+        record_startup_continuation,
+    )
 
     continuation = record_startup_continuation(
         "model_attractor_defense",
