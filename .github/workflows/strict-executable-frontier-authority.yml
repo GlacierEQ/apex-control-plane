@@ -7,6 +7,7 @@ on:
       - "src/executable_frontier_authority.py"
       - "src/execution_dependency_enumerator_authority.py"
       - "src/material_input_collector_authority.py"
+      - "src/verifier_identity_authority.py"
       - "src/strict_executable_frontier_authority.py"
       - "tests/test_execution_dependency_enumerator_authority.py"
       - "tests/test_strict_executable_frontier_authority.py"
@@ -17,6 +18,7 @@ on:
       - "src/executable_frontier_authority.py"
       - "src/execution_dependency_enumerator_authority.py"
       - "src/material_input_collector_authority.py"
+      - "src/verifier_identity_authority.py"
       - "src/strict_executable_frontier_authority.py"
       - "tests/test_execution_dependency_enumerator_authority.py"
       - "tests/test_strict_executable_frontier_authority.py"
@@ -36,7 +38,7 @@ jobs:
       - name: Install pytest
         run: python -m pip install --disable-pip-version-check pytest
       - name: Compile composed authority boundaries
-        run: python -m py_compile src/executable_frontier_authority.py src/execution_dependency_enumerator_authority.py src/material_input_collector_authority.py src/strict_executable_frontier_authority.py
+        run: python -m py_compile src/executable_frontier_authority.py src/execution_dependency_enumerator_authority.py src/material_input_collector_authority.py src/verifier_identity_authority.py src/strict_executable_frontier_authority.py
       - name: Run strict authority adversarial suites
         env:
           PYTHONPATH: src
