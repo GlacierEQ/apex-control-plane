@@ -27,6 +27,7 @@ steps:
         scripts/buildkite_master_inventory.py \
         scripts/reconcile_buildkite_github_status.py \
         scripts/reconcile_genius_buildkite.py \
+        scripts/reconcile_telecom_buildkite.py \
         scripts/reconcile_mastermind_buildkite.py \
         scripts/verify_buildkite_evidence_chain.py
       git diff --exit-code
@@ -164,6 +165,41 @@ steps:
     artifact_paths:
       - artifacts/buildkite/genius-reconciliation.json
       - artifacts/buildkite/genius-reconciliation.log
+
+  - label: ":telephone_receiver: Bootstrap + verify Telecom"
+    key: telecom-bootstrap
+    depends_on: source-fidelity
+    branches: telecom-buildkite-bootstrap-4
+    timeout_in_minutes: 30
+    cancel_on_build_failing: true
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 1
+        - exit_status: 255
+          limit: 1
+    agents:
+      queue: macos-self
+      os: macos
+    env:
+      TELECOM_BUILDKITE_REF: "feat/telecom-foundation-boot-v1"
+    command: |
+      set -euo pipefail
+      mkdir -p artifacts/buildkite
+      actual="$$(git rev-parse HEAD)"
+      test "$$actual" = "$BUILDKITE_COMMIT"
+      PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
+      test -x "$$PYTHON_BIN"
+      "$$PYTHON_BIN" scripts/reconcile_telecom_buildkite.py 2>&1 | tee artifacts/buildkite/telecom-reconciliation.log
+      test -s artifacts/buildkite/telecom-reconciliation.json
+      test -s artifacts/buildkite/telecom-reconciliation.json.sha256
+      shasum -a 256 -c artifacts/buildkite/telecom-reconciliation.json.sha256
+      buildkite-agent meta-data set telecom-reconciliation-sha256 "$$(shasum -a 256 artifacts/buildkite/telecom-reconciliation.json | cut -d ' ' -f 1)"
+      git diff --exit-code
+    artifact_paths:
+      - artifacts/buildkite/telecom-reconciliation.json
+      - artifacts/buildkite/telecom-reconciliation.json.sha256
+      - artifacts/buildkite/telecom-reconciliation.log
 
   - label: ":brain: Reconcile + verify Mastermind"
     key: mastermind-reconcile
