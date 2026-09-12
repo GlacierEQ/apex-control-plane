@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+import hashlib
+import json
+
+from execution_dependency_enumerator_authority import validate_dependency_enumeration
+
+
+def _sha256(payload: bytes) -> str:
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _resolver(sources: dict[str, bytes]):
+    def resolve(ref: str) -> bytes:
+        return sources[ref]
+    return resolve
+
+
+def _fixture(claim_ids: list[str] | None = None):
+    claim_ids = claim_ids or ["execution:alpha", "execution:beta"]
+    inputs = {
+        "provider:history": b'{"verified":["execution:alpha"]}',
+        "source:continuation": b'{"depends_on":["execution:beta"]}',
+    }
+    evidence = {
+        "frontier_id": "frontier:test",
+        "enumerator_ref": "independent:dependency-enumerator:v1",
+        "enumerator_version": "1",
+        "input_refs": sorted(inputs),
+        "input_sha256": {ref: _sha256(payload) for ref, payload in inputs.items()},
+        "candidate_execution_claim_ids": claim_ids,
+    }
+    evidence_bytes = json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode()
+    sources = dict(inputs)
+    sources["evidence:dependency-enumeration"] = evidence_bytes
+    artifact = {
+        "evidence_ref": "evidence:dependency-enumeration",
+        "evidence_sha256": _sha256(evidence_bytes),
+    }
+    return artifact, sources, claim_ids
+
+
+def test_verified_enumeration_requires_independent_hashed_inputs() -> None:
+    artifact, sources, claim_ids = _fixture()
+    result = validate_dependency_enumeration(
+        artifact,
+        resolver=_resolver(sources),
+        expected_frontier_id="frontier:test",
+        declared_execution_claim_ids=claim_ids,
+    )
+    assert result.ok is True
+    assert result.status == "DEPENDENCY_ENUMERATION_VERIFIED"
+
+
+def test_omitted_execution_dependency_is_rejected() -> None:
+    artifact, sources, claim_ids = _fixture()
+    result = validate_dependency_enumeration(
+        artifact,
+        resolver=_resolver(sources),
+        expected_frontier_id="frontier:test",
+        declared_execution_claim_ids=[claim_ids[0]],
+    )
+    assert result.ok is False
+    assert any("incomplete or substituted" in error for error in result.errors)
+
+
+def test_retrieval_failure_is_unresolved_not_absence() -> None:
+    artifact, sources, claim_ids = _fixture()
+    del sources["source:continuation"]
+    result = validate_dependency_enumeration(
+        artifact,
+        resolver=_resolver(sources),
+        expected_frontier_id="frontier:test",
+        declared_execution_claim_ids=claim_ids,
+    )
+    assert result.ok is False
+    assert any("readback unresolved" in error for error in result.errors)
+
+
+def test_tampered_input_invalidates_enumeration() -> None:
+    artifact, sources, claim_ids = _fixture()
+    sources["provider:history"] += b"tamper"
+    result = validate_dependency_enumeration(
+        artifact,
+        resolver=_resolver(sources),
+        expected_frontier_id="frontier:test",
+        declared_execution_claim_ids=claim_ids,
+    )
+    assert result.ok is False
+    assert any("does not match resolved bytes" in error for error in result.errors)
+
+
+def test_frontier_or_receipt_cannot_self_certify_enumeration() -> None:
+    artifact, sources, claim_ids = _fixture()
+    evidence = json.loads(sources["evidence:dependency-enumeration"].decode())
+    evidence["enumerator_ref"] = "frontier_receipt"
+    encoded = json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode()
+    sources["evidence:dependency-enumeration"] = encoded
+    artifact["evidence_sha256"] = _sha256(encoded)
+    result = validate_dependency_enumeration(
+        artifact,
+        resolver=_resolver(sources),
+        expected_frontier_id="frontier:test",
+        declared_execution_claim_ids=claim_ids,
+    )
+    assert result.ok is False
+    assert any("cannot self-certify" in error for error in result.errors)
+
+
+def test_enumeration_is_bound_to_exact_frontier_identity() -> None:
+    artifact, sources, claim_ids = _fixture()
+    result = validate_dependency_enumeration(
+        artifact,
+        resolver=_resolver(sources),
+        expected_frontier_id="frontier:different",
+        declared_execution_claim_ids=claim_ids,
+    )
+    assert result.ok is False
+    assert any("frontier_id" in error for error in result.errors)
