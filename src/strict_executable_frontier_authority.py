@@ -4,6 +4,8 @@ This boundary composes the existing source/entailment/execution-lineage frontier
 validator with the independently materialized execution-dependency enumerator,
 material-input collector attestation, content-addressed verifier identity, and
 provider-readback proof that the bound verifier implementation actually ran.
+Provider readback uses a distinct resolver so generic source material cannot
+silently impersonate provider-native execution evidence.
 """
 
 from __future__ import annotations
@@ -18,12 +20,18 @@ from executable_frontier_authority import (
 )
 from execution_dependency_enumerator_authority import validate_dependency_enumeration
 from material_input_collector_authority import validate_material_input_collector_authority
-from verifier_execution_authority import validate_verifier_execution_authority
+from verifier_execution_authority import (
+    ProviderReadbackResolver,
+    validate_verifier_execution_authority,
+)
 from verifier_identity_authority import validate_verifier_identity_authority
 
 
 def validate_strict_executable_frontier_authority(
-    receipt: Mapping[str, Any], *, resolver: SourceResolver
+    receipt: Mapping[str, Any],
+    *,
+    resolver: SourceResolver,
+    provider_resolver: ProviderReadbackResolver | None,
 ) -> FrontierAuthorizationResult:
     """Authorize only when every composed authority boundary independently passes."""
     base = validate_executable_frontier_authority(receipt, resolver=resolver)
@@ -115,7 +123,11 @@ def validate_strict_executable_frontier_authority(
             ),
         )
 
-    execution_result = validate_verifier_execution_authority(row, resolver=resolver)
+    execution_result = validate_verifier_execution_authority(
+        row,
+        resolver=resolver,
+        provider_resolver=provider_resolver,
+    )
     if not execution_result.ok:
         return FrontierAuthorizationResult(
             False,
