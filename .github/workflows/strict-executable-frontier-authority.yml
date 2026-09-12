@@ -1,0 +1,41 @@
+name: Strict Executable Frontier Authority
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/executable_frontier_authority.py"
+      - "src/execution_dependency_enumerator_authority.py"
+      - "src/strict_executable_frontier_authority.py"
+      - "tests/test_execution_dependency_enumerator_authority.py"
+      - "tests/test_strict_executable_frontier_authority.py"
+      - ".github/workflows/strict-executable-frontier-authority.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/executable_frontier_authority.py"
+      - "src/execution_dependency_enumerator_authority.py"
+      - "src/strict_executable_frontier_authority.py"
+      - "tests/test_execution_dependency_enumerator_authority.py"
+      - "tests/test_strict_executable_frontier_authority.py"
+      - ".github/workflows/strict-executable-frontier-authority.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  strict-frontier-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile composed authority boundaries
+        run: python -m py_compile src/executable_frontier_authority.py src/execution_dependency_enumerator_authority.py src/strict_executable_frontier_authority.py
+      - name: Run strict authority adversarial suites
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_execution_dependency_enumerator_authority.py tests/test_strict_executable_frontier_authority.py
