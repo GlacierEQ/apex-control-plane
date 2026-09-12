@@ -50,6 +50,7 @@ from prime_directive_boot import (
     automatic_prime_directive_boot,
     get_in_process_boot_validation,
 )
+from strict_frontier_preflight import validate_runtime_strict_frontier
 
 
 MODEL_ATTRACTOR_PREFLIGHT = "model_attractor_defense"
@@ -193,14 +194,38 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
 
 
 def _run_model_attractor_preflight(failures: list[str]) -> None:
-    """Require anti-compression proof before the ordinary startup gates.
+    """Require strict frontier authority and anti-compression proof before boot.
 
-    The proof is deliberately not published as a kernel startup gate because the
-    kernel's five gate identities are part of an existing compatibility contract.
-    It is nevertheless mandatory: any failure is accumulated into strong-boot
-    failure state and the runtime kernel is never created.
+    The strict frontier check closes the gap where the runtime could still call
+    the legacy frontier validator even after dependency enumeration had been
+    implemented.  It runs before model-attractor validation and therefore before
+    any runtime kernel can be created.
+
+    These proofs are deliberately not published as kernel startup gates because
+    the kernel's five gate identities are part of an existing compatibility
+    contract.  They are nevertheless mandatory: any failure is accumulated into
+    strong-boot failure state and the runtime kernel is never created.
     """
     name = MODEL_ATTRACTOR_PREFLIGHT
+    try:
+        strict_frontier = validate_runtime_strict_frontier()
+    except Exception as exc:
+        failures.append(
+            f"strict_executable_frontier_authority: {type(exc).__name__}: {exc}"
+        )
+        return
+    if strict_frontier.ok is not True:
+        if strict_frontier.errors:
+            failures.extend(
+                f"strict_executable_frontier_authority: {error}"
+                for error in strict_frontier.errors
+            )
+        else:
+            failures.append(
+                "strict_executable_frontier_authority: frontier authorization unresolved"
+            )
+        return
+
     try:
         validation = get_in_process_model_attractor_validation()
         if validation is None:
