@@ -1,0 +1,35 @@
+name: Executable Frontier Authority
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/executable_frontier_authority.py"
+      - "tests/test_executable_frontier_authority.py"
+      - ".github/workflows/executable-frontier-authority.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/executable_frontier_authority.py"
+      - "tests/test_executable_frontier_authority.py"
+      - ".github/workflows/executable-frontier-authority.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  executable-frontier-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile frontier authority boundary
+        run: python -m py_compile src/executable_frontier_authority.py
+      - name: Run frontier authority adversarial suite
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_executable_frontier_authority.py
