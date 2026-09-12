@@ -86,13 +86,14 @@ def _receipt_and_sources():
         provider=provider,
         run_ref=run_ref,
     )
-    provider_readback_ref = "provider-readback:strict-test"
+    provider_readback_ref = "provider://github-actions/run/strict-test/readback"
     provider_readback = {
         "frontier_id": frontier_id,
         "verifier_ref": verifier_ref,
         "verifier_implementation_sha256": _sha256(verifier_implementation),
         "provider": provider,
         "run_ref": run_ref,
+        "provider_readback_ref": provider_readback_ref,
         "verifier_execution_claim_id": execution_claim_id,
         "state": "completed",
         "conclusion": "success",
@@ -222,10 +223,34 @@ def test_verifier_implementation_readback_failure_stays_unresolved() -> None:
 
 def test_provider_execution_readback_failure_stays_unresolved() -> None:
     receipt, sources = _receipt_and_sources()
-    del sources["provider-readback:strict-test"]
+    del sources["provider://github-actions/run/strict-test/readback"]
     result = _validate(receipt, sources)
     assert result.ok is False
     assert any("provider_readback" in error and "readback unresolved" in error for error in result.errors)
+
+
+def test_non_provider_scoped_readback_reference_cannot_authorize() -> None:
+    receipt, sources = _receipt_and_sources()
+    execution = json.loads(sources["evidence:verifier-execution"].decode())
+    execution["provider_readback_ref"] = "local-cache:strict-test"
+    encoded = json.dumps(execution, sort_keys=True, separators=(",", ":")).encode()
+    sources["evidence:verifier-execution"] = encoded
+    sources["local-cache:strict-test"] = sources["provider://github-actions/run/strict-test/readback"]
+    receipt["frontier_authority"]["verifier_execution_attestation"]["evidence_sha256"] = _sha256(encoded)
+    result = _validate(receipt, sources)
+    assert result.ok is False
+    assert any("must be provider-scoped" in error for error in result.errors)
+
+
+def test_provider_readback_must_echo_exact_scoped_reference() -> None:
+    receipt, sources = _receipt_and_sources()
+    ref = "provider://github-actions/run/strict-test/readback"
+    readback = json.loads(sources[ref].decode())
+    readback["provider_readback_ref"] = "provider://github-actions/run/other/readback"
+    sources[ref] = json.dumps(readback, sort_keys=True, separators=(",", ":")).encode()
+    result = _validate(receipt, sources)
+    assert result.ok is False
+    assert any("must echo the exact provider-scoped" in error for error in result.errors)
 
 
 def test_provider_output_readback_failure_stays_unresolved() -> None:
@@ -238,9 +263,10 @@ def test_provider_output_readback_failure_stays_unresolved() -> None:
 
 def test_failed_provider_run_cannot_authorize_verifier_execution() -> None:
     receipt, sources = _receipt_and_sources()
-    readback = json.loads(sources["provider-readback:strict-test"].decode())
+    ref = "provider://github-actions/run/strict-test/readback"
+    readback = json.loads(sources[ref].decode())
     readback["conclusion"] = "failure"
-    sources["provider-readback:strict-test"] = json.dumps(readback, sort_keys=True, separators=(",", ":")).encode()
+    sources[ref] = json.dumps(readback, sort_keys=True, separators=(",", ":")).encode()
     result = _validate(receipt, sources)
     assert result.ok is False
     assert any("conclusion" in error for error in result.errors)
