@@ -62,6 +62,7 @@ steps:
       .buildkite-venv/bin/python -m json.tool config/model_attractor_defense_policy.json >/dev/null
       .buildkite-venv/bin/python -m json.tool config/mastermind_buildkite_target.json >/dev/null
       .buildkite-venv/bin/python -m py_compile \
+        src/executable_frontier_authority.py \
         src/model_attractor_defense.py \
         src/operator_fidelity_lock.py \
         src/operator_fidelity_preflight.py \
@@ -70,6 +71,8 @@ steps:
         src/sitecustomize.py \
         scripts/reconcile_mastermind_buildkite.py
       CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q \
+        tests/test_operator_source_binding_contract.py \
+        tests/test_executable_frontier_authority.py \
         tests/test_model_attractor_defense.py \
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \

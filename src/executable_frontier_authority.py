@@ -13,6 +13,7 @@ hash and exact span before accepting the frontier.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -21,8 +22,20 @@ from typing import Any
 from operator_source_binding_contract import verify_source_span_binding
 
 SourceResolver = Callable[[str], bytes]
+VerifierResolver = Callable[[str], bytes]
 
 _ENTAILED = "entailed"
+_VERIFICATION_METHOD = "hmac-sha256"
+_VERIFICATION_STATE = "verified"
+_DERIVATIVE_VERIFIER_PREFIXES = (
+    "assistant",
+    "summary",
+    "memory",
+    "profile",
+    "checkpoint",
+    "manifest",
+    "frontier_receipt",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +58,22 @@ def _canonical_digest(value: Mapping[str, Any]) -> str:
         dict(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False
     ).encode("utf-8")
     return _sha256(payload)
+
+
+def _attestation_payload(evidence: Mapping[str, Any]) -> bytes:
+    """Canonical bytes signed by the independently resolved verifier key."""
+    unsigned = {key: value for key, value in evidence.items() if key != "attestation"}
+    return json.dumps(
+        unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+
+
+def build_entailment_attestation(evidence: Mapping[str, Any], *, key: bytes) -> str:
+    """Build a detached HMAC attestation for test/external verifier producers."""
+    if not isinstance(key, bytes) or not key:
+        raise ValueError("verifier key must be non-empty bytes")
+    digest = hmac.new(key, _attestation_payload(evidence), hashlib.sha256).hexdigest()
+    return f"{_VERIFICATION_METHOD}:{digest}"
 
 
 def derive_frontier_id(
@@ -108,6 +137,7 @@ def _validate_entailment_artifact(
     artifact: Mapping[str, Any],
     *,
     resolver: SourceResolver,
+    verifier_resolver: VerifierResolver | None,
     expected_frontier_id: str,
     proposition_ids: Sequence[str],
     operation_class: str,
@@ -158,15 +188,55 @@ def _validate_entailment_artifact(
     verifier_ref = evidence.get("verifier_ref")
     if not _nonempty(verifier_ref):
         errors.append(f"{prefix}.evidence.verifier_ref must be non-empty")
-    if verifier_ref == "frontier_receipt":
+        return tuple(errors)
+    normalized_verifier = str(verifier_ref).strip().lower()
+    if normalized_verifier.startswith(_DERIVATIVE_VERIFIER_PREFIXES):
         errors.append(
-            f"{prefix}.evidence.verifier_ref cannot self-certify from frontier receipt"
+            f"{prefix}.evidence.verifier_ref is derivative/self-certifying and cannot self-certify or authorize entailment"
         )
-    return tuple(errors)
+
+    if evidence.get("verification_method") != _VERIFICATION_METHOD:
+        errors.append(
+            f"{prefix}.evidence.verification_method must be {_VERIFICATION_METHOD!r}"
+        )
+    if evidence.get("verification_state") != _VERIFICATION_STATE:
+        errors.append(
+            f"{prefix}.evidence.verification_state must be {_VERIFICATION_STATE!r}"
+        )
+
+    attestation = evidence.get("attestation")
+    if not _nonempty(attestation):
+        errors.append(f"{prefix}.evidence.attestation must be non-empty")
+    if verifier_resolver is None:
+        errors.append(
+            f"{prefix}.independent verifier readback unresolved: verifier resolver is unavailable"
+        )
+        return tuple(errors)
+    try:
+        verifier_key = verifier_resolver(str(verifier_ref))
+    except Exception as exc:  # noqa: BLE001 - fail-closed trust boundary
+        errors.append(
+            f"{prefix}.independent verifier readback unresolved: {exc.__class__.__name__}"
+        )
+        return tuple(errors)
+    if not isinstance(verifier_key, bytes) or not verifier_key:
+        errors.append(f"{prefix}.verifier resolver must return non-empty bytes")
+        return tuple(errors)
+
+    if _nonempty(attestation):
+        expected_attestation = build_entailment_attestation(evidence, key=verifier_key)
+        if not hmac.compare_digest(str(attestation), expected_attestation):
+            errors.append(
+                f"{prefix}.evidence.attestation does not verify against independently resolved verifier key"
+            )
+    return tuple(dict.fromkeys(errors))
 
 
 def validate_executable_frontier_authority(
-    receipt: Mapping[str, Any], *, resolver: SourceResolver
+    receipt: Mapping[str, Any],
+    *,
+    resolver: SourceResolver,
+    verifier_resolver: VerifierResolver | None = None,
 ) -> FrontierAuthorizationResult:
     """Authorize an executable frontier only from independently resolved evidence."""
     errors: list[str] = []
@@ -246,6 +316,7 @@ def validate_executable_frontier_authority(
                 _validate_entailment_artifact(
                     artifact,
                     resolver=resolver,
+                    verifier_resolver=verifier_resolver,
                     expected_frontier_id=expected_frontier_id,
                     proposition_ids=proposition_ids,
                     operation_class=str(operation_class),

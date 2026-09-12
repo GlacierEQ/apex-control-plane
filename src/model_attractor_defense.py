@@ -161,13 +161,33 @@ def _resolve_frontier_source(source_ref: str) -> bytes:
     return resolved.read_bytes()
 
 
+def _resolve_frontier_verifier_material(verifier_ref: str) -> bytes:
+    if not _nonempty_text(verifier_ref) or not verifier_ref.startswith("verifier:"):
+        raise ValueError("verifier_ref must use verifier: scheme")
+    root_value = os.getenv("GLACIEREQ_FRONTIER_VERIFIER_ROOT", "").strip()
+    if not root_value:
+        raise FileNotFoundError("GLACIEREQ_FRONTIER_VERIFIER_ROOT is not set")
+    root = Path(root_value).expanduser().resolve()
+    relative = verifier_ref.removeprefix("verifier:").lstrip("/")
+    if not relative:
+        raise ValueError("verifier_ref is empty")
+    resolved = (root / relative).resolve()
+    resolved.relative_to(root)
+    payload = resolved.read_bytes()
+    if not payload:
+        raise ValueError("verifier material is empty")
+    return payload
+
+
 def _validate_frontier_alignment(
     row: Mapping[str, Any], receipt: Mapping[str, Any]
 ) -> tuple[str, ...]:
     """Bind model-attractor continuity claims to independent frontier authority."""
     errors: list[str] = []
     result = validate_executable_frontier_authority(
-        receipt, resolver=_resolve_frontier_source
+        receipt,
+        resolver=_resolve_frontier_source,
+        verifier_resolver=_resolve_frontier_verifier_material,
     )
     if not result.ok:
         errors.extend(f"model_attractor_defense.{error}" for error in result.errors)
@@ -536,6 +556,7 @@ def build_model_attractor_request(
             "identify_nearest_valid_continuation_when_continuity_dependent": True,
             "identify_nearest_executable_frontier_when_continuity_dependent": True,
             "require_independently_authorized_executable_frontier_when_continuity_dependent": True,
+            "require_cryptographically_attested_independent_entailment_verifier": True,
             "bind_model_attractor_continuation_to_frontier_identity": True,
             "hydrate_material_source_bearing_state_when_continuity_dependent": True,
             "preserve_prior_verified_gains_when_continuity_dependent": True,
@@ -595,6 +616,10 @@ def build_model_attractor_request(
                     {
                         "evidence_ref": "file:<independent entailment artifact>",
                         "evidence_sha256": "sha256:<resolved entailment bytes>",
+                        "verifier_ref": "inside evidence; verifier:<trusted material path>",
+                        "verification_method": "inside evidence; hmac-sha256",
+                        "verification_state": "inside evidence; verified",
+                        "attestation": "inside evidence; HMAC over canonical unsigned entailment payload",
                     }
                 ],
             },
