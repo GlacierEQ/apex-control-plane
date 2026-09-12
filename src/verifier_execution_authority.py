@@ -2,8 +2,8 @@
 
 Content-addressing proves which verifier implementation is named; it does not
 prove that those bytes actually executed. This boundary therefore requires a
-provider-readback execution record bound to the frontier, verifier identity,
-implementation hash, run identity, and independently resolved output bytes.
+provider-scoped readback execution record bound to the frontier, verifier
+identity, implementation hash, run identity, and independently resolved output.
 """
 
 from __future__ import annotations
@@ -52,6 +52,10 @@ def _resolve(resolver: SourceResolver, ref: Any, *, prefix: str) -> tuple[bytes 
     if not isinstance(payload, bytes):
         return None, f"{prefix}.resolver must return bytes"
     return payload, None
+
+
+def _provider_readback_prefix(provider: str) -> str:
+    return f"provider://{provider}/"
 
 
 def derive_verifier_execution_claim_id(*, frontier_id: str, verifier_ref: str, implementation_sha256: str, provider: str, run_ref: str) -> str:
@@ -117,40 +121,51 @@ def validate_verifier_execution_authority(frontier_authority: Mapping[str, Any],
                     expected_claim_id = derive_verifier_execution_claim_id(frontier_id=str(frontier_id), verifier_ref=str(verifier_ref), implementation_sha256=str(implementation_sha256), provider=str(provider), run_ref=str(run_ref))
                     if evidence.get("verifier_execution_claim_id") != expected_claim_id:
                         errors.append(f"{prefix}.evidence.verifier_execution_claim_id is not bound to execution identity")
-                    readback_bytes, readback_error = _resolve(resolver, evidence.get("provider_readback_ref"), prefix=f"{prefix}.provider_readback")
-                    if readback_error:
-                        errors.append(readback_error)
+                    provider_readback_ref = evidence.get("provider_readback_ref")
+                    expected_prefix = _provider_readback_prefix(str(provider))
+                    if not _nonempty(provider_readback_ref) or not str(provider_readback_ref).startswith(expected_prefix):
+                        errors.append(
+                            f"{prefix}.evidence.provider_readback_ref must be provider-scoped under {expected_prefix!r}"
+                        )
                     else:
-                        assert readback_bytes is not None
-                        readback, parse_error = _json_object(readback_bytes, prefix=f"{prefix}.provider_readback")
-                        if parse_error:
-                            errors.append(parse_error)
-                        elif readback is not None:
-                            required = {
-                                "frontier_id": frontier_id,
-                                "verifier_ref": verifier_ref,
-                                "verifier_implementation_sha256": implementation_sha256,
-                                "provider": provider,
-                                "run_ref": run_ref,
-                                "verifier_execution_claim_id": expected_claim_id,
-                                "state": "completed",
-                                "conclusion": "success",
-                                "readback_verified": True,
-                            }
-                            for key, expected in required.items():
-                                if readback.get(key) != expected:
-                                    errors.append(f"{prefix}.provider_readback.{key} must equal {expected!r}")
-                            output_ref = readback.get("output_ref")
-                            output_bytes, output_error = _resolve(resolver, output_ref, prefix=f"{prefix}.provider_readback.output")
-                            if output_error:
-                                errors.append(output_error)
-                            else:
-                                assert output_bytes is not None
-                                output_sha256 = _sha256(output_bytes)
-                                if readback.get("output_sha256") != output_sha256:
-                                    errors.append(f"{prefix}.provider_readback.output_sha256 does not match independently resolved output bytes")
-                                if evidence.get("output_sha256") != output_sha256:
-                                    errors.append(f"{prefix}.evidence.output_sha256 does not match provider output")
+                        readback_bytes, readback_error = _resolve(resolver, provider_readback_ref, prefix=f"{prefix}.provider_readback")
+                        if readback_error:
+                            errors.append(readback_error)
+                        else:
+                            assert readback_bytes is not None
+                            readback, parse_error = _json_object(readback_bytes, prefix=f"{prefix}.provider_readback")
+                            if parse_error:
+                                errors.append(parse_error)
+                            elif readback is not None:
+                                required = {
+                                    "frontier_id": frontier_id,
+                                    "verifier_ref": verifier_ref,
+                                    "verifier_implementation_sha256": implementation_sha256,
+                                    "provider": provider,
+                                    "run_ref": run_ref,
+                                    "verifier_execution_claim_id": expected_claim_id,
+                                    "state": "completed",
+                                    "conclusion": "success",
+                                    "readback_verified": True,
+                                }
+                                for key, expected in required.items():
+                                    if readback.get(key) != expected:
+                                        errors.append(f"{prefix}.provider_readback.{key} must equal {expected!r}")
+                                if readback.get("provider_readback_ref") != provider_readback_ref:
+                                    errors.append(
+                                        f"{prefix}.provider_readback.provider_readback_ref must echo the exact provider-scoped readback reference"
+                                    )
+                                output_ref = readback.get("output_ref")
+                                output_bytes, output_error = _resolve(resolver, output_ref, prefix=f"{prefix}.provider_readback.output")
+                                if output_error:
+                                    errors.append(output_error)
+                                else:
+                                    assert output_bytes is not None
+                                    output_sha256 = _sha256(output_bytes)
+                                    if readback.get("output_sha256") != output_sha256:
+                                        errors.append(f"{prefix}.provider_readback.output_sha256 does not match independently resolved output bytes")
+                                    if evidence.get("output_sha256") != output_sha256:
+                                        errors.append(f"{prefix}.evidence.output_sha256 does not match provider output")
 
     if errors:
         status = "VERIFIER_EXECUTION_READBACK_UNRESOLVED" if any("readback unresolved" in error for error in errors) else "VERIFIER_EXECUTION_UNRESOLVED"
