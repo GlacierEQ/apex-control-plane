@@ -1,9 +1,8 @@
 """Fail-closed runtime preflight for strict executable-frontier authority.
 
-This module is deliberately small: it adapts the provider/source-backed boot
-receipt into the strict frontier authority boundary without creating a new
-source of truth.  Source bytes remain outside the receipt and are resolved from
-the explicitly mounted frontier source root.
+This adapter keeps source-bearing bytes and provider readback bytes in separate
+mounted trust roots. A provider-scoped reference can never fall through to the
+ordinary source root merely because a generic resolver is used downstream.
 """
 from __future__ import annotations
 
@@ -17,35 +16,67 @@ from strict_executable_frontier_authority import (
 )
 
 
-def _resolve_frontier_source(source_ref: str) -> bytes:
-    if not isinstance(source_ref, str) or not source_ref.strip():
-        raise ValueError("frontier source_ref must be non-empty")
-    if not source_ref.startswith("file:"):
-        raise ValueError("frontier source_ref must use file: scheme")
+def _root_from_env(name: str) -> Path:
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise FileNotFoundError(f"{name} is not set")
+    return Path(value).expanduser().resolve()
 
-    root_value = os.getenv("GLACIEREQ_FRONTIER_SOURCE_ROOT", "").strip()
-    if not root_value:
-        raise FileNotFoundError("GLACIEREQ_FRONTIER_SOURCE_ROOT is not set")
-    root = Path(root_value).expanduser().resolve()
-    relative = source_ref.removeprefix("file:").lstrip("/")
+
+def _read_beneath(root: Path, relative: str, *, label: str) -> bytes:
+    relative = relative.lstrip("/")
     if not relative:
-        raise ValueError("frontier source_ref is empty")
-
+        raise ValueError(f"{label} reference is empty")
     resolved = (root / relative).resolve()
     try:
         resolved.relative_to(root)
     except ValueError as exc:
-        raise ValueError("frontier source_ref escapes source root") from exc
+        raise ValueError(f"{label} reference escapes configured root") from exc
     return resolved.read_bytes()
+
+
+def _resolve_frontier_source(source_ref: str) -> bytes:
+    """Resolve source and provider evidence without crossing authority roots."""
+    if not isinstance(source_ref, str) or not source_ref.strip():
+        raise ValueError("frontier source_ref must be non-empty")
+
+    if source_ref.startswith("file:"):
+        root = _root_from_env("GLACIEREQ_FRONTIER_SOURCE_ROOT")
+        return _read_beneath(
+            root,
+            source_ref.removeprefix("file:"),
+            label="frontier source",
+        )
+
+    if source_ref.startswith("provider://"):
+        root = _root_from_env("GLACIEREQ_PROVIDER_READBACK_ROOT")
+        provider_relative = source_ref.removeprefix("provider://")
+        return _read_beneath(
+            root,
+            provider_relative,
+            label="provider readback",
+        )
+
+    if source_ref.startswith("provider-output:"):
+        root = _root_from_env("GLACIEREQ_PROVIDER_READBACK_ROOT")
+        output_relative = source_ref.removeprefix("provider-output:")
+        return _read_beneath(
+            root / "outputs",
+            output_relative,
+            label="provider output",
+        )
+
+    raise ValueError(
+        "frontier source_ref must use file:, provider://, or provider-output: scheme"
+    )
 
 
 def validate_runtime_strict_frontier() -> FrontierAuthorizationResult:
     """Require the live boot receipt to pass strict frontier authority.
 
-    Missing receipts are unresolved rather than silently downgraded to an empty
-    dependency set.  The strict validator then composes source binding,
-    entailment, current execution lineage, dependency-completeness evidence, and
-    independently materialized dependency enumeration.
+    Missing receipts are unresolved rather than silently downgraded. Source
+    material and provider readback material are resolved from distinct roots so
+    neither namespace can silently substitute for the other.
     """
     receipt = receipt_from_environment()
     if receipt is None:
