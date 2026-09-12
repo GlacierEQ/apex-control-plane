@@ -38,6 +38,18 @@ def test_buildkite_source_fidelity_covers_model_attractor_defense() -> None:
     assert "tests/test_model_attractor_defense.py" in text
 
 
+def test_evidence_scripts_use_pinned_python_runtime() -> None:
+    text = (ROOT / ".buildkite" / "pipeline.yml").read_text()
+    critical_scripts = (
+        "scripts/reconcile_genius_buildkite.py",
+        "scripts/reconcile_mastermind_buildkite.py",
+        "scripts/verify_buildkite_evidence_chain.py",
+    )
+    for script in critical_scripts:
+        assert f'"$$PYTHON_BIN" {script}' in text
+        assert f"python3 {script}" not in text
+
+
 def test_inline_secret_literal_is_rejected() -> None:
     text = """
 steps:
