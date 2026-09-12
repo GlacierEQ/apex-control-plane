@@ -5,14 +5,18 @@ on:
     branches: [main]
     paths:
       - "src/execution_evidence_authority.py"
+      - "jack/src/jack_relentless_gate.py"
       - "jack/src/jack_provider_verified_receipt.py"
+      - "jack/tests/test_jack_relentless_gate.py"
       - "tests/test_execution_evidence_authority.py"
       - ".github/workflows/execution-evidence-authority.yml"
   push:
     branches: [main]
     paths:
       - "src/execution_evidence_authority.py"
+      - "jack/src/jack_relentless_gate.py"
       - "jack/src/jack_provider_verified_receipt.py"
+      - "jack/tests/test_jack_relentless_gate.py"
       - "tests/test_execution_evidence_authority.py"
       - ".github/workflows/execution-evidence-authority.yml"
 
@@ -29,11 +33,18 @@ jobs:
           python-version: "3.12"
       - name: Install pytest
         run: python -m pip install --disable-pip-version-check pytest
-      - name: Compile execution evidence boundary
+      - name: Compile execution evidence and Jack completion boundaries
         env:
           PYTHONPATH: src:jack/src
-        run: python -m py_compile src/execution_evidence_authority.py jack/src/jack_provider_verified_receipt.py
-      - name: Run execution evidence adversarial suite
+        run: >-
+          python -m py_compile
+          src/execution_evidence_authority.py
+          jack/src/jack_relentless_gate.py
+          jack/src/jack_provider_verified_receipt.py
+      - name: Run execution evidence and completion-boundary adversarial suites
         env:
           PYTHONPATH: src:jack/src
-        run: python -m pytest -q tests/test_execution_evidence_authority.py
+        run: >-
+          python -m pytest -q
+          tests/test_execution_evidence_authority.py
+          jack/tests/test_jack_relentless_gate.py
