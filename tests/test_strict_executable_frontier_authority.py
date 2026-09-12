@@ -16,6 +16,17 @@ def _sha256(payload: bytes) -> str:
 
 def _resolver(sources: dict[str, bytes]):
     def resolve(ref: str) -> bytes:
+        if ref.startswith("provider://"):
+            raise KeyError("provider bytes are outside generic source trust root")
+        return sources[ref]
+    return resolve
+
+
+def _provider_resolver(sources: dict[str, bytes]):
+    def resolve(provider: str, ref: str) -> bytes:
+        prefix = f"provider://{provider}/"
+        if not ref.startswith(prefix):
+            raise KeyError("provider/reference mismatch")
         return sources[ref]
     return resolve
 
@@ -77,7 +88,8 @@ def _receipt_and_sources():
 
     provider = "github-actions"
     run_ref = "github-actions:run:strict-test"
-    output_ref = "provider-output:strict-test"
+    provider_readback_ref = "provider://github-actions/run/strict-test/readback"
+    output_ref = "provider://github-actions/run/strict-test/output"
     output_bytes = b'{"collector_verified":true}'
     execution_claim_id = derive_verifier_execution_claim_id(
         frontier_id=frontier_id,
@@ -86,7 +98,6 @@ def _receipt_and_sources():
         provider=provider,
         run_ref=run_ref,
     )
-    provider_readback_ref = "provider://github-actions/run/strict-test/readback"
     provider_readback = {
         "frontier_id": frontier_id,
         "verifier_ref": verifier_ref,
@@ -155,7 +166,11 @@ def _base_authorized(*args, **kwargs):
 
 def _validate(receipt: dict, sources: dict[str, bytes]):
     with patch("strict_executable_frontier_authority.validate_executable_frontier_authority", _base_authorized):
-        return validate_strict_executable_frontier_authority(receipt, resolver=_resolver(sources))
+        return validate_strict_executable_frontier_authority(
+            receipt,
+            resolver=_resolver(sources),
+            provider_resolver=_provider_resolver(sources),
+        )
 
 
 def test_strict_authority_requires_verified_enumeration_collector_identity_and_execution() -> None:
@@ -163,6 +178,18 @@ def test_strict_authority_requires_verified_enumeration_collector_identity_and_e
     result = _validate(receipt, sources)
     assert result.ok is True
     assert result.status == "frontier_authorized"
+
+
+def test_generic_source_resolver_cannot_substitute_for_provider_trust_root() -> None:
+    receipt, sources = _receipt_and_sources()
+    with patch("strict_executable_frontier_authority.validate_executable_frontier_authority", _base_authorized):
+        result = validate_strict_executable_frontier_authority(
+            receipt,
+            resolver=lambda ref: sources[ref],
+            provider_resolver=None,
+        )
+    assert result.ok is False
+    assert any("provider readback resolver is required" in error for error in result.errors)
 
 
 def test_missing_enumeration_fails_closed() -> None:
@@ -235,7 +262,6 @@ def test_non_provider_scoped_readback_reference_cannot_authorize() -> None:
     execution["provider_readback_ref"] = "local-cache:strict-test"
     encoded = json.dumps(execution, sort_keys=True, separators=(",", ":")).encode()
     sources["evidence:verifier-execution"] = encoded
-    sources["local-cache:strict-test"] = sources["provider://github-actions/run/strict-test/readback"]
     receipt["frontier_authority"]["verifier_execution_attestation"]["evidence_sha256"] = _sha256(encoded)
     result = _validate(receipt, sources)
     assert result.ok is False
@@ -253,9 +279,20 @@ def test_provider_readback_must_echo_exact_scoped_reference() -> None:
     assert any("must echo the exact provider-scoped" in error for error in result.errors)
 
 
+def test_provider_output_must_share_provider_trust_root() -> None:
+    receipt, sources = _receipt_and_sources()
+    ref = "provider://github-actions/run/strict-test/readback"
+    readback = json.loads(sources[ref].decode())
+    readback["output_ref"] = "local-cache:output"
+    sources[ref] = json.dumps(readback, sort_keys=True, separators=(",", ":")).encode()
+    result = _validate(receipt, sources)
+    assert result.ok is False
+    assert any("output_ref must be provider-scoped" in error for error in result.errors)
+
+
 def test_provider_output_readback_failure_stays_unresolved() -> None:
     receipt, sources = _receipt_and_sources()
-    del sources["provider-output:strict-test"]
+    del sources["provider://github-actions/run/strict-test/output"]
     result = _validate(receipt, sources)
     assert result.ok is False
     assert any("output" in error and "readback unresolved" in error for error in result.errors)
@@ -286,7 +323,7 @@ def test_execution_claim_cannot_substitute_run_identity() -> None:
 
 def test_provider_output_hash_must_match_resolved_bytes() -> None:
     receipt, sources = _receipt_and_sources()
-    sources["provider-output:strict-test"] += b"tamper"
+    sources["provider://github-actions/run/strict-test/output"] += b"tamper"
     result = _validate(receipt, sources)
     assert result.ok is False
     assert any("output_sha256" in error for error in result.errors)
@@ -296,5 +333,9 @@ def test_base_authority_failure_is_preserved() -> None:
     receipt, sources = _receipt_and_sources()
     base_failure = FrontierAuthorizationResult(False, "frontier_authorization_unresolved", ("source span unresolved",))
     with patch("strict_executable_frontier_authority.validate_executable_frontier_authority", return_value=base_failure):
-        result = validate_strict_executable_frontier_authority(receipt, resolver=_resolver(sources))
+        result = validate_strict_executable_frontier_authority(
+            receipt,
+            resolver=_resolver(sources),
+            provider_resolver=_provider_resolver(sources),
+        )
     assert result is base_failure
