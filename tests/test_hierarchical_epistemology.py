@@ -10,20 +10,18 @@ from hierarchical_epistemology import (
 )
 
 
-def test_clear_tool_task_uses_cheap_react_path():
+def test_clear_tool_task_uses_react_without_global_caps():
     task = TaskSpec("fetch one known file", well_defined=True, tools_central=True, target_state="file read")
-    plan = HierarchicalEpistemology.budget(task)
+    plan = HierarchicalEpistemology.plan(task)
     assert plan.strategy is Strategy.REACT
-    assert plan.max_workers == 1
-    assert plan.lane.value == "cold"
+    assert plan.resource_policy == "adaptive_evidence_driven"
 
 
-def test_long_horizon_task_uses_plan_and_execute_without_full_hot_swarm():
+def test_long_horizon_task_uses_plan_and_execute():
     task = TaskSpec("build subsystem", long_horizon=True, target_state="tested subsystem")
-    plan = HierarchicalEpistemology.budget(task)
+    plan = HierarchicalEpistemology.plan(task)
     assert plan.strategy is Strategy.PLAN_EXECUTE
-    assert plan.max_workers == 3
-    assert plan.lane.value == "warm"
+    assert plan.intensity == "deep"
 
 
 def test_contested_high_consequence_task_uses_debate():
@@ -33,10 +31,12 @@ def test_contested_high_consequence_task_uses_debate():
         high_consequence=True,
         target_state="verified position",
     )
-    plan = HierarchicalEpistemology.budget(task)
-    assert plan.strategy is Strategy.DEBATE
-    assert plan.lane.value == "hot"
-    assert plan.max_workers == 5
+    assert HierarchicalEpistemology.choose_strategy(task) is Strategy.DEBATE
+
+
+def test_repeated_failure_routes_to_reflexion():
+    task = TaskSpec("repair recurring failure", repeated_failure=True, target_state="verified repair")
+    assert HierarchicalEpistemology.choose_strategy(task) is Strategy.REFLEXION
 
 
 def test_tree_of_thoughts_is_reachable_for_high_consequence_choice_points():
@@ -67,54 +67,42 @@ def test_claim_promotion_is_monotonic_and_receipt_bound():
     assert executed.receipt == "runner:receipt-2"
 
 
-def test_dispatch_ledger_deduplicates_and_early_stops_on_no_signal():
-    plan = HierarchicalEpistemology.budget(TaskSpec("research", target_state="answer"))
-    ledger = DispatchLedger(plan)
-    ledger.record(WorkerResult("r1", unique_signal=False, retrievals=1, quota_units=1))
-    ledger.record(WorkerResult("r2", unique_signal=False, retrievals=1, quota_units=1))
-    stop, reason = ledger.should_stop()
-    assert stop is True
-    assert "marginal" in reason
-
-
-def test_duplicate_worker_is_rejected():
-    plan = HierarchicalEpistemology.budget(TaskSpec("research", target_state="answer"))
-    ledger = DispatchLedger(plan)
-    ledger.record(WorkerResult("r1", unique_signal=True, retrievals=1))
+def test_dispatch_ledger_deduplicates_without_fixed_worker_ceiling():
+    ledger = DispatchLedger()
+    for index in range(12):
+        ledger.record(WorkerResult(f"r{index}", unique_signal=True, retrievals=1))
+    assert len(ledger.dispatched) == 12
     try:
-        ledger.record(WorkerResult("r1", unique_signal=True, retrievals=1))
+        ledger.record(WorkerResult("r1", unique_signal=True))
     except ValueError as error:
         assert "duplicate" in str(error)
     else:
         raise AssertionError("duplicate worker was accepted")
 
 
-def test_retrieval_budget_cannot_be_overspent_by_one_worker():
-    plan = HierarchicalEpistemology.budget(TaskSpec("research", target_state="answer"))
-    ledger = DispatchLedger(plan)
-    try:
-        ledger.record(WorkerResult("expensive", unique_signal=True, retrievals=plan.max_retrievals + 1))
-    except ValueError as error:
-        assert "retrieval budget" in str(error)
-    else:
-        raise AssertionError("retrieval budget was overspent")
+def test_low_signal_reroutes_instead_of_truncating_mission():
+    ledger = DispatchLedger()
+    ledger.record(WorkerResult("r1", unique_signal=False))
+    ledger.record(WorkerResult("r2", unique_signal=False))
+    state, reason = ledger.continuation_signal()
+    assert state == "reroute"
+    assert "rather than truncate mission" in reason
 
 
-def test_dispatch_ledger_preserves_conflicts_instead_of_stopping_as_if_done():
-    plan = HierarchicalEpistemology.budget(TaskSpec("research", target_state="answer"))
-    ledger = DispatchLedger(plan)
-    ledger.record(WorkerResult("r1", unique_signal=False, conflict=True, retrievals=1))
-    ledger.record(WorkerResult("r2", unique_signal=False, conflict=True, retrievals=1))
-    stop, _ = ledger.should_stop()
-    assert stop is False
+def test_conflicts_remain_visible_and_route_to_investigation():
+    ledger = DispatchLedger()
+    ledger.record(WorkerResult("r1", unique_signal=False, conflict=True))
+    ledger.record(WorkerResult("r2", unique_signal=False, conflict=True))
+    assert ledger.continuation_signal()[0] == "investigate"
     assert ledger.conflicts == 2
 
 
-def test_verified_result_stops_dispatch():
-    plan = HierarchicalEpistemology.budget(TaskSpec("verify", target_state="verified"))
-    ledger = DispatchLedger(plan)
-    ledger.record(WorkerResult("verifier", unique_signal=True, verified=True, retrievals=1))
-    assert ledger.should_stop() == (True, "verification achieved")
+def test_verified_result_does_not_claim_global_mission_completion():
+    ledger = DispatchLedger()
+    ledger.record(WorkerResult("verifier", unique_signal=True, verified=True))
+    state, reason = ledger.continuation_signal()
+    assert state == "verified"
+    assert "if mission has remaining work" in reason
 
 
 def test_artifact_only_work_is_not_forward_progress():
@@ -131,7 +119,7 @@ def test_evidence_gain_is_forward_progress():
     assert result.forward_progress is True
 
 
-def test_correction_changes_routing_objective_and_preserves_known_good_state():
+def test_correction_changes_method_and_preserves_known_good_state():
     correction = HierarchicalEpistemology.correct(
         failure="duplicate retrieval",
         failed_assumption="more context would improve quality",
@@ -139,18 +127,21 @@ def test_correction_changes_routing_objective_and_preserves_known_good_state():
     )
     assert "evidence-bearing" in correction.objective_function_change
     assert correction.preserve == ("receipt:known-good", "cache:source-1")
-    assert correction.bounded_retry is True
+    assert correction.retry_policy == "adaptive"
 
 
-def test_packet_is_compact_and_machine_valid():
+def test_packet_encodes_mesh_and_adaptive_resource_law():
     packet = HierarchicalEpistemology.packet(
         TaskSpec("architect", long_horizon=True, target_state="tested design"),
-        pointers=("repo:sha-1", "notion:page-1"),
+        pointers=("repo:sha-1", "provider:readback-1"),
     )
     assert validate_packet(packet) == ()
-    assert packet["pointers"] == ["repo:sha-1", "notion:page-1"]
-    assert "duck" in packet["easter_egg"]
+    assert packet["pointers"] == ["repo:sha-1", "provider:readback-1"]
+    assert packet["resource_policy"] == "adaptive_evidence_driven"
+    assert "UNIQUE_CONTRIBUTION=0" in packet["mesh_rule"]
+    assert "max_workers" not in packet
+    assert "stop_rules" not in packet
 
 
 def test_invalid_packet_cannot_pass():
-    assert validate_packet({"schema": "wrong", "budget": {}, "target_state": ""})
+    assert validate_packet({"schema": "wrong", "target_state": ""})
