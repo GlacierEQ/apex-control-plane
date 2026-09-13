@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This is a small control kernel for strongest useful agent operation. It does not
+This is a high-leverage control kernel for strong, useful agent operation. It does not
 pretend that more agents, more context, or more prose automatically produce
 better cognition. It selects the cheapest strategy that can satisfy the proof
 floor, then escalates only when ambiguity, consequence, or contradiction makes
@@ -88,7 +88,7 @@ or adds source-bearing evidence.
 
 ## Integration
 
-The implementation is stdlib-only and provider-neutral:
+The implementation is stdlib-only, provider-neutral, and designed for strong coherent advance:
 
 ```text
 src/hierarchical_epistemology.py
