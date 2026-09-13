@@ -140,6 +140,8 @@ class DispatchLedger:
             raise ValueError(f"worker rejected: {reason}")
         if result.retrievals < 0 or result.quota_units < 0:
             raise ValueError("worker costs cannot be negative")
+        if self.retrievals + result.retrievals > self.plan.max_retrievals:
+            raise ValueError("worker rejected: retrieval budget would be exceeded")
         self.dispatched.append(result.worker_id)
         self.retrievals += result.retrievals
         self.quota_units += result.quota_units
@@ -192,9 +194,9 @@ class HierarchicalEpistemology:
 
     @staticmethod
     def choose_strategy(task: TaskSpec) -> Strategy:
-        if task.contested_evidence or (task.high_consequence and task.multiple_plausible_paths):
+        if task.contested_evidence:
             return Strategy.DEBATE
-        if task.multiple_plausible_paths and task.high_consequence:
+        if task.high_consequence and task.multiple_plausible_paths:
             return Strategy.TREE_OF_THOUGHTS
         if task.long_horizon:
             return Strategy.PLAN_EXECUTE
