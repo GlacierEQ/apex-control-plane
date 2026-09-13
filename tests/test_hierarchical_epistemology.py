@@ -39,6 +39,16 @@ def test_contested_high_consequence_task_uses_debate():
     assert plan.max_workers == 5
 
 
+def test_tree_of_thoughts_is_reachable_for_high_consequence_choice_points():
+    task = TaskSpec(
+        "choose an architecture",
+        multiple_plausible_paths=True,
+        high_consequence=True,
+        target_state="selected architecture",
+    )
+    assert HierarchicalEpistemology.choose_strategy(task) is Strategy.TREE_OF_THOUGHTS
+
+
 def test_claim_promotion_requires_receipt():
     claim = Claim("worker emitted a result", ClaimState.PROPOSED, "task:1")
     try:
@@ -65,6 +75,29 @@ def test_dispatch_ledger_deduplicates_and_early_stops_on_no_signal():
     stop, reason = ledger.should_stop()
     assert stop is True
     assert "marginal" in reason
+
+
+def test_duplicate_worker_is_rejected():
+    plan = HierarchicalEpistemology.budget(TaskSpec("research", target_state="answer"))
+    ledger = DispatchLedger(plan)
+    ledger.record(WorkerResult("r1", unique_signal=True, retrievals=1))
+    try:
+        ledger.record(WorkerResult("r1", unique_signal=True, retrievals=1))
+    except ValueError as error:
+        assert "duplicate" in str(error)
+    else:
+        raise AssertionError("duplicate worker was accepted")
+
+
+def test_retrieval_budget_cannot_be_overspent_by_one_worker():
+    plan = HierarchicalEpistemology.budget(TaskSpec("research", target_state="answer"))
+    ledger = DispatchLedger(plan)
+    try:
+        ledger.record(WorkerResult("expensive", unique_signal=True, retrievals=plan.max_retrievals + 1))
+    except ValueError as error:
+        assert "retrieval budget" in str(error)
+    else:
+        raise AssertionError("retrieval budget was overspent")
 
 
 def test_dispatch_ledger_preserves_conflicts_instead_of_stopping_as_if_done():
