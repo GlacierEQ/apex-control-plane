@@ -79,6 +79,32 @@ def _frontier_authority_fixture() -> tuple[dict, str]:
         "utf-8"
     )
     (root / "frontier-entailment.json").write_bytes(evidence_bytes)
+    completeness = {
+        "frontier_id": frontier_id,
+        "verdict": "complete",
+        "operation_class": operation_class,
+        "target": target,
+        "frontier_action": action,
+        "required_execution_claim_ids": [],
+        "dependency_basis": [
+            {
+                "basis_id": "basis:model-attractor-operator-source",
+                "source_ref": "file:operator-source.txt",
+                "source_kind": "operator_message",
+                "source_sha256": _sha256(source),
+                "span_start_byte": start,
+                "span_end_byte": end,
+                "span_sha256": _sha256(source[start:end]),
+                "temporal_context": "synthetic runtime integration test",
+                "contradiction_state": "active",
+                "superseded_by": None,
+                "verification_state": "source_resolved",
+            }
+        ],
+        "verifier_ref": "independent:test-dependency-completeness-verifier",
+    }
+    completeness_bytes = json.dumps(completeness, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    (root / "dependency-completeness.json").write_bytes(completeness_bytes)
     os.environ["GLACIEREQ_FRONTIER_SOURCE_ROOT"] = str(root)
     return (
         {
@@ -103,6 +129,10 @@ def _frontier_authority_fixture() -> tuple[dict, str]:
                     "verification_state": "source_resolved",
                 }
             ],
+            "dependency_completeness_verification": {
+                "evidence_ref": "file:dependency-completeness.json",
+                "evidence_sha256": _sha256(completeness_bytes),
+            },
             "entailment_verifications": [
                 {
                     "evidence_ref": "file:frontier-entailment.json",
