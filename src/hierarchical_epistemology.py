@@ -1,12 +1,8 @@
-"""Hierarchical epistemology and quota-aware strategy selection for APEX.
+"""Hierarchical epistemology for APEX continuity and execution truth.
 
-This module is intentionally provider-neutral and stdlib-only.  It gives an
-agent a high-leverage, inspectable control kernel instead of another personality layer:
-claims stay typed, strategies escalate only when evidence justifies the cost,
-and progress means target-state or evidence movement rather than paperwork.
-
-Easter egg: the duck is a sentinel, not a decision-maker.  If the sentinel
-quacks, inspect the receipt; do not promote the quack to a fact.
+This module preserves the useful epistemic machinery from the original donor
+without imposing fixed worker/retrieval ceilings or global stop semantics.
+Resources and strategy are adaptive; claim promotion remains receipt-bound.
 """
 from __future__ import annotations
 
@@ -49,12 +45,6 @@ class Strategy(str, Enum):
     DEBATE = "debate"
 
 
-class Lane(str, Enum):
-    COLD = "cold"
-    WARM = "warm"
-    HOT = "hot"
-
-
 _TRANSITION_RECEIPT: dict[tuple[ClaimState, ClaimState], str] = {
     (ClaimState.PROPOSED, ClaimState.ATTEMPTED): "authorization_ref",
     (ClaimState.ATTEMPTED, ClaimState.EXECUTED): "execution_receipt",
@@ -91,17 +81,16 @@ class TaskSpec:
     multiple_plausible_paths: bool = False
     contested_evidence: bool = False
     high_consequence: bool = False
+    repeated_failure: bool = False
     target_state: str = ""
 
 
 @dataclass(frozen=True)
-class BudgetPlan:
-    lane: Lane
+class StrategyPlan:
     strategy: Strategy
-    max_workers: int
-    max_rounds: int
-    max_retrievals: int
-    max_synthesis_passes: int
+    intensity: str
+    rationale: tuple[str, ...]
+    resource_policy: str = "adaptive_evidence_driven"
 
 
 @dataclass(frozen=True)
@@ -116,7 +105,8 @@ class WorkerResult:
 
 @dataclass
 class DispatchLedger:
-    plan: BudgetPlan
+    """Track work without converting heuristics into global execution ceilings."""
+
     dispatched: list[str] = field(default_factory=list)
     retrievals: int = 0
     quota_units: int = 0
@@ -128,10 +118,6 @@ class DispatchLedger:
     def can_dispatch(self, worker_id: str) -> tuple[bool, str]:
         if worker_id in self.dispatched:
             return False, "duplicate worker identity"
-        if len(self.dispatched) >= self.plan.max_workers:
-            return False, "worker budget exhausted"
-        if self.retrievals >= self.plan.max_retrievals:
-            return False, "retrieval budget exhausted"
         return True, "admitted"
 
     def record(self, result: WorkerResult) -> None:
@@ -140,8 +126,6 @@ class DispatchLedger:
             raise ValueError(f"worker rejected: {reason}")
         if result.retrievals < 0 or result.quota_units < 0:
             raise ValueError("worker costs cannot be negative")
-        if self.retrievals + result.retrievals > self.plan.max_retrievals:
-            raise ValueError("worker rejected: retrieval budget would be exceeded")
         self.dispatched.append(result.worker_id)
         self.retrievals += result.retrievals
         self.quota_units += result.quota_units
@@ -153,16 +137,14 @@ class DispatchLedger:
         else:
             self.no_signal_streak += 1
 
-    def should_stop(self) -> tuple[bool, str]:
+    def continuation_signal(self) -> tuple[str, str]:
         if self.verified:
-            return True, "verification achieved"
-        if len(self.dispatched) >= self.plan.max_workers:
-            return True, "worker budget exhausted"
-        if self.retrievals >= self.plan.max_retrievals:
-            return True, "retrieval budget exhausted"
-        if self.no_signal_streak >= 2 and self.conflicts == 0:
-            return True, "marginal signal collapsed"
-        return False, "continue"
+            return "verified", "target evidence verified; continue only if mission has remaining work"
+        if self.conflicts:
+            return "investigate", "unresolved contradiction remains visible"
+        if self.no_signal_streak >= 2:
+            return "reroute", "current path has low marginal signal; change method rather than truncate mission"
+        return "continue", "continue coherent progress"
 
 
 @dataclass(frozen=True)
@@ -183,11 +165,11 @@ class Correction:
     objective_function_change: str
     preserve: tuple[str, ...]
     next_action: str
-    bounded_retry: bool = True
+    retry_policy: str = "adaptive"
 
 
 class HierarchicalEpistemology:
-    """The APEX decision kernel: route cheaply, deepen deliberately, verify hard."""
+    """Route strategy without allowing lower layers to rewrite mission authority."""
 
     authority = "operator_intent"
     objective = "maximum_coherent_advance"
@@ -196,6 +178,8 @@ class HierarchicalEpistemology:
     def choose_strategy(task: TaskSpec) -> Strategy:
         if task.contested_evidence:
             return Strategy.DEBATE
+        if task.repeated_failure:
+            return Strategy.REFLEXION
         if task.high_consequence and task.multiple_plausible_paths:
             return Strategy.TREE_OF_THOUGHTS
         if task.long_horizon:
@@ -205,15 +189,23 @@ class HierarchicalEpistemology:
         return Strategy.REACT
 
     @classmethod
-    def budget(cls, task: TaskSpec) -> BudgetPlan:
+    def plan(cls, task: TaskSpec) -> StrategyPlan:
         strategy = cls.choose_strategy(task)
-        if task.high_consequence or task.contested_evidence:
-            lane, workers, rounds, retrievals = Lane.HOT, 5, 2, 8
-        elif task.long_horizon or not task.well_defined:
-            lane, workers, rounds, retrievals = Lane.WARM, 3, 2, 6
-        else:
-            lane, workers, rounds, retrievals = Lane.COLD, 1, 1, 2
-        return BudgetPlan(lane, strategy, workers, rounds, retrievals, 1)
+        rationale: list[str] = []
+        if task.contested_evidence:
+            rationale.append("contested evidence")
+        if task.repeated_failure:
+            rationale.append("persisted failure memory")
+        if task.high_consequence:
+            rationale.append("high consequence")
+        if task.multiple_plausible_paths:
+            rationale.append("multiple plausible paths")
+        if task.long_horizon:
+            rationale.append("long horizon")
+        if task.quality_paramount:
+            rationale.append("quality paramount")
+        intensity = "deep" if (task.high_consequence or task.contested_evidence or task.long_horizon) else "focused"
+        return StrategyPlan(strategy, intensity, tuple(rationale) or ("direct tool-centered path",))
 
     @staticmethod
     def assess_progress(*, target_state_changed: bool, evidence_added: bool, artifact_only: bool) -> ProgressAssessment:
@@ -228,50 +220,45 @@ class HierarchicalEpistemology:
             failed_assumption=failed_assumption,
             objective_function_change="prefer evidence-bearing progress over activity, repetition, or narrative completion",
             preserve=preserve,
-            next_action="isolate the failed transition, retry once with changed routing, then escalate with the receipt",
+            next_action="change the failed method while preserving known-good state, then verify the resulting transition",
         )
 
     @classmethod
     def packet(cls, task: TaskSpec, *, pointers: tuple[str, ...] = ()) -> dict[str, Any]:
-        plan = cls.budget(task)
+        plan = cls.plan(task)
         return {
-            "schema": "glaciereq.hierarchical-epistemology.v1",
+            "schema": "glaciereq.hierarchical-epistemology.v1.1",
             "authority": cls.authority,
             "objective": cls.objective,
             "intent": task.intent,
             "target_state": task.target_state,
-            "lane": plan.lane.value,
             "strategy": plan.strategy.value,
+            "intensity": plan.intensity,
+            "resource_policy": plan.resource_policy,
+            "rationale": list(plan.rationale),
             "pointers": list(pointers),
-            "budget": {
-                "max_workers": plan.max_workers,
-                "max_rounds": plan.max_rounds,
-                "max_retrievals": plan.max_retrievals,
-                "max_synthesis_passes": plan.max_synthesis_passes,
-            },
-            "stop_rules": [
-                "verification achieved",
-                "budget exhausted",
-                "two consecutive workers add no unique signal and no conflict exists",
+            "continuation_rules": [
+                "latest is a routing cursor, not replacement authority",
+                "preserve contradictions until source-bearing resolution",
+                "reroute low-signal work instead of truncating the mission",
+                "material state promotion requires provider/path receipt",
             ],
             "state_rule": "UNKNOWN != FALSE; GENERATED != EXECUTED != VERIFIED",
-            "easter_egg": "The duck watches the receipt; it never signs the receipt.",
+            "mesh_rule": "merge/transcribe/compound before retirement; retire only after UNIQUE_CONTRIBUTION=0 readback",
         }
 
 
 def validate_packet(packet: Mapping[str, Any]) -> tuple[str, ...]:
     errors: list[str] = []
-    if packet.get("schema") != "glaciereq.hierarchical-epistemology.v1":
+    if packet.get("schema") != "glaciereq.hierarchical-epistemology.v1.1":
         errors.append("schema mismatch")
     if packet.get("authority") != "operator_intent":
         errors.append("authority must be operator_intent")
-    budget = packet.get("budget")
-    if not isinstance(budget, Mapping):
-        errors.append("budget must be an object")
-    else:
-        for key in ("max_workers", "max_rounds", "max_retrievals", "max_synthesis_passes"):
-            if not isinstance(budget.get(key), int) or budget[key] < 1:
-                errors.append(f"budget.{key} must be a positive integer")
+    if packet.get("resource_policy") != "adaptive_evidence_driven":
+        errors.append("resource_policy must be adaptive_evidence_driven")
     if not packet.get("target_state"):
         errors.append("target_state is required")
+    forbidden = {"max_workers", "max_rounds", "max_retrievals", "hard_stop", "bounded_retry"}
+    if forbidden.intersection(packet):
+        errors.append("packet may not encode global fixed execution ceilings")
     return tuple(errors)
