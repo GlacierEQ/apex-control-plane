@@ -1,14 +1,10 @@
-# Hierarchical Epistemology — APEX Control Kernel v1
+# Hierarchical Epistemology — APEX Control Kernel v1.1
 
 ## Purpose
 
-This is a high-leverage control kernel for strong, useful agent operation. It does not
-pretend that more agents, more context, or more prose automatically produce
-better cognition. It selects the cheapest strategy that can satisfy the proof
-floor, then escalates only when ambiguity, consequence, or contradiction makes
-that escalation worthwhile.
+This kernel preserves typed epistemic state, receipt-bound execution truth, strategy selection, contradiction visibility, progress semantics, and correction memory without turning heuristics into global execution ceilings.
 
-## Hierarchy
+The hierarchy remains:
 
 ```text
 MISSION
@@ -28,54 +24,29 @@ VERIFICATION
 LEARNING
 ```
 
-The hierarchy prevents a lower layer from silently rewriting a higher layer:
+A lower layer cannot silently rewrite a higher layer. Tool output cannot redefine the mission; generated artifacts cannot become executed or verified without provider/path receipts; successful runs do not erase contradictions; failure may change routing but does not authorize scope loss.
 
-- a tool result cannot redefine the mission;
-- a repository policy cannot override current Operator direction;
-- a worker opinion cannot become a fact without provenance;
-- a generated artifact cannot become verified execution;
-- a successful run cannot erase a contradiction;
-- a failure can change routing, but not authorize scope loss.
+## Claim-state truth
 
-## Strategy selector
-
-- **ReAct**: clear, short, tool-centered work.
-- **Plan-and-Execute**: long-horizon work with replanning.
-- **Reflection**: quality-sensitive work with a concrete critic rubric.
-- **Tree-of-Thoughts**: multiple high-cost candidate paths.
-- **Reflexion**: repeated attempts where persisted failure memory can improve routing.
-- **Debate**: contested or evidence-weighted work with differentiated roles.
-
-The simpler strategy wins until observable failure justifies escalation.
-
-## Budget lanes
-
-- **Cold**: one worker, one round, minimal retrieval.
-- **Warm**: three workers, two rounds, bounded retrieval.
-- **Hot**: five differentiated workers, two rounds, verification required.
-
-Fan-out stops when verification is achieved, the budget is exhausted, or two
-workers add no unique signal without an unresolved conflict. Conflicts remain
-visible and route to investigation rather than being averaged away.
-
-## Self-correction
-
-A correction records:
+Material execution state is explicitly typed:
 
 ```text
-failure
-→ failed assumption
-→ objective-function change
-→ preserve known-good state
-→ bounded reroute
-→ verify
-→ learn
+UNKNOWN / OBSERVED / INFERRED / HYPOTHESIZED / PROPOSED
+→ ATTEMPTED
+→ EXECUTED
+→ VERIFIED
+→ COMMITTED
+→ DEPLOYED
+→ OBSERVED_IN_OPERATION
 ```
 
-Self-healing is deliberately bounded. The kernel can isolate, retry, reroute,
-and escalate. It cannot silently mutate project scope, promote its own output,
-or invent authority. Boringly explicit code is how future-proof systems stay
-alive.
+Transitions across execution states require the corresponding receipt. Action narration is never a receipt.
+
+## Strategy selection
+
+The kernel can select ReAct, Plan-and-Execute, Reflection, Tree-of-Thoughts, Reflexion, or Debate based on the task. Strategy choice is guidance, not authority over the Operator's mission.
+
+Resource depth is `adaptive_evidence_driven`. There are no fixed global worker ceilings, retrieval ceilings, or hard-stop rules. Low marginal signal causes rerouting; unresolved conflicts remain visible and route to investigation; verification of one target does not imply the whole mission is complete.
 
 ## Progress law
 
@@ -83,12 +54,35 @@ alive.
 forward_progress = (target_state_changed OR evidence_added) AND NOT artifact_only
 ```
 
-A new report, plan, page, or log is not progress unless it moves the target state
-or adds source-bearing evidence.
+Reports and plans are useful only insofar as they change target state or add source-bearing evidence.
 
-## Integration
+## Holographic mesh rule
 
-The implementation is stdlib-only, provider-neutral, and designed for strong coherent advance:
+The estate grows through merge, transcription, and compounding.
+
+- `latest` is a routing cursor, not replacement authority.
+- Older nodes remain active while they retain unique source, mechanism, contradiction, provenance, dependency, receipt, or authority-domain state.
+- Partial overlap receives explicit relationship semantics instead of global supersession.
+- Retirement requires unique-contribution recovery, merge/transcription of every still-valid contribution, provider readback, and verified `UNIQUE_CONTRIBUTION=0`.
+- Lineage pointers survive retirement.
+
+## Self-correction
+
+A correction preserves:
+
+```text
+failure
+→ failed assumption
+→ objective-function change
+→ known-good state
+→ changed method/routing
+→ verification
+→ learning
+```
+
+Retry policy is adaptive. A failed method can be replaced; the mission and valid prior state are not silently discarded.
+
+## Integration surface
 
 ```text
 src/hierarchical_epistemology.py
@@ -96,8 +90,4 @@ config/hierarchical_epistemology_policy.json
 tests/test_hierarchical_epistemology.py
 ```
 
-The next integration step is to bind the packet and ledger into the existing
-APEX strong-boot/runtime path without changing the established five-gate
-compatibility contract.
-
-Easter egg: the duck is a sentinel. It watches receipts. It never signs them.
+The donor remains an explicit lineage node until these contributions are merged into the surviving execution graph and verified by readback.
