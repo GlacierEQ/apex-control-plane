@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "authority": "operator_intent",
+  "default_on_ambiguity": "preserve_mission_and_retrieve_context",
+  "rules": {
+    "TOOL_FAILURE": {
+      "allowed_effect": "ROUTE_CHANGE_ONLY",
+      "mission_scope_preserved": true
+    },
+    "ROUTE_UNAVAILABLE": {
+      "allowed_effect": "ROUTE_CHANGE_ONLY",
+      "mission_scope_preserved": true
+    },
+    "TEMPORARY_SKIP": {
+      "allowed_effect": "SEQUENCING_CHANGE_ONLY",
+      "mission_scope_preserved": true
+    },
+    "OPERATOR_SCOPE_CHANGE": {
+      "allowed_effect": "SCOPE_CHANGE",
+      "requires_explicit_operator_scope_change": true
+    }
+  },
+  "forbidden_substitutions": [
+    "tool_failure->drop_objective",
+    "route_unavailable->defer_objective",
+    "temporary_skip->drop_objective",
+    "temporary_skip->narrow_scope",
+    "temporary_skip->mission_change",
+    "assistant_inference->scope_change"
+  ],
+  "compact_law": [
+    "blocked_tool_changes_route_not_objective",
+    "temporary_skip_changes_sequence_not_scope",
+    "only_explicit_operator_scope_change_changes_mission"
+  ]
+}
