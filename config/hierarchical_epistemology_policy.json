@@ -1,5 +1,5 @@
 {
-  "schema": "glaciereq.hierarchical-epistemology.v1",
+  "schema": "glaciereq.hierarchical-epistemology.v1.1",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
   "levels": [
@@ -19,18 +19,24 @@
     "artifact-only work is not mission progress",
     "relevant known state is reused before rediscovery",
     "contradictions remain visible until resolved",
-    "every loop has a hard stop",
+    "latest is a routing cursor, not replacement authority",
+    "merge transcribe compound before retirement",
+    "retirement requires verified UNIQUE_CONTRIBUTION=0",
     "every material promotion has a receipt"
   ],
-  "lanes": {
-    "cold": {"max_workers": 1, "max_rounds": 1, "max_retrievals": 2},
-    "warm": {"max_workers": 3, "max_rounds": 2, "max_retrievals": 6},
-    "hot": {"max_workers": 5, "max_rounds": 2, "max_retrievals": 8}
+  "resource_policy": "adaptive_evidence_driven",
+  "continuation_policy": {
+    "low_signal": "reroute_method_without_scope_loss",
+    "conflict": "preserve_and_investigate",
+    "verified": "continue_if_mission_has_remaining_work",
+    "fixed_global_worker_caps": false,
+    "fixed_global_retrieval_caps": false,
+    "global_hard_stop_semantics": false
   },
   "self_correction": {
-    "bounded_retry": 1,
     "preserve_known_good_state": true,
     "reroute_after_failure": true,
-    "unresolved_failure_escalates": true
+    "unresolved_failure_escalates": true,
+    "retry_policy": "adaptive"
   }
 }
