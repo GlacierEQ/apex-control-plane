@@ -1,7 +1,7 @@
 """Hierarchical epistemology and quota-aware strategy selection for APEX.
 
 This module is intentionally provider-neutral and stdlib-only.  It gives an
-agent a small, inspectable control kernel instead of another personality layer:
+agent a high-leverage, inspectable control kernel instead of another personality layer:
 claims stay typed, strategies escalate only when evidence justifies the cost,
 and progress means target-state or evidence movement rather than paperwork.
 
