@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.2.0",
   "name": "APEX Operator Source Authority Contract",
   "fail_closed": true,
   "personalization": {
@@ -24,6 +24,36 @@
     "compression_may_merge_actors_events_or_truth_states": false,
     "historical_wording_may_be_normalized": false
   },
+  "source_identity": {
+    "operator_designation": "OPERATOR",
+    "operator_designation_semantics": "proper_name",
+    "operator_source_class": "KNOWLEDGE_USE_DIRECTION",
+    "knowledge_system_source_class": "KNOWLEDGE_STATE",
+    "agent_source_class": "INFERENCE",
+    "evidence_source_class": "EVIDENCE",
+    "source_classes_never_collapse": true,
+    "knowledge_state_is_not_use_direction": true,
+    "use_direction_is_not_knowledge_state": true,
+    "knowledge_state_alone_does_not_choose_use": true,
+    "operator_direction_does_not_rewrite_evidence_or_knowledge_state": true,
+    "framework_material_never_becomes_operator_words_by_retrieval": true
+  },
+  "intent_provenance": {
+    "allowed_classes": [
+      "USER_ORIGINATED",
+      "ASSISTANT_PROPOSED_USER_ACCEPTED",
+      "ASSISTANT_ORIGINATED_UNCONTESTED",
+      "UNKNOWN"
+    ],
+    "project_direction_authority_classes": [
+      "USER_ORIGINATED",
+      "ASSISTANT_PROPOSED_USER_ACCEPTED"
+    ],
+    "operator_adoption_requires_explicit_evidence": true,
+    "assistant_originated_uncontested_does_not_become_operator_intent": true,
+    "unknown_provenance_does_not_gain_direction_authority": true,
+    "absence_of_operator_objection_is_not_adoption": true
+  },
   "organization": {
     "evidence_integrity_controls": true,
     "beneficial_reorganization_allowed": true,
@@ -40,6 +70,11 @@
     "tool or widget redefines operator mission",
     "fresh model inference supersedes operator source state",
     "source wording normalized without explicit Operator instruction",
+    "knowledge state silently converted into use direction",
+    "Operator direction silently rewritten as external factual state",
+    "framework material silently promoted into Operator words",
+    "assistant-originated uncontested content silently promoted to Operator intent",
+    "absence of Operator objection treated as adoption",
     "empty scaffold represented as completed organization"
   ]
 }
