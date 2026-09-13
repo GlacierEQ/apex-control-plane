@@ -1,0 +1,36 @@
+{
+  "schema": "glaciereq.hierarchical-epistemology.v1",
+  "authority": "operator_intent",
+  "objective": "maximum_coherent_advance",
+  "levels": [
+    "mission",
+    "authority",
+    "claim",
+    "evidence",
+    "strategy",
+    "execution",
+    "verification",
+    "learning"
+  ],
+  "invariants": [
+    "UNKNOWN != FALSE",
+    "GENERATED != EXECUTED != VERIFIED",
+    "consensus does not create truth",
+    "artifact-only work is not mission progress",
+    "relevant known state is reused before rediscovery",
+    "contradictions remain visible until resolved",
+    "every loop has a hard stop",
+    "every material promotion has a receipt"
+  ],
+  "lanes": {
+    "cold": {"max_workers": 1, "max_rounds": 1, "max_retrievals": 2},
+    "warm": {"max_workers": 3, "max_rounds": 2, "max_retrievals": 6},
+    "hot": {"max_workers": 5, "max_rounds": 2, "max_retrievals": 8}
+  },
+  "self_correction": {
+    "bounded_retry": 1,
+    "preserve_known_good_state": true,
+    "reroute_after_failure": true,
+    "unresolved_failure_escalates": true
+  }
+}
