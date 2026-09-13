@@ -65,17 +65,22 @@ def action_request(**overrides):
     return payload
 
 
-def write_catalog(tmp_path, *, enable_github_issue=False):
+def write_catalog(
+    tmp_path,
+    *,
+    enable_github_issue: bool = True,
+    approval_required: bool = False,
+):
     raw = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-    raw["connectors"]["github"]["write_operations"]["issue.create"]["enabled"] = (
-        enable_github_issue
-    )
+    rule = raw["connectors"]["github"]["write_operations"]["issue.create"]
+    rule["enabled"] = enable_github_issue
+    rule["approval_required"] = approval_required
     path = tmp_path / "catalog.json"
     path.write_text(json.dumps(raw), encoding="utf-8")
     return load_connector_catalog(path)
 
 
-def test_catalog_loads_and_prohibits_credential_storage():
+def test_catalog_loads_and_preserves_system_side_safety_controls():
     catalog = load_connector_catalog(CATALOG_PATH)
 
     assert catalog.catalog_id == "apex-connector-catalog"
@@ -88,7 +93,7 @@ def test_catalog_loads_and_prohibits_credential_storage():
     )
     github_issue = catalog.connectors["github"]["write_operations"]["issue.create"]
     assert github_issue["enabled"] is True
-    assert github_issue["approval_required"] is True
+    assert github_issue["approval_required"] is False
     assert github_issue["idempotency_required"] is True
     assert github_issue["terminal_readback_required"] is True
 
@@ -161,11 +166,29 @@ def test_inactive_write_route_remains_blocked_even_with_full_approval_record():
         )
 
 
-def test_enabled_write_route_requires_exact_approval_and_stated_consequence(tmp_path):
-    catalog = write_catalog(tmp_path, enable_github_issue=True)
+def test_recoverable_write_inherits_active_mission_authority(tmp_path):
+    catalog = write_catalog(tmp_path, enable_github_issue=True, approval_required=False)
 
-    with pytest.raises(ConnectorReceiptError, match="consequence"):
-        validate_action_request(action_request(consequence=""), catalog)
+    payload = action_request()
+    payload.pop("approval")
+    validated = validate_action_request(payload, catalog)
+
+    assert validated.connector == "github"
+    assert validated.operation == "issue.create"
+    assert validated.authority_mode == "active_mission_authority"
+    assert validated.approved_by is None
+    assert validated.approved_at is None
+    assert validated.approval_reference is None
+
+
+def test_consequence_sensitive_write_requires_scoped_authority(tmp_path):
+    catalog = write_catalog(tmp_path, enable_github_issue=True, approval_required=True)
+
+    payload = action_request()
+    payload.pop("approval")
+    with pytest.raises(ConnectorReceiptError, match="approval must be an object"):
+        validate_action_request(payload, catalog)
+
     with pytest.raises(ConnectorReceiptError, match="approval_reference"):
         validate_action_request(
             action_request(approval={"approved_by": "GlacierEQ", "approved_at": NOW.isoformat()}),
@@ -173,8 +196,7 @@ def test_enabled_write_route_requires_exact_approval_and_stated_consequence(tmp_
         )
 
     validated = validate_action_request(action_request(), catalog)
-    assert validated.connector == "github"
-    assert validated.operation == "issue.create"
+    assert validated.authority_mode == "scoped_consequence_authority"
     assert validated.approval_reference == "task-approval-001"
 
 
@@ -206,7 +228,7 @@ def test_runtime_admits_read_receipt_with_safe_audit_details_and_deduplicates():
     assert audit.details["external_action_authorized"] is False
 
 
-def test_action_proposal_remains_non_authorizing_when_route_is_active():
+def test_action_proposal_reports_mission_authority_without_self_authorizing():
     catalog = load_connector_catalog(CATALOG_PATH)
 
     proposal = build_action_proposal(
@@ -219,5 +241,16 @@ def test_action_proposal_remains_non_authorizing_when_route_is_active():
     )
 
     assert proposal["operation_active"] is True
-    assert proposal["approval_required"] is True
+    assert proposal["approval_required"] is False
+    assert proposal["authority_mode"] == "active_mission_authority"
     assert proposal["external_action_authorized"] is False
+
+
+def test_catalog_rejects_return_to_blanket_external_write_approval(tmp_path):
+    raw = deepcopy(json.loads(CATALOG_PATH.read_text(encoding="utf-8")))
+    raw["security"]["external_write_requires_exact_approval"] = True
+    path = tmp_path / "regressed-catalog.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+
+    with pytest.raises(ConnectorReceiptError, match="blanket approval"):
+        load_connector_catalog(path)

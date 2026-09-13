@@ -53,9 +53,10 @@ class ConnectorActionRequest:
     target: Mapping[str, Any]
     consequence: str
     evidence_refs: tuple[str, ...]
-    approved_by: str
-    approved_at: datetime
-    approval_reference: str
+    authority_mode: str
+    approved_by: str | None
+    approved_at: datetime | None
+    approval_reference: str | None
 
 
 def canonical_json(value: Any) -> str:
@@ -151,8 +152,18 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
         raise ConnectorReceiptError("catalog must prohibit credentials in source")
     if security.get("bridge_receipt_required") is not True:
         raise ConnectorReceiptError("catalog must require bridge receipts")
-    if security.get("external_write_requires_exact_approval") is not True:
-        raise ConnectorReceiptError("catalog must require exact approval for external writes")
+    if security.get("external_write_requires_exact_approval") is not False:
+        raise ConnectorReceiptError(
+            "catalog must not impose blanket approval on every external write"
+        )
+    if security.get("recoverable_write_inherits_mission_authority") is not True:
+        raise ConnectorReceiptError(
+            "catalog must allow bounded recoverable writes under mission authority"
+        )
+    if security.get("consequence_sensitive_write_requires_scoped_authority") is not True:
+        raise ConnectorReceiptError(
+            "catalog must preserve scoped authority for consequence-sensitive writes"
+        )
 
     connectors: dict[str, Mapping[str, Any]] = {}
     for raw_name, raw_definition in raw_connectors.items():
@@ -175,9 +186,9 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
                 raise ConnectorReceiptError(f"connector {name}.{operation} must be an object")
             if not isinstance(raw_rule.get("enabled"), bool):
                 raise ConnectorReceiptError(f"connector {name}.{operation}.enabled must be boolean")
-            if raw_rule.get("approval_required") is not True:
+            if not isinstance(raw_rule.get("approval_required"), bool):
                 raise ConnectorReceiptError(
-                    f"connector {name}.{operation} must require exact approval"
+                    f"connector {name}.{operation}.approval_required must be boolean"
                 )
             if raw_rule.get("idempotency_required") is not True:
                 raise ConnectorReceiptError(
@@ -295,12 +306,20 @@ def validate_action_request(
         raise ConnectorReceiptError(f"write operation is not catalogued: {connector}.{operation}")
     if write_rule.get("enabled") is not True:
         raise ConnectorReceiptError(f"write operation is inactive: {connector}.{operation}")
-    if write_rule.get("approval_required") is not True:
-        raise ConnectorReceiptError(f"write operation lacks exact approval rule: {connector}.{operation}")
 
-    approval = payload.get("approval")
-    if not isinstance(approval, Mapping):
-        raise ConnectorReceiptError("action request approval must be an object")
+    approval_required = write_rule.get("approval_required") is True
+    approved_by: str | None = None
+    approved_at: datetime | None = None
+    approval_reference: str | None = None
+    if approval_required:
+        approval = payload.get("approval")
+        if not isinstance(approval, Mapping):
+            raise ConnectorReceiptError("action request approval must be an object")
+        approved_by = _required_text(approval.get("approved_by"), "approval.approved_by")
+        approved_at = _parse_timestamp(approval.get("approved_at"), "approval.approved_at")
+        approval_reference = _required_text(
+            approval.get("approval_reference"), "approval.approval_reference"
+        )
 
     return ConnectorActionRequest(
         action_request_id=_required_text(payload.get("action_request_id"), "action_request_id"),
@@ -309,11 +328,14 @@ def validate_action_request(
         target=_validate_target(payload.get("target")),
         consequence=_required_text(payload.get("consequence"), "consequence"),
         evidence_refs=_string_list(payload.get("evidence_refs"), "evidence_refs"),
-        approved_by=_required_text(approval.get("approved_by"), "approval.approved_by"),
-        approved_at=_parse_timestamp(approval.get("approved_at"), "approval.approved_at"),
-        approval_reference=_required_text(
-            approval.get("approval_reference"), "approval.approval_reference"
+        authority_mode=(
+            "scoped_consequence_authority"
+            if approval_required
+            else "active_mission_authority"
         ),
+        approved_by=approved_by,
+        approved_at=approved_at,
+        approval_reference=approval_reference,
     )
 
 
