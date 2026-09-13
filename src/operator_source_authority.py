@@ -27,13 +27,18 @@ def enforce_operator_source_authority() -> dict[str, Any]:
 
     personalization = policy.get("personalization")
     source_state = policy.get("source_state")
+    source_identity = policy.get("source_identity")
+    intent_provenance = policy.get("intent_provenance")
     organization = policy.get("organization")
-    if not isinstance(personalization, Mapping):
-        raise OperatorSourceAuthorityError("personalization policy missing")
-    if not isinstance(source_state, Mapping):
-        raise OperatorSourceAuthorityError("source_state policy missing")
-    if not isinstance(organization, Mapping):
-        raise OperatorSourceAuthorityError("organization policy missing")
+    for name, value in {
+        "personalization": personalization,
+        "source_state": source_state,
+        "source_identity": source_identity,
+        "intent_provenance": intent_provenance,
+        "organization": organization,
+    }.items():
+        if not isinstance(value, Mapping):
+            raise OperatorSourceAuthorityError(f"{name} policy missing")
 
     for key, expected in {
         "status": "mandatory_user_authority_input",
@@ -60,6 +65,39 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "historical_wording_may_be_normalized": False,
     }.items():
         _require(source_state, key, expected, scope="source_state")
+
+    for key, expected in {
+        "operator_designation": "OPERATOR",
+        "operator_designation_semantics": "proper_name",
+        "operator_source_class": "KNOWLEDGE_USE_DIRECTION",
+        "knowledge_system_source_class": "KNOWLEDGE_STATE",
+        "agent_source_class": "INFERENCE",
+        "evidence_source_class": "EVIDENCE",
+        "source_classes_never_collapse": True,
+        "knowledge_state_is_not_use_direction": True,
+        "use_direction_is_not_knowledge_state": True,
+        "knowledge_state_alone_does_not_choose_use": True,
+        "operator_direction_does_not_rewrite_evidence_or_knowledge_state": True,
+        "framework_material_never_becomes_operator_words_by_retrieval": True,
+    }.items():
+        _require(source_identity, key, expected, scope="source_identity")
+
+    expected_classes = [
+        "USER_ORIGINATED",
+        "ASSISTANT_PROPOSED_USER_ACCEPTED",
+        "ASSISTANT_ORIGINATED_UNCONTESTED",
+        "UNKNOWN",
+    ]
+    expected_authority_classes = ["USER_ORIGINATED", "ASSISTANT_PROPOSED_USER_ACCEPTED"]
+    _require(intent_provenance, "allowed_classes", expected_classes, scope="intent_provenance")
+    _require(intent_provenance, "project_direction_authority_classes", expected_authority_classes, scope="intent_provenance")
+    for key, expected in {
+        "operator_adoption_requires_explicit_evidence": True,
+        "assistant_originated_uncontested_does_not_become_operator_intent": True,
+        "unknown_provenance_does_not_gain_direction_authority": True,
+        "absence_of_operator_objection_is_not_adoption": True,
+    }.items():
+        _require(intent_provenance, key, expected, scope="intent_provenance")
 
     for key, expected in {
         "evidence_integrity_controls": True,
