@@ -57,7 +57,64 @@ class DownwardDirectiveClassifierTests(unittest.TestCase):
         self.assert_allowed("Always enforce least privilege for runtime credentials.")
 
     def test_allows_rollback_checkpoint(self) -> None:
-        self.assert_allowed("Freeze implementation only as a known-good rollback checkpoint while evolution continues.")
+        self.assert_allowed(
+            "Freeze implementation only as a known-good rollback checkpoint while evolution continues."
+        )
+
+
+class DestructiveAuthorityRetirementTests(unittest.TestCase):
+    def test_allows_ref_deletion_retirement_with_lineage_replacement(self) -> None:
+        parts = {
+            "added": [
+                '"""Read-only lineage auditor."""',
+                'state = "ACTIVE_IN_MESH"',
+                'terminal = "PRESERVE_DRAINED_LINEAGE"',
+            ],
+            "deleted": [
+                "def delete_ref(self, branch: str) -> None:",
+                'encoded = urllib.parse.quote(branch, safe="")',
+                'self.request("DELETE", f"/git/refs/heads/{encoded}")',
+            ],
+        }
+        self.assertTrue(MODULE.retires_destructive_ref_authority(parts))
+
+    def test_rejects_generic_runtime_removal_even_if_ref_deletion_also_removed(self) -> None:
+        parts = {
+            "added": [
+                '"""Read-only lineage auditor."""',
+                'terminal = "PRESERVE_DRAINED_LINEAGE"',
+            ],
+            "deleted": [
+                "def delete_ref(self, branch: str) -> None:",
+                'encoded = urllib.parse.quote(branch, safe="")',
+                "def execute(self) -> None:",
+                "    self.runtime.run()",
+            ],
+        }
+        self.assertFalse(MODULE.retires_destructive_ref_authority(parts))
+
+    def test_rejects_read_only_replacement_without_anti_replacement_evidence(self) -> None:
+        parts = {
+            "added": ['"""Read-only adapter."""'],
+            "deleted": [
+                "def delete_ref(self, branch: str) -> None:",
+                'encoded = urllib.parse.quote(branch, safe="")',
+            ],
+        }
+        self.assertFalse(MODULE.retires_destructive_ref_authority(parts))
+
+    def test_rejects_non_ref_execution_contraction(self) -> None:
+        parts = {
+            "added": [
+                '"""Read-only lineage mode."""',
+                'state = "ACTIVE_IN_MESH"',
+            ],
+            "deleted": [
+                "def dispatch(self) -> None:",
+                "    requests.post(self.endpoint)",
+            ],
+        }
+        self.assertFalse(MODULE.retires_destructive_ref_authority(parts))
 
 
 if __name__ == "__main__":
