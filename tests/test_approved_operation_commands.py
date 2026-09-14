@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import importlib.util
 import json
-from pathlib import Path
 import sys
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -12,8 +12,11 @@ SCRIPTS = ROOT / "scripts"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from approved_operation_bridge import action_scope_sha256
-
+from approved_operation_bridge import (
+    EvidenceAuthority,
+    ResolvedProviderEvidence,
+    action_scope_sha256,
+)
 
 NOW = datetime(2026, 8, 22, 12, 0, tzinfo=UTC)
 
@@ -115,12 +118,24 @@ def test_execution_admission_command_keeps_provider_material_out_of_ledger(tmp_p
     )
     ledger_path = tmp_path / "execution-receipts.jsonl"
 
+    provider_material = {
+        "github://issue/create/101": execution_path.read_bytes(),
+        "github://issue/101": readback_path.read_bytes(),
+    }
+    def provider_native(source_ref: str) -> ResolvedProviderEvidence:
+        return ResolvedProviderEvidence(
+            material=provider_material[source_ref],
+            authority=EvidenceAuthority.PROVIDER_NATIVE,
+            verifier_ref="test-provider-native-readback",
+        )
+
     result = module.admit_execution_manifest(
         action_request_path=action_path,
         execution_manifest_path=manifest_path,
         receipt_ledger_path=ledger_path,
         commit_sha="b" * 40,
         now=NOW,
+        provider_evidence_resolver=provider_native,
     )
 
     content = ledger_path.read_text(encoding="utf-8")
@@ -131,3 +146,38 @@ def test_execution_admission_command_keeps_provider_material_out_of_ledger(tmp_p
     assert "Command test" not in content
     assert "execution_content_sha256" in content
     assert "readback_content_sha256" in content
+
+
+def test_execution_admission_command_refuses_success_from_captured_artifacts_only(tmp_path):
+    module = _load_script("admit_session_connector_execution_receipts.py")
+    action_path = tmp_path / "action.json"
+    action_path.write_text(json.dumps(action_request()), encoding="utf-8")
+    execution_path = tmp_path / "provider-execution.json"
+    readback_path = tmp_path / "provider-readback.json"
+    execution_path.write_text('{"provider_id": 202}', encoding="utf-8")
+    readback_path.write_text('{"number": 202, "state": "open"}', encoding="utf-8")
+    manifest_path = tmp_path / "execution-manifest.json"
+    manifest_path.write_text(json.dumps({
+        "result_state": "success",
+        "verification_passed": True,
+        "execution_source_refs": ["github://issue/create/202"],
+        "execution_observation_path": str(execution_path),
+        "executed_at": NOW.isoformat().replace("+00:00", "Z"),
+        "result_target": {"repository": "GlacierEQ/apex-control-plane", "issue_number": 202},
+        "readback_source_refs": ["github://issue/202"],
+        "readback_observation_path": str(readback_path),
+        "readback_at": (NOW + timedelta(seconds=1)).isoformat().replace("+00:00", "Z"),
+    }), encoding="utf-8")
+
+    try:
+        module.admit_execution_manifest(
+            action_request_path=action_path,
+            execution_manifest_path=manifest_path,
+            receipt_ledger_path=tmp_path / "ledger.jsonl",
+            commit_sha="c" * 40,
+            now=NOW,
+        )
+    except ValueError as exc:
+        assert "provider-native execution evidence" in str(exc)
+    else:
+        raise AssertionError("captured artifacts must not certify provider-native success")
