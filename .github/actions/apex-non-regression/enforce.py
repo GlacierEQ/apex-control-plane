@@ -73,6 +73,20 @@ STATE_DEMOTION_RE = re.compile(
     r"(?:\"state\"|principal_state|status)\s*[:=]\s*[\"']?(?:TESTED|PENDING|READ_ONLY|REJECTED)",
     re.IGNORECASE,
 )
+DESTRUCTIVE_REF_AUTHORITY_RE = re.compile(
+    r"(def\s+delete_ref\b|\.delete_ref\(|/git/refs/heads/|DELETE_REF_REQUIRED|"
+    r"delete verified obsolete branches|delete branches after explicit manual dispatch)",
+    re.IGNORECASE,
+)
+ANTI_REPLACEMENT_EVIDENCE_RE = re.compile(
+    r"(UNIQUE_CONTRIBUTION=0|ACTIVE_IN_MESH|PRESERVE_DRAINED_LINEAGE|"
+    r"anti[-_ ]replacement|lineage)",
+    re.IGNORECASE,
+)
+GENERAL_EXECUTION_DEF_RE = re.compile(
+    r"\b(?:async\s+def|def)\s+(?:run|tick|execute|dispatch|submit|assign)\b",
+    re.IGNORECASE,
+)
 
 
 def output(*args: str) -> str:
@@ -148,11 +162,32 @@ def classify_downward_directive(line: str) -> str | None:
         return None
     if ROLLBACK_EXCEPTION_RE.search(line):
         return None
-    if DIRECTIVE_RE.search(line) or re.search(r"[:=]\s*[\"']?(?:smallest|minimum|least|freeze)", line, re.IGNORECASE):
+    if DIRECTIVE_RE.search(line) or re.search(
+        r"[:=]\s*[\"']?(?:smallest|minimum|least|freeze)", line, re.IGNORECASE
+    ):
         return "DOWNWARD_SCOPE_DIRECTIVE"
-    # Policy prose can omit an imperative verb while still declaring a target,
-    # e.g. "the smallest useful implementation." Fail closed on that ambiguity.
     return "DOWNWARD_SCOPE_SIGNAL_UNQUALIFIED"
+
+
+def retires_destructive_ref_authority(parts: dict[str, list[str]]) -> bool:
+    """Allow removing a destructive ref actuator without calling it capability loss.
+
+    This exception is intentionally narrow. It applies only when the deleted side
+    contains branch-ref destruction authority, the added side explicitly binds the
+    replacement to anti-replacement/lineage semantics, and no general runtime
+    execution entry point is removed in the same file. Read-only classification,
+    comparison, provenance and verification remain capabilities; ref destruction
+    does not receive preservation privilege merely because it was executable.
+    """
+
+    added = "\n".join(parts["added"])
+    deleted = "\n".join(parts["deleted"])
+    return bool(
+        DESTRUCTIVE_REF_AUTHORITY_RE.search(deleted)
+        and ANTI_REPLACEMENT_EVIDENCE_RE.search(added)
+        and RESTRICTION_RE.search(added)
+        and not GENERAL_EXECUTION_DEF_RE.search(deleted)
+    )
 
 
 def tree_conflicts(head: str) -> list[dict[str, str]]:
@@ -221,9 +256,10 @@ def main() -> int:
                 failures.append({"code": code, "file": name})
 
         if RESTRICTION_RE.search(added) and EXECUTION_RE.search(deleted):
-            failures.append(
-                {"code": "EXECUTION_TO_RESTRICTION_CONTRACTION", "file": name}
-            )
+            if not retires_destructive_ref_authority(parts):
+                failures.append(
+                    {"code": "EXECUTION_TO_RESTRICTION_CONTRACTION", "file": name}
+                )
 
         for line_number, line in enumerate(parts["added"], start=1):
             code = classify_downward_directive(line)
@@ -240,9 +276,6 @@ def main() -> int:
         if STATE_DEMOTION_RE.search(added):
             warnings.append({"code": "STATE_DEMOTION_SIGNAL", "file": name})
 
-    # Exact-diff authorization may release a deliberate capability reduction. It
-    # never legalizes unresolved merge corruption. The authorization must be
-    # explicit because downward routing is now a hard failure, not a suggestion.
     if authorized:
         failures = [
             finding
@@ -262,11 +295,13 @@ def main() -> int:
         "full_tree_conflict_scan": True,
         "exact_conflict_marker_matching": True,
         "anti_minimization_fail_closed": True,
+        "retired_destructive_ref_authority_exception": True,
         "downward_scope_exceptions": [
             "local_debug_or_diagnostic_isolation",
             "least_privilege_security",
             "rollback_or_known_good_checkpoint",
             "explicit_declarative_prohibition",
+            "explicit_holographic_retirement_of_destructive_ref_authority",
         ],
         "failures": failures,
         "warnings": warnings,
