@@ -126,6 +126,7 @@ def execute_verified_local_smoke(namespace: Mapping[str, Any]) -> dict[str, Any]
             kernel.block(
                 "verified local runtime smoke failed",
                 reference=f"runtime-error:{type(exc).__name__}",
+                blocker_class="task_failure",
             )
         raise
 
