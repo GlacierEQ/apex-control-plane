@@ -61,11 +61,15 @@ steps:
       .buildkite-venv/bin/python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
       .buildkite-venv/bin/python -m json.tool config/model_attractor_defense_policy.json >/dev/null
       .buildkite-venv/bin/python -m json.tool config/mastermind_buildkite_target.json >/dev/null
+      .buildkite-venv/bin/python -m json.tool config/outcome_fidelity_policy.json >/dev/null
       .buildkite-venv/bin/python -m py_compile \
         src/model_attractor_defense.py \
         src/operator_fidelity_lock.py \
         src/operator_fidelity_preflight.py \
         src/operator_source_binding_contract.py \
+        src/route_scope_fidelity.py \
+        src/outcome_fidelity_runtime.py \
+        src/verified_runtime_entrypoint.py \
         src/control_plane.py \
         src/sitecustomize.py \
         scripts/reconcile_mastermind_buildkite.py
@@ -73,6 +77,8 @@ steps:
         tests/test_model_attractor_defense.py \
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \
+        tests/test_outcome_fidelity_runtime.py \
+        tests/test_route_scope_fidelity.py \
         tests/test_buildkite_master.py \
         tests/test_buildkite_master_inventory.py \
         tests/test_buildkite_github_status.py \
