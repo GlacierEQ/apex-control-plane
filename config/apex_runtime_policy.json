@@ -1,7 +1,8 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "name": "APEX Verified Runtime Kernel",
   "fail_closed": true,
+  "fail_closed_scope": "integrity_and_consequence_boundaries_only",
   "objective": "maximum_coherent_advance",
   "required_startup_gates": [
     "notion_continuity",
@@ -10,6 +11,11 @@
     "operator_fidelity",
     "apex_startup"
   ],
+  "startup_semantics": {
+    "verification_is_observational": true,
+    "missing_or_stale_context_does_not_revoke_mission_authority": true,
+    "degraded_boot_continues_with_observations": true
+  },
   "action_scopes": [
     "none",
     "internal",
@@ -63,7 +69,9 @@
     "instruction_drift_is_runtime_violation": true,
     "operation_class_bound_before_action": true,
     "target_state_bound_before_action": true,
-    "mutation_requires_operator_authorization_reference": true
+    "recoverable_mutation_inherits_active_mission_authority": true,
+    "consequence_specific_authority_reference_is_optional_until_required_by_operation_boundary": true,
+    "mutation_requires_operator_authorization_reference": false
   },
   "privacy": {
     "audit_literal_instruction": false,

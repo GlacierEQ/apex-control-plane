@@ -49,7 +49,7 @@ def build_action_proposal(
     evidence_refs: list[str],
     catalog: ConnectorCatalog,
 ) -> dict[str, Any]:
-    """Describe a possible write without treating the proposal as an authorization."""
+    """Describe a possible write and its authority mode without executing it."""
     if connector not in catalog.connectors:
         raise ConnectorReceiptError(f"connector is not catalogued: {connector}")
     if operation not in catalog.connectors[connector]["write_operations"]:
@@ -63,6 +63,7 @@ def build_action_proposal(
         raise ConnectorReceiptError("evidence_refs requires at least one receipt reference")
 
     rule = catalog.connectors[connector]["write_operations"][operation]
+    approval_required = rule["approval_required"] is True
     return {
         "schema_version": catalog.schema_version,
         "proposal_id": str(uuid4()),
@@ -72,6 +73,11 @@ def build_action_proposal(
         "consequence": str(consequence).strip(),
         "evidence_refs": refs,
         "operation_active": rule["enabled"],
-        "approval_required": rule["approval_required"],
+        "approval_required": approval_required,
+        "authority_mode": (
+            "scoped_consequence_authority"
+            if approval_required
+            else "active_mission_authority"
+        ),
         "external_action_authorized": False,
     }
