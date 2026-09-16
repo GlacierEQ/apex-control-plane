@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "name": "APEX Operator Source Authority Contract",
   "fail_closed": true,
   "personalization": {
@@ -11,6 +11,20 @@
     "memory_gap_may_demote": false,
     "tool_or_widget_may_redefine_mission": false,
     "fresh_model_inference_may_supersede": false
+  },
+  "turn_start_context": {
+    "scope": "every_operator_turn",
+    "retrieval_attempt_required": true,
+    "model_may_skip_due_to_apparent_sufficiency": false,
+    "current_conversation_is_not_complete_personalization": true,
+    "prior_corrections_checked_before_action_selection": true,
+    "retrieved_context_must_causally_affect_action_when_material": true,
+    "context_application_receipt_required": true,
+    "missing_context_response": "AUTO_RECOVER_THEN_CONTINUE",
+    "retrieval_failure_response": "CONTINUE_DEGRADED_AND_TRY_ALTERNATE_SOURCES",
+    "retrieval_failure_is_mission_stop": false,
+    "support_mechanism_may_not_gain_veto": true,
+    "unknown_context_reduces_confidence_not_effort": true
   },
   "source_state": {
     "operator_words_are_source_state": true,
@@ -64,6 +78,12 @@
   },
   "forbidden": [
     "personalization treated as optional context",
+    "model decides saved personalization is irrelevant and skips turn-start retrieval",
+    "current conversation treated as a substitute for the always-active user model",
+    "substantive action selected before prior corrections are checked",
+    "retrieved material context ignored during action selection",
+    "retrieval failure converted into a generalized mission stop",
+    "context or verification support mechanism promoted into a veto authority",
     "summary impersonates source state",
     "summary silently replaces operator wording",
     "retrieval failure demotes operator authority",
