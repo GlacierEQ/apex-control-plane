@@ -117,7 +117,7 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "source_classes_never_collapse": True,
         "knowledge_state_is_not_use_direction": True,
         "use_direction_is_not_knowledge_state": True,
-        "knowledge_state_alone_does_not_choose_use": true,
+        "knowledge_state_alone_does_not_choose_use": True,
         "operator_direction_does_not_rewrite_evidence_or_knowledge_state": True,
         "framework_material_never_becomes_operator_words_by_retrieval": True,
     }.items():
