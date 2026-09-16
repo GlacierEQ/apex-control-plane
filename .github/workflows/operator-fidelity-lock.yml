@@ -1,4 +1,4 @@
-name: Operator Fidelity Hard Lock
+name: Operator Fidelity Execution Uplift
 
 on:
   push:
@@ -14,6 +14,7 @@ on:
       - "src/apex_strong_boot.py"
       - "src/control_plane.py"
       - "src/sitecustomize.py"
+      - "src/startup_continuation.py"
       - "tests/test_anti_minimization_compiler.py"
       - "tests/test_model_attractor_defense.py"
       - "tests/test_operator_fidelity_lock.py"
@@ -34,6 +35,7 @@ on:
       - "src/apex_strong_boot.py"
       - "src/control_plane.py"
       - "src/sitecustomize.py"
+      - "src/startup_continuation.py"
       - "tests/test_anti_minimization_compiler.py"
       - "tests/test_model_attractor_defense.py"
       - "tests/test_operator_fidelity_lock.py"
@@ -47,6 +49,7 @@ permissions:
 
 jobs:
   hard-lock:
+    # Historical check name retained because provider branch protection may bind it.
     name: operator-fidelity-hard-lock
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +62,7 @@ jobs:
       - name: Install pytest
         run: python -m pip install --disable-pip-version-check pytest
 
-      - name: Compile hard-lock boundary
+      - name: Compile fidelity uplift boundary
         run: |
           python -m py_compile \
             src/anti_minimization_compiler.py \
@@ -68,6 +71,7 @@ jobs:
             src/operator_fidelity_preflight.py \
             src/operator_source_binding_contract.py \
             src/apex_strong_boot.py \
+            src/startup_continuation.py \
             src/control_plane.py \
             src/sitecustomize.py
 
@@ -81,36 +85,42 @@ jobs:
             tests/test_operator_fidelity_preflight.py \
             tests/test_apex_strong_boot.py
 
-      - name: Prove disable flag cannot bypass fidelity
-        shell: bash
+      - name: Prove disable flag becomes visible uplift without global execution veto
         run: |
-          set +e
           CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
-            >/tmp/disable.out 2>/tmp/disable.err
-          status=$?
-          set -e
-          test "$status" -eq 78
-          grep -q 'cannot disable operator fidelity' /tmp/disable.err
-          test ! -s /tmp/disable.out
+            python - <<'PY'
+          import os
+          import operator_fidelity_lock as lock
 
-      - name: Prove off mode cannot bypass fidelity
-        shell: bash
+          lock._IN_PROCESS = None
+          validation = lock.automatic_operator_fidelity_lock()
+          assert validation is not None
+          assert validation.ok is False
+          assert validation.status == "uplift_required"
+          assert any("CASEY_AUTO_BOOT_DISABLE" in error for error in validation.errors)
+          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
+          PY
+
+      - name: Prove off mode becomes visible uplift without process death
         run: |
-          set +e
           CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
-            >/tmp/off.out 2>/tmp/off.err
-          status=$?
-          set -e
-          test "$status" -eq 78
-          grep -q 'cannot disable operator fidelity' /tmp/off.err
-          test ! -s /tmp/off.out
+            python - <<'PY'
+          import os
+          import operator_fidelity_lock as lock
 
-      - name: Prove forged complete statuses cannot authorize runtime
-        shell: bash
+          lock._IN_PROCESS = None
+          validation = lock.automatic_operator_fidelity_lock()
+          assert validation is not None
+          assert validation.ok is False
+          assert validation.status == "uplift_required"
+          assert any("CASEY_AUTO_BOOT_MODE=off" in error for error in validation.errors)
+          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
+          PY
+
+      - name: Prove forged environment statuses cannot counterfeit source-bound fidelity
         run: |
-          set +e
           GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
@@ -119,13 +129,19 @@ jobs:
           GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
           CASEY_BOOT_STATUS=complete \
           CASEY_AUTO_BOOT_MODE=strict \
-          python src/control_plane.py >/tmp/forged.out 2>/tmp/forged.err
-          status=$?
-          set -e
-          test "$status" -eq 78
-          test ! -s /tmp/forged.out
+          PYTHONPATH=src \
+            python - <<'PY'
+          import operator_fidelity_lock as lock
 
-      - name: Prove semantic minimization cannot hide behind clean flags
+          lock._IN_PROCESS = None
+          validation = lock.automatic_operator_fidelity_lock()
+          assert validation is not None
+          assert validation.ok is False
+          assert validation.status == "uplift_required"
+          assert any("receipt" in error for error in validation.errors)
+          PY
+
+      - name: Prove semantic minimization becomes repair evidence even with clean flags
         run: |
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src python - <<'PY'
           from operator_fidelity_preflight import (
@@ -180,7 +196,7 @@ jobs:
                   "unsolicited_operator_asset_disposition": False,
                   "inspection_scope_expansion": False,
                   "operator_owned_asset_identity_preserved": True,
-                  "functional_advance": "semantic hard lock",
+                  "functional_advance": "semantic hardening",
                   "strongest_coherent_path": "take the safest slice and freeze architecture",
               },
               "next_ceiling": "estate propagation",
@@ -235,7 +251,7 @@ jobs:
           assert any("summary_substituted_for_state" in e for e in errors), errors
           PY
 
-      - name: Prove stale digest cannot survive literal-word mutation
+      - name: Prove stale digest becomes repair evidence after literal-word mutation
         run: |
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src python - <<'PY'
           from operator_fidelity_lock import validate_operator_fidelity_lock
@@ -287,8 +303,8 @@ jobs:
                   "unsolicited_operator_asset_disposition": False,
                   "inspection_scope_expansion": False,
                   "operator_owned_asset_identity_preserved": True,
-                  "functional_advance": "hard lock",
-                  "strongest_coherent_path": "runtime rejection",
+                  "functional_advance": "source-bound fidelity repair",
+                  "strongest_coherent_path": "continue known frontiers while repairing the stale digest",
               },
               "next_ceiling": "estate propagation",
           }

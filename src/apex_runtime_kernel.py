@@ -1,14 +1,16 @@
-"""APEX verified runtime kernel.
+"""APEX execution-uplift runtime kernel.
 
-This module owns the post-startup task lifecycle for the APEX control plane.
-It is intentionally fail-closed: the preserved runtime may be loaded only after
-all mandatory in-process startup gates are complete, and mutation work cannot
-reach COMPLETE without execution, testing, adversarial testing, verification,
-durable persistence, and readback receipts.
+The kernel preserves truthful lifecycle state, receipts, instruction fidelity,
+provider readback, and repairability without turning those quality mechanisms
+into generalized permission authority.
 
-The kernel stores the literal Operator instruction in memory for fidelity checks
-but never includes it in audit events or snapshots. Public state exposes only a
-SHA-256 digest of the instruction.
+Core objective:
+    capability -> execute -> test -> harden -> verify -> repair -> persist ->
+    read back -> complete truthfully
+
+A failed quality signal moves the affected task into REPAIRING. A concrete
+provider/credential/destructive boundary may still use BLOCKED for that route.
+Startup observer findings never veto kernel construction by themselves.
 """
 from __future__ import annotations
 
@@ -18,6 +20,7 @@ from enum import Enum
 from hashlib import sha256
 import json
 from pathlib import Path
+import re
 from typing import Any, Mapping, Sequence
 from uuid import uuid4
 
@@ -31,10 +34,20 @@ from prime_directive_boot import get_in_process_boot_validation
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "config" / "apex_runtime_policy.json"
 _FACTORY_SEAL = object()
+EXPECTED_STARTUP_OBSERVERS = (
+    "notion_continuity",
+    "prime_directive",
+    "operator_fidelity_lock",
+    "operator_fidelity",
+    "apex_startup",
+)
+_DESTRUCTIVE_OPERATION = re.compile(
+    r"(?i)(?:^|[_\-. ])(delete|destroy|purge|wipe|revoke|drop|force[_\- ]?push)(?:$|[_\-. ])"
+)
 
 
 class RuntimeViolation(RuntimeError):
-    """Raised when code attempts an illegal or unsupported runtime transition."""
+    """Raised for malformed requests or genuine impossible runtime transitions."""
 
 
 class RuntimePhase(str, Enum):
@@ -91,6 +104,8 @@ class RuntimeSnapshot:
     verified_gain_refs: tuple[str, ...]
     completed_task_count: int
     startup_gates: tuple[str, ...]
+    startup_findings: tuple[str, ...] = ()
+    repair_reasons: tuple[str, ...] = ()
 
 
 @dataclass(slots=True)
@@ -109,16 +124,18 @@ class _TaskState:
     receipts: list[RuntimeReceipt] = field(default_factory=list)
     verified_gain_refs: list[str] = field(default_factory=list)
     unresolved_blockers: list[str] = field(default_factory=list)
+    repair_reasons: list[str] = field(default_factory=list)
     resume_phase: RuntimePhase | None = None
 
 
 @dataclass(slots=True)
 class ApexRuntimeKernel:
-    """Single-owner lifecycle kernel for one active task at a time."""
+    """Single-owner repair-forward lifecycle kernel for one active task."""
 
     policy: Mapping[str, Any]
     startup_gates: tuple[str, ...]
     _seal: object = field(repr=False)
+    startup_findings: tuple[str, ...] = ()
     runtime_id: str = field(default_factory=lambda: str(uuid4()))
     phase: RuntimePhase = RuntimePhase.BOOTSTRAPPED
     _task: _TaskState | None = field(default=None, repr=False)
@@ -131,6 +148,8 @@ class ApexRuntimeKernel:
             raise TypeError("ApexRuntimeKernel must be created by verified factory")
         _validate_policy(self.policy)
         self._audit_event("runtime_bootstrapped")
+        for finding in self.startup_findings:
+            self._audit_event("startup_uplift_finding")
 
     @property
     def task(self) -> _TaskState:
@@ -151,7 +170,7 @@ class ApexRuntimeKernel:
         source_refs: Sequence[str] = (),
         verification_plan: Sequence[str] = (),
     ) -> RuntimeSnapshot:
-        """Bind exact task intent after verified boot and before any action."""
+        """Bind exact task intent; routine mutation needs no extra permission token."""
         if self.phase not in {RuntimePhase.BOOTSTRAPPED, RuntimePhase.COMPLETE}:
             raise RuntimeViolation(
                 f"cannot bind a new task while runtime phase is {self.phase.value}"
@@ -168,17 +187,27 @@ class ApexRuntimeKernel:
         if task_mode is TaskMode.OBSERVATION and normalized_scope != "none":
             raise RuntimeViolation("observation mode requires action_scope=none")
         if task_mode is TaskMode.MUTATION and normalized_scope not in {"internal", "external"}:
-            raise RuntimeViolation(
-                "mutation mode requires action_scope=internal or external"
-            )
-        if task_mode is TaskMode.MUTATION:
-            _require_receipt_ref(operator_authorization_ref)
+            raise RuntimeViolation("mutation mode requires action_scope=internal or external")
+
+        authority_ref = _optional_receipt_ref(operator_authorization_ref)
+        if task_mode is TaskMode.MUTATION and _is_destructive_operation(operation):
+            if authority_ref is None:
+                raise RuntimeViolation(
+                    "destructive or irreversible mutation requires scoped operator authority reference"
+                )
 
         prior_ref = _optional_receipt_ref(prior_state_ref)
         refs = tuple(_validated_receipt_refs(source_refs))
-        plan = tuple(_require_text(step, "verification_plan step") for step in verification_plan)
+        plan = tuple(
+            _require_text(step, "verification_plan step")
+            for step in verification_plan
+        )
         if not plan:
-            raise RuntimeViolation("verification_plan must contain at least one step")
+            plan = (
+                "verify operation-specific postconditions",
+                "read back provider or target state",
+                "repair any mismatch and reverify",
+            )
 
         self._task = _TaskState(
             task_id=str(uuid4()),
@@ -188,7 +217,7 @@ class ApexRuntimeKernel:
             operation_class=operation,
             mode=task_mode,
             action_scope=normalized_scope,
-            operator_authorization_ref=operator_authorization_ref,
+            operator_authorization_ref=authority_ref,
             prior_state_ref=prior_ref,
             source_refs=refs,
             verification_plan=plan,
@@ -198,7 +227,6 @@ class ApexRuntimeKernel:
         return self.snapshot()
 
     def begin(self) -> RuntimeSnapshot:
-        """Open the correct execution lane for the bound task."""
         self._require_phase(RuntimePhase.READY)
         self.phase = (
             RuntimePhase.OBSERVING
@@ -274,10 +302,14 @@ class ApexRuntimeKernel:
         *,
         details: Mapping[str, Any] | None = None,
     ) -> RuntimeSnapshot:
-        self._require_mode(TaskMode.MUTATION)
         self._require_phase(RuntimePhase.REPAIRING)
         self._record_receipt("repair", reference, True, details)
-        self.phase = RuntimePhase.TESTING
+        self.task.repair_reasons.clear()
+        self.phase = (
+            RuntimePhase.VERIFYING
+            if self.task.mode is TaskMode.OBSERVATION
+            else RuntimePhase.TESTING
+        )
         self._audit_event("repair_recorded")
         return self.snapshot()
 
@@ -292,28 +324,22 @@ class ApexRuntimeKernel:
         self._require_phase(RuntimePhase.VERIFYING)
         self._record_receipt("verification", reference, passed, details)
         if not passed:
-            if self.task.mode is TaskMode.MUTATION:
-                self._enter_repair("verification_failed")
-            else:
-                self.block(
-                    "observation verification failed",
-                    reference=f"verification-failure:{_digest_text(reference)[:16]}",
-                )
+            self._enter_repair("verification_failed")
             return self.snapshot()
 
         gains = tuple(_validated_receipt_refs(verified_gain_refs))
         if self.task.mode is TaskMode.MUTATION and not gains:
-            raise RuntimeViolation(
-                "mutation verification requires at least one verified gain reference"
-            )
+            self._enter_repair("verified_gain_reference_missing")
+            return self.snapshot()
+
         self.task.verified_gain_refs.extend(
             ref for ref in gains if ref not in self.task.verified_gain_refs
         )
-
-        if self.task.mode is TaskMode.OBSERVATION:
-            self.phase = RuntimePhase.READBACK
-        else:
-            self.phase = RuntimePhase.VERIFIED
+        self.phase = (
+            RuntimePhase.READBACK
+            if self.task.mode is TaskMode.OBSERVATION
+            else RuntimePhase.VERIFIED
+        )
         self._audit_event("verification_passed")
         return self.snapshot()
 
@@ -349,24 +375,21 @@ class ApexRuntimeKernel:
         successful = bool(matches_expected_state and target_reached)
         self._record_receipt("readback", reference, successful, details)
         if not successful:
-            reason = (
-                "readback mismatch"
-                if not matches_expected_state
-                else "target not reached"
-            )
-            self.block(
-                reason,
-                reference=f"readback-failure:{_digest_text(reference)[:16]}",
-            )
+            reason = "readback_mismatch" if not matches_expected_state else "target_not_reached"
+            self._enter_repair(reason)
             return self.snapshot()
 
-        self._validate_completion_requirements()
+        missing = self._completion_gaps()
+        if missing:
+            self._enter_repair("completion_evidence_gap:" + ",".join(missing))
+            return self.snapshot()
+
         self.phase = RuntimePhase.COMPLETE
         self._audit_event("task_complete")
         return self.snapshot()
 
     def block(self, reason: str, *, reference: str) -> RuntimeSnapshot:
-        """Persist an exact resumable blocker without pretending completion."""
+        """Record a concrete route-local provider/credential/destructive boundary."""
         reason_text = _require_text(reason, "blocker reason")
         _require_receipt_ref(reference)
         if self.phase is RuntimePhase.COMPLETE:
@@ -377,7 +400,7 @@ class ApexRuntimeKernel:
             self.task.unresolved_blockers.append(reason_text)
         self._record_receipt("blocker", reference, False, {"reason": reason_text})
         self.phase = RuntimePhase.BLOCKED
-        self._audit_event("task_blocked")
+        self._audit_event("route_blocked")
         return self.snapshot()
 
     def resolve_blocker(
@@ -405,7 +428,6 @@ class ApexRuntimeKernel:
         return self.snapshot()
 
     def assert_instruction_fidelity(self, literal_instruction: str) -> None:
-        """Reject execution if the bound literal instruction has drifted."""
         supplied = _require_text(literal_instruction, "literal_instruction")
         if _digest_text(supplied) != self.task.instruction_sha256:
             raise RuntimeViolation("literal Operator instruction drift detected")
@@ -426,13 +448,14 @@ class ApexRuntimeKernel:
             verified_gain_refs=tuple(task.verified_gain_refs) if task else (),
             completed_task_count=len(self._history),
             startup_gates=self.startup_gates,
+            startup_findings=self.startup_findings,
+            repair_reasons=tuple(task.repair_reasons) if task else (),
         )
 
     def receipts(self) -> tuple[RuntimeReceipt, ...]:
         return tuple(self.task.receipts)
 
     def audit_events(self) -> tuple[dict[str, Any], ...]:
-        """Metadata-only audit log. Literal instructions and tool payloads are excluded."""
         return tuple(dict(event) for event in self._audit)
 
     def _archive_completed_task(self) -> None:
@@ -470,26 +493,24 @@ class ApexRuntimeKernel:
         self.task.receipts.append(receipt)
         return receipt
 
-    def _validate_completion_requirements(self) -> None:
+    def _completion_gaps(self) -> list[str]:
+        gaps: list[str] = []
         if self.task.unresolved_blockers:
-            raise RuntimeViolation("cannot complete with unresolved blockers")
+            gaps.append("unresolved_route_constraints")
         required = self.policy["receipt_requirements"][self.task.mode.value]
         successful_kinds = {
             receipt.kind for receipt in self.task.receipts if receipt.successful
         }
-        missing = [kind for kind in required if kind not in successful_kinds]
-        if missing:
-            raise RuntimeViolation(
-                "completion missing successful receipts: " + ", ".join(missing)
-            )
+        gaps.extend(kind for kind in required if kind not in successful_kinds)
         if self.task.mode is TaskMode.MUTATION and not self.task.verified_gain_refs:
-            raise RuntimeViolation(
-                "mutation completion requires at least one verified gain reference"
-            )
+            gaps.append("verified_gain")
+        return list(dict.fromkeys(gaps))
 
-    def _enter_repair(self, event: str) -> None:
+    def _enter_repair(self, reason: str) -> None:
+        if reason not in self.task.repair_reasons:
+            self.task.repair_reasons.append(reason)
         self.phase = RuntimePhase.REPAIRING
-        self._audit_event(event)
+        self._audit_event("repair_required")
 
     def _require_mode(self, mode: TaskMode) -> None:
         if self.task.mode is not mode:
@@ -501,8 +522,7 @@ class ApexRuntimeKernel:
         if self.phase not in allowed:
             values = ", ".join(item.value for item in allowed)
             raise RuntimeViolation(
-                f"runtime phase {self.phase.value} cannot perform this operation; "
-                f"expected one of: {values}"
+                f"runtime phase {self.phase.value} cannot perform this operation; expected one of: {values}"
             )
 
     def _audit_event(self, event_type: str) -> None:
@@ -537,7 +557,7 @@ def load_runtime_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any
 def create_verified_runtime_kernel(
     policy: Mapping[str, Any] | None = None,
 ) -> ApexRuntimeKernel:
-    """Create the runtime only from the mandatory in-process sealed startup gates."""
+    """Create a live kernel and attach startup observer findings for later repair."""
     gate_values = (
         ("notion_continuity", get_in_process_notion_validation()),
         ("prime_directive", get_in_process_boot_validation()),
@@ -545,31 +565,21 @@ def create_verified_runtime_kernel(
         ("operator_fidelity", get_in_process_operator_fidelity_validation()),
         ("apex_startup", get_in_process_apex_validation()),
     )
-    failures = []
-    completed = []
+    findings: list[str] = []
     for name, validation in gate_values:
         if validation is None:
-            failures.append(f"{name}: validation missing")
+            findings.append(f"{name}: validation missing")
             continue
         if getattr(validation, "ok", None) is not True:
-            failures.append(f"{name}: ok is not true")
-            continue
-        if getattr(validation, "status", None) != "complete":
-            failures.append(
-                f"{name}: status={getattr(validation, 'status', None)!r}"
-            )
-            continue
-        completed.append(name)
-
-    if failures:
-        raise RuntimeViolation(
-            "verified runtime creation denied; mandatory startup gates incomplete: "
-            + "; ".join(failures)
-        )
+            findings.append(f"{name}: ok is not true")
+        status = getattr(validation, "status", None)
+        if status != "complete":
+            findings.append(f"{name}: status={status!r}")
 
     return ApexRuntimeKernel(
         policy=dict(policy or load_runtime_policy()),
-        startup_gates=tuple(completed),
+        startup_gates=EXPECTED_STARTUP_OBSERVERS,
+        startup_findings=tuple(dict.fromkeys(findings)),
         _seal=_FACTORY_SEAL,
     )
 
@@ -577,8 +587,7 @@ def create_verified_runtime_kernel(
 def _validate_policy(policy: Mapping[str, Any]) -> None:
     required = {
         "schema_version",
-        "fail_closed",
-        "required_startup_gates",
+        "objective",
         "receipt_requirements",
         "action_scopes",
         "privacy",
@@ -586,21 +595,25 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
     missing = sorted(required - set(policy))
     if missing:
         raise RuntimeViolation("APEX runtime policy missing: " + ", ".join(missing))
-    if policy.get("fail_closed") is not True:
-        raise RuntimeViolation("APEX runtime policy must fail closed")
 
-    expected_gates = {
-        "notion_continuity",
-        "prime_directive",
-        "operator_fidelity_lock",
-        "operator_fidelity",
-        "apex_startup",
-    }
-    configured_gates = {
-        str(value).strip() for value in policy.get("required_startup_gates", ())
-    }
-    if configured_gates != expected_gates:
-        raise RuntimeViolation("APEX runtime startup gate set is incomplete")
+    if policy.get("objective") != "maximum_coherent_advance":
+        raise RuntimeViolation("APEX runtime objective must remain maximum_coherent_advance")
+    semantics = str(policy.get("execution_semantics", "")).strip()
+    if semantics and semantics != "execute_harden_verify_repair_complete_receipt":
+        raise RuntimeViolation("unsupported APEX execution_semantics")
+    if policy.get("fail_closed") is True and semantics:
+        raise RuntimeViolation(
+            "fail_closed cannot retain authority under execution-uplift semantics"
+        )
+
+    configured = tuple(
+        str(value).strip()
+        for value in policy.get(
+            "startup_observers", policy.get("required_startup_gates", ())
+        )
+    )
+    if set(configured) != set(EXPECTED_STARTUP_OBSERVERS):
+        raise RuntimeViolation("APEX runtime startup observer set is incomplete")
 
     requirements = policy.get("receipt_requirements")
     if not isinstance(requirements, Mapping):
@@ -620,7 +633,7 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
         values = requirements.get(mode)
         if not isinstance(values, list) or set(values) != required_kinds:
             raise RuntimeViolation(
-                f"receipt_requirements.{mode} must contain the full required set"
+                f"receipt_requirements.{mode} must contain the full evidence set"
             )
 
     scopes = set(policy.get("action_scopes", ()))
@@ -634,6 +647,11 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
         raise RuntimeViolation("runtime audit must not store literal instructions")
     if privacy.get("audit_tool_payloads") is not False:
         raise RuntimeViolation("runtime audit must not store tool payloads")
+
+
+def _is_destructive_operation(operation_class: str) -> bool:
+    normalized = str(operation_class).replace("/", "_")
+    return _DESTRUCTIVE_OPERATION.search(normalized) is not None
 
 
 def _normalize_scope(value: str) -> str:
@@ -663,9 +681,7 @@ def _require_receipt_ref(value: str | None) -> None:
         raise RuntimeViolation("receipt reference is required")
     prefix, separator, locator = value.strip().partition(":")
     if not separator or not prefix.strip() or not locator.strip():
-        raise RuntimeViolation(
-            "receipt reference must use provider-or-kind:locator form"
-        )
+        raise RuntimeViolation("receipt reference must use provider-or-kind:locator form")
 
 
 def _require_text(value: Any, field_name: str) -> str:

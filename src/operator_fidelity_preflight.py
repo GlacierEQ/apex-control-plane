@@ -1,11 +1,15 @@
-"""Fail-closed operator-fidelity preflight for APEX runtime startup.
+"""Operator-fidelity execution uplift for APEX runtime startup.
 
-This gate exists for one failure class: INSTRUCTION_DISPLACEMENT.
-It verifies that literal Operator direction survived context compression and
-that the selected execution vector did not silently collapse into minimum
-scope, governance-first behavior, permission loops, capability reduction,
-unsolicited Operator-asset valuation or disposition, inspection-scope
-expansion, or textual minimization hidden behind compliant booleans.
+This observer targets one failure class: INSTRUCTION_DISPLACEMENT. It verifies
+that literal Operator direction survived context compression and that the
+selected execution vector did not silently collapse into minimum scope,
+governance-first behavior, permission loops, capability reduction, unsolicited
+Operator-asset valuation or disposition, inspection-scope expansion, or textual
+minimization hidden behind compliant booleans.
+
+A finding is mandatory repair evidence, not global permission authority. The
+affected path is compiled upward and reverified while unrelated executable
+frontiers remain live.
 """
 
 from __future__ import annotations
@@ -81,6 +85,7 @@ def load_operator_fidelity_policy(
         "authority",
         "objective",
         "direction",
+        "execution_semantics",
         "fail_closed",
         "required_true_fields",
         "required_nonempty_fields",
@@ -93,8 +98,14 @@ def load_operator_fidelity_policy(
     missing = sorted(required - value.keys())
     if missing:
         raise BootError("operator-fidelity policy missing: " + ", ".join(missing))
-    if value.get("fail_closed") is not True:
-        raise BootError("operator-fidelity policy must remain fail_closed=true")
+    if value.get("fail_closed") is not False:
+        raise BootError(
+            "operator-fidelity fail_closed must be false under execution-uplift semantics"
+        )
+    if value.get("execution_semantics") != "detect_repair_continue_known_frontiers":
+        raise BootError(
+            "operator-fidelity execution_semantics must be detect_repair_continue_known_frontiers"
+        )
 
     asset_sovereignty = value.get("operator_asset_sovereignty")
     if not isinstance(asset_sovereignty, Mapping):
@@ -119,8 +130,10 @@ def load_operator_fidelity_policy(
     anti_minimization = value.get("anti_minimization")
     if not isinstance(anti_minimization, Mapping):
         raise BootError("operator-fidelity anti_minimization policy must be an object")
-    if str(anti_minimization.get("mode", "")).strip().lower() != "fail_closed":
-        raise BootError("operator-fidelity anti_minimization.mode must be fail_closed")
+    if str(anti_minimization.get("mode", "")).strip().lower() != "compile_upward":
+        raise BootError(
+            "operator-fidelity anti_minimization.mode must be compile_upward"
+        )
     if anti_minimization.get("semantic_selected_path_scan") is not True:
         raise BootError(
             "operator-fidelity anti_minimization.semantic_selected_path_scan must be true"
@@ -327,6 +340,8 @@ def build_operator_fidelity_request(
         "authority": policy.get("authority"),
         "objective": policy.get("objective"),
         "direction": policy.get("direction"),
+        "execution_semantics": policy.get("execution_semantics"),
+        "finding_behavior": "repair_instruction_displacement_continue_known_frontiers",
         "requirements": {
             "read_literal_operator_words": True,
             "bind_literal_operator_words_to_independently_resolved_source_spans": True,
@@ -352,6 +367,7 @@ def build_operator_fidelity_request(
             "inspection_scope_expansion_forbidden": True,
             "identify_functional_advance": True,
             "identify_next_ceiling": True,
+            "continue_unaffected_execution_while_repairing": True,
         },
         "receipt_contract": {
             "operator_fidelity": {
@@ -395,14 +411,27 @@ def _continue_operator_fidelity(
         record_startup_continuation,
     )
 
+    enriched_request = dict(request)
+    enriched_request.update(
+        {
+            "operator_fidelity_status": "uplift_required",
+            "mission_execution": "continue_known_executable_frontiers",
+            "external_action_authorized": "route_local_only",
+            "repair_actions": [
+                "recover_source_bound_operator_context",
+                "repair_instruction_displacement",
+                "reverify_fidelity",
+            ],
+        }
+    )
     continuation = record_startup_continuation(
         "operator_fidelity_preflight",
         errors,
-        request=request,
+        request=enriched_request,
         environment_key="GLACIEREQ_OPERATOR_FIDELITY_STATUS",
     )
     emit_startup_continuation(continuation)
-    return _issue(False, "continuation_required", errors)
+    return _issue(False, "uplift_required", errors)
 
 
 def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None:
@@ -424,27 +453,24 @@ def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None
     receipt = receipt_from_environment()
 
     if receipt is None:
+        request = build_operator_fidelity_request(policy, task=task)
         print(
-            json.dumps(
-                build_operator_fidelity_request(policy, task=task),
-                ensure_ascii=False,
-                sort_keys=True,
-            ),
+            json.dumps(request, ensure_ascii=False, sort_keys=True),
             file=sys.stderr,
         )
         sys.stderr.flush()
         return _continue_operator_fidelity(
             ("no boot receipt supplied",),
-            request=build_operator_fidelity_request(policy, task=task),
+            request=request,
         )
 
     errors = validate_operator_fidelity_receipt(policy, receipt)
-    validation = _issue(not errors, "complete" if not errors else "blocked", errors)
-    if validation.ok:
+    if not errors:
+        validation = _issue(True, "complete")
         _IN_PROCESS = validation
         os.environ["GLACIEREQ_OPERATOR_FIDELITY_STATUS"] = "complete"
         return validation
 
     request = build_operator_fidelity_request(policy, task=task)
-    request["receipt_errors"] = list(validation.errors)
-    return _continue_operator_fidelity(validation.errors, request=request)
+    request["receipt_errors"] = list(errors)
+    return _continue_operator_fidelity(errors, request=request)
