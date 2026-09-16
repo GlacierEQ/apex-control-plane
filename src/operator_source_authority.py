@@ -33,6 +33,7 @@ def enforce_operator_source_authority() -> dict[str, Any]:
 
     personalization = policy.get("personalization")
     turn_start_context = policy.get("turn_start_context")
+    source_fidelity = policy.get("source_fidelity")
     source_state = policy.get("source_state")
     source_identity = policy.get("source_identity")
     intent_provenance = policy.get("intent_provenance")
@@ -40,6 +41,7 @@ def enforce_operator_source_authority() -> dict[str, Any]:
     for name, value in {
         "personalization": personalization,
         "turn_start_context": turn_start_context,
+        "source_fidelity": source_fidelity,
         "source_state": source_state,
         "source_identity": source_identity,
         "intent_provenance": intent_provenance,
@@ -75,6 +77,21 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "unknown_context_reduces_confidence_not_effort": True,
     }.items():
         _require(turn_start_context, key, expected, scope="turn_start_context")
+
+    for key, expected in {
+        "verbatim_operator_source_is_controlling": True,
+        "summary_role": "INDEX_AND_ROUTING_ONLY",
+        "summary_may_be_governing_source": False,
+        "summary_may_replace_verbatim_source": False,
+        "summary_may_normalize_operator_meaning": False,
+        "controlling_decision_requires_source_rehydration_when_available": True,
+        "summary_conflict_resolution": "VERBATIM_OPERATOR_SOURCE_WINS",
+        "compression_must_preserve_qualifiers_distinctions_scope_and_corrections": True,
+        "summary_without_source_lineage_is_non_authoritative": True,
+        "repeated_summary_does_not_gain_authority": True,
+        "assistant_interpretation_must_remain_separate_from_operator_words": True,
+    }.items():
+        _require(source_fidelity, key, expected, scope="source_fidelity")
 
     for key, expected in {
         "operator_words_are_source_state": True,

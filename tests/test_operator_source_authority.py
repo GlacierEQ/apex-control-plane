@@ -23,6 +23,12 @@ def test_live_operator_source_authority_contract_is_valid() -> None:
     assert turn_context["retrieved_context_must_causally_affect_action_when_material"] is True
     assert turn_context["retrieval_failure_is_mission_stop"] is False
     assert turn_context["support_mechanism_may_not_gain_veto"] is True
+    source_fidelity = policy["source_fidelity"]
+    assert source_fidelity["verbatim_operator_source_is_controlling"] is True
+    assert source_fidelity["summary_role"] == "INDEX_AND_ROUTING_ONLY"
+    assert source_fidelity["summary_may_be_governing_source"] is False
+    assert source_fidelity["summary_conflict_resolution"] == "VERBATIM_OPERATOR_SOURCE_WINS"
+    assert source_fidelity["repeated_summary_does_not_gain_authority"] is True
     assert policy["source_state"]["operator_words_are_source_state"] is True
     identity = policy["source_identity"]
     assert identity["operator_source_class"] == "KNOWLEDGE_USE_DIRECTION"
@@ -51,6 +57,24 @@ def test_operator_source_authority_fails_closed_on_override(monkeypatch, tmp_pat
     import src.operator_source_authority as module
     monkeypatch.setattr(module, "POLICY_PATH", _write_policy(tmp_path, policy))
     with pytest.raises(OperatorSourceAuthorityError, match="summary_may_override"):
+        module.enforce_operator_source_authority()
+
+
+def test_summary_can_never_become_governing_source(monkeypatch, tmp_path: Path) -> None:
+    policy = json.loads((ROOT / "config" / "operator_source_authority_contract.json").read_text(encoding="utf-8"))
+    policy["source_fidelity"]["summary_may_be_governing_source"] = True
+    import src.operator_source_authority as module
+    monkeypatch.setattr(module, "POLICY_PATH", _write_policy(tmp_path, policy))
+    with pytest.raises(OperatorSourceAuthorityError, match="summary_may_be_governing_source"):
+        module.enforce_operator_source_authority()
+
+
+def test_repeated_summary_cannot_gain_authority(monkeypatch, tmp_path: Path) -> None:
+    policy = json.loads((ROOT / "config" / "operator_source_authority_contract.json").read_text(encoding="utf-8"))
+    policy["source_fidelity"]["repeated_summary_does_not_gain_authority"] = False
+    import src.operator_source_authority as module
+    monkeypatch.setattr(module, "POLICY_PATH", _write_policy(tmp_path, policy))
+    with pytest.raises(OperatorSourceAuthorityError, match="repeated_summary_does_not_gain_authority"):
         module.enforce_operator_source_authority()
 
 

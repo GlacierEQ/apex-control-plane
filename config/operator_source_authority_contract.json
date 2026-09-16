@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "name": "APEX Operator Source Authority Contract",
   "fail_closed": true,
   "personalization": {
@@ -25,6 +25,19 @@
     "retrieval_failure_is_mission_stop": false,
     "support_mechanism_may_not_gain_veto": true,
     "unknown_context_reduces_confidence_not_effort": true
+  },
+  "source_fidelity": {
+    "verbatim_operator_source_is_controlling": true,
+    "summary_role": "INDEX_AND_ROUTING_ONLY",
+    "summary_may_be_governing_source": false,
+    "summary_may_replace_verbatim_source": false,
+    "summary_may_normalize_operator_meaning": false,
+    "controlling_decision_requires_source_rehydration_when_available": true,
+    "summary_conflict_resolution": "VERBATIM_OPERATOR_SOURCE_WINS",
+    "compression_must_preserve_qualifiers_distinctions_scope_and_corrections": true,
+    "summary_without_source_lineage_is_non_authoritative": true,
+    "repeated_summary_does_not_gain_authority": true,
+    "assistant_interpretation_must_remain_separate_from_operator_words": true
   },
   "source_state": {
     "operator_words_are_source_state": true,
@@ -86,6 +99,10 @@
     "context or verification support mechanism promoted into a veto authority",
     "summary impersonates source state",
     "summary silently replaces operator wording",
+    "summary used as governing source when verbatim Operator source is available",
+    "summary gains authority through repetition",
+    "compression erases qualifiers distinctions scope or corrections",
+    "assistant interpretation merged into Operator wording",
     "retrieval failure demotes operator authority",
     "tool or widget redefines operator mission",
     "fresh model inference supersedes operator source state",
