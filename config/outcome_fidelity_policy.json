@@ -1,9 +1,14 @@
 {
-  "schema_version": "1.0.0",
-  "name": "APEX Mission Outcome Fidelity Hard Lock",
-  "fail_closed": true,
-  "principle": "Assistant activity is not progress. Mutation work may complete only when the underlying mission state changes or every materially available internal route is exhausted to a genuine external boundary.",
-  "required_for_mutation": true,
+  "schema_version": "2.0.0",
+  "name": "APEX Mission Outcome Uplift",
+  "fail_closed": false,
+  "execution_semantics": "measure_progress_enrich_next_action_never_erase_execution",
+  "principle": "Assistant activity is not automatically mission progress. Preserve and verify useful intermediate work, classify its actual effect honestly, then use the gap between activity and mission outcome to drive the next highest-impact execution step.",
+  "required_for_mutation": false,
+  "mission_outcome_measurement_required": true,
+  "missing_outcome_behavior": "persist_truthfully_then_continue_toward_mission_outcome",
+  "activity_only_behavior": "classify_as_intermediate_gain_and_raise_next_action_ceiling",
+  "invalid_outcome_claim_behavior": "record_uplift_finding_do_not_promote_claim",
   "allowed_transition_kinds": [
     "proved",
     "disproved",
@@ -45,5 +50,12 @@
   "state_transition_requires_evidence": true,
   "boundary_requires_routes_exhausted": true,
   "boundary_requires_reason": true,
-  "boundary_requires_evidence": true
+  "boundary_requires_evidence": true,
+  "uplift": {
+    "preserve_intermediate_verified_gains": true,
+    "never_promote_activity_only_artifact_to_mission_outcome": true,
+    "never_block_persistence_only_because_mission_outcome_is_not_yet_reached": true,
+    "after_intermediate_gain_select_next_material_frontier": true,
+    "provider_or_external_boundary_is_route_local": true
+  }
 }
