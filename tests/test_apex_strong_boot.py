@@ -43,12 +43,13 @@ def _fake_kernel(*, phase: str = "bootstrapped", gates=EXPECTED_GATES):
     return SimpleNamespace(
         runtime_id="runtime-proof",
         snapshot=lambda: snapshot,
+        outcome_state=lambda: {"recorded": False},
     )
 
 
 def _arm_model_attractor_preflight(monkeypatch) -> None:
     state = {"value": None}
-    validation = SimpleNamespace(ok=True, status="complete")
+    validation = SimpleNamespace(ok=True, status="complete", errors=())
 
     def automatic():
         state["value"] = validation
@@ -59,6 +60,11 @@ def _arm_model_attractor_preflight(monkeypatch) -> None:
 
     monkeypatch.setattr(boot, "automatic_model_attractor_defense", automatic)
     monkeypatch.setattr(boot, "get_in_process_model_attractor_validation", getter)
+    monkeypatch.setattr(
+        boot,
+        "validate_runtime_strict_frontier",
+        lambda: SimpleNamespace(ok=True, errors=()),
+    )
 
 
 def _arm_complete_boot(monkeypatch) -> list[str]:
@@ -66,7 +72,7 @@ def _arm_complete_boot(monkeypatch) -> list[str]:
     _arm_model_attractor_preflight(monkeypatch)
     for index, (automatic_name, getter_name) in enumerate(_GATE_BINDINGS):
         state = {"value": None}
-        validation = SimpleNamespace(ok=True, status="complete")
+        validation = SimpleNamespace(ok=True, status="complete", errors=())
 
         def automatic(
             *,
@@ -85,11 +91,12 @@ def _arm_complete_boot(monkeypatch) -> list[str]:
         monkeypatch.setattr(boot, getter_name, getter)
 
     monkeypatch.setattr(boot, "create_verified_runtime_kernel", lambda: _fake_kernel())
+    monkeypatch.setattr(boot, "enforce_outcome_fidelity", lambda kernel: kernel)
     boot._IN_PROCESS = None
     return calls
 
 
-def test_strong_boot_runs_exact_gate_sequence_and_creates_kernel(monkeypatch) -> None:
+def test_strong_boot_runs_exact_observation_sequence_and_creates_kernel(monkeypatch) -> None:
     calls = _arm_complete_boot(monkeypatch)
 
     session = apply_strongest_boot()
@@ -98,14 +105,20 @@ def test_strong_boot_runs_exact_gate_sequence_and_creates_kernel(monkeypatch) ->
     assert session.status == "complete"
     assert session.gates == EXPECTED_GATES
     assert session.runtime_id == "runtime-proof"
+    assert session.uplift_findings == ()
+    assert session.uplift_required is False
     assert get_in_process_strong_boot() is session
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
 
 
-def test_model_attractor_preflight_is_mandatory_before_kernel_creation(monkeypatch) -> None:
+def test_model_attractor_failure_becomes_uplift_and_kernel_still_exists(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     state = {"value": None}
-    validation = SimpleNamespace(ok=False, status="continuation_required")
+    validation = SimpleNamespace(
+        ok=False,
+        status="continuation_required",
+        errors=("attractor context unresolved",),
+    )
 
     def automatic():
         state["value"] = validation
@@ -125,14 +138,13 @@ def test_model_attractor_preflight_is_mandatory_before_kernel_creation(monkeypat
 
     monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
 
-    with pytest.raises(
-        StrongBootViolation,
-        match=f"{MODEL_ATTRACTOR_PREFLIGHT}: validation ok is not true",
-    ):
-        apply_strongest_boot()
+    session = apply_strongest_boot()
 
-    assert kernel_called["value"] is False
-    assert get_in_process_strong_boot() is None
+    assert kernel_called["value"] is True
+    assert session.runtime_id == "runtime-proof"
+    assert session.uplift_required is True
+    assert any(MODEL_ATTRACTOR_PREFLIGHT in item for item in session.uplift_findings)
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete_with_uplift"
 
 
 def test_strong_boot_is_idempotent_inside_process(monkeypatch) -> None:
@@ -176,22 +188,29 @@ def test_session_cannot_be_forged() -> None:
         )
 
 
-def test_missing_in_process_validation_fails_closed(monkeypatch) -> None:
+def test_missing_in_process_validation_becomes_repair_finding(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
-    validation = SimpleNamespace(ok=True, status="complete")
+    validation = SimpleNamespace(ok=True, status="complete", errors=())
     monkeypatch.setattr(boot, "automatic_prime_directive_boot", lambda: validation)
     monkeypatch.setattr(boot, "get_in_process_boot_validation", lambda: None)
 
-    with pytest.raises(StrongBootViolation, match="in-process validation missing"):
-        apply_strongest_boot()
+    session = apply_strongest_boot()
 
-    assert get_in_process_strong_boot() is None
+    assert session.runtime_id == "runtime-proof"
+    assert any(
+        "prime_directive: no in-process validation published" in item
+        for item in session.uplift_findings
+    )
 
 
-def test_incomplete_gate_preserves_later_diagnostics_before_block(monkeypatch) -> None:
+def test_incomplete_observer_preserves_later_diagnostics_and_runtime(monkeypatch) -> None:
     calls = _arm_complete_boot(monkeypatch)
     state = {"value": None}
-    validation = SimpleNamespace(ok=False, status="continuation_required")
+    validation = SimpleNamespace(
+        ok=False,
+        status="continuation_required",
+        errors=("Notion continuity unresolved",),
+    )
 
     def incomplete_notion():
         calls.append("notion_continuity")
@@ -201,17 +220,23 @@ def test_incomplete_gate_preserves_later_diagnostics_before_block(monkeypatch) -
     monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", incomplete_notion)
     monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
 
-    with pytest.raises(StrongBootViolation, match="notion_continuity"):
-        apply_strongest_boot()
+    session = apply_strongest_boot()
 
     assert calls == list(EXPECTED_GATES)
-    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "blocked"
+    assert session.runtime_id == "runtime-proof"
+    assert session.uplift_required is True
+    assert any("notion_continuity" in item for item in session.uplift_findings)
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete_with_uplift"
 
 
-def test_incomplete_gate_fails_before_kernel_creation(monkeypatch) -> None:
+def test_incomplete_fidelity_observer_does_not_prevent_kernel_creation(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     state = {"value": None}
-    validation = SimpleNamespace(ok=False, status="continuation_required")
+    validation = SimpleNamespace(
+        ok=False,
+        status="uplift_required",
+        errors=("source binding unresolved",),
+    )
 
     def automatic():
         state["value"] = validation
@@ -231,13 +256,31 @@ def test_incomplete_gate_fails_before_kernel_creation(monkeypatch) -> None:
 
     monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
 
-    with pytest.raises(StrongBootViolation, match="operator_fidelity: validation ok is not true"):
-        apply_strongest_boot()
+    session = apply_strongest_boot()
 
-    assert kernel_called["value"] is False
+    assert kernel_called["value"] is True
+    assert any("operator_fidelity" in item for item in session.uplift_findings)
 
 
-def test_kernel_must_bind_same_complete_gate_set(monkeypatch) -> None:
+def test_legacy_terminal_gate_is_converted_to_uplift(monkeypatch) -> None:
+    _arm_complete_boot(monkeypatch)
+
+    def terminal_gate():
+        raise SystemExit(78)
+
+    monkeypatch.setattr(boot, "automatic_operator_fidelity_lock", terminal_gate)
+    monkeypatch.setattr(boot, "get_in_process_operator_fidelity_lock", lambda: None)
+
+    session = apply_strongest_boot()
+
+    assert session.runtime_id == "runtime-proof"
+    assert any(
+        "legacy terminal gate requested process exit" in item
+        for item in session.uplift_findings
+    )
+
+
+def test_kernel_must_bind_same_complete_observation_set(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     monkeypatch.setattr(
         boot,
@@ -245,7 +288,7 @@ def test_kernel_must_bind_same_complete_gate_set(monkeypatch) -> None:
         lambda: _fake_kernel(gates=EXPECTED_GATES[:-1]),
     )
 
-    with pytest.raises(StrongBootViolation, match="startup-gate proof"):
+    with pytest.raises(StrongBootViolation, match="startup observation sequence"):
         apply_strongest_boot()
 
 
@@ -301,13 +344,13 @@ def test_control_plane_executes_verified_boundary_with_exact_boot_objects(
     assert injected["APEX_RUNTIME_KERNEL"] is kernel
 
 
-def test_control_plane_blocks_before_runtime_when_strong_boot_fails(
+def test_control_plane_still_stops_on_real_kernel_boot_failure(
     monkeypatch, capsys
 ) -> None:
     fake_boot = ModuleType("apex_strong_boot")
 
     def fail_boot():
-        raise RuntimeError("boot proof missing")
+        raise RuntimeError("kernel construction failed")
 
     fake_boot.apply_strongest_boot = fail_boot
     fake_auto = ModuleType("auto_boot")
@@ -319,7 +362,7 @@ def test_control_plane_blocks_before_runtime_when_strong_boot_fails(
 
     def forbidden_run_path(*args, **kwargs):
         called["runtime"] = True
-        raise AssertionError("runtime must not load")
+        raise AssertionError("runtime must not load without a constructed kernel")
 
     monkeypatch.setattr(runpy, "run_path", forbidden_run_path)
     target = SRC / "control_plane.py"

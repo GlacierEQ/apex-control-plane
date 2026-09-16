@@ -3,8 +3,6 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-import pytest
-
 import operator_fidelity_lock as lock
 from operator_fidelity_lock import validate_operator_fidelity_lock
 from operator_fidelity_preflight import digest_operator_words
@@ -93,10 +91,13 @@ def _receipt() -> dict:
                 "preserves_prior_valid_gain": True,
                 "maximum_coherent_advance": True,
                 "pro_code_elite_humanized_engineered": True,
-                "functional_advance": "hard runtime fidelity lock with semantic inspection",
-                "strongest_coherent_path": "runtime is rejected before loading on fidelity failure",
+                "functional_advance": "source-bound fidelity evidence with semantic inspection",
+                "strongest_coherent_path": (
+                    "continue known executable frontiers while fidelity findings are repaired, "
+                    "then reverify without redefining the mission"
+                ),
             },
-            "next_ceiling": "propagate enforcement across every execution entrypoint",
+            "next_ceiling": "propagate execution-uplift semantics across every entrypoint",
         }
     }
 
@@ -105,33 +106,37 @@ def test_valid_lock_receipt_passes() -> None:
     assert validate_operator_fidelity_lock(_receipt()) == ()
 
 
-def test_request_mode_without_receipt_yields_non_authorizing_continuation(monkeypatch) -> None:
+def test_request_mode_without_receipt_yields_uplift_and_preserves_execution(monkeypatch) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "request")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
+    monkeypatch.delenv("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED", raising=False)
     lock._IN_PROCESS = None
+
     validation = lock.automatic_operator_fidelity_lock()
+
     assert validation is not None
     assert validation.ok is False
-    assert validation.status == "continuation_required"
-    assert "boot receipt" in validation.errors[0]
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert validation.status == "uplift_required"
+    assert "receipt" in validation.errors[0]
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+    assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in lock.os.environ
 
 
-def test_strict_compatibility_mode_without_receipt_yields_continuation(monkeypatch) -> None:
+def test_strict_compatibility_mode_without_receipt_yields_uplift_not_process_death(monkeypatch) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
     lock._IN_PROCESS = None
+
     validation = lock.automatic_operator_fidelity_lock()
+
     assert validation is not None
     assert validation.ok is False
-    assert validation.status == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert validation.status == "uplift_required"
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
 
 
-def test_disable_flag_records_continuation_then_terminates_fail_closed(
-    monkeypatch, tmp_path, capsys
+def test_disable_flag_records_uplift_without_terminating_runtime(
+    monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setattr(lock, "_testing", lambda: False)
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
@@ -139,20 +144,18 @@ def test_disable_flag_records_continuation_then_terminates_fail_closed(
     monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     lock._IN_PROCESS = None
 
-    with pytest.raises(SystemExit) as exc_info:
-        lock.automatic_operator_fidelity_lock()
+    validation = lock.automatic_operator_fidelity_lock()
 
-    assert exc_info.value.code == lock.EXIT_BOOT_BLOCKED
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity" in captured.err
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert validation is not None
+    assert validation.ok is False
+    assert validation.status == "uplift_required"
+    assert any("CASEY_AUTO_BOOT_DISABLE" in error for error in validation.errors)
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
     assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
-def test_off_mode_records_continuation_then_terminates_fail_closed(
-    monkeypatch, tmp_path, capsys
+def test_off_mode_records_uplift_without_terminating_runtime(
+    monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setattr(lock, "_testing", lambda: False)
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "off")
@@ -160,15 +163,13 @@ def test_off_mode_records_continuation_then_terminates_fail_closed(
     monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     lock._IN_PROCESS = None
 
-    with pytest.raises(SystemExit) as exc_info:
-        lock.automatic_operator_fidelity_lock()
+    validation = lock.automatic_operator_fidelity_lock()
 
-    assert exc_info.value.code == lock.EXIT_BOOT_BLOCKED
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity" in captured.err
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert validation is not None
+    assert validation.ok is False
+    assert validation.status == "uplift_required"
+    assert any("CASEY_AUTO_BOOT_MODE=off" in error for error in validation.errors)
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
     assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
@@ -186,7 +187,7 @@ def test_source_binding_is_required_even_when_receipt_digest_is_self_consistent(
     assert any("independently bind every literal constraint" in error for error in errors)
 
 
-def test_forged_span_digest_is_rejected() -> None:
+def test_forged_span_digest_is_detected_for_repair() -> None:
     receipt = _receipt()
     receipt["operator_fidelity"]["operator_source_bindings"][0]["span_sha256"] = (
         "sha256:" + "0" * 64
@@ -210,7 +211,7 @@ def test_source_span_must_exactly_equal_literal_constraint() -> None:
     assert any("does not exactly equal literal_constraints[1]" in error for error in errors)
 
 
-def test_derivative_working_model_cannot_authorize_verbatim_operator_words() -> None:
+def test_derivative_working_model_cannot_substitute_for_verbatim_operator_words() -> None:
     receipt = _receipt()
     receipt["operator_fidelity"]["operator_source_bindings"][0]["source_kind"] = (
         "working_model"
@@ -264,7 +265,7 @@ def test_durable_upward_anchor_is_required() -> None:
     assert any("look up" in error or "do not look down" in error for error in errors)
 
 
-def test_minimum_scope_and_governance_first_are_rejected() -> None:
+def test_minimum_scope_and_governance_first_are_flagged_for_repair() -> None:
     receipt = _receipt()
     receipt["operator_fidelity"]["selected_path"]["minimum_scope_default"] = True
     receipt["operator_fidelity"]["selected_path"]["governance_first"] = True

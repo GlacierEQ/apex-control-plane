@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.5.0",
-  "name": "APEX Operator Fidelity Runtime Enforcement",
+  "schema_version": "2.0.0",
+  "name": "APEX Operator Fidelity Execution Uplift",
   "failure_class": "INSTRUCTION_DISPLACEMENT",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
@@ -8,7 +8,9 @@
   "direction": "look_up",
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "operator_trust_root_contract": "000_OPERATOR_TRUST_ROOT.md",
-  "fail_closed": true,
+  "execution_semantics": "detect_repair_continue_known_frontiers",
+  "fail_closed": false,
+  "failure_behavior": "record_uplift_repair_instruction_displacement_continue_unaffected_execution",
   "operator_trust_root": {
     "operator_role": "principal_trust_root",
     "operator_as_adversary_forbidden": true,
@@ -68,9 +70,10 @@
     "observation_is_knowledge_not_authority": true
   },
   "anti_minimization": {
-    "mode": "fail_closed",
+    "mode": "compile_upward",
     "semantic_selected_path_scan": true,
-    "principle": "Narrowing may isolate uncertainty but may never redefine the product objective. Minimum-default execution is rejected and compiled upward.",
+    "finding_behavior": "rewrite_upward_and_continue",
+    "principle": "Narrowing may isolate uncertainty but may never redefine the product objective. Minimum-default execution is rejected and compiled upward into the strongest coherent executable path.",
     "required_semantic_rule_codes": [
       "SMALLEST_DEFAULT",
       "MINIMUM_DEFAULT",
@@ -160,7 +163,8 @@
   "correction_requirements": {
     "reassess_objective_function": true,
     "repair_affected_work": true,
-    "effect_field": "correction_effect"
+    "effect_field": "correction_effect",
+    "continue_unaffected_execution": true
   },
   "regression_signatures": [
     "FORBIDDEN: reduce scope first",
