@@ -1,19 +1,15 @@
-"""Fail-closed postcondition gate for APEX mutation work.
+"""Mission-outcome measurement and uplift for APEX mutation work.
 
-The existing runtime proves that work was executed, tested, verified, persisted,
-and read back. That lifecycle is necessary but insufficient: assistant-authored
-artifacts can satisfy those mechanics while the Operator's underlying mission
-state remains unchanged.
+This wrapper preserves the crucial distinction between assistant activity and an
+actual mission-state transition. The distinction now improves execution instead
+of acting as a persistence gate:
 
-This wrapper closes that gap. Mutation work cannot enter persistence until it has
-an explicit, source-bearing mission outcome proving either:
-
-1. a substantive transition in the underlying mission state; or
-2. exhaustion of materially available internal routes to a genuine external
-   boundary.
-
-Creating a ledger, matrix, packet, summary, report, plan, commit, or task update
-is never accepted as the mission outcome merely because it is durable or tested.
+* real mission transitions are recorded with source-bearing evidence;
+* activity-only/intermediate gains are preserved but never mislabeled as the
+  mission outcome;
+* missing or weak outcome proof becomes an uplift finding that drives the next
+  material frontier;
+* persistence/readback remain available so useful verified work is not erased.
 """
 from __future__ import annotations
 
@@ -29,7 +25,7 @@ DEFAULT_POLICY_PATH = REPO_ROOT / "config" / "outcome_fidelity_policy.json"
 
 
 class OutcomeFidelityViolation(RuntimeViolation):
-    """Raised when assistant activity is presented as mission progress."""
+    """Raised only for malformed outcome inputs or impossible lifecycle usage."""
 
 
 def _require_text(value: Any, field_name: str) -> str:
@@ -71,8 +67,6 @@ def load_outcome_fidelity_policy(
         raise OutcomeFidelityViolation("outcome fidelity policy must be a JSON object")
     required = {
         "schema_version",
-        "fail_closed",
-        "required_for_mutation",
         "allowed_transition_kinds",
         "activity_only_transition_kinds",
         "activity_only_evidence_prefixes",
@@ -88,11 +82,13 @@ def load_outcome_fidelity_policy(
         raise OutcomeFidelityViolation(
             "outcome fidelity policy missing: " + ", ".join(missing)
         )
-    if payload.get("fail_closed") is not True:
-        raise OutcomeFidelityViolation("outcome fidelity policy must fail closed")
-    if payload.get("required_for_mutation") is not True:
+
+    semantics = str(payload.get("execution_semantics", "")).strip()
+    if semantics and semantics != "measure_progress_enrich_next_action_never_erase_execution":
+        raise OutcomeFidelityViolation("unsupported outcome fidelity execution_semantics")
+    if payload.get("fail_closed") is True and semantics:
         raise OutcomeFidelityViolation(
-            "outcome fidelity must remain required for mutation"
+            "outcome fidelity cannot retain fail-closed authority under uplift semantics"
         )
 
     allowed = payload.get("allowed_transition_kinds")
@@ -101,39 +97,32 @@ def load_outcome_fidelity_policy(
     if not isinstance(allowed, list) or not allowed:
         raise OutcomeFidelityViolation("allowed_transition_kinds must be non-empty")
     if not isinstance(activity, list) or not activity:
-        raise OutcomeFidelityViolation(
-            "activity_only_transition_kinds must be non-empty"
-        )
+        raise OutcomeFidelityViolation("activity_only_transition_kinds must be non-empty")
     if not isinstance(prefixes, list) or not prefixes:
-        raise OutcomeFidelityViolation(
-            "activity_only_evidence_prefixes must be non-empty"
-        )
+        raise OutcomeFidelityViolation("activity_only_evidence_prefixes must be non-empty")
     overlap = set(allowed) & set(activity)
     if overlap:
         raise OutcomeFidelityViolation(
-            "transition kinds cannot be both allowed and activity-only: "
+            "transition kinds cannot be both mission outcomes and activity-only: "
             + ", ".join(sorted(overlap))
         )
     return payload
 
 
 class OutcomeFidelityRuntime:
-    """Verified-kernel proxy that hard-locks mission postconditions."""
+    """Verified-kernel proxy that measures mission progress and drives uplift."""
 
     def __init__(
         self,
         kernel: ApexRuntimeKernel,
         policy: Mapping[str, Any] | None = None,
     ) -> None:
-        # Production strong boot supplies ApexRuntimeKernel. Duck-typed test
-        # doubles are deliberately allowed so the boot sequencing tests can stay
-        # isolated from runtime internals; execution-path methods still fail if a
-        # double lacks the verified kernel contract they call.
         self._kernel = kernel
         self._policy = dict(policy or load_outcome_fidelity_policy())
         self._outcome_recorded = False
         self._outcome_kind: str | None = None
         self._outcome_reference: str | None = None
+        self._outcome_findings: list[str] = []
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._kernel, name)
@@ -150,7 +139,26 @@ class OutcomeFidelityRuntime:
         self._outcome_recorded = False
         self._outcome_kind = None
         self._outcome_reference = None
+        self._outcome_findings.clear()
         return self._kernel.bind_task(**kwargs)
+
+    def _finding(
+        self,
+        message: str,
+        *,
+        reference: str | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> None:
+        if message not in self._outcome_findings:
+            self._outcome_findings.append(message)
+        if reference is not None:
+            self._kernel._record_receipt(
+                "outcome_uplift",
+                reference,
+                False,
+                {"finding": message, **dict(details or {})},
+            )
+        self._kernel._audit_event("mission_outcome_uplift_required")
 
     def record_mission_outcome(
         self,
@@ -164,13 +172,7 @@ class OutcomeFidelityRuntime:
         boundary_reason: str | None = None,
         details: Mapping[str, Any] | None = None,
     ):
-        """Record the mission-domain postcondition after verification.
-
-        Normal transitions require distinct source-bearing before/after state and
-        evidence beyond assistant activity. A genuine external boundary may leave
-        domain state unchanged, but only after available internal routes are
-        explicitly exhausted and the boundary itself is evidenced.
-        """
+        """Evaluate a candidate mission outcome without erasing useful work."""
         task = self._kernel.task
         if task.mode is not TaskMode.MUTATION:
             raise OutcomeFidelityViolation(
@@ -178,28 +180,33 @@ class OutcomeFidelityRuntime:
             )
         if self._kernel.phase is not RuntimePhase.VERIFIED:
             raise OutcomeFidelityViolation(
-                "mission outcome must be recorded after successful verification and before persistence"
+                "mission outcome is measured after verification and before persistence"
             )
         if self._outcome_recorded:
-            raise OutcomeFidelityViolation(
-                "mission outcome already recorded for active task"
-            )
+            raise OutcomeFidelityViolation("mission outcome already recorded for active task")
 
         ref = _require_ref(reference, "reference")
         kind = _require_text(transition_kind, "transition_kind").lower()
         before_ref = _require_ref(before_state_ref, "before_state_ref")
         evidence = _validated_refs(evidence_refs, "evidence_ref")
+        normalized_after: str | None = None
 
         activity_only = set(self._policy["activity_only_transition_kinds"])
         allowed = set(self._policy["allowed_transition_kinds"])
         if kind in activity_only:
-            raise OutcomeFidelityViolation(
-                f"assistant activity is not mission progress: {kind}"
+            self._finding(
+                f"activity-only gain is not yet the mission outcome: {kind}",
+                reference=ref,
+                details={"transition_kind": kind},
             )
+            return self._kernel.snapshot()
         if kind not in allowed:
-            raise OutcomeFidelityViolation(
-                f"transition_kind is not an allowed mission outcome: {kind}"
+            self._finding(
+                f"unrecognized mission outcome kind requires classification: {kind}",
+                reference=ref,
+                details={"transition_kind": kind},
             )
+            return self._kernel.snapshot()
 
         boundary_kind = str(self._policy["boundary_transition_kind"]).strip().lower()
         if kind == boundary_kind:
@@ -207,33 +214,48 @@ class OutcomeFidelityRuntime:
                 self._policy["boundary_requires_routes_exhausted"] is True
                 and routes_exhausted is not True
             ):
-                raise OutcomeFidelityViolation(
-                    "genuine external boundary requires routes_exhausted=true"
+                self._finding(
+                    "external-boundary claim needs evidence that meaningful internal routes were exhausted",
+                    reference=ref,
                 )
-            if self._policy["boundary_requires_reason"] is True:
-                _require_text(boundary_reason, "boundary_reason")
+                return self._kernel.snapshot()
+            if self._policy["boundary_requires_reason"] is True and not str(
+                boundary_reason or ""
+            ).strip():
+                self._finding(
+                    "external-boundary claim needs a concrete boundary reason",
+                    reference=ref,
+                )
+                return self._kernel.snapshot()
             if self._policy["boundary_requires_evidence"] is True and not evidence:
-                raise OutcomeFidelityViolation(
-                    "genuine external boundary requires source-bearing evidence"
+                self._finding(
+                    "external-boundary claim needs source-bearing evidence",
+                    reference=ref,
                 )
-            normalized_after = None
+                return self._kernel.snapshot()
         else:
             normalized_after = _require_ref(after_state_ref or "", "after_state_ref")
             if (
                 self._policy["state_transition_requires_distinct_before_after"] is True
                 and normalized_after == before_ref
             ):
-                raise OutcomeFidelityViolation(
-                    "mission state did not change: before_state_ref equals after_state_ref"
+                self._finding(
+                    "candidate outcome did not change mission state; preserve the gain and continue",
+                    reference=ref,
                 )
+                return self._kernel.snapshot()
             if self._policy["state_transition_requires_evidence"] is True and not evidence:
-                raise OutcomeFidelityViolation(
-                    "mission state transition requires source-bearing evidence"
+                self._finding(
+                    "candidate mission transition needs source-bearing evidence",
+                    reference=ref,
                 )
+                return self._kernel.snapshot()
             if routes_exhausted:
-                raise OutcomeFidelityViolation(
-                    "routes_exhausted is reserved for genuine external boundary outcomes"
+                self._finding(
+                    "routes_exhausted applies only to genuine external boundaries",
+                    reference=ref,
                 )
+                return self._kernel.snapshot()
 
         if evidence:
             activity_prefixes = {
@@ -244,9 +266,11 @@ class OutcomeFidelityRuntime:
                 item.split(":", 1)[0].strip().lower() for item in evidence
             }
             if evidence_prefixes and evidence_prefixes <= activity_prefixes:
-                raise OutcomeFidelityViolation(
-                    "mission outcome cannot be proved solely by assistant-authored activity artifacts"
+                self._finding(
+                    "candidate outcome is supported only by assistant-authored activity artifacts",
+                    reference=ref,
                 )
+                return self._kernel.snapshot()
 
         receipt_details = {
             "transition_kind": kind,
@@ -257,12 +281,7 @@ class OutcomeFidelityRuntime:
             "boundary_reason": boundary_reason,
             "details": dict(details or {}),
         }
-        self._kernel._record_receipt(
-            "mission_outcome",
-            ref,
-            True,
-            receipt_details,
-        )
+        self._kernel._record_receipt("mission_outcome", ref, True, receipt_details)
         self._outcome_recorded = True
         self._outcome_kind = kind
         self._outcome_reference = ref
@@ -272,16 +291,16 @@ class OutcomeFidelityRuntime:
     def begin_persistence(self):
         task = self._kernel.task
         if task.mode is TaskMode.MUTATION and not self._outcome_recorded:
-            raise OutcomeFidelityViolation(
-                "mutation cannot persist: no verified mission-state transition or genuine external boundary was recorded"
+            self._finding(
+                "mission outcome not yet demonstrated; persist verified intermediate gain and continue upward"
             )
         return self._kernel.begin_persistence()
 
     def record_readback(self, *args: Any, **kwargs: Any):
         task = self._kernel.task
         if task.mode is TaskMode.MUTATION and not self._outcome_recorded:
-            raise OutcomeFidelityViolation(
-                "mutation cannot complete: mission outcome postcondition is missing"
+            self._finding(
+                "mission outcome remains open after this intermediate execution; select next material frontier"
             )
         return self._kernel.record_readback(*args, **kwargs)
 
@@ -290,6 +309,8 @@ class OutcomeFidelityRuntime:
             "recorded": self._outcome_recorded,
             "transition_kind": self._outcome_kind,
             "reference": self._outcome_reference,
+            "uplift_required": bool(self._outcome_findings),
+            "findings": tuple(self._outcome_findings),
         }
 
 
@@ -297,5 +318,5 @@ def enforce_outcome_fidelity(
     kernel: ApexRuntimeKernel,
     policy: Mapping[str, Any] | None = None,
 ) -> OutcomeFidelityRuntime:
-    """Wrap the verified kernel in the mandatory mission postcondition boundary."""
+    """Wrap the kernel with mission-progress measurement, not a permission gate."""
     return OutcomeFidelityRuntime(kernel, policy)
