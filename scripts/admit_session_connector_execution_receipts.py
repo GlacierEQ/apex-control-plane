@@ -9,11 +9,12 @@ provider material to the JSONL receipt ledger.
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime
 import json
-from pathlib import Path
 import sys
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -21,7 +22,10 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from approved_operation_bridge import (
+    EvidenceAuthority,
+    ProviderEvidenceResolver,
     ProviderExecutionObservation,
+    ResolvedProviderEvidence,
     build_execution_receipt,
     render_safe_execution_receipt,
     validate_approved_action_request,
@@ -96,6 +100,7 @@ def admit_execution_manifest(
     receipt_ledger_path: Path,
     commit_sha: str,
     now: datetime | None = None,
+    provider_evidence_resolver: ProviderEvidenceResolver | None = None,
 ) -> dict[str, Any]:
     """Validate and admit one host-completed exact-approved provider operation."""
     catalog = load_connector_catalog(ROOT / "config" / "apex_connector_catalog.json")
@@ -110,16 +115,24 @@ def admit_execution_manifest(
     if not isinstance(verification_passed, bool):
         raise ExecutionAdmissionInputError("execution manifest verification_passed must be boolean")
 
+    execution_refs = _refs(manifest.get("execution_source_refs"), "execution_source_refs")
+    execution_material = _read_material(
+        manifest.get("execution_observation_path"), "execution_observation_path", required=True
+    )
     execution = ProviderExecutionObservation(
-        source_refs=_refs(manifest.get("execution_source_refs"), "execution_source_refs"),
-        material=_read_material(manifest.get("execution_observation_path"), "execution_observation_path", required=True),
+        source_refs=execution_refs, material=execution_material,
         observed_at=_parse_time(manifest.get("executed_at"), "executed_at"),
     )
     readback: ProviderExecutionObservation | None = None
+    readback_refs: tuple[str, ...] = ()
+    readback_material: bytes | None = None
     if result_state == "success":
+        readback_refs = _refs(manifest.get("readback_source_refs"), "readback_source_refs")
+        readback_material = _read_material(
+            manifest.get("readback_observation_path"), "readback_observation_path", required=True
+        )
         readback = ProviderExecutionObservation(
-            source_refs=_refs(manifest.get("readback_source_refs"), "readback_source_refs"),
-            material=_read_material(manifest.get("readback_observation_path"), "readback_observation_path", required=True),
+            source_refs=readback_refs, material=readback_material,
             observed_at=_parse_time(manifest.get("readback_at"), "readback_at"),
         )
 
@@ -138,11 +151,26 @@ def admit_execution_manifest(
             component="authenticated-session-approved-operation-bridge",
         )
     )
+    captured_evidence = {ref: execution_material for ref in execution_refs if execution_material is not None}
+    if readback_material is not None:
+        captured_evidence.update({ref: readback_material for ref in readback_refs})
+
+    def evidence_resolver(source_ref: str) -> ResolvedProviderEvidence:
+        try:
+            material = captured_evidence[source_ref]
+        except KeyError as exc:
+            raise ExecutionAdmissionInputError(
+                f"provider evidence readback unresolved: {source_ref}"
+            ) from exc
+        return ResolvedProviderEvidence(
+            material=material,
+            authority=EvidenceAuthority.CAPTURED_ARTIFACT,
+            verifier_ref=f"captured-artifact:{execution_manifest_path}",
+        )
+
     accepted = runtime.admit_connector_execution_receipt(
-        action_request,
-        receipt,
-        catalog,
-        now=current,
+        action_request, receipt, catalog, now=current,
+        evidence_resolver=provider_evidence_resolver or evidence_resolver,
     )
     receipt_ledger_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_ledger_path.write_text(render_safe_execution_receipt(receipt), encoding="utf-8")
