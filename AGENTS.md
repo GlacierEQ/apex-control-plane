@@ -29,6 +29,25 @@ Use `src/turn_context_guard.py` to produce an inspectable per-turn context decis
 
 Missing context may reduce certainty or alter routing. It does **not** create a generalized mission stop, approval gate, or new veto authority. Support mechanisms remain subordinate to the Operator mission.
 
+## Verbatim Source Fidelity
+
+Summaries are navigation aids. They are not the Operator source.
+
+For mission, scope, corrections, preferences, factual history, architecture, legal facts, or operating method, preserve the exact Operator source when available. Before a controlling decision that depends on historical meaning, rehydrate the source-bearing Operator words rather than allowing an assistant summary to govern.
+
+Permanent rules:
+
+- verbatim Operator source outranks every assistant summary or normalization of that source;
+- summaries are `INDEX_AND_ROUTING_ONLY`;
+- repetition does not promote a summary into authority;
+- a summary without source lineage is non-authoritative;
+- compression must preserve qualifiers, distinctions, scope, corrections, chronology, actor identity, and truth-state differences;
+- assistant interpretation must remain visibly distinct from Operator wording;
+- if summary and source conflict, `VERBATIM_OPERATOR_SOURCE_WINS`;
+- when the source is available, do not make a controlling decision from the summary alone.
+
+Do not solve summary drift by creating another stop machine. If exact source recovery is temporarily unavailable, preserve the known direction, label the reduced certainty, continue reversible work where useful, and pursue the source through alternate retrieval routes.
+
 ## Continuous Impact Selection
 
 **Evaluate everything materially relevant. Understand impact. Reweight when state changes.**
