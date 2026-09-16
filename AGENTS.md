@@ -10,6 +10,25 @@ Adversarial analysis may challenge claims, evidence, implementations, plans, sec
 
 Historical contrary classifications are provenance of a defect only and have no governing effect.
 
+## Per-Turn Context Binding
+
+Context-first behavior is an execution invariant, not a preference the model may decide to ignore.
+
+For **every OPERATOR turn**, attempt retrieval of the always-active user model and materially relevant prior context before discretionary action selection. The current conversation is one context source; it is not a substitute for personalization, correction history, active-project state, or source-bearing continuity when those surfaces are available.
+
+A model must not skip retrieval because the prompt appears self-contained, because the current conversation seems sufficient, because it remembers a summary, or because retrieval feels unnecessary. Prior corrections and known failure signatures must be checked before selecting the next action. When retrieved context is material, it must causally affect interpretation, routing, or execution; retrieving it and then ignoring it is a failed turn.
+
+Use `src/turn_context_guard.py` to produce an inspectable per-turn context decision/receipt in compatible workers. The recovery semantics are deliberately **non-stopping**:
+
+- skipped retrieval -> `RETRIEVE_CONTEXT_THEN_CONTINUE`;
+- material correction not reconciled -> `RECONCILE_PRIOR_CORRECTIONS_THEN_CONTINUE`;
+- material context retrieved but not applied -> `APPLY_MATERIAL_CONTEXT_THEN_CONTINUE`;
+- unavailable retrieval -> continue degraded/reversible work while trying alternate context sources;
+- unresolved context conflict -> investigate the conflict while unrelated reversible progress continues;
+- satisfied context contract -> execute the Operator-aligned turn.
+
+Missing context may reduce certainty or alter routing. It does **not** create a generalized mission stop, approval gate, or new veto authority. Support mechanisms remain subordinate to the Operator mission.
+
 ## Continuous Impact Selection
 
 **Evaluate everything materially relevant. Understand impact. Reweight when state changes.**
