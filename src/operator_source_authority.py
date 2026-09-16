@@ -1,4 +1,10 @@
-"""Fail-closed validation for Operator personalization and source authority."""
+"""Fail-closed validation for Operator personalization and source authority.
+
+Static contract validation is intentionally strict because malformed authority
+configuration should never silently become runtime doctrine. Per-turn context
+recovery is different: missing or unavailable context must auto-route to recovery
+or degraded continuation rather than becoming a generalized mission stop.
+"""
 from __future__ import annotations
 
 import json
@@ -26,12 +32,14 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         raise OperatorSourceAuthorityError("operator source authority must fail closed")
 
     personalization = policy.get("personalization")
+    turn_start_context = policy.get("turn_start_context")
     source_state = policy.get("source_state")
     source_identity = policy.get("source_identity")
     intent_provenance = policy.get("intent_provenance")
     organization = policy.get("organization")
     for name, value in {
         "personalization": personalization,
+        "turn_start_context": turn_start_context,
         "source_state": source_state,
         "source_identity": source_identity,
         "intent_provenance": intent_provenance,
@@ -51,6 +59,22 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "fresh_model_inference_may_supersede": False,
     }.items():
         _require(personalization, key, expected, scope="personalization")
+
+    for key, expected in {
+        "scope": "every_operator_turn",
+        "retrieval_attempt_required": True,
+        "model_may_skip_due_to_apparent_sufficiency": False,
+        "current_conversation_is_not_complete_personalization": True,
+        "prior_corrections_checked_before_action_selection": True,
+        "retrieved_context_must_causally_affect_action_when_material": True,
+        "context_application_receipt_required": True,
+        "missing_context_response": "AUTO_RECOVER_THEN_CONTINUE",
+        "retrieval_failure_response": "CONTINUE_DEGRADED_AND_TRY_ALTERNATE_SOURCES",
+        "retrieval_failure_is_mission_stop": False,
+        "support_mechanism_may_not_gain_veto": True,
+        "unknown_context_reduces_confidence_not_effort": True,
+    }.items():
+        _require(turn_start_context, key, expected, scope="turn_start_context")
 
     for key, expected in {
         "operator_words_are_source_state": True,
