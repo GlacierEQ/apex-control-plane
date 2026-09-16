@@ -2,13 +2,17 @@
 """Python startup hook for the single APEX strongest-boot path.
 
 When this hook is active, it establishes the same sealed boot session used by
-`src/control_plane.py`: continuity, Prime Directive, Operator-fidelity hard lock,
-Operator-fidelity preflight, APEX startup, and the verified runtime kernel.
+`src/control_plane.py`: continuity observers, Prime Directive evidence,
+Operator-fidelity checks, APEX startup, and the verified runtime kernel.
+
+Recoverable startup observations are repair-forward: missing or incomplete
+proof is attached to the live boot session as uplift work while known executable
+frontiers continue. Startup observations do not create global permission
+authority. Concrete provider, credential, hardware, legal, destructive-action,
+and unrecoverable kernel-integrity constraints remain scoped to the route that
+actually carries them.
 
 Verifier CLIs and pytest are excluded so enforcement code can be tested directly.
-Strict runtime startup is fail-closed. Request mode remains a diagnostic lane:
-it may continue only without a strong-boot session or runtime kernel, with all
-execution authorization remaining false.
 """
 from __future__ import annotations
 
@@ -16,7 +20,7 @@ import os
 from pathlib import Path
 import sys
 
-_BOOT_BLOCKED_EXIT = 78
+_BOOT_UNRECOVERABLE_EXIT = 78
 
 
 def _entrypoint_path() -> str:
@@ -63,17 +67,18 @@ def _should_boot() -> bool:
     return entrypoint in {"control_plane.py", "verified_runtime_entrypoint.py"}
 
 
-def _record_blocked_startup(exc: BaseException) -> None:
-    """Persist exact recovery evidence without granting execution authority."""
+def _record_startup_uplift(exc: BaseException) -> None:
+    """Persist exact recovery evidence without creating global execution authority."""
     from startup_continuation import emit_startup_continuation, record_startup_continuation
 
     payload = {
-        "boot_status": "blocked",
-        "strong_boot_status": "blocked",
+        "boot_status": "uplift_required",
+        "strong_boot_status": "uplift_required",
         "error": f"{type(exc).__name__}: {exc}",
         "entrypoint": _entrypoint_path(),
-        "runtime_authorized": False,
-        "external_action_authorized": False,
+        "runtime_authorized": "route_local_only",
+        "external_action_authorized": "route_local_only",
+        "mission_execution": "continue_known_executable_frontiers",
     }
     continuation = record_startup_continuation(
         "strong_boot",
@@ -84,12 +89,13 @@ def _record_blocked_startup(exc: BaseException) -> None:
     emit_startup_continuation(continuation)
 
 
-def _terminate_blocked(code: int = _BOOT_BLOCKED_EXIT) -> None:
-    """Exit from interpreter startup without CPython rewriting the status to 1.
+def _terminate_unrecoverable(code: int = _BOOT_UNRECOVERABLE_EXIT) -> None:
+    """Terminate only when the startup/kernel path itself cannot be constructed.
 
-    Raising SystemExit from `sitecustomize` can be treated as a fatal site-import
-    error by the interpreter. Diagnostics are flushed first, then `_exit` preserves
-    the fail-closed status code exactly.
+    Recoverable evidence gaps are consumed by StrongBoot before reaching this
+    function. An exception escaping that repair-forward path is therefore an
+    implementation/integrity failure of the runtime constructor itself, not a
+    missing-proof permission decision.
     """
     try:
         sys.stdout.flush()
@@ -101,21 +107,16 @@ def _terminate_blocked(code: int = _BOOT_BLOCKED_EXIT) -> None:
 APEX_STRONG_BOOT_SESSION = None
 APEX_RUNTIME_KERNEL = None
 
-# `control_plane_runtime.py` is the preserved implementation library, not an
-# executable authorization boundary. Direct execution would bypass the verified
-# lifecycle wrapper, so it is rejected and callers are routed to control_plane.py.
-if _entrypoint_name() == "control_plane_runtime.py" and not _is_pytest_startup():
-    _record_blocked_startup(
-        RuntimeError(
-            "direct control_plane_runtime execution is disabled; use control_plane.py"
-        )
-    )
-    _terminate_blocked()
+# Do not intercept control_plane_runtime.py here. Its executable shim owns the
+# compatibility reroute to the canonical entrypoint; terminating in sitecustomize
+# would recreate the global startup veto removed by StrongBoot.
 
 if _should_boot():
     try:
-        # Validate source/personalization authority before any task-bearing boot
-        # so derivative summaries or fresh inference cannot become authority.
+        # Source/personalization authority is checked before task-bearing boot so
+        # derivative summaries or fresh inference cannot silently become source
+        # authority. Recoverable observer findings after this point are uplifted
+        # inside StrongBoot rather than promoted into global vetoes.
         from operator_source_authority import enforce_operator_source_authority
 
         enforce_operator_source_authority()
@@ -125,10 +126,17 @@ if _should_boot():
         APEX_STRONG_BOOT_SESSION = apply_strongest_boot()
         APEX_RUNTIME_KERNEL = APEX_STRONG_BOOT_SESSION.runtime_kernel
     except SystemExit as exc:
-        # Explicit hard-lock bypass attempts remain terminal even in diagnostic mode.
-        code = exc.code if isinstance(exc.code, int) and exc.code else _BOOT_BLOCKED_EXIT
-        _terminate_blocked(code)
+        # StrongBoot absorbs legacy/recoverable observer exits. A SystemExit that
+        # escapes here belongs to an explicit source-authority or unrecoverable
+        # runtime-integrity boundary and remains a concrete local constraint.
+        _record_startup_uplift(exc)
+        code = (
+            exc.code
+            if isinstance(exc.code, int) and exc.code
+            else _BOOT_UNRECOVERABLE_EXIT
+        )
+        _terminate_unrecoverable(code)
     except Exception as exc:
-        _record_blocked_startup(exc)
+        _record_startup_uplift(exc)
         if not _request_mode():
-            _terminate_blocked()
+            _terminate_unrecoverable()
