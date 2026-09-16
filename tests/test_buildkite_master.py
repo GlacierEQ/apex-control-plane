@@ -43,9 +43,10 @@ def test_evidence_scripts_use_worker_local_verified_python_runtime() -> None:
     assert "PYTHON_BIN: \"/usr/local/bin/python3.12\"" not in text
     assert "PYTHON_BIN: \"/opt/homebrew/bin/python3.12\"" not in text
     resolver = 'PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"'
-    assert text.count(resolver) == 6
+    assert text.count(resolver) == 7
     critical_scripts = (
         "scripts/reconcile_genius_buildkite.py",
+        "scripts/reconcile_telecom_buildkite.py",
         "scripts/reconcile_mastermind_buildkite.py",
         "scripts/verify_buildkite_evidence_chain.py",
     )
