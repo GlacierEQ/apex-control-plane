@@ -32,6 +32,7 @@
   },
   "outbound_claim_invariants": {
     "guard_required_before_response_emission": true,
+    "execution_language_requires_typed_claims": true,
     "current_provider_state_requires_current_run_read_receipt": true,
     "current_provider_hash_requires_receipt_hash_match": true,
     "current_provider_identifier_requires_receipt_binding": true,
