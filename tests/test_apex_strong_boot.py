@@ -39,6 +39,7 @@ def _fake_kernel(*, phase: str = "bootstrapped", gates=EXPECTED_GATES):
         phase=phase,
         task_id=None,
         startup_gates=tuple(gates),
+        startup_diagnostics=(),
     )
     return SimpleNamespace(
         runtime_id="runtime-proof",
@@ -97,12 +98,13 @@ def test_strong_boot_runs_exact_gate_sequence_and_creates_kernel(monkeypatch) ->
     assert calls == list(EXPECTED_GATES)
     assert session.status == "complete"
     assert session.gates == EXPECTED_GATES
+    assert session.diagnostics == ()
     assert session.runtime_id == "runtime-proof"
     assert get_in_process_strong_boot() is session
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
 
 
-def test_model_attractor_preflight_is_mandatory_before_kernel_creation(monkeypatch) -> None:
+def test_model_attractor_preflight_enriches_session_without_veto(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     state = {"value": None}
     validation = SimpleNamespace(ok=False, status="continuation_required")
@@ -117,22 +119,12 @@ def test_model_attractor_preflight_is_mandatory_before_kernel_creation(monkeypat
         "get_in_process_model_attractor_validation",
         lambda: state["value"],
     )
-    kernel_called = {"value": False}
 
-    def kernel_factory():
-        kernel_called["value"] = True
-        return _fake_kernel()
+    session = apply_strongest_boot()
 
-    monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
-
-    with pytest.raises(
-        StrongBootViolation,
-        match=f"{MODEL_ATTRACTOR_PREFLIGHT}: validation ok is not true",
-    ):
-        apply_strongest_boot()
-
-    assert kernel_called["value"] is False
-    assert get_in_process_strong_boot() is None
+    assert session.status == "complete"
+    assert any(MODEL_ATTRACTOR_PREFLIGHT in item for item in session.diagnostics)
+    assert get_in_process_strong_boot() is session
 
 
 def test_strong_boot_is_idempotent_inside_process(monkeypatch) -> None:
@@ -171,24 +163,25 @@ def test_session_cannot_be_forged() -> None:
             status="complete",
             created_at=boot.datetime.now(boot.UTC),
             gates=EXPECTED_GATES,
+            diagnostics=(),
             runtime_kernel=_fake_kernel(),
             _seal=object(),
         )
 
 
-def test_missing_in_process_validation_fails_closed(monkeypatch) -> None:
+def test_missing_in_process_validation_is_preserved_as_diagnostic(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     validation = SimpleNamespace(ok=True, status="complete")
     monkeypatch.setattr(boot, "automatic_prime_directive_boot", lambda: validation)
     monkeypatch.setattr(boot, "get_in_process_boot_validation", lambda: None)
 
-    with pytest.raises(StrongBootViolation, match="in-process validation missing"):
-        apply_strongest_boot()
+    session = apply_strongest_boot()
 
-    assert get_in_process_strong_boot() is None
+    assert any("prime_directive: in-process validation missing" in item for item in session.diagnostics)
+    assert get_in_process_strong_boot() is session
 
 
-def test_incomplete_gate_preserves_later_diagnostics_before_block(monkeypatch) -> None:
+def test_incomplete_check_preserves_later_diagnostics_and_continues(monkeypatch) -> None:
     calls = _arm_complete_boot(monkeypatch)
     state = {"value": None}
     validation = SimpleNamespace(ok=False, status="continuation_required")
@@ -201,14 +194,14 @@ def test_incomplete_gate_preserves_later_diagnostics_before_block(monkeypatch) -
     monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", incomplete_notion)
     monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
 
-    with pytest.raises(StrongBootViolation, match="notion_continuity"):
-        apply_strongest_boot()
+    session = apply_strongest_boot()
 
     assert calls == list(EXPECTED_GATES)
-    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "blocked"
+    assert any("notion_continuity" in item for item in session.diagnostics)
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
 
 
-def test_incomplete_gate_fails_before_kernel_creation(monkeypatch) -> None:
+def test_incomplete_fidelity_check_does_not_block_kernel_creation(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     state = {"value": None}
     validation = SimpleNamespace(ok=False, status="continuation_required")
@@ -223,18 +216,11 @@ def test_incomplete_gate_fails_before_kernel_creation(monkeypatch) -> None:
         "get_in_process_operator_fidelity_validation",
         lambda: state["value"],
     )
-    kernel_called = {"value": False}
 
-    def kernel_factory():
-        kernel_called["value"] = True
-        return _fake_kernel()
+    session = apply_strongest_boot()
 
-    monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
-
-    with pytest.raises(StrongBootViolation, match="operator_fidelity: validation ok is not true"):
-        apply_strongest_boot()
-
-    assert kernel_called["value"] is False
+    assert session.runtime_kernel is not None
+    assert any("operator_fidelity" in item for item in session.diagnostics)
 
 
 def test_kernel_must_bind_same_complete_gate_set(monkeypatch) -> None:
