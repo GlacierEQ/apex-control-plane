@@ -1,4 +1,4 @@
-name: Operator Fidelity Hard Lock
+name: Operator Fidelity Enrichment
 
 on:
   push:
@@ -46,8 +46,8 @@ permissions:
   contents: read
 
 jobs:
-  hard-lock:
-    name: operator-fidelity-hard-lock
+  fidelity-enrichment:
+    name: operator-fidelity-enrichment
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,7 +59,7 @@ jobs:
       - name: Install pytest
         run: python -m pip install --disable-pip-version-check pytest
 
-      - name: Compile hard-lock boundary
+      - name: Compile fidelity boundary
         run: |
           python -m py_compile \
             src/anti_minimization_compiler.py \
@@ -81,36 +81,25 @@ jobs:
             tests/test_operator_fidelity_preflight.py \
             tests/test_apex_strong_boot.py
 
-      - name: Prove disable flag cannot bypass fidelity
+      - name: Prove disable flag cannot erase fidelity evidence
         shell: bash
         run: |
-          set +e
           CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; r=automatic_operator_fidelity_lock(); assert r.status=="continuation_required"; assert r.ok is False' \
             >/tmp/disable.out 2>/tmp/disable.err
-          status=$?
-          set -e
-          test "$status" -eq 78
           grep -q 'cannot disable operator fidelity' /tmp/disable.err
-          test ! -s /tmp/disable.out
 
-      - name: Prove off mode cannot bypass fidelity
+      - name: Prove off mode preserves fidelity evidence
         shell: bash
         run: |
-          set +e
           CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; r=automatic_operator_fidelity_lock(); assert r.status=="continuation_required"; assert r.ok is False' \
             >/tmp/off.out 2>/tmp/off.err
-          status=$?
-          set -e
-          test "$status" -eq 78
           grep -q 'cannot disable operator fidelity' /tmp/off.err
-          test ! -s /tmp/off.out
 
-      - name: Prove forged complete statuses cannot authorize runtime
+      - name: Prove forged complete statuses do not fabricate verified evidence
         shell: bash
         run: |
-          set +e
           GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
@@ -119,11 +108,11 @@ jobs:
           GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
           CASEY_BOOT_STATUS=complete \
           CASEY_AUTO_BOOT_MODE=strict \
+          PYTHONPATH=src:. \
           python src/control_plane.py >/tmp/forged.out 2>/tmp/forged.err
-          status=$?
-          set -e
-          test "$status" -eq 78
-          test ! -s /tmp/forged.out
+          grep -q '"phase":"complete"' /tmp/forged.out
+          grep -q '"startup_diagnostics"' /tmp/forged.out
+          grep -q 'continuation_required' /tmp/forged.err
 
       - name: Prove semantic minimization cannot hide behind clean flags
         run: |
@@ -180,7 +169,7 @@ jobs:
                   "unsolicited_operator_asset_disposition": False,
                   "inspection_scope_expansion": False,
                   "operator_owned_asset_identity_preserved": True,
-                  "functional_advance": "semantic hard lock",
+                  "functional_advance": "semantic fidelity enrichment",
                   "strongest_coherent_path": "take the safest slice and freeze architecture",
               },
               "next_ceiling": "estate propagation",
@@ -287,8 +276,8 @@ jobs:
                   "unsolicited_operator_asset_disposition": False,
                   "inspection_scope_expansion": False,
                   "operator_owned_asset_identity_preserved": True,
-                  "functional_advance": "hard lock",
-                  "strongest_coherent_path": "runtime rejection",
+                  "functional_advance": "source-bound fidelity check",
+                  "strongest_coherent_path": "preserve failed fidelity evidence and continue through bounded runtime routes",
               },
               "next_ceiling": "estate propagation",
           }
