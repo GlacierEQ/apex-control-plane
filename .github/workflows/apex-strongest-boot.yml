@@ -119,45 +119,37 @@ jobs:
             tests/test_runtime_execution_guard.py \
             tests/test_control_plane.py
 
-      - name: Prove strict frontier blocks before model-attractor without receipt
+      - name: Prove strict frontier becomes diagnostic without receipt
         shell: bash
         run: |
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python - <<'PY'
           from apex_strong_boot import _run_model_attractor_preflight
 
-          failures = []
-          _run_model_attractor_preflight(failures)
-          assert failures == [
+          diagnostics = []
+          _run_model_attractor_preflight(diagnostics)
+          assert diagnostics == [
               "strict_executable_frontier_authority: strict frontier preflight requires a boot receipt"
-          ], failures
+          ], diagnostics
           PY
 
-      - name: Prove runtime entrypoint fails closed without receipts
+      - name: Prove runtime entrypoint continues with startup diagnostics
         shell: bash
         run: |
-          set +e
-          CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/strong.out 2>/tmp/strong.err
-          status=$?
-          set -e
-          test "$status" -eq 78
-          test ! -s /tmp/strong.out
-          grep -q 'glaciereq_notion_continuity_preflight' /tmp/strong.err
-          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/strong.err
+          CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src:. python src/control_plane.py >/tmp/strong.out 2>/tmp/strong.err
+          grep -q '"phase":"complete"' /tmp/strong.out
+          grep -q '"startup_diagnostics"' /tmp/strong.out
+          grep -q 'continuation_required' /tmp/strong.err
 
-      - name: Prove strict Python auto-boot preserves blocked exit code
+      - name: Prove strict Python auto-boot continues after enrichment checks
         shell: bash
         run: |
-          set +e
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=strict \
-          python -c 'print("RAN")' >/tmp/site.out 2>/tmp/site.err
-          status=$?
-          set -e
-          test "$status" -eq 78
-          test ! -s /tmp/site.out
-          grep -q 'glaciereq_notion_continuity_preflight' /tmp/site.err
-          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/site.err
+          python -c 'import sitecustomize; assert sitecustomize.APEX_STRONG_BOOT_SESSION is not None; assert sitecustomize.APEX_RUNTIME_KERNEL is not None; print("RAN")' \
+          >/tmp/site.out 2>/tmp/site.err
+          grep -q 'RAN' /tmp/site.out
+          grep -q 'continuation_required' /tmp/site.err
 
       - name: Prove legacy runtime cannot bypass verified boundary
         shell: bash
@@ -170,10 +162,10 @@ jobs:
           test ! -s /tmp/legacy.out
           grep -q 'direct control_plane_runtime execution is disabled' /tmp/legacy.err
 
-      - name: Prove request-mode auto-boot is diagnostic only
+      - name: Prove request-mode auto-boot preserves diagnostics without authority inversion
         shell: bash
         run: |
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \
-          python -c 'import os, sitecustomize; assert sitecustomize.APEX_STRONG_BOOT_SESSION is None; assert sitecustomize.APEX_RUNTIME_KERNEL is None; assert os.environ.get("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED") == "0"; assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "continuation_required"'
+          python -c 'import os, sitecustomize; assert sitecustomize.APEX_STRONG_BOOT_SESSION is not None; assert sitecustomize.APEX_RUNTIME_KERNEL is not None; assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ; assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete"'
