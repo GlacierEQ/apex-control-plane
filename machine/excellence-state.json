@@ -3,21 +3,43 @@
   "repository": "GlacierEQ/apex-control-plane",
   "principal_state": "DISCOVERED",
   "gates": {
-    "IDENTITY_RESOLVED": {"status": "PENDING"},
-    "PROBLEM_VERIFIED": {"status": "PENDING"},
-    "TARGET_CONTRACT_FROZEN": {"status": "PENDING"},
-    "DONOR_PLAN_RESOLVED": {"status": "PENDING"},
-    "VERTICAL_SLICE_ALIVE": {"status": "PENDING"},
-    "CENTRAL_MECHANISM_PRESENT": {"status": "PENDING"},
-    "DETERMINISTIC_PROOF_GREEN": {"status": "PENDING"},
-    "ADVERSARIAL_SURVIVAL": {"status": "PENDING"},
-    "OPERABLE_AND_OBSERVABLE": {"status": "PENDING"},
-    "PROOF_RECEIPT_BOUND": {"status": "PENDING"},
+    "IDENTITY_RESOLVED": {
+      "status": "PENDING"
+    },
+    "PROBLEM_VERIFIED": {
+      "status": "PENDING"
+    },
+    "TARGET_CONTRACT_FROZEN": {
+      "status": "PENDING"
+    },
+    "DONOR_PLAN_RESOLVED": {
+      "status": "PENDING"
+    },
+    "VERTICAL_SLICE_ALIVE": {
+      "status": "PENDING"
+    },
+    "CENTRAL_MECHANISM_PRESENT": {
+      "status": "PENDING"
+    },
+    "DETERMINISTIC_PROOF_GREEN": {
+      "status": "PENDING"
+    },
+    "ADVERSARIAL_SURVIVAL": {
+      "status": "PENDING"
+    },
+    "OPERABLE_AND_OBSERVABLE": {
+      "status": "PENDING"
+    },
+    "PROOF_RECEIPT_BOUND": {
+      "status": "PENDING"
+    },
     "PROMOTION_LOCKOUT_REMOVED": {
       "status": "PASS",
       "evidence": "legacy checked-in HMAC promotion grant and local secret authority removed; source/receipt proof remains non-authorizing"
     },
-    "CANONICAL_POSITION_RESOLVED": {"status": "PENDING"},
+    "CANONICAL_POSITION_RESOLVED": {
+      "status": "PENDING"
+    },
     "EVOLUTION_CURSOR_DEFINED": {
       "status": "PASS",
       "at": "2026-08-10T06:12Z",
@@ -42,8 +64,21 @@
     "at": "2026-08-10T05:56Z",
     "from_claim": "PROMOTED",
     "to": "DISCOVERED",
-    "reason": "schema migrate: PROMOTED XOR gap-receipt",
+    "reason": "schema migrate: gap_receipt_enriches_progress (former PROMOTED XOR retired as stopper)",
     "blocker": "TESTS_FAIL",
-    "rule": "PROMOTED XOR gap-receipt"
+    "rule": "gap_receipt_enriches_progress",
+    "former_rule": "PROMOTED XOR gap-receipt",
+    "gate_policy": {
+      "mode": "enrichment",
+      "stoppers_forbidden": true,
+      "promotion_ladder_forbidden": true
+    }
+  },
+  "operator_contract": "OPERATOR_CONTRACT.md",
+  "gate_policy": {
+    "mode": "enrichment",
+    "stoppers_forbidden": true,
+    "promotion_ladder_forbidden": true,
+    "note": "Helix PROMOTED/demoted ladder retired; checks enrich only."
   }
 }
