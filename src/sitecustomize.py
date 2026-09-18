@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""Python startup hook for the single APEX strongest-boot path.
+"""Python startup hook for the composed APEX boot path.
 
-When this hook is active, it establishes the same sealed boot session used by
-`src/control_plane.py`: continuity, Prime Directive, Operator-fidelity hard lock,
-Operator-fidelity preflight, APEX startup, and the verified runtime kernel.
+When active, this hook executes the same source/continuity/fidelity checks used by
+`src/control_plane.py` and binds their diagnostics to the runtime session.
+Unresolved evidence does not become a global permission decision. Actual runtime
+construction failures and direct boundary bypass attempts remain hard failures.
 
 Verifier CLIs and pytest are excluded so enforcement code can be tested directly.
-Strict runtime startup is fail-closed. Request mode remains a diagnostic lane:
-it may continue only without a strong-boot session or runtime kernel, with all
-execution authorization remaining false.
 """
 from __future__ import annotations
 
@@ -114,18 +112,37 @@ if _entrypoint_name() == "control_plane_runtime.py" and not _is_pytest_startup()
 
 if _should_boot():
     try:
-        # Validate source/personalization authority before any task-bearing boot
-        # so derivative summaries or fresh inference cannot become authority.
-        from operator_source_authority import enforce_operator_source_authority
+        # Source-authority validation controls claim strength and routing. Preserve
+        # a diagnostic if unresolved, but do not let the validator become a
+        # project-level permission gate.
+        try:
+            from operator_source_authority import enforce_operator_source_authority
 
-        enforce_operator_source_authority()
+            enforce_operator_source_authority()
+        except Exception as source_exc:
+            from startup_continuation import (
+                emit_startup_continuation,
+                record_startup_continuation,
+            )
+
+            source_record = record_startup_continuation(
+                "operator_source_authority",
+                (f"{type(source_exc).__name__}: {source_exc}",),
+                request={
+                    "authority_effect": "none",
+                    "claim_effect": "epistemic_enrichment_only",
+                },
+                environment_key="GLACIEREQ_OPERATOR_SOURCE_AUTHORITY_STATUS",
+            )
+            emit_startup_continuation(source_record)
 
         from apex_strong_boot import apply_strongest_boot
 
         APEX_STRONG_BOOT_SESSION = apply_strongest_boot()
         APEX_RUNTIME_KERNEL = APEX_STRONG_BOOT_SESSION.runtime_kernel
     except SystemExit as exc:
-        # Explicit hard-lock bypass attempts remain terminal even in diagnostic mode.
+        # A real process-level boundary remains terminal; startup evidence checks
+        # themselves are converted to diagnostics before this point.
         code = exc.code if isinstance(exc.code, int) and exc.code else _BOOT_BLOCKED_EXIT
         _terminate_blocked(code)
     except Exception as exc:
