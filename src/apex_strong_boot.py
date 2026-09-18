@@ -132,16 +132,18 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
                 issued = automatic()
                 current = getter()
                 if current is None:
-                    diagnostics.append(
-                        f"{name}: in-process validation missing after check"
-                    )
-                    continue
-                if issued is not None and current is not issued:
-                    diagnostics.append(
-                        f"{name}: check validation identity changed in-process"
-                    )
-                    continue
-                validation = current
+                    if issued is None:
+                        diagnostics.append(
+                            f"{name}: validation missing after check"
+                        )
+                        continue
+                    validation = issued
+                else:
+                    if issued is not None and current is not issued:
+                        diagnostics.append(
+                            f"{name}: check validation identity changed in-process"
+                        )
+                    validation = current
         except SystemExit as exc:
             diagnostics.append(f"{name}: SystemExit: {exc.code}")
             continue
@@ -222,16 +224,18 @@ def _run_model_attractor_preflight(diagnostics: list[str]) -> None:
             issued = automatic_model_attractor_defense()
             current = get_in_process_model_attractor_validation()
             if current is None:
-                diagnostics.append(
-                    f"{name}: in-process validation missing after preflight"
-                )
-                return
-            if issued is not None and current is not issued:
-                diagnostics.append(
-                    f"{name}: preflight validation identity changed in-process"
-                )
-                return
-            validation = current
+                if issued is None:
+                    diagnostics.append(
+                        f"{name}: validation missing after preflight"
+                    )
+                    return
+                validation = issued
+            else:
+                if issued is not None and current is not issued:
+                    diagnostics.append(
+                        f"{name}: preflight validation identity changed in-process"
+                    )
+                validation = current
     except SystemExit as exc:
         diagnostics.append(f"{name}: SystemExit: {exc.code}")
         return
