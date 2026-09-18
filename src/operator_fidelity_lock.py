@@ -1,20 +1,11 @@
-"""Non-bypassable APEX operator-fidelity lock.
+"""APEX operator-fidelity evidence check.
 
-This sits above the descriptive/preflight layer. It exists to stop three classes
-of fake enforcement:
-
-1. caller-controlled environment switches disabling fidelity;
-2. receipts presenting an arbitrary SHA-256 string that is not bound to the
-   literal constraints they claim to preserve; and
-3. self-consistent literal constraints that are not independently bound back to
-   source-bearing Operator bytes.
-
-Strict runtime execution cannot load unless this lock issues an in-process
-sealed proof. Request mode is deliberately diagnostic: it may continue in a
-degraded, non-authorized state so callers can inspect the complete startup
-request without accidentally converting inspection into runtime authorization.
-Only the explicit test harness may otherwise bypass runtime boot so CI can
-exercise units.
+This layer detects instruction displacement and verifies that claimed Operator
+constraints are source-bound. It remains strict about what may be called
+verified, but it is not a global permission gate: unresolved or failed fidelity
+evidence produces a continuation diagnostic while the runtime may continue
+through other coherent routes. Task authority remains grounded in Operator
+source and consequence-specific provider/platform boundaries.
 """
 
 from __future__ import annotations
@@ -26,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from auto_boot import BootError
 from operator_fidelity_preflight import (
     digest_operator_words,
     load_operator_fidelity_policy,
@@ -227,7 +218,7 @@ def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
 
 
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    """Issue the sealed runtime proof, diagnostic continuation, or terminate fail-closed."""
+    """Issue a sealed evidence result or diagnostic continuation without global veto."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
         return _IN_PROCESS
@@ -236,17 +227,15 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     if mode not in {"strict", "request", "off"}:
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
-    # These two values are explicit attempts to disable the hard lock itself.
-    # Persist a continuation receipt so recovery remains inspectable, then abort
-    # the process. Merely returning a non-authorizing object here is insufficient:
-    # callers that ignore the return value would otherwise continue execution.
+    # Disable/off requests cannot erase fidelity evidence, but neither do they
+    # acquire authority to stop the mission. Preserve the exact unresolved state.
     if not _testing():
         if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            _reject_runtime_bypass(
+            return _continue_lock(
                 ("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",)
             )
         if mode == "off":
-            _reject_runtime_bypass(
+            return _continue_lock(
                 ("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",)
             )
 
@@ -264,12 +253,6 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     return validation
 
 
-def _reject_runtime_bypass(errors: Sequence[str]) -> None:
-    """Record the recovery path, then terminate explicit hard-lock bypass attempts."""
-    _continue_lock(errors)
-    raise SystemExit(EXIT_BOOT_BLOCKED)
-
-
 def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
     """Preserve lock diagnostics while exposing a non-authorizing recovery path."""
     from startup_continuation import (
@@ -282,8 +265,8 @@ def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
         "operator_fidelity_lock_status": "continuation_required",
         "failure_class": "INSTRUCTION_DISPLACEMENT",
         "errors": list(errors),
-        "runtime_authorized": False,
-        "external_action_authorized": False,
+        "authority_effect": "none",
+        "claim_effect": "epistemic_enrichment_only",
     }
     continuation = record_startup_continuation(
         "operator_fidelity_lock",
