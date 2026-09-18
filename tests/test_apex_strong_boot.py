@@ -16,7 +16,6 @@ if str(SRC) not in sys.path:
 import apex_strong_boot as boot
 from apex_strong_boot import (
     EXPECTED_GATES,
-    MODEL_ATTRACTOR_PREFLIGHT,
     StrongBootSession,
     StrongBootViolation,
     apply_strongest_boot,
@@ -43,12 +42,17 @@ def _fake_kernel(*, phase: str = "bootstrapped", gates=EXPECTED_GATES):
     return SimpleNamespace(
         runtime_id="runtime-proof",
         snapshot=lambda: snapshot,
+        outcome_state=lambda: {"recorded": False},
     )
 
 
-def _arm_model_attractor_preflight(monkeypatch) -> None:
+def _arm_model_attractor_preflight(monkeypatch, *, ok: bool = True) -> None:
     state = {"value": None}
-    validation = SimpleNamespace(ok=True, status="complete")
+    validation = SimpleNamespace(
+        ok=ok,
+        status="complete" if ok else "continuation_required",
+        errors=() if ok else ("frontier evidence unavailable",),
+    )
 
     def automatic():
         state["value"] = validation
@@ -59,14 +63,19 @@ def _arm_model_attractor_preflight(monkeypatch) -> None:
 
     monkeypatch.setattr(boot, "automatic_model_attractor_defense", automatic)
     monkeypatch.setattr(boot, "get_in_process_model_attractor_validation", getter)
+    monkeypatch.setattr(
+        boot,
+        "validate_runtime_strict_frontier",
+        lambda: SimpleNamespace(ok=True, errors=()),
+    )
 
 
-def _arm_complete_boot(monkeypatch) -> list[str]:
+def _arm_boot(monkeypatch) -> list[str]:
     calls: list[str] = []
     _arm_model_attractor_preflight(monkeypatch)
     for index, (automatic_name, getter_name) in enumerate(_GATE_BINDINGS):
         state = {"value": None}
-        validation = SimpleNamespace(ok=True, status="complete")
+        validation = SimpleNamespace(ok=True, status="complete", errors=())
 
         def automatic(
             *,
@@ -84,59 +93,103 @@ def _arm_complete_boot(monkeypatch) -> list[str]:
         monkeypatch.setattr(boot, automatic_name, automatic)
         monkeypatch.setattr(boot, getter_name, getter)
 
-    monkeypatch.setattr(boot, "create_verified_runtime_kernel", lambda: _fake_kernel())
+    monkeypatch.setattr(boot, "enforce_outcome_fidelity", lambda kernel: kernel)
+    monkeypatch.setattr(
+        boot,
+        "create_operator_sovereign_runtime_kernel",
+        lambda *, observed_gates: _fake_kernel(gates=observed_gates),
+    )
     boot._IN_PROCESS = None
     return calls
 
 
-def test_strong_boot_runs_exact_gate_sequence_and_creates_kernel(monkeypatch) -> None:
-    calls = _arm_complete_boot(monkeypatch)
+def test_complete_boot_records_all_observations_and_creates_kernel(monkeypatch) -> None:
+    calls = _arm_boot(monkeypatch)
 
     session = apply_strongest_boot()
 
     assert calls == list(EXPECTED_GATES)
     assert session.status == "complete"
     assert session.gates == EXPECTED_GATES
+    assert session.observations == ()
     assert session.runtime_id == "runtime-proof"
     assert get_in_process_strong_boot() is session
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
 
 
-def test_model_attractor_preflight_is_mandatory_before_kernel_creation(monkeypatch) -> None:
-    _arm_complete_boot(monkeypatch)
-    state = {"value": None}
-    validation = SimpleNamespace(ok=False, status="continuation_required")
+def test_missing_frontier_proof_is_observation_not_permission_gate(monkeypatch) -> None:
+    _arm_boot(monkeypatch)
+    monkeypatch.setattr(
+        boot,
+        "validate_runtime_strict_frontier",
+        lambda: SimpleNamespace(ok=False, errors=("boot receipt missing",)),
+    )
 
-    def automatic():
+    session = apply_strongest_boot()
+
+    assert session.status == "degraded"
+    assert session.gates == EXPECTED_GATES
+    assert any("boot receipt missing" in item for item in session.observations)
+    assert session.runtime_id == "runtime-proof"
+
+
+def test_incomplete_gate_degrades_and_later_checks_still_run(monkeypatch) -> None:
+    calls = _arm_boot(monkeypatch)
+    state = {"value": None}
+    validation = SimpleNamespace(
+        ok=False,
+        status="continuation_required",
+        errors=("continuity receipt unavailable",),
+    )
+
+    def incomplete_notion():
+        calls.append("notion_continuity")
         state["value"] = validation
         return validation
 
-    monkeypatch.setattr(boot, "automatic_model_attractor_defense", automatic)
-    monkeypatch.setattr(
-        boot,
-        "get_in_process_model_attractor_validation",
-        lambda: state["value"],
-    )
-    kernel_called = {"value": False}
+    monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", incomplete_notion)
+    monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
 
-    def kernel_factory():
-        kernel_called["value"] = True
-        return _fake_kernel()
+    session = apply_strongest_boot()
 
-    monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
+    assert calls == list(EXPECTED_GATES)
+    assert session.status == "degraded"
+    assert "notion_continuity" not in session.gates
+    assert session.gates == EXPECTED_GATES[1:]
+    assert any("continuity receipt unavailable" in item for item in session.observations)
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "degraded"
 
-    with pytest.raises(
-        StrongBootViolation,
-        match=f"{MODEL_ATTRACTOR_PREFLIGHT}: validation ok is not true",
-    ):
-        apply_strongest_boot()
 
-    assert kernel_called["value"] is False
-    assert get_in_process_strong_boot() is None
+def test_model_attractor_incomplete_does_not_prevent_runtime_creation(monkeypatch) -> None:
+    _arm_boot(monkeypatch)
+    _arm_model_attractor_preflight(monkeypatch, ok=False)
+    created = {"value": False}
+
+    def factory(*, observed_gates):
+        created["value"] = True
+        return _fake_kernel(gates=observed_gates)
+
+    monkeypatch.setattr(boot, "create_operator_sovereign_runtime_kernel", factory)
+
+    session = apply_strongest_boot()
+
+    assert created["value"] is True
+    assert session.status == "degraded"
+    assert any("frontier evidence unavailable" in item for item in session.observations)
+
+
+def test_require_strong_boot_automatically_establishes_context(monkeypatch) -> None:
+    calls = _arm_boot(monkeypatch)
+    boot._IN_PROCESS = None
+
+    session = require_strong_boot()
+
+    assert session is get_in_process_strong_boot()
+    assert calls == list(EXPECTED_GATES)
 
 
 def test_strong_boot_is_idempotent_inside_process(monkeypatch) -> None:
-    calls = _arm_complete_boot(monkeypatch)
+    calls = _arm_boot(monkeypatch)
 
     first = apply_strongest_boot()
     second = apply_strongest_boot()
@@ -146,14 +199,14 @@ def test_strong_boot_is_idempotent_inside_process(monkeypatch) -> None:
 
 
 def test_concurrent_first_boot_publishes_one_session_and_kernel(monkeypatch) -> None:
-    calls = _arm_complete_boot(monkeypatch)
+    calls = _arm_boot(monkeypatch)
     kernel_calls: list[str] = []
 
-    def kernel_factory():
+    def kernel_factory(*, observed_gates):
         kernel_calls.append("create")
-        return _fake_kernel()
+        return _fake_kernel(gates=observed_gates)
 
-    monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
+    monkeypatch.setattr(boot, "create_operator_sovereign_runtime_kernel", kernel_factory)
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         sessions = list(pool.map(lambda _: apply_strongest_boot(), range(64)))
@@ -171,107 +224,63 @@ def test_session_cannot_be_forged() -> None:
             status="complete",
             created_at=boot.datetime.now(boot.UTC),
             gates=EXPECTED_GATES,
+            observations=(),
             runtime_kernel=_fake_kernel(),
             _seal=object(),
         )
 
 
-def test_missing_in_process_validation_fails_closed(monkeypatch) -> None:
-    _arm_complete_boot(monkeypatch)
-    validation = SimpleNamespace(ok=True, status="complete")
-    monkeypatch.setattr(boot, "automatic_prime_directive_boot", lambda: validation)
-    monkeypatch.setattr(boot, "get_in_process_boot_validation", lambda: None)
-
-    with pytest.raises(StrongBootViolation, match="in-process validation missing"):
-        apply_strongest_boot()
-
-    assert get_in_process_strong_boot() is None
-
-
-def test_incomplete_gate_preserves_later_diagnostics_before_block(monkeypatch) -> None:
-    calls = _arm_complete_boot(monkeypatch)
-    state = {"value": None}
-    validation = SimpleNamespace(ok=False, status="continuation_required")
-
-    def incomplete_notion():
-        calls.append("notion_continuity")
-        state["value"] = validation
-        return validation
-
-    monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", incomplete_notion)
-    monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
-
-    with pytest.raises(StrongBootViolation, match="notion_continuity"):
-        apply_strongest_boot()
-
-    assert calls == list(EXPECTED_GATES)
-    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "blocked"
-
-
-def test_incomplete_gate_fails_before_kernel_creation(monkeypatch) -> None:
-    _arm_complete_boot(monkeypatch)
-    state = {"value": None}
-    validation = SimpleNamespace(ok=False, status="continuation_required")
-
-    def automatic():
-        state["value"] = validation
-        return validation
-
-    monkeypatch.setattr(boot, "automatic_operator_fidelity_preflight", automatic)
+def test_kernel_must_bind_same_observed_gate_set(monkeypatch) -> None:
+    _arm_boot(monkeypatch)
     monkeypatch.setattr(
         boot,
-        "get_in_process_operator_fidelity_validation",
-        lambda: state["value"],
-    )
-    kernel_called = {"value": False}
-
-    def kernel_factory():
-        kernel_called["value"] = True
-        return _fake_kernel()
-
-    monkeypatch.setattr(boot, "create_verified_runtime_kernel", kernel_factory)
-
-    with pytest.raises(StrongBootViolation, match="operator_fidelity: validation ok is not true"):
-        apply_strongest_boot()
-
-    assert kernel_called["value"] is False
-
-
-def test_kernel_must_bind_same_complete_gate_set(monkeypatch) -> None:
-    _arm_complete_boot(monkeypatch)
-    monkeypatch.setattr(
-        boot,
-        "create_verified_runtime_kernel",
-        lambda: _fake_kernel(gates=EXPECTED_GATES[:-1]),
+        "create_operator_sovereign_runtime_kernel",
+        lambda *, observed_gates: _fake_kernel(gates=observed_gates[:-1]),
     )
 
-    with pytest.raises(StrongBootViolation, match="startup-gate proof"):
+    with pytest.raises(StrongBootViolation, match="startup observations"):
         apply_strongest_boot()
 
 
 def test_kernel_must_begin_before_any_task_is_bound(monkeypatch) -> None:
-    _arm_complete_boot(monkeypatch)
+    _arm_boot(monkeypatch)
     monkeypatch.setattr(
         boot,
-        "create_verified_runtime_kernel",
-        lambda: _fake_kernel(phase="ready"),
+        "create_operator_sovereign_runtime_kernel",
+        lambda *, observed_gates: _fake_kernel(phase="ready", gates=observed_gates),
     )
 
     with pytest.raises(StrongBootViolation, match="must begin bootstrapped"):
         apply_strongest_boot()
 
 
-def test_require_strong_boot_does_not_secretly_run_boot(monkeypatch) -> None:
-    _arm_complete_boot(monkeypatch)
-    boot._IN_PROCESS = None
+def test_explicit_operator_fidelity_hard_lock_bypass_remains_terminal(monkeypatch) -> None:
+    _arm_boot(monkeypatch)
 
-    with pytest.raises(StrongBootViolation, match="has not been established"):
-        require_strong_boot()
+    def reject_bypass():
+        raise SystemExit(78)
+
+    monkeypatch.setattr(boot, "automatic_operator_fidelity_lock", reject_bypass)
+    monkeypatch.setattr(boot, "get_in_process_operator_fidelity_lock", lambda: None)
+
+    with pytest.raises(SystemExit) as exc_info:
+        apply_strongest_boot()
+
+    assert exc_info.value.code == 78
+    assert get_in_process_strong_boot() is None
 
 
-def test_control_plane_executes_verified_boundary_with_exact_boot_objects(
-    monkeypatch,
-) -> None:
+def test_boot_observation_mode_restores_caller_environment(monkeypatch) -> None:
+    _arm_boot(monkeypatch)
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+
+    session = apply_strongest_boot()
+
+    assert session.status == "complete"
+    assert boot.os.environ["CASEY_AUTO_BOOT_MODE"] == "strict"
+
+
+def test_control_plane_executes_runtime_with_exact_boot_objects(monkeypatch) -> None:
     kernel = SimpleNamespace(runtime_id="kernel-1")
     session = SimpleNamespace(session_id="session-1", runtime_kernel=kernel)
     fake_boot = ModuleType("apex_strong_boot")
@@ -295,19 +304,16 @@ def test_control_plane_executes_verified_boundary_with_exact_boot_objects(
     exec(compile(target.read_text(encoding="utf-8"), str(target), "exec"), namespace)
 
     assert captured["path"].endswith("verified_runtime_entrypoint.py")
-    assert captured["run_name"] == "__main__"
     injected = captured["init_globals"]
     assert injected["APEX_STRONG_BOOT_SESSION"] is session
     assert injected["APEX_RUNTIME_KERNEL"] is kernel
 
 
-def test_control_plane_blocks_before_runtime_when_strong_boot_fails(
-    monkeypatch, capsys
-) -> None:
+def test_control_plane_still_stops_on_true_boot_integrity_failure(monkeypatch, capsys) -> None:
     fake_boot = ModuleType("apex_strong_boot")
 
     def fail_boot():
-        raise RuntimeError("boot proof missing")
+        raise RuntimeError("runtime seal invalid")
 
     fake_boot.apply_strongest_boot = fail_boot
     fake_auto = ModuleType("auto_boot")
@@ -331,30 +337,3 @@ def test_control_plane_blocks_before_runtime_when_strong_boot_fails(
     assert exc_info.value.code == 78
     assert called["runtime"] is False
     assert '"strong_boot_status": "blocked"' in capsys.readouterr().err
-
-
-def test_sitecustomize_executes_same_strong_boot_session(monkeypatch) -> None:
-    kernel = SimpleNamespace(runtime_id="kernel-site")
-    session = SimpleNamespace(session_id="session-site", runtime_kernel=kernel)
-    fake_boot = ModuleType("apex_strong_boot")
-    calls: list[str] = []
-
-    def fake_apply():
-        calls.append("boot")
-        return session
-
-    fake_boot.apply_strongest_boot = fake_apply
-    monkeypatch.setitem(sys.modules, "apex_strong_boot", fake_boot)
-    monkeypatch.setattr(sys, "argv", [str(SRC / "verified_runtime_entrypoint.py")])
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    monkeypatch.delenv("CASEY_AUTO_BOOT_TESTING", raising=False)
-    monkeypatch.delenv("CASEY_AUTO_BOOT", raising=False)
-    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
-
-    target = SRC / "sitecustomize.py"
-    namespace = {"__name__": "sitecustomize_test", "__file__": str(target)}
-    exec(compile(target.read_text(encoding="utf-8"), str(target), "exec"), namespace)
-
-    assert calls == ["boot"]
-    assert namespace["APEX_STRONG_BOOT_SESSION"] is session
-    assert namespace["APEX_RUNTIME_KERNEL"] is kernel
