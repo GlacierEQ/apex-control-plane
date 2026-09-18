@@ -93,8 +93,8 @@ def _receipt() -> dict:
                 "preserves_prior_valid_gain": True,
                 "maximum_coherent_advance": True,
                 "pro_code_elite_humanized_engineered": True,
-                "functional_advance": "hard runtime fidelity lock with semantic inspection",
-                "strongest_coherent_path": "runtime is rejected before loading on fidelity failure",
+                "functional_advance": "source-bound fidelity enrichment with semantic inspection",
+                "strongest_coherent_path": "runtime carries unresolved fidelity evidence as diagnostics while preserving task-level consequence controls",
             },
             "next_ceiling": "propagate enforcement across every execution entrypoint",
         }
@@ -115,7 +115,7 @@ def test_request_mode_without_receipt_yields_non_authorizing_continuation(monkey
     assert validation.status == "continuation_required"
     assert "boot receipt" in validation.errors[0]
     assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in lock.os.environ
 
 
 def test_strict_compatibility_mode_without_receipt_yields_continuation(monkeypatch) -> None:
@@ -127,11 +127,11 @@ def test_strict_compatibility_mode_without_receipt_yields_continuation(monkeypat
     assert validation.ok is False
     assert validation.status == "continuation_required"
     assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in lock.os.environ
 
 
-def test_disable_flag_records_continuation_then_terminates_fail_closed(
-    monkeypatch, tmp_path, capsys
+def test_disable_flag_records_epistemic_continuation_without_veto(
+    monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setattr(lock, "_testing", lambda: False)
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
@@ -139,20 +139,19 @@ def test_disable_flag_records_continuation_then_terminates_fail_closed(
     monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     lock._IN_PROCESS = None
 
-    with pytest.raises(SystemExit) as exc_info:
-        lock.automatic_operator_fidelity_lock()
+    validation = lock.automatic_operator_fidelity_lock()
 
-    assert exc_info.value.code == lock.EXIT_BOOT_BLOCKED
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity" in captured.err
+    assert validation is not None
+    assert validation.ok is False
+    assert validation.status == "continuation_required"
+    assert "cannot disable operator fidelity" in validation.errors[0]
     assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in lock.os.environ
     assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
-def test_off_mode_records_continuation_then_terminates_fail_closed(
-    monkeypatch, tmp_path, capsys
+def test_off_mode_records_epistemic_continuation_without_veto(
+    monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setattr(lock, "_testing", lambda: False)
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "off")
@@ -160,15 +159,14 @@ def test_off_mode_records_continuation_then_terminates_fail_closed(
     monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     lock._IN_PROCESS = None
 
-    with pytest.raises(SystemExit) as exc_info:
-        lock.automatic_operator_fidelity_lock()
+    validation = lock.automatic_operator_fidelity_lock()
 
-    assert exc_info.value.code == lock.EXIT_BOOT_BLOCKED
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity" in captured.err
+    assert validation is not None
+    assert validation.ok is False
+    assert validation.status == "continuation_required"
+    assert "cannot disable operator fidelity" in validation.errors[0]
     assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "continuation_required"
-    assert lock.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in lock.os.environ
     assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
