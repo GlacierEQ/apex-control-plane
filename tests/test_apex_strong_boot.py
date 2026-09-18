@@ -169,7 +169,7 @@ def test_session_cannot_be_forged() -> None:
         )
 
 
-def test_missing_in_process_validation_is_preserved_as_diagnostic(monkeypatch) -> None:
+def test_returned_validation_is_accepted_without_global_publication(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     validation = SimpleNamespace(ok=True, status="complete")
     monkeypatch.setattr(boot, "automatic_prime_directive_boot", lambda: validation)
@@ -177,7 +177,8 @@ def test_missing_in_process_validation_is_preserved_as_diagnostic(monkeypatch) -
 
     session = apply_strongest_boot()
 
-    assert any("prime_directive: in-process validation missing" in item for item in session.diagnostics)
+    assert session.status == "complete"
+    assert not any("prime_directive" in item for item in session.diagnostics)
     assert get_in_process_strong_boot() is session
 
 
