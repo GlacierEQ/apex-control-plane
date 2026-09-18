@@ -30,6 +30,19 @@
       "readback"
     ]
   },
+  "outbound_claim_invariants": {
+    "guard_required_before_response_emission": true,
+    "execution_language_requires_typed_claims": true,
+    "current_provider_state_requires_current_run_read_receipt": true,
+    "current_provider_hash_requires_receipt_hash_match": true,
+    "current_provider_identifier_requires_receipt_binding": true,
+    "current_mutation_requires_verified_execution_and_terminal_readback": true,
+    "historical_state_requires_explicit_historical_reference": true,
+    "historical_state_must_not_be_represented_as_current_run": true,
+    "absence_claims_fail_closed_without_exhaustive_search_proof": true,
+    "latest_claims_fail_closed_without_ordering_proof": true,
+    "unadmitted_receipt_references_are_runtime_violations": true
+  },
   "mutation_lifecycle": [
     "ready",
     "executing",
