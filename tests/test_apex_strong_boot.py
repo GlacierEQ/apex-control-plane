@@ -232,7 +232,7 @@ def test_kernel_must_bind_same_complete_gate_set(monkeypatch) -> None:
         lambda: _fake_kernel(gates=EXPECTED_GATES[:-1]),
     )
 
-    with pytest.raises(StrongBootViolation, match="startup-gate proof"):
+    with pytest.raises(StrongBootViolation, match="startup-check set"):
         apply_strongest_boot()
 
 
