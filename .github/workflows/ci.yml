@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   operator-fidelity:
-    name: Operator fidelity hard stop
+    name: Operator fidelity enrichment
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -52,40 +52,30 @@ jobs:
             tests/test_operator_fidelity_preflight.py \
             tests/test_operator_trust_root_policy.py
 
-      - name: Prove runtime fails closed without fidelity receipt
+      - name: Prove missing fidelity receipt enriches without global veto
         shell: bash
         run: |
-          set +e
-          CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/fidelity.out 2>/tmp/fidelity.err
-          status=$?
-          set -e
-          if [[ "$status" -ne 78 ]]; then
-            cat /tmp/fidelity.out || true
-            cat /tmp/fidelity.err || true
-            echo "expected fail-closed exit 78, received $status" >&2
-            exit 1
-          fi
-          test ! -s /tmp/fidelity.out
+          CASEY_AUTO_BOOT_TESTING=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src:. python - <<'PY'
+          import operator_fidelity_lock as lock
+          lock._IN_PROCESS = None
+          result = lock.automatic_operator_fidelity_lock()
+          assert result is not None
+          assert result.ok is False
+          assert result.status == "continuation_required"
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in lock.os.environ
+          PY
 
-      - name: Prove environment disable cannot bypass fidelity
+      - name: Prove disable requests preserve evidence without terminating runtime
         shell: bash
         run: |
-          set +e
           CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; r=automatic_operator_fidelity_lock(); assert r.status=="continuation_required"' \
             >/tmp/disable.out 2>/tmp/disable.err
-          disable_status=$?
           CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
+            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; r=automatic_operator_fidelity_lock(); assert r.status=="continuation_required"' \
             >/tmp/off.out 2>/tmp/off.err
-          off_status=$?
-          set -e
-          test "$disable_status" -eq 78
-          test "$off_status" -eq 78
           grep -q 'cannot disable operator fidelity' /tmp/disable.err
           grep -q 'cannot disable operator fidelity' /tmp/off.err
-          test ! -s /tmp/disable.out
-          test ! -s /tmp/off.out
 
   estate-registry:
     name: Estate registry quality
@@ -114,7 +104,7 @@ jobs:
       - name: Install quality tools
         run: python -m pip install --upgrade ruff mypy pytest
 
-      - name: Operator fidelity lock inside legacy required surface
+      - name: Operator fidelity enrichment inside legacy compatibility surface
         run: |
           python -m py_compile src/operator_fidelity_lock.py src/operator_fidelity_preflight.py
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
