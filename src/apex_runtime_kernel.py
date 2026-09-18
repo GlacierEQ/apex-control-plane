@@ -119,8 +119,8 @@ class ApexRuntimeKernel:
 
     policy: Mapping[str, Any]
     startup_gates: tuple[str, ...]
-    startup_diagnostics: tuple[str, ...] = ()
     _seal: object = field(repr=False)
+    startup_diagnostics: tuple[str, ...] = ()
     runtime_id: str = field(default_factory=lambda: str(uuid4()))
     phase: RuntimePhase = RuntimePhase.BOOTSTRAPPED
     _task: _TaskState | None = field(default=None, repr=False)
