@@ -13,19 +13,19 @@ import auto_boot  # noqa: E402
 from startup_continuation import record_startup_continuation  # noqa: E402
 
 
-def test_continuation_record_is_durable_non_authorizing_and_hash_bound(tmp_path, monkeypatch) -> None:
+def test_continuation_record_is_durable_epistemic_and_hash_bound(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     record = record_startup_continuation(
         "operator fidelity / preflight",
         ("missing receipt",),
-        request={"request_type": "operator_fidelity", "external_action_authorized": False},
+        request={"request_type": "operator_fidelity"},
         environment_key="GLACIEREQ_OPERATOR_FIDELITY_STATUS",
     )
 
     assert record["status"] == "continuation_required"
     assert record["gate"] == "operator_fidelity___preflight"
-    assert record["local_recovery_authorized"] is True
-    assert record["external_action_authorized"] is False
+    assert record["authority_effect"] == "none"
+    assert record["claim_effect"] == "epistemic_enrichment_only"
     assert record["record_sha256"]
     assert record["persistence"] == "durable_local_record"
     persisted = json.loads((tmp_path / f"{record['gate']}-{record['continuation_id'][:16]}.json").read_text(encoding="utf-8"))
@@ -45,7 +45,7 @@ def test_automatic_boot_strict_compatibility_mode_returns_continuation(tmp_path,
     assert validation.ok is False
     assert validation.status == "continuation_required"
     assert auto_boot.os.environ["CASEY_BOOT_STATUS"] == "continuation_required"
-    assert auto_boot.os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] == "0"
+    assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in auto_boot.os.environ
     records = list(tmp_path.glob("auto_boot-*.json"))
     assert len(records) == 1
     record = json.loads(records[0].read_text(encoding="utf-8"))
