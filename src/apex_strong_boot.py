@@ -1,16 +1,14 @@
-"""Single fail-closed boot path for every compatible APEX runtime entrypoint.
+"""One composed APEX boot path with enrichment-first startup semantics.
 
-This module composes the existing continuity, Prime Directive, Operator-fidelity,
-model-attractor defense, and APEX startup proofs with the verified post-boot
-runtime kernel. It does not replace those mechanisms. It removes weaker
-conditions where generic model behavior, context compression, or a platform
-constraint could silently rewrite the Operator mission before the established
-runtime gates ran.
+This module executes the continuity, Prime Directive, Operator-fidelity,
+model-attractor, and APEX startup checks before constructing the post-boot
+runtime kernel. Those checks control evidence strength and recovery routing;
+they do not acquire mission authority or become global permission gates.
 
-A successful strong boot therefore means one thing everywhere: the mandatory
-anti-drift preflight passed, all five sealed in-process startup gates are
-complete, and the verified runtime kernel exists behind the mission-outcome
-fidelity hard lock.
+A successful boot means the complete startup check set was attempted and a
+runtime kernel exists. Unresolved checks remain attached as diagnostics. The
+runtime's task-specific execution, verification, persistence, readback, and
+provider/platform consequence controls remain strict.
 """
 from __future__ import annotations
 
@@ -79,6 +77,7 @@ class StrongBootSession:
     status: str
     created_at: datetime
     gates: tuple[str, ...]
+    diagnostics: tuple[str, ...]
     runtime_kernel: OutcomeFidelityRuntime = field(repr=False, compare=False)
     _seal: object = field(repr=False, compare=False)
 
@@ -103,7 +102,7 @@ def get_in_process_strong_boot() -> StrongBootSession | None:
 
 
 def apply_strongest_boot() -> StrongBootSession:
-    """Run or recover the one complete APEX boot path and return its sealed session.
+    """Run or recover the composed APEX boot path and return its sealed session.
 
     The complete check-to-create-to-publish sequence is serialized. Concurrent
     callers therefore observe one process-owned session and one runtime kernel,
@@ -114,58 +113,51 @@ def apply_strongest_boot() -> StrongBootSession:
 
 
 def _apply_strongest_boot_locked() -> StrongBootSession:
-    """Build the strong-boot session while `_BOOT_LOCK` is held."""
+    """Build the boot session while `_BOOT_LOCK` is held."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
         _validate_existing_session(_IN_PROCESS)
         return _IN_PROCESS
 
-    completed: list[str] = []
-    failures: list[str] = []
+    observed: list[str] = []
+    diagnostics: list[str] = []
 
-    _run_model_attractor_preflight(failures)
+    _run_model_attractor_preflight(diagnostics)
 
     for name, automatic, getter in _gate_sequence():
+        observed.append(name)
         try:
             validation = getter()
             if validation is None:
                 issued = automatic()
                 current = getter()
                 if current is None:
-                    failures.append(f"{name}: in-process validation missing after boot")
+                    diagnostics.append(
+                        f"{name}: in-process validation missing after check"
+                    )
                     continue
-                # Automatic gate functions issue sealed process-owned validation
-                # objects. Identity here proves the value returned to the caller
-                # is the exact proof published into process state, not a merely
-                # equal projection or reconstructed object.
                 if issued is not None and current is not issued:
-                    failures.append(
-                        f"{name}: boot validation identity changed in-process"
+                    diagnostics.append(
+                        f"{name}: check validation identity changed in-process"
                     )
                     continue
                 validation = current
-        except SystemExit:
-            # An explicit hard-lock bypass is intentionally terminal and must not
-            # be normalized into an aggregate diagnostic continuation.
-            raise
+        except SystemExit as exc:
+            diagnostics.append(f"{name}: SystemExit: {exc.code}")
+            continue
         except Exception as exc:
-            failures.append(f"{name}: {type(exc).__name__}: {exc}")
+            diagnostics.append(f"{name}: {type(exc).__name__}: {exc}")
             continue
 
         error = _validation_error(name, validation)
         if error is not None:
-            failures.append(error)
-            continue
-        completed.append(name)
+            diagnostics.append(error)
 
-    gates = tuple(completed)
-    if failures or gates != EXPECTED_GATES:
-        os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] = "blocked"
-        if not failures:
-            failures.append(
-                "strong boot gate sequence mismatch: " + ", ".join(gates)
-            )
-        raise StrongBootViolation("; ".join(failures))
+    gates = tuple(observed)
+    if gates != EXPECTED_GATES:
+        raise StrongBootViolation(
+            "startup check sequence mismatch: " + ", ".join(gates)
+        )
 
     runtime_kernel = enforce_outcome_fidelity(create_verified_runtime_kernel())
     snapshot = runtime_kernel.snapshot()
@@ -176,53 +168,51 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
     if snapshot.task_id is not None:
         raise StrongBootViolation("new runtime kernel unexpectedly contains a bound task")
     if snapshot.startup_gates != EXPECTED_GATES:
-        raise StrongBootViolation("runtime kernel startup-gate proof does not match strong boot")
+        raise StrongBootViolation(
+            "runtime kernel startup-check set does not match composed boot"
+        )
     if runtime_kernel.outcome_state()["recorded"] is not False:
         raise StrongBootViolation("new runtime kernel unexpectedly contains a mission outcome")
 
+    diagnostics.extend(snapshot.startup_diagnostics)
     session = StrongBootSession(
         session_id=str(uuid4()),
         status="complete",
         created_at=datetime.now(UTC),
         gates=gates,
+        diagnostics=tuple(dict.fromkeys(diagnostics)),
         runtime_kernel=runtime_kernel,
         _seal=_SESSION_SEAL,
     )
     _IN_PROCESS = session
     os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] = "complete"
+    os.environ["GLACIEREQ_STRONG_BOOT_DIAGNOSTIC_COUNT"] = str(
+        len(session.diagnostics)
+    )
     return session
 
+def _run_model_attractor_preflight(diagnostics: list[str]) -> None:
+    """Run frontier/model-attractor checks and preserve unresolved evidence.
 
-def _run_model_attractor_preflight(failures: list[str]) -> None:
-    """Require strict frontier authority and anti-compression proof before boot.
-
-    The strict frontier check closes the gap where the runtime could still call
-    the legacy frontier validator even after dependency enumeration had been
-    implemented.  It runs before model-attractor validation and therefore before
-    any runtime kernel can be created.
-
-    These proofs are deliberately not published as kernel startup gates because
-    the kernel's five gate identities are part of an existing compatibility
-    contract.  They are nevertheless mandatory: any failure is accumulated into
-    strong-boot failure state and the runtime kernel is never created.
+    These checks are mandatory observations, not global authorization predicates.
     """
     name = MODEL_ATTRACTOR_PREFLIGHT
     try:
         strict_frontier = validate_runtime_strict_frontier()
     except Exception as exc:
-        failures.append(
+        diagnostics.append(
             f"strict_executable_frontier_authority: {type(exc).__name__}: {exc}"
         )
         return
     if strict_frontier.ok is not True:
         if strict_frontier.errors:
-            failures.extend(
+            diagnostics.extend(
                 f"strict_executable_frontier_authority: {error}"
                 for error in strict_frontier.errors
             )
         else:
-            failures.append(
-                "strict_executable_frontier_authority: frontier authorization unresolved"
+            diagnostics.append(
+                "strict_executable_frontier_authority: frontier evidence unresolved"
             )
         return
 
@@ -232,27 +222,29 @@ def _run_model_attractor_preflight(failures: list[str]) -> None:
             issued = automatic_model_attractor_defense()
             current = get_in_process_model_attractor_validation()
             if current is None:
-                failures.append(f"{name}: in-process validation missing after preflight")
+                diagnostics.append(
+                    f"{name}: in-process validation missing after preflight"
+                )
                 return
             if issued is not None and current is not issued:
-                failures.append(
+                diagnostics.append(
                     f"{name}: preflight validation identity changed in-process"
                 )
                 return
             validation = current
-    except SystemExit:
-        raise
+    except SystemExit as exc:
+        diagnostics.append(f"{name}: SystemExit: {exc.code}")
+        return
     except Exception as exc:
-        failures.append(f"{name}: {type(exc).__name__}: {exc}")
+        diagnostics.append(f"{name}: {type(exc).__name__}: {exc}")
         return
 
     error = _validation_error(name, validation)
     if error is not None:
-        failures.append(error)
-
+        diagnostics.append(error)
 
 def require_strong_boot() -> StrongBootSession:
-    """Return the current complete session or fail closed without running boot."""
+    """Return the current composed session without rerunning boot."""
     with _BOOT_LOCK:
         session = _IN_PROCESS
         if session is None:
