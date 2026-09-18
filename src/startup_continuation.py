@@ -1,9 +1,10 @@
-"""Durable continuation records for recoverable APEX startup prerequisites.
+"""Durable continuation records for unresolved APEX startup evidence.
 
 Startup validation remains strict about evidence. When evidence is missing or
-incomplete, this module records the exact recovery path instead of terminating
-the Python process. A continuation is non-authorizing: it enables diagnosis and
-receipt repair, never external mutation.
+incomplete, this module records the exact recovery path without turning that
+epistemic condition into a global permission decision. A continuation neither
+grants nor revokes task authority; consequence-specific controls remain local to
+the action they own.
 """
 from __future__ import annotations
 
@@ -43,7 +44,7 @@ def record_startup_continuation(
     request: Mapping[str, Any] | None = None,
     environment_key: str | None = None,
 ) -> Mapping[str, Any]:
-    """Record a non-authorizing startup recovery receipt and expose its identity."""
+    """Record unresolved startup evidence without acquiring mission authority."""
     normalized_errors = tuple(str(error) for error in errors if str(error).strip()) or ("startup prerequisite incomplete",)
     gate_id = _safe_gate(gate)
     body: dict[str, Any] = {
@@ -57,8 +58,8 @@ def record_startup_continuation(
             "revalidate_startup_evidence",
             "resume_highest_value_non_mutating_recovery",
         ],
-        "local_recovery_authorized": True,
-        "external_action_authorized": False,
+        "authority_effect": "none",
+        "claim_effect": "epistemic_enrichment_only",
         "recorded_at": time.time(),
     }
     if request is not None:
@@ -84,13 +85,13 @@ def record_startup_continuation(
     body["persistence"] = persistence
 
     os.environ["GLACIEREQ_STARTUP_CONTINUATION_STATUS"] = "continuation_required"
-    os.environ["GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED"] = "0"
+    os.environ.pop("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED", None)
     if environment_key:
         os.environ[environment_key] = "continuation_required"
     return body
 
 
 def emit_startup_continuation(record: Mapping[str, Any]) -> None:
-    """Emit structured recovery data without treating it as execution authorization."""
+    """Emit structured recovery data without treating it as global authorization."""
     print(json.dumps(dict(record), ensure_ascii=False, sort_keys=True), file=sys.stderr)
     sys.stderr.flush()
