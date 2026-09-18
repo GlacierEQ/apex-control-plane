@@ -1,19 +1,15 @@
-"""Fail-closed postcondition gate for APEX mutation work.
+"""Fail-closed postcondition and route/scope fidelity runtime for APEX.
 
-The existing runtime proves that work was executed, tested, verified, persisted,
-and read back. That lifecycle is necessary but insufficient: assistant-authored
-artifacts can satisfy those mechanics while the Operator's underlying mission
-state remains unchanged.
+The verified kernel proves that work was executed, tested, verified, persisted,
+and read back. This wrapper additionally proves two independent invariants:
 
-This wrapper closes that gap. Mutation work cannot enter persistence until it has
-an explicit, source-bearing mission outcome proving either:
+1. assistant activity is not mission progress; and
+2. a route is not the mission.
 
-1. a substantive transition in the underlying mission state; or
-2. exhaustion of materially available internal routes to a genuine external
-   boundary.
-
-Creating a ledger, matrix, packet, summary, report, plan, commit, or task update
-is never accepted as the mission outcome merely because it is durable or tested.
+A tool/provider/path failure may mutate route state, but it cannot defer, remove,
+skip, or otherwise narrow the Operator's objective. A temporary route skip is
+sequencing only. Objective deferment/removal requires explicit source-bearing
+Operator authority.
 """
 from __future__ import annotations
 
@@ -22,6 +18,11 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from apex_runtime_kernel import ApexRuntimeKernel, RuntimePhase, RuntimeViolation, TaskMode
+from route_scope_fidelity import (
+    ObjectiveState,
+    RouteScopeFidelity,
+    RouteScopeViolation,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +30,7 @@ DEFAULT_POLICY_PATH = REPO_ROOT / "config" / "outcome_fidelity_policy.json"
 
 
 class OutcomeFidelityViolation(RuntimeViolation):
-    """Raised when assistant activity is presented as mission progress."""
+    """Raised when assistant activity or route state is presented as mission state."""
 
 
 def _require_text(value: Any, field_name: str) -> str:
@@ -82,6 +83,7 @@ def load_outcome_fidelity_policy(
         "boundary_requires_routes_exhausted",
         "boundary_requires_reason",
         "boundary_requires_evidence",
+        "route_scope_invariant",
     }
     missing = sorted(required - payload.keys())
     if missing:
@@ -114,11 +116,19 @@ def load_outcome_fidelity_policy(
             "transition kinds cannot be both allowed and activity-only: "
             + ", ".join(sorted(overlap))
         )
+
+    route_policy = payload.get("route_scope_invariant")
+    if not isinstance(route_policy, Mapping):
+        raise OutcomeFidelityViolation("route_scope_invariant must be an object")
+    try:
+        RouteScopeFidelity(route_policy)
+    except RouteScopeViolation as exc:
+        raise OutcomeFidelityViolation(str(exc)) from exc
     return payload
 
 
 class OutcomeFidelityRuntime:
-    """Verified-kernel proxy that hard-locks mission postconditions."""
+    """Verified-kernel proxy that hard-locks mission and route/scope semantics."""
 
     def __init__(
         self,
@@ -126,11 +136,17 @@ class OutcomeFidelityRuntime:
         policy: Mapping[str, Any] | None = None,
     ) -> None:
         # Production strong boot supplies ApexRuntimeKernel. Duck-typed test
-        # doubles are deliberately allowed so the boot sequencing tests can stay
-        # isolated from runtime internals; execution-path methods still fail if a
-        # double lacks the verified kernel contract they call.
+        # doubles are deliberately allowed so boot sequencing tests remain
+        # isolated from runtime internals.
         self._kernel = kernel
         self._policy = dict(policy or load_outcome_fidelity_policy())
+        route_policy = self._policy.get("route_scope_invariant")
+        if not isinstance(route_policy, Mapping):
+            raise OutcomeFidelityViolation("route_scope_invariant must be an object")
+        try:
+            self._route_scope = RouteScopeFidelity(route_policy)
+        except RouteScopeViolation as exc:
+            raise OutcomeFidelityViolation(str(exc)) from exc
         self._outcome_recorded = False
         self._outcome_kind: str | None = None
         self._outcome_reference: str | None = None
@@ -150,7 +166,205 @@ class OutcomeFidelityRuntime:
         self._outcome_recorded = False
         self._outcome_kind = None
         self._outcome_reference = None
+        self._route_scope.reset()
         return self._kernel.bind_task(**kwargs)
+
+    def select_execution_route(
+        self,
+        reference: str,
+        *,
+        route_ref: str,
+        details: Mapping[str, Any] | None = None,
+    ):
+        """Select an execution route without changing Operator-owned mission state."""
+        receipt_ref = _require_ref(reference, "reference")
+        route = _require_ref(route_ref, "route_ref")
+        try:
+            state = self._route_scope.select_route(route)
+        except RouteScopeViolation as exc:
+            raise OutcomeFidelityViolation(str(exc)) from exc
+        payload = dict(details or {})
+        payload.update(
+            {
+                "route_ref": route,
+                "route_state": "selected",
+                "objective_state": state.objective_state,
+            }
+        )
+        self._kernel._record_receipt("route_selection", receipt_ref, True, payload)
+        self._kernel._audit_event("execution_route_selected")
+        return self._kernel.snapshot()
+
+    def record_route_failure(
+        self,
+        reference: str,
+        *,
+        route_ref: str,
+        reason: str,
+        alternate_route_ref: str | None = None,
+        details: Mapping[str, Any] | None = None,
+    ):
+        """Mark only the failed route BLOCKED; leave the objective ACTIVE."""
+        receipt_ref = _require_ref(reference, "reference")
+        route = _require_ref(route_ref, "route_ref")
+        reason_text = _require_text(reason, "reason")
+        alternate = (
+            _require_ref(alternate_route_ref, "alternate_route_ref")
+            if alternate_route_ref is not None
+            else None
+        )
+        try:
+            state = self._route_scope.block_route(
+                route,
+                alternate_route_ref=alternate,
+            )
+        except RouteScopeViolation as exc:
+            raise OutcomeFidelityViolation(str(exc)) from exc
+        payload = dict(details or {})
+        payload.update(
+            {
+                "route_ref": route,
+                "route_state": "blocked",
+                "reason": reason_text,
+                "alternate_route_ref": alternate,
+                "objective_state": state.objective_state,
+                "scope_mutated": False,
+            }
+        )
+        self._kernel._record_receipt("route_failure", receipt_ref, False, payload)
+        if alternate is not None:
+            self._kernel._record_receipt(
+                "route_selection",
+                f"route-selection:{alternate.split(':', 1)[1]}",
+                True,
+                {
+                    "route_ref": alternate,
+                    "objective_state": state.objective_state,
+                    "selected_after_route_failure": True,
+                },
+            )
+        self._kernel._audit_event("route_failure_recorded_objective_preserved")
+        return self._kernel.snapshot()
+
+    def record_temporary_route_skip(
+        self,
+        reference: str,
+        *,
+        route_ref: str,
+        sequencing_reason: str,
+        alternate_route_ref: str | None = None,
+        details: Mapping[str, Any] | None = None,
+    ):
+        """Record sequencing change only; never infer deferment/removal."""
+        receipt_ref = _require_ref(reference, "reference")
+        route = _require_ref(route_ref, "route_ref")
+        reason_text = _require_text(sequencing_reason, "sequencing_reason")
+        alternate = (
+            _require_ref(alternate_route_ref, "alternate_route_ref")
+            if alternate_route_ref is not None
+            else None
+        )
+        try:
+            state = self._route_scope.temporarily_skip_route(
+                route,
+                alternate_route_ref=alternate,
+            )
+        except RouteScopeViolation as exc:
+            raise OutcomeFidelityViolation(str(exc)) from exc
+        payload = dict(details or {})
+        payload.update(
+            {
+                "route_ref": route,
+                "route_state": "temporarily_skipped",
+                "sequencing_reason": reason_text,
+                "alternate_route_ref": alternate,
+                "objective_state": state.objective_state,
+                "scope_mutated": False,
+                "sequencing_only": True,
+            }
+        )
+        self._kernel._record_receipt("route_temporary_skip", receipt_ref, True, payload)
+        if alternate is not None:
+            self._kernel._record_receipt(
+                "route_selection",
+                f"route-selection:{alternate.split(':', 1)[1]}",
+                True,
+                {
+                    "route_ref": alternate,
+                    "objective_state": state.objective_state,
+                    "selected_after_temporary_skip": True,
+                },
+            )
+        self._kernel._audit_event("route_temporarily_skipped_objective_preserved")
+        return self._kernel.snapshot()
+
+    def mutate_objective_scope(
+        self,
+        reference: str,
+        *,
+        new_state: str,
+        operator_scope_mutation_ref: str,
+        details: Mapping[str, Any] | None = None,
+    ):
+        """Apply explicit Operator deferment/removal as a separate authority event."""
+        receipt_ref = _require_ref(reference, "reference")
+        try:
+            state = self._route_scope.mutate_objective(
+                new_state,
+                operator_scope_mutation_ref=operator_scope_mutation_ref,
+            )
+        except RouteScopeViolation as exc:
+            raise OutcomeFidelityViolation(str(exc)) from exc
+        payload = dict(details or {})
+        payload.update(
+            {
+                "objective_state": state.objective_state,
+                "operator_scope_mutation_ref": state.operator_scope_mutation_ref,
+                "explicit_operator_scope_mutation": True,
+            }
+        )
+        self._kernel._record_receipt(
+            "objective_scope_mutation",
+            receipt_ref,
+            True,
+            payload,
+        )
+        self._kernel._audit_event("objective_scope_mutated_by_operator")
+        return self._kernel.snapshot()
+
+    def block(
+        self,
+        reason: str,
+        *,
+        reference: str,
+        blocker_class: str | None = None,
+    ):
+        """Block the task only for typed task/objective blockers.
+
+        A declared route failure or route skip is rejected here because those
+        transitions must use record_route_failure/record_temporary_route_skip,
+        which preserve objective ACTIVE and keep the current execution phase.
+        """
+        classification = _require_text(blocker_class, "blocker_class").lower()
+        if classification in {
+            "route",
+            "route_failure",
+            "tool_failure",
+            "provider_failure",
+            "temporary_route_skip",
+        }:
+            raise OutcomeFidelityViolation(
+                "route-level blocker cannot block the mission; record route state and continue/reroute"
+            )
+        if classification not in {
+            "task_failure",
+            "objective_blocker",
+            "genuine_external_boundary",
+        }:
+            raise OutcomeFidelityViolation(
+                "blocker_class must be task_failure, objective_blocker, or genuine_external_boundary"
+            )
+        return self._kernel.block(reason, reference=reference)
 
     def record_mission_outcome(
         self,
@@ -164,13 +378,7 @@ class OutcomeFidelityRuntime:
         boundary_reason: str | None = None,
         details: Mapping[str, Any] | None = None,
     ):
-        """Record the mission-domain postcondition after verification.
-
-        Normal transitions require distinct source-bearing before/after state and
-        evidence beyond assistant activity. A genuine external boundary may leave
-        domain state unchanged, but only after available internal routes are
-        explicitly exhausted and the boundary itself is evidenced.
-        """
+        """Record the mission-domain postcondition after verification."""
         task = self._kernel.task
         if task.mode is not TaskMode.MUTATION:
             raise OutcomeFidelityViolation(
@@ -183,6 +391,10 @@ class OutcomeFidelityRuntime:
         if self._outcome_recorded:
             raise OutcomeFidelityViolation(
                 "mission outcome already recorded for active task"
+            )
+        if self._route_scope.objective_state is not ObjectiveState.ACTIVE:
+            raise OutcomeFidelityViolation(
+                "inactive Operator objective cannot be presented as newly completed mission progress"
             )
 
         ref = _require_ref(reference, "reference")
@@ -271,6 +483,10 @@ class OutcomeFidelityRuntime:
 
     def begin_persistence(self):
         task = self._kernel.task
+        if task.mode is TaskMode.MUTATION and self._route_scope.objective_state is not ObjectiveState.ACTIVE:
+            raise OutcomeFidelityViolation(
+                "inactive/deferred Operator objective cannot persist as completed mission work"
+            )
         if task.mode is TaskMode.MUTATION and not self._outcome_recorded:
             raise OutcomeFidelityViolation(
                 "mutation cannot persist: no verified mission-state transition or genuine external boundary was recorded"
@@ -285,11 +501,21 @@ class OutcomeFidelityRuntime:
             )
         return self._kernel.record_readback(*args, **kwargs)
 
+    def route_scope_state(self) -> dict[str, Any]:
+        state = self._route_scope.snapshot()
+        return {
+            "objective_state": state.objective_state,
+            "selected_route_ref": state.selected_route_ref,
+            "route_states": dict(state.route_states),
+            "operator_scope_mutation_ref": state.operator_scope_mutation_ref,
+        }
+
     def outcome_state(self) -> dict[str, Any]:
         return {
             "recorded": self._outcome_recorded,
             "transition_kind": self._outcome_kind,
             "reference": self._outcome_reference,
+            "route_scope": self.route_scope_state(),
         }
 
 
@@ -297,5 +523,5 @@ def enforce_outcome_fidelity(
     kernel: ApexRuntimeKernel,
     policy: Mapping[str, Any] | None = None,
 ) -> OutcomeFidelityRuntime:
-    """Wrap the verified kernel in the mandatory mission postcondition boundary."""
+    """Wrap the verified kernel in mandatory mission and route/scope boundaries."""
     return OutcomeFidelityRuntime(kernel, policy)
