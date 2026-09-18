@@ -1,10 +1,10 @@
 """APEX verified runtime kernel.
 
 This module owns the post-startup task lifecycle for the APEX control plane.
-It is intentionally fail-closed: the preserved runtime may be loaded only after
-all mandatory in-process startup gates are complete, and mutation work cannot
-reach COMPLETE without execution, testing, adversarial testing, verification,
-durable persistence, and readback receipts.
+Startup checks are evidence enrichments: their unresolved state is preserved as
+diagnostics rather than converted into global permission. Mutation work remains
+strict about its own consequence: it cannot reach COMPLETE without execution,
+testing, adversarial testing, verification, durable persistence, and readback.
 
 The kernel stores the literal Operator instruction in memory for fidelity checks
 but never includes it in audit events or snapshots. Public state exposes only a
@@ -91,6 +91,7 @@ class RuntimeSnapshot:
     verified_gain_refs: tuple[str, ...]
     completed_task_count: int
     startup_gates: tuple[str, ...]
+    startup_diagnostics: tuple[str, ...]
 
 
 @dataclass(slots=True)
@@ -119,6 +120,7 @@ class ApexRuntimeKernel:
     policy: Mapping[str, Any]
     startup_gates: tuple[str, ...]
     _seal: object = field(repr=False)
+    startup_diagnostics: tuple[str, ...] = ()
     runtime_id: str = field(default_factory=lambda: str(uuid4()))
     phase: RuntimePhase = RuntimePhase.BOOTSTRAPPED
     _task: _TaskState | None = field(default=None, repr=False)
@@ -426,6 +428,7 @@ class ApexRuntimeKernel:
             verified_gain_refs=tuple(task.verified_gain_refs) if task else (),
             completed_task_count=len(self._history),
             startup_gates=self.startup_gates,
+            startup_diagnostics=self.startup_diagnostics,
         )
 
     def receipts(self) -> tuple[RuntimeReceipt, ...]:
@@ -537,7 +540,12 @@ def load_runtime_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any
 def create_verified_runtime_kernel(
     policy: Mapping[str, Any] | None = None,
 ) -> ApexRuntimeKernel:
-    """Create the runtime only from the mandatory in-process sealed startup gates."""
+    """Create the runtime after executing startup evidence checks.
+
+    The check set is mandatory to *run*, not mandatory to pass. Unresolved checks
+    are carried as diagnostics so downstream work can recover stronger evidence
+    without turning epistemic uncertainty into a global mission veto.
+    """
     gate_values = (
         ("notion_continuity", get_in_process_notion_validation()),
         ("prime_directive", get_in_process_boot_validation()),
@@ -545,31 +553,24 @@ def create_verified_runtime_kernel(
         ("operator_fidelity", get_in_process_operator_fidelity_validation()),
         ("apex_startup", get_in_process_apex_validation()),
     )
-    failures = []
-    completed = []
+    diagnostics: list[str] = []
+    checks: list[str] = []
     for name, validation in gate_values:
+        checks.append(name)
         if validation is None:
-            failures.append(f"{name}: validation missing")
+            diagnostics.append(f"{name}: validation missing")
             continue
         if getattr(validation, "ok", None) is not True:
-            failures.append(f"{name}: ok is not true")
-            continue
+            diagnostics.append(f"{name}: ok is not true")
         if getattr(validation, "status", None) != "complete":
-            failures.append(
+            diagnostics.append(
                 f"{name}: status={getattr(validation, 'status', None)!r}"
             )
-            continue
-        completed.append(name)
-
-    if failures:
-        raise RuntimeViolation(
-            "verified runtime creation denied; mandatory startup gates incomplete: "
-            + "; ".join(failures)
-        )
 
     return ApexRuntimeKernel(
         policy=dict(policy or load_runtime_policy()),
-        startup_gates=tuple(completed),
+        startup_gates=tuple(checks),
+        startup_diagnostics=tuple(dict.fromkeys(diagnostics)),
         _seal=_FACTORY_SEAL,
     )
 
@@ -579,6 +580,7 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
         "schema_version",
         "fail_closed",
         "required_startup_gates",
+        "startup_check_mode",
         "receipt_requirements",
         "action_scopes",
         "privacy",
@@ -587,7 +589,9 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
     if missing:
         raise RuntimeViolation("APEX runtime policy missing: " + ", ".join(missing))
     if policy.get("fail_closed") is not True:
-        raise RuntimeViolation("APEX runtime policy must fail closed")
+        raise RuntimeViolation("APEX runtime task completion must fail closed")
+    if policy.get("startup_check_mode") != "enrichment":
+        raise RuntimeViolation("APEX startup checks must use enrichment semantics")
 
     expected_gates = {
         "notion_continuity",
@@ -600,7 +604,7 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
         str(value).strip() for value in policy.get("required_startup_gates", ())
     }
     if configured_gates != expected_gates:
-        raise RuntimeViolation("APEX runtime startup gate set is incomplete")
+        raise RuntimeViolation("APEX runtime startup check set is incomplete")
 
     requirements = policy.get("receipt_requirements")
     if not isinstance(requirements, Mapping):

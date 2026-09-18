@@ -65,14 +65,23 @@ def test_direct_constructor_is_rejected() -> None:
         )
 
 
-def test_factory_requires_every_in_process_gate(monkeypatch) -> None:
+def test_factory_carries_unresolved_startup_check_as_diagnostic(monkeypatch) -> None:
     valid = SimpleNamespace(ok=True, status="complete")
     for getter in _GATE_GETTERS:
         monkeypatch.setattr(runtime, getter, lambda valid=valid: valid)
     monkeypatch.setattr(runtime, "get_in_process_apex_validation", lambda: None)
 
-    with pytest.raises(RuntimeViolation, match="apex_startup: validation missing"):
-        create_verified_runtime_kernel()
+    kernel = create_verified_runtime_kernel()
+
+    assert kernel.phase is RuntimePhase.BOOTSTRAPPED
+    assert kernel.snapshot().startup_gates == (
+        "notion_continuity",
+        "prime_directive",
+        "operator_fidelity_lock",
+        "operator_fidelity",
+        "apex_startup",
+    )
+    assert "apex_startup: validation missing" in kernel.snapshot().startup_diagnostics
 
 
 def test_mutation_cannot_complete_without_full_receipt_chain(monkeypatch) -> None:

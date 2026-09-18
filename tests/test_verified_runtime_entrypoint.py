@@ -29,6 +29,7 @@ class FakeKernel:
             phase=self.phase.value,
             task_id=self.task_id,
             startup_gates=EXPECTED_GATES,
+            startup_diagnostics=(),
             receipt_kinds=tuple(self.receipts),
         )
 

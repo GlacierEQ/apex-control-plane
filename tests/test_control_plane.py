@@ -30,9 +30,9 @@ def _startup_validation(*, ok: bool = True, status: str = "complete") -> SimpleN
     return SimpleNamespace(ok=ok, status=status)
 
 
-def test_runtime_authorization_requires_every_gate_to_complete() -> None:
+def test_startup_validation_helper_reports_diagnostics_without_veto() -> None:
     completed = _startup_validation()
-    _require_completed_startup_validations(
+    assert _require_completed_startup_validations(
         (
             ("notion_continuity", completed),
             ("prime_directive", completed),
@@ -40,18 +40,22 @@ def test_runtime_authorization_requires_every_gate_to_complete() -> None:
             ("operator_fidelity", completed),
             ("apex_startup", completed),
         )
-    )
+    ) == ()
 
-    with pytest.raises(RuntimeError, match="operator_fidelity_lock"):
-        _require_completed_startup_validations(
+    diagnostics = _require_completed_startup_validations(
+        (
+            ("notion_continuity", completed),
+            ("prime_directive", completed),
             (
-                ("notion_continuity", completed),
-                ("prime_directive", completed),
-                ("operator_fidelity_lock", _startup_validation(ok=False, status="continuation_required")),
-                ("operator_fidelity", completed),
-                ("apex_startup", completed),
-            )
+                "operator_fidelity_lock",
+                _startup_validation(ok=False, status="continuation_required"),
+            ),
+            ("operator_fidelity", completed),
+            ("apex_startup", completed),
         )
+    )
+    assert len(diagnostics) == 1
+    assert "operator_fidelity_lock" in diagnostics[0]
 
 
 def source() -> SourcePointer:

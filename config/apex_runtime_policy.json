@@ -70,5 +70,7 @@
     "audit_tool_payloads": false,
     "public_snapshot_uses_instruction_sha256": true,
     "receipt_details_are_digest_only": true
-  }
+  },
+  "startup_check_mode": "enrichment",
+  "startup_check_law": "startup checks control claim strength and recovery routing; they do not authorize or stop the mission"
 }

@@ -142,6 +142,7 @@ def execute_verified_local_smoke(namespace: Mapping[str, Any]) -> dict[str, Any]
             "phase": final_snapshot.phase,
             "receipt_kinds": list(final_snapshot.receipt_kinds),
             "startup_gates": list(final_snapshot.startup_gates),
+            "startup_diagnostics": list(final_snapshot.startup_diagnostics),
             "external_action_authorized": False,
         },
     }

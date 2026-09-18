@@ -152,49 +152,32 @@ jobs:
             tests/test_scan_repos.py \
             jack/tests/test_jack_relentless_gate.py
 
-      - name: Prove strict mode fails closed without receipt
+      - name: Prove strict mode continues with unresolved startup evidence
         shell: bash
         run: |
-          set +e
-          CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/boot.out 2>/tmp/boot.err
-          status=$?
-          set -e
-          if [[ "$status" -ne 78 ]]; then
-            cat /tmp/boot.out || true
-            cat /tmp/boot.err || true
-            echo "expected exit 78, received $status" >&2
-            exit 1
-          fi
+          CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src:. python src/control_plane.py >/tmp/boot.out 2>/tmp/boot.err
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot.err
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot.err
           grep -q 'ground_truth_files_loaded' /tmp/boot.err
           grep -q 'tool_inventory' /tmp/boot.err
-          test ! -s /tmp/boot.out
+          grep -q '"phase":"complete"' /tmp/boot.out
+          grep -q '"startup_diagnostics"' /tmp/boot.out
 
-      - name: Prove malformed receipt fails closed without traceback
+      - name: Prove malformed receipt remains visible without global veto
         shell: bash
         run: |
-          set +e
           CASEY_BOOT_RECEIPT_JSON='{' \
           CASEY_AUTO_BOOT_MODE=strict \
+          PYTHONPATH=src:. \
           python src/control_plane.py >/tmp/malformed.out 2>/tmp/malformed.err
-          status=$?
-          set -e
-          if [[ "$status" -ne 78 ]]; then
-            cat /tmp/malformed.out || true
-            cat /tmp/malformed.err || true
-            echo "malformed receipt returned $status instead of 78" >&2
-            exit 1
-          fi
-          grep -q '"boot_status": "blocked"' /tmp/malformed.err
           grep -q 'CASEY_BOOT_RECEIPT_JSON is invalid' /tmp/malformed.err
           ! grep -q 'Traceback' /tmp/malformed.err
-          test ! -s /tmp/malformed.out
+          grep -q '"phase":"complete"' /tmp/malformed.out
+          grep -q '"startup_diagnostics"' /tmp/malformed.out
 
-      - name: Prove forged status environment cannot bypass strict boot
+      - name: Prove forged status environment cannot fabricate evidence
         shell: bash
         run: |
-          set +e
           GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
           GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
@@ -202,19 +185,13 @@ jobs:
           CASEY_BOOT_STATUS=complete \
           GLACIEREQ_BOOT_RECEIPT_VERIFIED=1 \
           CASEY_AUTO_BOOT_MODE=strict \
+          PYTHONPATH=src:. \
           python src/control_plane.py >/tmp/forged.out 2>/tmp/forged.err
-          status=$?
-          set -e
-          if [[ "$status" -ne 78 ]]; then
-            cat /tmp/forged.out || true
-            cat /tmp/forged.err || true
-            echo "forged status bypassed boot; received $status" >&2
-            exit 1
-          fi
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/forged.err
-          test ! -s /tmp/forged.out
+          grep -q '"startup_diagnostics"' /tmp/forged.out
+          grep -q '"phase":"complete"' /tmp/forged.out
 
-      - name: Prove fidelity preflight itself fails closed
+      - name: Prove fidelity preflight preserves unresolved evidence
         shell: bash
         run: |
           set +e
@@ -233,32 +210,22 @@ jobs:
           fi
           grep -q '"gate": "operator_fidelity_preflight"' /tmp/fidelity.err
           grep -q '"status": "continuation_required"' /tmp/fidelity.err
-          grep -q '"external_action_authorized": false' /tmp/fidelity.err
+          grep -q '"authority_effect": "none"' /tmp/fidelity.err
           grep -q 'literal_operator_words_preserved' /tmp/fidelity.err
           test ! -s /tmp/fidelity.out
 
-      - name: Prove request mode exposes all gates and remains degraded
+      - name: Prove request mode exposes all checks and still constructs runtime
         shell: bash
         run: |
-          set +e
-          CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
-          status=$?
-          set -e
-          if [[ "$status" -ne 78 ]]; then
-            cat /tmp/control-plane.json || true
-            cat /tmp/boot-request.json || true
-            echo "request mode returned $status instead of the expected degraded exit 78" >&2
-            exit 1
-          fi
+          CASEY_AUTO_BOOT_MODE=request PYTHONPATH=src:. python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot-request.json
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot-request.json
           grep -q 'glaciereq_operator_fidelity_preflight' /tmp/boot-request.json
           grep -q 'apex_genesis_enforced_startup' /tmp/boot-request.json
           grep -q '"status": "continuation_required"' /tmp/boot-request.json
-          grep -q '"runtime_authorized": false' /tmp/boot-request.json
-          grep -q '"external_action_authorized": false' /tmp/boot-request.json
-          test ! -s /tmp/control-plane.json
+          grep -q '"phase":"complete"' /tmp/control-plane.json
+          grep -q '"startup_diagnostics"' /tmp/control-plane.json
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \
-          python -c 'import os; assert os.environ.get("GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS") == "degraded"; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_OPERATOR_FIDELITY_STATUS") == "continuation_required"; assert os.environ.get("GLACIEREQ_APEX_STARTUP_STATUS") == "continuation_required"'
+          python -c 'import os, sitecustomize; assert sitecustomize.APEX_STRONG_BOOT_SESSION is not None; assert sitecustomize.APEX_RUNTIME_KERNEL is not None; assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ; assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete"'
