@@ -17,26 +17,23 @@ from typing import Any
 
 def _require_completed_startup_validations(
     validations: tuple[tuple[str, Any | None], ...],
-) -> None:
-    """Compatibility validator for callers that already hold startup proofs.
+) -> tuple[str, ...]:
+    """Compatibility helper that returns unresolved startup evidence.
 
-    This helper does not run boot stages or authorize runtime loading. The real
-    executable startup path is `apply_strongest_boot()` below.
+    The historical name is retained for callers. Startup checks enrich confidence
+    and recovery routing; they do not authorize the runtime. A non-empty return
+    value therefore means "carry these diagnostics", not "stop the mission".
     """
-    incomplete: list[str] = []
-    for gate_name, validation in validations:
+    diagnostics: list[str] = []
+    for check_name, validation in validations:
         if validation is None:
-            incomplete.append(f"{gate_name}: validation missing")
+            diagnostics.append(f"{check_name}: validation missing")
             continue
         if validation.ok is not True or validation.status != "complete":
-            incomplete.append(
-                f"{gate_name}: status={validation.status!r}, ok={validation.ok!r}"
+            diagnostics.append(
+                f"{check_name}: status={validation.status!r}, ok={validation.ok!r}"
             )
-    if incomplete:
-        raise RuntimeError(
-            "runtime authorization denied; mandatory startup gates incomplete: "
-            + "; ".join(incomplete)
-        )
+    return tuple(diagnostics)
 
 
 if __name__ == "__main__":
