@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.7.0",
+  "schema_version": "1.7.1",
   "name": "APEX Enforced Startup",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
