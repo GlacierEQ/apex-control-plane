@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 
+import pytest
+
 import apex_enforced_startup as apex
 
 
@@ -137,3 +139,22 @@ def test_explicit_authority_and_scope_negatives_are_blocking() -> None:
     assert "Operator scope was explicitly narrowed without Operator authorization" in blockers
     assert any("unsupported_scope_narrowing" in item for item in blockers)
     assert "operator_authorization.authorized is explicitly false" in blockers
+
+
+
+def test_policy_rejects_authorization_semantic_drift(tmp_path) -> None:
+    policy = apex.load_apex_policy()
+    policy["mutation_interlock"]["startup_receipt_is_execution_permission"] = True
+    target = tmp_path / "bad-policy.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+
+    with pytest.raises(
+        apex.BootError,
+        match="startup_receipt_is_execution_permission must be False",
+    ):
+        apex.load_apex_policy(target)
+
+
+def test_runtime_consumes_nonblocking_proof_policy() -> None:
+    policy = apex.load_apex_policy()
+    assert apex._incomplete_proof_is_nonblocking(policy) is True
