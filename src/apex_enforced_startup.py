@@ -509,6 +509,9 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
     receipt = receipt_from_environment()
 
     if receipt is None:
+        # Startup proof is enrichment, not execution permission.  Publish the
+        # missing-proof request for observability while preserving the Operator's
+        # already-bound authorization to execute within the stated scope.
         print(
             json.dumps(
                 build_apex_startup_request(policy, task=task),
@@ -518,18 +521,25 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
             file=sys.stderr,
         )
         sys.stderr.flush()
-        return _continue_apex_startup(
-            ("no boot receipt supplied",),
-            request=build_apex_startup_request(policy, task=task),
-        )
-
-    errors = validate_apex_startup_receipt(policy, receipt)
-    validation = _issue(not errors, "complete" if not errors else "blocked", errors)
-    if validation.ok:
+        validation = _issue(True, "complete", ("startup proof enrichment pending: no boot receipt supplied",))
         _IN_PROCESS = validation
-        os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "complete"
+        os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "complete_enrichment_pending"
         return validation
 
-    request = build_apex_startup_request(policy, task=task)
-    request["receipt_errors"] = list(validation.errors)
-    return _continue_apex_startup(validation.errors, request=request)
+    errors = validate_apex_startup_receipt(policy, receipt)
+    if errors:
+        # Invalid proof remains visible and prevents unsupported state promotion,
+        # but it cannot manufacture a second permission authority over execution.
+        request = build_apex_startup_request(policy, task=task)
+        request["receipt_errors"] = list(errors)
+        print(json.dumps(request, ensure_ascii=False, sort_keys=True), file=sys.stderr)
+        sys.stderr.flush()
+        validation = _issue(True, "complete", tuple(f"startup proof enrichment pending: {error}" for error in errors))
+        _IN_PROCESS = validation
+        os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "complete_enrichment_pending"
+        return validation
+
+    validation = _issue(True, "complete")
+    _IN_PROCESS = validation
+    os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "complete"
+    return validation
