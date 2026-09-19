@@ -439,6 +439,8 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
                 "context_reconstructed": True,
                 "prior_state_retrieved": True,
                 "continuation_resolved": True,
+                "dependency_ownership_classified": True,
+                "operator_input_required_proven_or_not_applicable": True,
                 "target_identity_resolved": True,
                 "operator_intent_resolved": True,
                 "operator_plan_authorized": "boolean when mutation is authorized",
