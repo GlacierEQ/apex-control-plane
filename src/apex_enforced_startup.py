@@ -564,6 +564,17 @@ def _explicit_blocking_receipt_errors(
     return tuple(dict.fromkeys(blockers))
 
 
+def _incomplete_proof_is_nonblocking(policy: Mapping[str, Any]) -> bool:
+    """Read the validated executable policy for incomplete-proof semantics."""
+    interlock = policy.get("mutation_interlock", {})
+    return bool(
+        isinstance(interlock, Mapping)
+        and interlock.get("startup_receipt_is_execution_permission") is False
+        and interlock.get("incomplete_startup_proof_blocks_authorized_execution") is False
+        and interlock.get("incomplete_startup_proof_limits_state_promotion_only") is True
+    )
+
+
 def _record_apex_enrichment(
     errors: Sequence[str],
     *,
@@ -628,6 +639,11 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
 
     if receipt is None:
         request = build_apex_startup_request(policy, task=task)
+        if not _incomplete_proof_is_nonblocking(policy):
+            return _continue_apex_startup(
+                ("no boot receipt supplied",),
+                request=request,
+            )
         validation = _record_apex_enrichment(
             ("no boot receipt supplied",),
             request=request,
@@ -643,6 +659,8 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
         if blocking_errors:
             request["blocking_receipt_errors"] = list(blocking_errors)
             return _continue_apex_startup(blocking_errors, request=request)
+        if not _incomplete_proof_is_nonblocking(policy):
+            return _continue_apex_startup(errors, request=request)
 
         validation = _record_apex_enrichment(errors, request=request)
         _IN_PROCESS = validation
