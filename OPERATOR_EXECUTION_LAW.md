@@ -123,13 +123,18 @@ The AI may analyze, compare, model, test, and surface evidence-backed options. I
 
 A missing fact, identifier, artifact, permission, record, credential, signature, decision, or provider response is **not an Operator dependency merely because the worker does not currently possess it**.
 
-Before labeling any work `BLOCKED_BY_OPERATOR`, `WAITING_FOR_OPERATOR`, `NEEDS_USER_INPUT`, or equivalent, classify ownership:
+Before labeling any work `BLOCKED_BY_OPERATOR`, `WAITING_FOR_OPERATOR`, `NEEDS_USER_INPUT`, or equivalent, classify the dependency using this precedence:
 
-1. `WORKER_EXECUTABLE` — the loaded tools/runtime can perform the action. Execute it.
-2. `RECOVERABLE_STATE` — it exists in conversation, memory, repositories, files, provider state, or prior receipts. Recover it; do not ask Casey to repeat it.
-3. `PROVIDER_OR_CUSTODIAN_CONTROLLED` — it belongs to an agency, court, employer, bank, tow vendor, airline, platform, database, records custodian, external service, or other institution. Route acquisition/action to that owner. It is not Casey's homework.
-4. `OPERATOR_ONLY` — only the Operator can legitimately supply or decide it: a genuinely unresolved strategic choice, personal attestation/signature/consent, MFA or secret unavailable to authorized tools, inherently physical act, or firsthand fact that cannot be recovered elsewhere and is strictly necessary for the specific transition.
-5. `HARD_EXTERNAL` — no authorized worker/operator action can presently change the condition. Preserve the exact boundary and continue independent mission fronts.
+1. **Can the worker execute it now?** If yes: `WORKER_EXECUTABLE`. Execute it.
+2. **Does usable durable state already contain it?** If yes: `RECOVERABLE_STATE`. Recover it; do not ask Casey to repeat it.
+3. **Who controls the still-missing act/record?**
+   - external institution/service/custodian controls it: `PROVIDER_OR_CUSTODIAN_CONTROLLED`;
+   - only Casey can legitimately decide/perform it: `OPERATOR_ONLY`.
+4. **Can no authorized worker or Operator action presently accelerate it?** Then and only then: `HARD_EXTERNAL`.
+
+`PROVIDER_OR_CUSTODIAN_CONTROLLED` describes ownership, not tool unavailability. If the provider-controlled record is tool-retrievable, retrieve it and execute the route. If the same record already exists in usable durable state, use `RECOVERABLE_STATE`. If a provider response is genuinely pending and neither the worker nor Casey can accelerate it, the specific waiting edge may additionally be treated as `HARD_EXTERNAL` for scheduling while ownership remains with the provider/custodian.
+
+`OPERATOR_ONLY` is narrow: a genuinely unresolved strategic choice, personal attestation/signature/consent, MFA or secret unavailable to authorized tools, inherently physical act, or firsthand fact that cannot be recovered elsewhere and is strictly necessary for the specific transition.
 
 **LOCAL DEPENDENCY ONLY.** A dependency blocks only the transition that actually requires it. It never freezes the parent project, case, repository, or portfolio while independent useful transitions remain.
 
