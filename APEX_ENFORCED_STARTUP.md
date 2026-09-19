@@ -107,7 +107,7 @@ READ CURRENT OPERATOR MESSAGE
   -> REPORT MATERIAL DELTA
 ```
 
-Startup checks preserve known state, continuity, literal operation scope, the Operator's working method, asset sovereignty, and intent. The startup receipt records and promotes evidence about those checks; it does not grant permission, re-authorize an already-authorized Operator action, or freeze material execution while enrichment is incomplete. Missing or imperfect startup proof remains visible as enrichment debt and may limit evidence-backed state promotion, but it does not become a second authority over the Operator's stated scope.
+Startup checks preserve known state, continuity, literal operation scope, the Operator's working method, asset sovereignty, and intent. The startup receipt records and promotes evidence about those checks; it does not grant permission, re-authorize an already-authorized Operator action, or freeze material execution while enrichment is incomplete. Missing or incomplete non-contradictory startup proof remains visible as durable, retryable enrichment debt and may limit evidence-backed state promotion. Explicit negative evidence—such as an unresolved contradiction blocker, unauthorized scope narrowing, an explicitly blocked mutation, or an affirmative violation of required authority-preservation invariants—remains blocking for the affected action. Neither condition creates a second authority over the Operator's stated scope.
 
 ## Known-state reuse and context hydration
 
