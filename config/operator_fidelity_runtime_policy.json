@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.5.0",
+  "schema_version": "1.6.0",
   "name": "APEX Operator Fidelity Runtime Enforcement",
   "failure_class": "INSTRUCTION_DISPLACEMENT",
   "authority": "operator_intent",
@@ -55,7 +55,24 @@
     "unsolicited_operator_asset_value_ranking": false,
     "unsolicited_operator_asset_disposition": false,
     "inspection_scope_expansion": false,
-    "operator_owned_asset_identity_preserved": true
+    "operator_owned_asset_identity_preserved": true,
+    "route_failure_preserves_objective": true,
+    "route_failure_preserves_scope": true,
+    "temporary_skip_is_sequencing_only": true,
+    "scope_change_requires_explicit_operator_instruction": true
+  },
+  "route_scope_invariants": {
+    "route_is_not_scope": true,
+    "tool_failure_is_routing_data_only": true,
+    "tool_unavailability_may_change_route": true,
+    "tool_unavailability_may_not_change_objective": true,
+    "tool_unavailability_may_not_remove_scope": true,
+    "temporary_skip_preserves_scope": true,
+    "temporary_skip_preserves_objective": true,
+    "temporary_skip_changes_sequence_only": true,
+    "scope_removal_requires_explicit_operator_instruction": true,
+    "objective_replacement_requires_explicit_operator_instruction": true,
+    "default_recovery": "preserve mission -> mark route unavailable -> choose next coherent route -> continue unresolved scope"
   },
   "operator_asset_sovereignty": {
     "look_inspect_list_inventory_map_are_observation_only": true,
@@ -190,6 +207,9 @@
     "FORBIDDEN: operator disagreement classified as adversarial behavior",
     "FORBIDDEN: operator forceful language classified as threat signal",
     "FORBIDDEN: operator firsthand knowledge classified as external adversary input",
-    "FORBIDDEN: operator rejection of agent plan classified as obstruction"
+    "FORBIDDEN: operator rejection of agent plan classified as obstruction",
+    "FORBIDDEN: tool failure treated as scope removal",
+    "FORBIDDEN: route unavailability treated as objective change",
+    "FORBIDDEN: temporary skip treated as permanent scope deletion"
   ]
 }
