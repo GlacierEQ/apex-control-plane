@@ -107,7 +107,7 @@ READ CURRENT OPERATOR MESSAGE
   -> REPORT MATERIAL DELTA
 ```
 
-No material mutation may occur before the startup receipt proves the required preconditions. This protection exists to preserve known state, continuity, literal operation scope, the Operator's working method, asset sovereignty, and intent, not to create a self-referential permission engine.
+Startup checks preserve known state, continuity, literal operation scope, the Operator's working method, asset sovereignty, and intent. The startup receipt records and promotes evidence about those checks; it does not grant permission, re-authorize an already-authorized Operator action, or freeze material execution while enrichment is incomplete. Missing or incomplete non-contradictory startup proof remains visible as durable, retryable enrichment debt and may limit evidence-backed state promotion. Explicit negative evidence—such as an unresolved contradiction blocker, unauthorized scope narrowing, an explicitly blocked mutation, or an affirmative violation of required authority-preservation invariants—remains blocking for the affected action. Neither condition creates a second authority over the Operator's stated scope.
 
 ## Known-state reuse and context hydration
 

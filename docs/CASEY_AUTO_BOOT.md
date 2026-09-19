@@ -202,7 +202,7 @@ Expected status projections include:
 ```text
 GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=degraded|complete|blocked
 GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=degraded|complete|blocked
-GLACIEREQ_APEX_STARTUP_STATUS=degraded|complete|blocked
+GLACIEREQ_APEX_STARTUP_STATUS=off|complete|complete_enrichment_pending|continuation_required
 CASEY_BOOT_STATUS=degraded|complete|blocked
 ```
 

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.7.0",
+  "schema_version": "1.7.1",
   "name": "APEX Enforced Startup",
   "authority": "operator_intent",
   "objective": "maximum_coherent_advance",
@@ -208,7 +208,10 @@
     "external_action_requires_secondary_human_approval": false,
     "operator_owned_asset_disposition_requires_explicit_operator_direction": true,
     "operator_owned_asset_value_ranking_requires_explicit_operator_direction": true,
-    "operator_scope_narrowing_requires_explicit_operator_authorization": true
+    "operator_scope_narrowing_requires_explicit_operator_authorization": true,
+    "startup_receipt_is_execution_permission": false,
+    "incomplete_startup_proof_blocks_authorized_execution": false,
+    "incomplete_startup_proof_limits_state_promotion_only": true
   },
   "completion_gate": {
     "proof_bound": true,

@@ -90,6 +90,70 @@ def record_startup_continuation(
     return body
 
 
+def record_startup_enrichment(
+    gate: str,
+    errors: Sequence[str],
+    *,
+    request: Mapping[str, Any] | None = None,
+    environment_key: str | None = None,
+) -> Mapping[str, Any]:
+    """Persist retryable evidence debt without changing execution authorization.
+
+    Enrichment records describe missing or incomplete startup proof. They are
+    deliberately non-authorizing and non-blocking: they neither grant execution
+    permission nor revoke authority already supplied by the Operator.
+    """
+    normalized_errors = tuple(str(error) for error in errors if str(error).strip()) or (
+        "startup proof enrichment incomplete",
+    )
+    gate_id = _safe_gate(gate)
+    body: dict[str, Any] = {
+        "schema": SCHEMA,
+        "status": "enrichment_pending",
+        "gate": gate_id,
+        "errors": list(normalized_errors),
+        "next_actions": [
+            "inspect_startup_request",
+            "assemble_or_repair_receipt",
+            "revalidate_startup_evidence",
+            "promote_evidence_state_when_valid",
+        ],
+        "execution_permission_effect": "none",
+        "state_promotion_limited": True,
+        "retryable": True,
+        "recorded_at": time.time(),
+    }
+    if request is not None:
+        body["request"] = dict(request)
+    identity_input = dict(body)
+    identity_input.pop("recorded_at", None)
+    record_id = _json_digest(identity_input)
+    body["continuation_id"] = record_id
+    body["record_sha256"] = _json_digest(body)
+
+    persistence = "memory_only"
+    try:
+        root = _continuation_root()
+        root.mkdir(parents=True, exist_ok=True)
+        target = root / f"{gate_id}-{record_id[:16]}.json"
+        temporary = target.with_suffix(".tmp")
+        temporary.write_text(
+            json.dumps(body, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(target)
+        body["record_path"] = str(target)
+        persistence = "durable_local_record"
+    except OSError as exc:
+        body["persistence_error"] = exc.__class__.__name__
+    body["persistence"] = persistence
+
+    os.environ["GLACIEREQ_STARTUP_ENRICHMENT_STATUS"] = "pending"
+    if environment_key:
+        os.environ[environment_key] = "complete_enrichment_pending"
+    return body
+
+
 def emit_startup_continuation(record: Mapping[str, Any]) -> None:
     """Emit structured recovery data without treating it as execution authorization."""
     print(json.dumps(dict(record), ensure_ascii=False, sort_keys=True), file=sys.stderr)

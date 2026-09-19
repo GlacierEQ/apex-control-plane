@@ -144,6 +144,7 @@ jobs:
         run: |
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
             tests/test_apex_enforced_startup.py \
+            tests/test_apex_authority_enrichment.py \
             tests/test_operator_fidelity_preflight.py \
             tests/test_auto_boot.py \
             tests/test_notion_continuity_gate.py \
@@ -261,4 +262,4 @@ jobs:
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \
-          python -c 'import os; assert os.environ.get("GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS") == "degraded"; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_OPERATOR_FIDELITY_STATUS") == "continuation_required"; assert os.environ.get("GLACIEREQ_APEX_STARTUP_STATUS") == "continuation_required"'
+          python -c 'import os; assert os.environ.get("GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS") == "degraded"; assert os.environ.get("CASEY_BOOT_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS") == "degraded"; assert os.environ.get("GLACIEREQ_OPERATOR_FIDELITY_STATUS") == "continuation_required"; assert os.environ.get("GLACIEREQ_APEX_STARTUP_STATUS") == "complete_enrichment_pending"'
