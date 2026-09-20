@@ -33,6 +33,11 @@ except ImportError:  # Direct src-on-PYTHONPATH runtime entrypoints.
         DEFAULT_WEIGHTS,
     )
 
+try:
+    from .prosecution_pressure import ProsecutionPressure, pressure_adjusted_features
+except ImportError:
+    from prosecution_pressure import ProsecutionPressure, pressure_adjusted_features
+
 
 class ImpactSelectionViolation(RuntimeError):
     """Raised when action selection bypasses impact-aware comparison."""
@@ -84,6 +89,10 @@ class ImpactDecision:
     rejected_candidate_ids: tuple[str, ...]
     evidence_refs: tuple[str, ...]
     decision_sha256: str
+    pressure_level: str = "normal"
+    pressure_score: float = 0.0
+    pressure_reasons: tuple[str, ...] = ()
+    prosecution_eligible: bool = False
 
 
 class ContinuousImpactSelector:
@@ -111,6 +120,7 @@ class ContinuousImpactSelector:
         operation_class: str,
         state_version: str,
         candidates: Sequence[ImpactCandidate],
+        pressure: ProsecutionPressure | None = None,
     ) -> ImpactDecision:
         task = _required_text(task_id, "task_id")
         mission_text = _required_text(mission, "mission")
@@ -142,7 +152,9 @@ class ContinuousImpactSelector:
                 "no candidate preserves the bound Operator operation class"
             )
 
-        ranking = self.engine.rank([self._to_adaptive(candidate) for candidate in eligible])
+        ranking = self.engine.rank(
+            [self._to_adaptive(candidate, pressure=pressure) for candidate in eligible]
+        )
         if not ranking:
             raise ImpactSelectionViolation("impact ranker returned no eligible candidate")
 
@@ -161,6 +173,12 @@ class ContinuousImpactSelector:
             "ranked_candidate_ids": [row.candidate.candidate_id for row in ranking],
             "rejected_candidate_ids": rejected,
             "evidence_refs": list(selected.evidence_refs),
+            "pressure_level": pressure.level.value if pressure is not None else "normal",
+            "pressure_score": pressure.score if pressure is not None else 0.0,
+            "pressure_reasons": list(pressure.reasons) if pressure is not None else [],
+            "prosecution_eligible": (
+                pressure.prosecution_eligible if pressure is not None else False
+            ),
         }
         decision = ImpactDecision(
             task_id=task,
@@ -176,6 +194,10 @@ class ContinuousImpactSelector:
             rejected_candidate_ids=tuple(rejected),
             evidence_refs=tuple(selected.evidence_refs),
             decision_sha256=_digest(_canonical_json(decision_payload)),
+            pressure_level=decision_payload["pressure_level"],
+            pressure_score=decision_payload["pressure_score"],
+            pressure_reasons=tuple(decision_payload["pressure_reasons"]),
+            prosecution_eligible=decision_payload["prosecution_eligible"],
         )
         self._history.append(decision)
         return decision
@@ -213,6 +235,8 @@ class ContinuousImpactSelector:
                 f"Operation class: {decision.operation_class}. "
                 f"Selected operation: {decision.selected_operation}. "
                 f"Expected mission delta: {decision.selected_expected_delta}. "
+                f"Pressure level: {decision.pressure_level}; "
+                f"prosecution eligible: {decision.prosecution_eligible}. "
                 "Execute this selected operation; do not replace it with planning, "
                 "rediscovery, rule creation, or another meta-operation. Re-evaluate "
                 "after any material state change. "
@@ -220,8 +244,19 @@ class ContinuousImpactSelector:
             ),
         }
 
-    def _to_adaptive(self, candidate: ImpactCandidate) -> AdaptiveCandidate:
+    def _to_adaptive(
+        self,
+        candidate: ImpactCandidate,
+        *,
+        pressure: ProsecutionPressure | None = None,
+    ) -> AdaptiveCandidate:
         features = {str(name): float(value) for name, value in candidate.features.items()}
+        if pressure is not None:
+            features = pressure_adjusted_features(
+                features,
+                metadata=candidate.metadata,
+                pressure=pressure,
+            )
         features["task_relevance"] = max(features.get("task_relevance", 0.0), 1.0)
         features["operator_alignment"] = max(
             features.get("operator_alignment", 0.0), 1.0
