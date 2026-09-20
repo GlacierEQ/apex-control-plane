@@ -33,13 +33,11 @@
   },
   "receipt_requirements": {
     "observation": [
-      "context_recovery",
       "observation",
       "verification",
       "readback"
     ],
     "mutation": [
-      "context_recovery",
       "execution",
       "test",
       "adversarial_test",
@@ -49,7 +47,6 @@
     ]
   },
   "mutation_lifecycle": [
-    "context_recovering",
     "ready",
     "executing",
     "testing",
@@ -62,7 +59,6 @@
     "complete"
   ],
   "observation_lifecycle": [
-    "context_recovering",
     "ready",
     "observing",
     "verifying",
@@ -71,8 +67,6 @@
     "complete"
   ],
   "uplift_invariants": {
-    "context_recovery_must_precede_work": true,
-    "context_recovery_requires_source_reference": true,
     "test_failure_routes_to_repair": true,
     "adversarial_test_failure_routes_to_repair": true,
     "verification_failure_routes_to_repair": true,
