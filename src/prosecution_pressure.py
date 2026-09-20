@@ -152,6 +152,13 @@ def pressure_adjusted_features(
     adjusted = {str(name): _clamp01(float(value)) for name, value in features.items()}
     kind = route_kind(metadata)
 
+    # Prosecution is never self-authorizing. If the evidence/route gate is not
+    # satisfied, the candidate carries a strong unsupported-claim/failure cost
+    # even when the runtime is otherwise under pressure.
+    if kind == "prosecution" and not pressure.prosecution_eligible:
+        _raise(adjusted, "unsupported_claim_risk", 0.80)
+        _raise(adjusted, "failure_risk", 0.55)
+
     if pressure.level is ProsecutionLevel.NORMAL:
         return adjusted
 
@@ -160,7 +167,9 @@ def pressure_adjusted_features(
         _raise(adjusted, "meta_substitution_risk", 0.15 + 0.35 * pressure.score)
         _raise(adjusted, "rediscovery_risk", 0.10 + 0.30 * pressure.score)
 
-    if kind in {"execution", "escalation", "enforcement", "prosecution"}:
+    if kind in {"execution", "escalation", "enforcement"} or (
+        kind == "prosecution" and pressure.prosecution_eligible
+    ):
         _raise(adjusted, "mission_advancement", 0.10 + 0.20 * pressure.score)
         _raise(adjusted, "state_change_value", 0.10 + 0.20 * pressure.score)
         _raise(adjusted, "execution_proximity", 0.12 + 0.25 * pressure.score)
@@ -173,8 +182,8 @@ def pressure_adjusted_features(
             _raise(adjusted, "execution_proximity", 0.30)
             _raise(adjusted, "second_order_value", 0.15)
         elif kind == "prosecution":
-            _raise(adjusted, "unsupported_claim_risk", 0.80)
-            _raise(adjusted, "failure_risk", 0.55)
+            # The unsupported-route penalty was applied before pressure boosts.
+            pass
 
     return adjusted
 
