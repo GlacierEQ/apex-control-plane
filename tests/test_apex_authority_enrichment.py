@@ -99,13 +99,13 @@ def test_explicit_contradiction_remains_blocking(monkeypatch, tmp_path) -> None:
 
     assert validation is not None
     assert validation.ok is False
-    assert validation.status == "uplift_required"
-    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "uplift_required"
+    assert validation.status == "continuation_required"
+    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "continuation_required"
 
     records = list(tmp_path.glob("apex_enforced_startup-*.json"))
     assert len(records) == 1
     record = json.loads(records[0].read_text(encoding="utf-8"))
-    assert record["status"] == "uplift_required"
+    assert record["status"] == "continuation_required"
 
 
 def test_explicit_authority_and_scope_negatives_are_blocking() -> None:
