@@ -34,9 +34,19 @@ except ImportError:  # Direct src-on-PYTHONPATH runtime entrypoints.
     )
 
 try:
-    from .prosecution_pressure import ProsecutionPressure, pressure_adjusted_features
+    from .prosecution_pressure import (
+        ProsecutionPressure,
+        ProsecutionSignal,
+        assess_prosecution_pressure,
+        pressure_adjusted_features,
+    )
 except ImportError:
-    from prosecution_pressure import ProsecutionPressure, pressure_adjusted_features
+    from prosecution_pressure import (
+        ProsecutionPressure,
+        ProsecutionSignal,
+        assess_prosecution_pressure,
+        pressure_adjusted_features,
+    )
 
 
 class ImpactSelectionViolation(RuntimeError):
@@ -224,6 +234,11 @@ class ContinuousImpactSelector:
 
     def history(self) -> tuple[ImpactDecision, ...]:
         return tuple(self._history)
+
+    @staticmethod
+    def assess_pressure(**signals: Any) -> ProsecutionPressure:
+        """Build evidence-gated escalation pressure from observed runtime signals."""
+        return assess_prosecution_pressure(ProsecutionSignal(**signals))
 
     @staticmethod
     def execution_frame(decision: ImpactDecision) -> dict[str, Any]:
