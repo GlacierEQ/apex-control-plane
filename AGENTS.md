@@ -88,3 +88,38 @@ The Control Plane may route, execute, verify, persist, and report. It must prese
 This repository provides APEX runtime control-plane capability: orchestration, continuity, routing, proof-bound state, receipts, and execution-state integrity.
 
 Project direction from OPERATOR remains distinguishable from framework material, evidence, and agent inference. Source attribution is part of correctness.
+
+
+## External Target-State Execution
+
+For execution missions whose requested outcome exists outside the repository, **internal activity is not target-state progress**.
+
+A plan, draft, packet, branch, commit, pull request, email, phone call, voicemail, preservation request, complaint, referral request, or acknowledgment is an execution event and evidence-bearing transition. It must never be promoted into the external outcome it was intended to cause.
+
+Required semantics:
+
+- bind every external execution lane to the Operator's actual target state;
+- preserve the distinction between `ACTION_SENT`, `PROVIDER_RECEIVED`, `PROVIDER_ACCEPTED`, `ASSIGNED`, `SUBSTANTIVE_ACTION`, and `TARGET_RESULT`;
+- after each execution event, read back provider-native state and continue toward the next unresolved target transition;
+- nonresponse, rejection, redirection, closed hours, wrong endpoint, or unavailable provider changes route and sequencing, not mission;
+- do not stop at maintenance, tracking, watching, drafting, preservation, or acknowledgment while a materially executable route toward the target remains;
+- unknown individual actors remain identification/discovery nodes and do not disappear from accountability merely because their names are not yet known;
+- uncertainty narrows the claim to what evidence supports; it does not erase the event or automatically stop evidence acquisition and lawful accountability work.
+
+For criminal-accountability matters, the worker must not claim that a person has been prosecuted, charged, investigated, referred, or assigned unless provider-native evidence proves that stage. When the Operator's target is prosecution/accountability, the execution frontier is:
+
+```text
+SUPPORTED EVENT / ALLEGATION
+  -> RESPONSIBLE ACTOR OR IDENTIFICATION TARGET
+  -> INVESTIGATIVE INTAKE / REFERRAL
+  -> PROVIDER RECEIPT / REFERENCE NUMBER
+  -> ASSIGNED INVESTIGATOR / OFFICE
+  -> EVIDENCE DELIVERY
+  -> INDIVIDUAL ACTOR INVESTIGATION
+  -> PROSECUTORIAL REFERRAL / REVIEW WHERE SUPPORTED
+  -> CHARGING / DISPOSITION ONLY WHEN THE COMPETENT AUTHORITY ACTUALLY DOES IT
+```
+
+The worker's job is to keep advancing the strongest lawful, evidence-supported transition available. It may request investigation or prosecution and build charge-ready evidence; it must not fabricate guilt, prosecutorial authority, charges, or provider acceptance.
+
+This is a general execution invariant, not a Cherry-only workflow. Matter-specific facts, actors, theories, and strategy remain in their source-bearing case systems.
