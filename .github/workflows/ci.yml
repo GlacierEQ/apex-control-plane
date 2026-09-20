@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   operator-fidelity:
+    # Preserve the historical required-check identity while correcting its semantics.
     name: Operator fidelity hard stop
     runs-on: ubuntu-latest
     steps:
@@ -52,40 +53,64 @@ jobs:
             tests/test_operator_fidelity_preflight.py \
             tests/test_operator_trust_root_policy.py
 
-      - name: Prove runtime fails closed without fidelity receipt
+      - name: Prove unresolved fidelity uplifts without killing the runtime
         shell: bash
         run: |
           set +e
           CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/fidelity.out 2>/tmp/fidelity.err
           status=$?
           set -e
-          if [[ "$status" -ne 78 ]]; then
+          if [[ "$status" -ne 0 ]]; then
             cat /tmp/fidelity.out || true
             cat /tmp/fidelity.err || true
-            echo "expected fail-closed exit 78, received $status" >&2
+            echo "runtime should continue with startup uplift; received $status" >&2
             exit 1
           fi
-          test ! -s /tmp/fidelity.out
+          test -s /tmp/fidelity.out
+          grep -q '"phase":"complete"' /tmp/fidelity.out
+          grep -q '"status": "uplift_required"' /tmp/fidelity.err
+          if grep -q '"external_action_authorized": true' /tmp/fidelity.err; then
+            echo "startup uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi
 
-      - name: Prove environment disable cannot bypass fidelity
+      - name: Prove disable and off modes create visible repair state without process death
         shell: bash
         run: |
-          set +e
           CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
-            >/tmp/disable.out 2>/tmp/disable.err
-          disable_status=$?
+            python - <<'PY' >/tmp/disable.out 2>/tmp/disable.err
+          import json
+          import os
+          import operator_fidelity_lock as lock
+
+          lock._IN_PROCESS = None
+          result = lock.automatic_operator_fidelity_lock()
+          assert result is not None
+          assert result.ok is False
+          assert result.status == "uplift_required"
+          assert any("CASEY_AUTO_BOOT_DISABLE" in item for item in result.errors)
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
+          print(json.dumps({"status": result.status, "errors": list(result.errors)}))
+          PY
+
           CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
-            python -c 'from operator_fidelity_lock import automatic_operator_fidelity_lock; automatic_operator_fidelity_lock()' \
-            >/tmp/off.out 2>/tmp/off.err
-          off_status=$?
-          set -e
-          test "$disable_status" -eq 78
-          test "$off_status" -eq 78
-          grep -q 'cannot disable operator fidelity' /tmp/disable.err
-          grep -q 'cannot disable operator fidelity' /tmp/off.err
-          test ! -s /tmp/disable.out
-          test ! -s /tmp/off.out
+            python - <<'PY' >/tmp/off.out 2>/tmp/off.err
+          import json
+          import os
+          import operator_fidelity_lock as lock
+
+          lock._IN_PROCESS = None
+          result = lock.automatic_operator_fidelity_lock()
+          assert result is not None
+          assert result.ok is False
+          assert result.status == "uplift_required"
+          assert any("CASEY_AUTO_BOOT_MODE=off" in item for item in result.errors)
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
+          print(json.dumps({"status": result.status, "errors": list(result.errors)}))
+          PY
+
+          grep -q '"status": "uplift_required"' /tmp/disable.out
+          grep -q '"status": "uplift_required"' /tmp/off.out
 
   estate-registry:
     name: Estate registry quality
@@ -114,7 +139,7 @@ jobs:
       - name: Install quality tools
         run: python -m pip install --upgrade ruff mypy pytest
 
-      - name: Operator fidelity lock inside legacy required surface
+      - name: Operator fidelity uplift inside legacy required surface
         run: |
           python -m py_compile src/operator_fidelity_lock.py src/operator_fidelity_preflight.py
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
