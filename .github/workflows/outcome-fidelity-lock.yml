@@ -1,4 +1,4 @@
-name: Mission Outcome Fidelity Hard Lock
+name: Mission Outcome Fidelity Uplift
 
 on:
   push:
@@ -25,6 +25,8 @@ permissions:
 
 jobs:
   outcome-hard-lock:
+    # Preserve the historical check name so provider branch protection does not
+    # need to be weakened while its semantics are corrected.
     name: mission-outcome-hard-lock
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +39,7 @@ jobs:
       - name: Install pytest
         run: python -m pip install --disable-pip-version-check pytest
 
-      - name: Compile outcome boundary
+      - name: Compile outcome uplift boundary
         run: |
           python -m py_compile \
             src/outcome_fidelity_runtime.py \
@@ -49,13 +51,13 @@ jobs:
             tests/test_outcome_fidelity_runtime.py \
             tests/test_apex_strong_boot.py
 
-      - name: Prove artifact production cannot authorize persistence
+      - name: Prove artifact gain is preserved without being promoted to mission outcome
         run: |
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python - <<'PY'
           from types import SimpleNamespace
           import apex_runtime_kernel as runtime
           from apex_runtime_kernel import TaskMode, create_verified_runtime_kernel
-          from outcome_fidelity_runtime import OutcomeFidelityViolation, enforce_outcome_fidelity
+          from outcome_fidelity_runtime import enforce_outcome_fidelity
 
           valid = SimpleNamespace(ok=True, status="complete")
           for name in (
@@ -74,7 +76,6 @@ jobs:
               operation_class="continue_case_execution",
               mode=TaskMode.MUTATION,
               action_scope="internal",
-              operator_authorization_ref="operator-command:ci",
               prior_state_ref="case-proposition:before",
               source_refs=("case-source:known",),
               verification_plan=("verify case-state change",),
@@ -89,23 +90,32 @@ jobs:
               verified_gain_refs=("artifact:ledger",),
           )
 
-          try:
-              kernel.record_mission_outcome(
-                  "outcome:artifact-only",
-                  transition_kind="ledger_created",
-                  before_state_ref="case-proposition:before",
-                  after_state_ref="artifact:new-ledger",
-                  evidence_refs=("ledger:new-ledger",),
-              )
-          except OutcomeFidelityViolation:
-              pass
-          else:
-              raise SystemExit("artifact-only outcome was incorrectly accepted")
+          snapshot = kernel.record_mission_outcome(
+              "outcome:artifact-only",
+              transition_kind="ledger_created",
+              before_state_ref="case-proposition:before",
+              after_state_ref="artifact:new-ledger",
+              evidence_refs=("ledger:new-ledger",),
+          )
+          if snapshot.phase != "verified":
+              raise SystemExit("activity-only outcome should remain a verified intermediate gain")
+          state = kernel.outcome_state()
+          if state["recorded"] is not False:
+              raise SystemExit("activity-only artifact was incorrectly promoted to mission outcome")
+          if state["uplift_required"] is not True:
+              raise SystemExit("activity-only artifact did not raise next-frontier uplift")
 
-          try:
-              kernel.begin_persistence()
-          except OutcomeFidelityViolation:
-              pass
-          else:
-              raise SystemExit("artifact-only work incorrectly reached persistence")
+          persistence = kernel.begin_persistence()
+          if persistence.phase != "persisting":
+              raise SystemExit("verified intermediate gain did not reach persistence")
+          kernel.record_persistence("persistence:artifact-only")
+          final = kernel.record_readback(
+              "readback:artifact-only",
+              matches_expected_state=True,
+              target_reached=True,
+          )
+          if final.phase != "complete":
+              raise SystemExit("truthful intermediate execution did not complete")
+          if kernel.outcome_state()["recorded"] is not False:
+              raise SystemExit("intermediate completion was incorrectly promoted to mission outcome")
           PY

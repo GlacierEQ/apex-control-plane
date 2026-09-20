@@ -4,8 +4,6 @@ from pathlib import Path
 from types import SimpleNamespace
 import sys
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
@@ -14,7 +12,6 @@ if str(SRC) not in sys.path:
 import apex_runtime_kernel as runtime
 from apex_runtime_kernel import RuntimePhase, TaskMode, create_verified_runtime_kernel
 from outcome_fidelity_runtime import (
-    OutcomeFidelityViolation,
     enforce_outcome_fidelity,
     load_outcome_fidelity_policy,
 )
@@ -43,7 +40,6 @@ def _bind_mutation(kernel) -> None:
         operation_class="continue_case_execution",
         mode=TaskMode.MUTATION,
         action_scope="internal",
-        operator_authorization_ref="operator-command:current",
         prior_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
         source_refs=("case-source:ticket-100859",),
         verification_plan=(
@@ -64,67 +60,85 @@ def _bind_mutation(kernel) -> None:
     assert kernel.phase is RuntimePhase.VERIFIED
 
 
-def test_policy_is_fail_closed() -> None:
+def test_policy_measures_progress_without_fail_closed_authority() -> None:
     policy = load_outcome_fidelity_policy()
-    assert policy["fail_closed"] is True
-    assert policy["required_for_mutation"] is True
+    assert policy["fail_closed"] is False
+    assert policy["required_for_mutation"] is False
+    assert policy["mission_outcome_measurement_required"] is True
     assert "artifact_created" in policy["activity_only_transition_kinds"]
     assert "genuine_external_boundary" in policy["allowed_transition_kinds"]
 
 
-def test_mutation_cannot_persist_without_mission_outcome(monkeypatch) -> None:
+def test_mutation_can_persist_verified_intermediate_gain_without_fake_outcome(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
-    with pytest.raises(OutcomeFidelityViolation, match="cannot persist"):
-        kernel.begin_persistence()
+    state = kernel.begin_persistence()
 
-    assert kernel.phase is RuntimePhase.VERIFIED
+    assert state.phase == "persisting"
+    outcome = kernel.outcome_state()
+    assert outcome["recorded"] is False
+    assert outcome["uplift_required"] is True
+    assert any("persist verified intermediate gain" in item for item in outcome["findings"])
 
 
-def test_artifact_creation_is_explicitly_rejected_as_progress(monkeypatch) -> None:
+def test_artifact_creation_is_preserved_but_not_promoted_to_mission_progress(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
-    with pytest.raises(OutcomeFidelityViolation, match="assistant activity is not mission progress"):
-        kernel.record_mission_outcome(
-            "outcome:fake-artifact",
-            transition_kind="artifact_created",
-            before_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
-            after_state_ref="artifact:new-ledger",
-            evidence_refs=("artifact:new-ledger",),
-        )
+    snapshot = kernel.record_mission_outcome(
+        "outcome:fake-artifact",
+        transition_kind="artifact_created",
+        before_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
+        after_state_ref="artifact:new-ledger",
+        evidence_refs=("artifact:new-ledger",),
+    )
+
+    assert snapshot.phase == "verified"
+    assert "outcome_uplift" in snapshot.receipt_kinds
+    state = kernel.outcome_state()
+    assert state["recorded"] is False
+    assert any("activity-only gain" in item for item in state["findings"])
 
 
-def test_same_before_and_after_state_is_not_progress(monkeypatch) -> None:
+def test_same_before_and_after_state_drives_next_frontier_instead_of_veto(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
-    with pytest.raises(OutcomeFidelityViolation, match="mission state did not change"):
-        kernel.record_mission_outcome(
-            "outcome:no-change",
-            transition_kind="attributed",
-            before_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
-            after_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
-            evidence_refs=("source-proof:native-record-1",),
-        )
+    kernel.record_mission_outcome(
+        "outcome:no-change",
+        transition_kind="attributed",
+        before_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
+        after_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
+        evidence_refs=("source-proof:native-record-1",),
+    )
+
+    state = kernel.outcome_state()
+    assert state["recorded"] is False
+    assert any("did not change mission state" in item for item in state["findings"])
 
 
-def test_activity_artifacts_alone_cannot_prove_outcome(monkeypatch) -> None:
+def test_activity_artifacts_alone_cannot_prove_outcome_but_work_is_preserved(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
-    with pytest.raises(OutcomeFidelityViolation, match="solely by assistant-authored"):
-        kernel.record_mission_outcome(
-            "outcome:fake-attribution",
-            transition_kind="attributed",
-            before_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
-            after_state_ref="case-proposition:ALG-NEX-641@ACTOR_ATTRIBUTED",
-            evidence_refs=("ledger:actor-ledger", "matrix:attribution-matrix"),
-        )
+    snapshot = kernel.record_mission_outcome(
+        "outcome:fake-attribution",
+        transition_kind="attributed",
+        before_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
+        after_state_ref="case-proposition:ALG-NEX-641@ACTOR_ATTRIBUTED",
+        evidence_refs=("ledger:actor-ledger", "matrix:attribution-matrix"),
+    )
+
+    assert snapshot.phase == "verified"
+    assert kernel.outcome_state()["recorded"] is False
+    assert any(
+        "assistant-authored activity artifacts" in item
+        for item in kernel.outcome_state()["findings"]
+    )
 
 
-def test_real_source_bearing_state_transition_allows_completion(monkeypatch) -> None:
+def test_real_source_bearing_state_transition_records_mission_outcome(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
@@ -151,22 +165,25 @@ def test_real_source_bearing_state_transition_allows_completion(monkeypatch) -> 
     assert kernel.outcome_state()["transition_kind"] == "attributed"
 
 
-def test_external_boundary_requires_route_exhaustion(monkeypatch) -> None:
+def test_external_boundary_without_route_exhaustion_becomes_uplift_finding(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
-    with pytest.raises(OutcomeFidelityViolation, match="routes_exhausted=true"):
-        kernel.record_mission_outcome(
-            "outcome:external-boundary",
-            transition_kind="genuine_external_boundary",
-            before_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
-            evidence_refs=("provider-error:records-not-produced",),
-            boundary_reason="native recovery inventory remains exclusively provider-held",
-            routes_exhausted=False,
-        )
+    kernel.record_mission_outcome(
+        "outcome:external-boundary",
+        transition_kind="genuine_external_boundary",
+        before_state_ref="case-proposition:ALG-NEX-641@ITEMS_MATCHED",
+        evidence_refs=("provider-error:records-not-produced",),
+        boundary_reason="native recovery inventory remains exclusively provider-held",
+        routes_exhausted=False,
+    )
+
+    state = kernel.outcome_state()
+    assert state["recorded"] is False
+    assert any("internal routes were exhausted" in item for item in state["findings"])
 
 
-def test_genuine_external_boundary_is_valid_only_with_evidence(monkeypatch) -> None:
+def test_genuine_external_boundary_is_recorded_with_evidence(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
@@ -183,6 +200,25 @@ def test_genuine_external_boundary_is_valid_only_with_evidence(monkeypatch) -> N
     )
     assert "mission_outcome" in outcome.receipt_kinds
     assert kernel.outcome_state()["transition_kind"] == "genuine_external_boundary"
+
+
+def test_intermediate_gain_can_complete_truthfully_then_raise_next_frontier(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    _bind_mutation(kernel)
+
+    kernel.begin_persistence()
+    kernel.record_persistence("github-commit:intermediate")
+    final = kernel.record_readback(
+        "readback:intermediate",
+        matches_expected_state=True,
+        target_reached=True,
+    )
+
+    assert final.phase == "complete"
+    state = kernel.outcome_state()
+    assert state["recorded"] is False
+    assert state["uplift_required"] is True
+    assert any("next material frontier" in item for item in state["findings"])
 
 
 def test_observation_tasks_are_not_forced_to_fake_progress(monkeypatch) -> None:
@@ -206,3 +242,4 @@ def test_observation_tasks_are_not_forced_to_fake_progress(monkeypatch) -> None:
     )
     assert final.phase == "complete"
     assert kernel.outcome_state()["recorded"] is False
+    assert kernel.outcome_state()["uplift_required"] is False

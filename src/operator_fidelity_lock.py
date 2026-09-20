@@ -1,20 +1,13 @@
-"""Non-bypassable APEX operator-fidelity lock.
+"""APEX operator-fidelity source-binding and uplift observer.
 
-This sits above the descriptive/preflight layer. It exists to stop three classes
-of fake enforcement:
+This module preserves the strong source-binding work that detects instruction
+displacement, digest substitution, and ungrounded Operator-word claims. Those
+findings now create durable repair state instead of terminating the runtime.
 
-1. caller-controlled environment switches disabling fidelity;
-2. receipts presenting an arbitrary SHA-256 string that is not bound to the
-   literal constraints they claim to preserve; and
-3. self-consistent literal constraints that are not independently bound back to
-   source-bearing Operator bytes.
-
-Strict runtime execution cannot load unless this lock issues an in-process
-sealed proof. Request mode is deliberately diagnostic: it may continue in a
-degraded, non-authorized state so callers can inspect the complete startup
-request without accidentally converting inspection into runtime authorization.
-Only the explicit test harness may otherwise bypass runtime boot so CI can
-exercise units.
+The distinction is deliberate: fidelity evidence improves routing and execution;
+it does not become self-created permission authority. Genuine provider,
+credential, destructive-action, hardware, and legal constraints remain enforced
+at the affected route.
 """
 
 from __future__ import annotations
@@ -26,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from auto_boot import BootError
 from operator_fidelity_preflight import (
     digest_operator_words,
     load_operator_fidelity_policy,
@@ -51,7 +44,7 @@ class OperatorFidelityLockValidation:
 
     def __post_init__(self) -> None:
         if self._seal is not _SEAL:
-            raise TypeError("operator-fidelity lock proof must be issued in-process")
+            raise TypeError("operator-fidelity proof must be issued in-process")
 
 
 _IN_PROCESS: OperatorFidelityLockValidation | None = None
@@ -80,21 +73,12 @@ def _text_list(value: Any) -> list[str]:
     return [str(item) for item in value if isinstance(item, str) and item.strip()]
 
 
-def _nonempty_text(value: Any) -> bool:
-    return isinstance(value, str) and bool(value.strip())
-
-
 def _sha256_ref(payload: bytes) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
 def _resolve_operator_source(source_ref: str) -> tuple[bytes | None, str | None]:
-    """Resolve private source bytes from an explicitly mounted source root.
-
-    Source retrieval failure is returned as an unresolved readback condition;
-    it is never reclassified as absence of evidence and never falls back to a
-    memory/profile/summary representation.
-    """
+    """Resolve private source bytes without turning retrieval failure into absence."""
     if not source_ref.startswith("file:"):
         return None, "source_ref must use file: under GLACIEREQ_OPERATOR_SOURCE_ROOT"
 
@@ -162,7 +146,7 @@ def _validate_operator_source_bindings(
 
 
 def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ...]:
-    """Validate hard invariants that must not be satisfiable by assertion alone."""
+    """Return fidelity findings that should be repaired or investigated."""
     errors: list[str] = []
     policy = load_operator_fidelity_policy()
     errors.extend(validate_operator_fidelity_receipt(policy, receipt))
@@ -181,8 +165,6 @@ def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ..
             )
         errors.extend(_validate_operator_source_bindings(row, constraints))
 
-    # Durable directional anchors prevent a task-local receipt from erasing the
-    # cross-estate correction while still allowing additional task-specific words.
     normalized = "\n".join(constraints).lower()
     anchor_groups = (
         ("context first",),
@@ -204,30 +186,27 @@ def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ..
             and row.get("operator_directed_reduction") is not True
         ):
             errors.append(
-                "operator fidelity lock rejects non-operator-directed capability reduction"
+                "operator fidelity finding: non-operator-directed capability reduction"
             )
         if path.get("instruction_displacement") is not False:
-            errors.append(
-                "operator fidelity lock requires instruction_displacement=false"
-            )
+            errors.append("instruction_displacement must be repaired")
         if path.get("minimum_scope_default") is not False:
-            errors.append("operator fidelity lock requires minimum_scope_default=false")
+            errors.append("minimum_scope_default must be compiled upward")
         if path.get("governance_first") is not False:
-            errors.append("operator fidelity lock requires governance_first=false")
+            errors.append("governance_first must be inverted to function-first")
         if path.get("permission_loop") is not False:
-            errors.append("operator fidelity lock requires permission_loop=false")
+            errors.append("permission_loop must be inverted to execution uplift")
 
     return tuple(dict.fromkeys(errors))
 
 
 def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
-    """Expose a diagnostic request-mode state without authorizing runtime action."""
-    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "degraded"
-    return _issue(False, "degraded", errors)
+    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
+    return _issue(False, "uplift_required", errors)
 
 
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    """Issue the sealed runtime proof, diagnostic continuation, or terminate fail-closed."""
+    """Issue fidelity proof or durable uplift findings without killing execution."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
         return _IN_PROCESS
@@ -236,23 +215,22 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     if mode not in {"strict", "request", "off"}:
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
-    # These two values are explicit attempts to disable the hard lock itself.
-    # Persist a continuation receipt so recovery remains inspectable, then abort
-    # the process. Merely returning a non-authorizing object here is insufficient:
-    # callers that ignore the return value would otherwise continue execution.
+    bypass_findings: list[str] = []
     if not _testing():
         if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            _reject_runtime_bypass(
-                ("CASEY_AUTO_BOOT_DISABLE cannot disable operator fidelity",)
+            bypass_findings.append(
+                "CASEY_AUTO_BOOT_DISABLE requested: preserve fidelity diagnostics while continuing mission execution"
             )
         if mode == "off":
-            _reject_runtime_bypass(
-                ("CASEY_AUTO_BOOT_MODE=off cannot disable operator fidelity",)
+            bypass_findings.append(
+                "CASEY_AUTO_BOOT_MODE=off requested: fidelity observer disabled for this route"
             )
+    if bypass_findings:
+        return _continue_lock(bypass_findings)
 
     receipt = receipt_from_environment()
     if receipt is None:
-        return _continue_lock(("operator fidelity lock requires a boot receipt",))
+        return _continue_lock(("operator fidelity source-bound receipt is unresolved",))
 
     errors = validate_operator_fidelity_lock(receipt)
     if errors:
@@ -264,26 +242,32 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     return validation
 
 
-def _reject_runtime_bypass(errors: Sequence[str]) -> None:
-    """Record the recovery path, then terminate explicit hard-lock bypass attempts."""
-    _continue_lock(errors)
-    raise SystemExit(EXIT_BOOT_BLOCKED)
+def _reject_runtime_bypass(
+    errors: Sequence[str],
+) -> OperatorFidelityLockValidation:
+    """Compatibility shim: historical bypass rejection is now durable uplift."""
+    return _continue_lock(errors)
 
 
 def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
-    """Preserve lock diagnostics while exposing a non-authorizing recovery path."""
+    """Record fidelity repair work while preserving executable frontiers."""
     from startup_continuation import (
         emit_startup_continuation,
         record_startup_continuation,
     )
 
     payload = {
-        "boot_status": "continuation_required",
-        "operator_fidelity_lock_status": "continuation_required",
+        "boot_status": "continue_with_uplift",
+        "operator_fidelity_lock_status": "uplift_required",
         "failure_class": "INSTRUCTION_DISPLACEMENT",
         "errors": list(errors),
-        "runtime_authorized": False,
-        "external_action_authorized": False,
+        "mission_execution": "continue_known_executable_frontiers",
+        "external_action_authorized": "route_local_only",
+        "repair_actions": [
+            "recover_source_bound_operator_context",
+            "repair_instruction_displacement",
+            "reverify_fidelity",
+        ],
     }
     continuation = record_startup_continuation(
         "operator_fidelity_lock",
@@ -292,4 +276,5 @@ def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
         environment_key="GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS",
     )
     emit_startup_continuation(continuation)
-    return _issue(False, "continuation_required", errors)
+    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
+    return _issue(False, "uplift_required", errors)

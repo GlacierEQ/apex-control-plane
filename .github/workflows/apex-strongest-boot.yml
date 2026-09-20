@@ -119,17 +119,18 @@ jobs:
             tests/test_runtime_execution_guard.py \
             tests/test_control_plane.py
 
-      - name: Prove strict frontier blocks before model-attractor without receipt
+      - name: Prove frontier uncertainty accumulates diagnostics instead of suppressing later observers
         shell: bash
         run: |
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python - <<'PY'
           from apex_strong_boot import _run_model_attractor_preflight
 
-          failures = []
-          _run_model_attractor_preflight(failures)
-          assert failures == [
-              "strict_executable_frontier_authority: strict frontier preflight requires a boot receipt"
-          ], failures
+          findings = []
+          _run_model_attractor_preflight(findings)
+          assert findings == [
+              "strict_executable_frontier_authority: strict frontier preflight requires a boot receipt",
+              "model_attractor_defense: no in-process validation published",
+          ], findings
           PY
 
       - name: Prove runtime entrypoint fails closed without receipts
