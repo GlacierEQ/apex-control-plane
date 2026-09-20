@@ -53,13 +53,6 @@ def _bind_mutation(kernel: ApexRuntimeKernel) -> None:
             "read back committed files",
         ),
     )
-    kernel.record_context_recovery(
-        "context-recovery:mutation-helper",
-        recovered_refs=(
-            "github:existing-apex-control-plane",
-            "github:control-plane.py",
-        ),
-    )
 
 
 def test_direct_constructor_is_rejected() -> None:
@@ -82,37 +75,6 @@ def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> Non
     assert kernel.phase is RuntimePhase.BOOTSTRAPPED
     assert kernel.startup_gates == runtime.EXPECTED_STARTUP_OBSERVERS
     assert any("apex_startup: validation missing" in item for item in kernel.startup_findings)
-
-
-def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
-    kernel = _arm(monkeypatch)
-    kernel.bind_task(
-        literal_instruction="use context first",
-        target_state="context is recovered before work",
-        operation_class="context_first",
-        mode=TaskMode.OBSERVATION,
-        action_scope="none",
-        source_refs=("memory:operator-context",),
-        verification_plan=("verify context receipt precedes observation",),
-    )
-
-    assert kernel.phase is RuntimePhase.CONTEXT_RECOVERING
-    with pytest.raises(RuntimeViolation, match="expected one of: ready"):
-        kernel.begin()
-
-    with pytest.raises(RuntimeViolation, match="at least one recovered source reference"):
-        kernel.record_context_recovery(
-            "context-recovery:empty",
-            recovered_refs=(),
-        )
-
-    result = kernel.record_context_recovery(
-        "context-recovery:operator-context",
-        recovered_refs=("memory:operator-context",),
-    )
-    assert result.phase == "ready"
-    kernel.begin()
-    assert kernel.phase is RuntimePhase.OBSERVING
 
 
 def test_routine_mutation_needs_no_separate_authorization_reference(monkeypatch) -> None:
@@ -159,7 +121,6 @@ def test_mutation_completes_with_full_evidence_chain(monkeypatch) -> None:
     assert result.phase == "complete"
     assert kernel.phase is RuntimePhase.COMPLETE
     assert result.receipt_kinds == (
-        "context_recovery",
         "execution",
         "test",
         "adversarial_test",
@@ -220,10 +181,6 @@ def test_observation_has_separate_non_mutating_lifecycle(monkeypatch) -> None:
         source_refs=("github:runtime-kernel",),
         verification_plan=("cross-check observed source",),
     )
-    kernel.record_context_recovery(
-        "context-recovery:runtime-kernel",
-        recovered_refs=("github:runtime-kernel",),
-    )
     kernel.begin()
     kernel.record_observation("github-read:runtime-kernel")
     kernel.record_verification("verification:observation", passed=True)
@@ -234,12 +191,7 @@ def test_observation_has_separate_non_mutating_lifecycle(monkeypatch) -> None:
     )
 
     assert result.phase == "complete"
-    assert result.receipt_kinds == (
-        "context_recovery",
-        "observation",
-        "verification",
-        "readback",
-    )
+    assert result.receipt_kinds == ("observation", "verification", "readback")
 
 
 def test_observation_verification_miss_routes_to_repair(monkeypatch) -> None:
@@ -250,10 +202,6 @@ def test_observation_verification_miss_routes_to_repair(monkeypatch) -> None:
         operation_class="inspect",
         mode=TaskMode.OBSERVATION,
         action_scope="none",
-    )
-    kernel.record_context_recovery(
-        "context-recovery:inspect-state",
-        recovered_refs=("runtime-state:current",),
     )
     kernel.begin()
     kernel.record_observation("read:state")
@@ -345,10 +293,6 @@ def test_audit_never_contains_literal_instruction_or_receipt_details(monkeypatch
         mode="mutation",
         action_scope="internal",
         verification_plan=("verify",),
-    )
-    kernel.record_context_recovery(
-        "context-recovery:audit-test",
-        recovered_refs=("operator-context:current",),
     )
     kernel.begin()
     kernel.record_execution(
