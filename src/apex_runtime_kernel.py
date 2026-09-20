@@ -52,7 +52,6 @@ class RuntimeViolation(RuntimeError):
 
 class RuntimePhase(str, Enum):
     BOOTSTRAPPED = "bootstrapped"
-    CONTEXT_RECOVERING = "context_recovering"
     READY = "ready"
     OBSERVING = "observing"
     EXECUTING = "executing"
@@ -223,28 +222,8 @@ class ApexRuntimeKernel:
             source_refs=refs,
             verification_plan=plan,
         )
-        self.phase = RuntimePhase.CONTEXT_RECOVERING
-        self._audit_event("task_bound")
-        return self.snapshot()
-
-    def record_context_recovery(
-        self,
-        reference: str,
-        *,
-        recovered_refs: Sequence[str],
-        details: Mapping[str, Any] | None = None,
-    ) -> RuntimeSnapshot:
-        """Record recovered prior/current context before any task work begins."""
-        self._require_phase(RuntimePhase.CONTEXT_RECOVERING)
-        refs = tuple(_validated_receipt_refs(recovered_refs))
-        if not refs:
-            raise RuntimeViolation(
-                "context recovery requires at least one recovered source reference"
-            )
-        self.task.source_refs = tuple(dict.fromkeys((*self.task.source_refs, *refs)))
-        self._record_receipt("context_recovery", reference, True, details)
         self.phase = RuntimePhase.READY
-        self._audit_event("context_recovered")
+        self._audit_event("task_bound")
         return self.snapshot()
 
     def begin(self) -> RuntimeSnapshot:
@@ -640,9 +619,8 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
     if not isinstance(requirements, Mapping):
         raise RuntimeViolation("receipt_requirements must be an object")
     expected = {
-        "observation": {"context_recovery", "observation", "verification", "readback"},
+        "observation": {"observation", "verification", "readback"},
         "mutation": {
-            "context_recovery",
             "execution",
             "test",
             "adversarial_test",
