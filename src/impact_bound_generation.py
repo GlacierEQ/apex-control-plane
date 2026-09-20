@@ -312,6 +312,8 @@ class ImpactBoundGenerationHost:
 
 
 def _route_kind(value: Any) -> str:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return "execution"
     kind = _text(value, "route_kind").lower()
     if kind not in ROUTE_KINDS:
         raise ImpactBoundGenerationViolation(
