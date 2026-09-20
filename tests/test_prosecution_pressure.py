@@ -197,4 +197,5 @@ def test_weak_evidence_never_turns_prosecution_into_supported_route() -> None:
         metadata={"route_kind": "prosecution"},
         pressure=pressure,
     )
-    assert adjusted["unsupported_claim_risk"] == 0.1
+    assert adjusted["unsupported_claim_risk"] >= 0.8
+    assert adjusted["failure_risk"] > 0.1
