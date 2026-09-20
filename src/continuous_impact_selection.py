@@ -48,6 +48,19 @@ except ImportError:
         pressure_adjusted_features,
     )
 
+try:
+    from .mission_ambition import (
+        AmbitionPressure,
+        MissionAmbition,
+        ambition_adjusted_features,
+    )
+except ImportError:
+    from mission_ambition import (
+        AmbitionPressure,
+        MissionAmbition,
+        ambition_adjusted_features,
+    )
+
 
 class ImpactSelectionViolation(RuntimeError):
     """Raised when action selection bypasses impact-aware comparison."""
@@ -68,6 +81,8 @@ IMPACT_WEIGHTS: dict[str, float] = {
     "rule_accretion_risk": -2.25,
     "rediscovery_risk": -2.70,
     "scope_drift_risk": -2.40,
+    "ambition_drive": 2.60,
+    "stagnation_risk": -2.80,
 }
 
 
@@ -103,6 +118,9 @@ class ImpactDecision:
     pressure_score: float = 0.0
     pressure_reasons: tuple[str, ...] = ()
     prosecution_eligible: bool = False
+    ambition_level: str = "steady"
+    ambition_score: float = 0.0
+    ambition_nonprogress_streak: int = 0
 
 
 class ContinuousImpactSelector:
@@ -114,12 +132,21 @@ class ContinuousImpactSelector:
     history remains inspectable.
     """
 
-    def __init__(self, engine: AdaptiveIntelligenceEngine | None = None) -> None:
+    def __init__(
+        self,
+        engine: AdaptiveIntelligenceEngine | None = None,
+        *,
+        ambition: MissionAmbition | None = None,
+        ambition_state_path: str | None = None,
+    ) -> None:
         if engine is None:
             weights = dict(DEFAULT_WEIGHTS)
             weights.update(IMPACT_WEIGHTS)
             engine = AdaptiveIntelligenceEngine(ranker=AdaptiveRanker(weights=weights))
+        if ambition is not None and ambition_state_path is not None:
+            raise ValueError("provide ambition or ambition_state_path, not both")
         self.engine = engine
+        self.ambition = ambition or MissionAmbition(ambition_state_path)
         self._history: list[ImpactDecision] = []
 
     def select(
@@ -138,6 +165,12 @@ class ContinuousImpactSelector:
         version = _required_text(state_version, "state_version")
         if not candidates:
             raise ImpactSelectionViolation("at least one candidate operation is required")
+
+        ambition_pressure = self.ambition.observe_selection(
+            mission=mission_text,
+            operation_class=bound_operation,
+            state_version=version,
+        )
 
         seen: set[str] = set()
         eligible: list[ImpactCandidate] = []
@@ -163,7 +196,14 @@ class ContinuousImpactSelector:
             )
 
         ranking = self.engine.rank(
-            [self._to_adaptive(candidate, pressure=pressure) for candidate in eligible]
+            [
+                self._to_adaptive(
+                    candidate,
+                    pressure=pressure,
+                    ambition_pressure=ambition_pressure,
+                )
+                for candidate in eligible
+            ]
         )
         if not ranking:
             raise ImpactSelectionViolation("impact ranker returned no eligible candidate")
@@ -189,6 +229,9 @@ class ContinuousImpactSelector:
             "prosecution_eligible": (
                 pressure.prosecution_eligible if pressure is not None else False
             ),
+            "ambition_level": ambition_pressure.level.value,
+            "ambition_score": ambition_pressure.score,
+            "ambition_nonprogress_streak": ambition_pressure.nonprogress_streak,
         }
         decision = ImpactDecision(
             task_id=task,
@@ -208,6 +251,11 @@ class ContinuousImpactSelector:
             pressure_score=decision_payload["pressure_score"],
             pressure_reasons=tuple(decision_payload["pressure_reasons"]),
             prosecution_eligible=decision_payload["prosecution_eligible"],
+            ambition_level=decision_payload["ambition_level"],
+            ambition_score=decision_payload["ambition_score"],
+            ambition_nonprogress_streak=decision_payload[
+                "ambition_nonprogress_streak"
+            ],
         )
         self._history.append(decision)
         return decision
@@ -232,6 +280,24 @@ class ContinuousImpactSelector:
             },
         )
 
+    def record_material_progress(
+        self,
+        *,
+        mission: str,
+        operation_class: str,
+        state_version: str,
+        material_progress: bool,
+        reason: str,
+    ) -> AmbitionPressure:
+        """Update durable ambition from verified mission-state evidence."""
+        return self.ambition.record_outcome(
+            mission=mission,
+            operation_class=operation_class,
+            state_version=state_version,
+            material_progress=material_progress,
+            reason=reason,
+        )
+
     def history(self) -> tuple[ImpactDecision, ...]:
         return tuple(self._history)
 
@@ -252,6 +318,10 @@ class ContinuousImpactSelector:
                 f"Expected mission delta: {decision.selected_expected_delta}. "
                 f"Pressure level: {decision.pressure_level}; "
                 f"prosecution eligible: {decision.prosecution_eligible}. "
+                f"Ambition: {decision.ambition_level} "
+                f"(nonprogress streak {decision.ambition_nonprogress_streak}). "
+                "Do not stop at an activity-only intermediate gain while a material "
+                "state-changing route remains executable. "
                 "Execute this selected operation; do not replace it with planning, "
                 "rediscovery, rule creation, or another meta-operation. Re-evaluate "
                 "after any material state change. "
@@ -264,8 +334,15 @@ class ContinuousImpactSelector:
         candidate: ImpactCandidate,
         *,
         pressure: ProsecutionPressure | None = None,
+        ambition_pressure: AmbitionPressure | None = None,
     ) -> AdaptiveCandidate:
         features = {str(name): float(value) for name, value in candidate.features.items()}
+        if ambition_pressure is not None:
+            features = ambition_adjusted_features(
+                features,
+                metadata=candidate.metadata,
+                pressure=ambition_pressure,
+            )
         if pressure is not None:
             features = pressure_adjusted_features(
                 features,
