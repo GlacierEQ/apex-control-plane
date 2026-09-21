@@ -2,7 +2,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.oa_agent_genomes_v1 (
   logical_agent_id text primary key,
-  runtime_agent_id uuid null references public.agents(id) on delete set null,
+  runtime_agent_id uuid null,
   parent_logical_agent_id text null references public.oa_agent_genomes_v1(logical_agent_id) on delete restrict,
   domain_key text not null,
   display_name text not null,
@@ -27,7 +27,8 @@ create table if not exists public.oa_agent_genome_versions_v1 (
   genome_sha256 text not null check (genome_sha256 ~ '^[0-9a-f]{64}$'),
   previous_version_id uuid null references public.oa_agent_genome_versions_v1(genome_version_id) on delete restrict,
   activation_status text not null default 'ACTIVE' check (activation_status in ('CANDIDATE','ACTIVE','SUPERSEDED','QUARANTINED','RETIRED')),
-  created_by text not null default 'OPERATOR',
+  created_by text not null,
+  created_source_class text not null check (created_source_class in ('OPERATOR','AGENT','SYSTEM','EVIDENCE','MIGRATION')),
   created_at timestamptz not null default now(),
   activated_at timestamptz,
   unique (logical_agent_id, version),
@@ -62,11 +63,12 @@ create table if not exists public.oa_administration_events_v1 (
   admin_event_id uuid primary key default gen_random_uuid(),
   logical_agent_id text not null references public.oa_agent_genomes_v1(logical_agent_id) on delete restrict,
   event_type text not null,
-  source_continuity_event_id uuid null references public.continuity_events_v1(event_id) on delete set null,
+  source_continuity_event_id uuid null,
   parent_admin_event_id uuid null references public.oa_administration_events_v1(admin_event_id) on delete restrict,
   payload jsonb not null default '{}'::jsonb,
   payload_sha256 text not null check (payload_sha256 ~ '^[0-9a-f]{64}$'),
-  created_by text not null default 'OPERATOR',
+  created_by text not null,
+  created_source_class text not null check (created_source_class in ('OPERATOR','AGENT','SYSTEM','EVIDENCE','MIGRATION')),
   created_at timestamptz not null default now()
 );
 
@@ -76,17 +78,61 @@ create table if not exists public.oa_continuity_heads_v1 (
   sequence bigint not null check (sequence > 0),
   previous_head_id uuid null references public.oa_continuity_heads_v1(continuity_head_id) on delete restrict,
   genome_version_id uuid not null references public.oa_agent_genome_versions_v1(genome_version_id) on delete restrict,
-  source_continuity_event_id uuid null references public.continuity_events_v1(event_id) on delete set null,
+  source_continuity_event_id uuid null,
   state jsonb not null,
   state_sha256 text not null check (state_sha256 ~ '^[0-9a-f]{64}$'),
   recovery_instructions jsonb not null default '{}'::jsonb,
   verified boolean not null default false,
   verified_at timestamptz,
   created_at timestamptz not null default now(),
-  unique (logical_agent_id, sequence)
+  unique (logical_agent_id, sequence),
+  check ((verified = true and verified_at is not null) or (verified = false and verified_at is null))
 );
 
-create index if not exists oa_agent_genomes_runtime_agent_idx
+
+-- Optional estate dependencies are bound when present. The migration remains
+-- installable in a fresh control plane where legacy runtime/continuity tables
+-- have not yet been created.
+do $
+begin
+  if to_regclass('public.agents') is not null
+     and not exists (
+       select 1 from pg_constraint
+       where conname = 'oa_agent_genomes_runtime_agent_fk'
+         and conrelid = 'public.oa_agent_genomes_v1'::regclass
+     ) then
+    alter table public.oa_agent_genomes_v1
+      add constraint oa_agent_genomes_runtime_agent_fk
+      foreign key (runtime_agent_id) references public.agents(id) on delete set null;
+  end if;
+
+  if to_regclass('public.continuity_events_v1') is not null then
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'oa_admin_events_source_continuity_event_fk'
+        and conrelid = 'public.oa_administration_events_v1'::regclass
+    ) then
+      alter table public.oa_administration_events_v1
+        add constraint oa_admin_events_source_continuity_event_fk
+        foreign key (source_continuity_event_id)
+        references public.continuity_events_v1(event_id) on delete restrict;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'oa_continuity_heads_source_continuity_event_fk'
+        and conrelid = 'public.oa_continuity_heads_v1'::regclass
+    ) then
+      alter table public.oa_continuity_heads_v1
+        add constraint oa_continuity_heads_source_continuity_event_fk
+        foreign key (source_continuity_event_id)
+        references public.continuity_events_v1(event_id) on delete restrict;
+    end if;
+  end if;
+end;
+$;
+
+create unique index if not exists oa_agent_genomes_runtime_agent_idx
   on public.oa_agent_genomes_v1(runtime_agent_id)
   where runtime_agent_id is not null;
 
@@ -102,6 +148,50 @@ create index if not exists oa_admin_events_agent_created_idx
 create index if not exists oa_continuity_heads_agent_sequence_idx
   on public.oa_continuity_heads_v1(logical_agent_id, sequence desc);
 
+
+create or replace function public.oa_source_class_v1(p_identity text)
+returns text
+language sql
+immutable
+set search_path = pg_catalog, public
+as $
+  select case
+    when p_identity = 'OPERATOR' then 'OPERATOR'
+    when p_identity like 'agent:%' then 'AGENT'
+    when p_identity like 'evidence:%' then 'EVIDENCE'
+    when p_identity like 'migration:%' then 'MIGRATION'
+    else 'SYSTEM'
+  end;
+$;
+
+create or replace function public.oa_validate_content_hash_v1()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public, extensions
+as $
+declare
+  v_expected text;
+begin
+  if tg_table_name = 'oa_agent_genome_versions_v1' then
+    v_expected := encode(digest(jsonb_strip_nulls(new.genome)::text, 'sha256'), 'hex');
+    if new.genome_sha256 <> v_expected then
+      raise exception 'genome_sha256 does not match genome payload';
+    end if;
+  elsif tg_table_name = 'oa_administration_events_v1' then
+    v_expected := encode(digest(jsonb_strip_nulls(new.payload)::text, 'sha256'), 'hex');
+    if new.payload_sha256 <> v_expected then
+      raise exception 'payload_sha256 does not match event payload';
+    end if;
+  elsif tg_table_name = 'oa_continuity_heads_v1' then
+    v_expected := encode(digest(jsonb_strip_nulls(new.state)::text, 'sha256'), 'hex');
+    if new.state_sha256 <> v_expected then
+      raise exception 'state_sha256 does not match continuity state';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
 create or replace function public.oa_reject_history_mutation_v1()
 returns trigger
 language plpgsql
@@ -111,6 +201,26 @@ begin
   raise exception '% is append-only; write a new record instead', tg_table_name;
 end;
 $$;
+
+drop trigger if exists oa_genome_versions_append_only_v1 on public.oa_agent_genome_versions_v1;
+create trigger oa_genome_versions_append_only_v1
+before update or delete on public.oa_agent_genome_versions_v1
+for each row execute function public.oa_reject_history_mutation_v1();
+
+drop trigger if exists oa_genome_versions_hash_check_v1 on public.oa_agent_genome_versions_v1;
+create trigger oa_genome_versions_hash_check_v1
+before insert on public.oa_agent_genome_versions_v1
+for each row execute function public.oa_validate_content_hash_v1();
+
+drop trigger if exists oa_admin_events_hash_check_v1 on public.oa_administration_events_v1;
+create trigger oa_admin_events_hash_check_v1
+before insert on public.oa_administration_events_v1
+for each row execute function public.oa_validate_content_hash_v1();
+
+drop trigger if exists oa_continuity_heads_hash_check_v1 on public.oa_continuity_heads_v1;
+create trigger oa_continuity_heads_hash_check_v1
+before insert on public.oa_continuity_heads_v1
+for each row execute function public.oa_validate_content_hash_v1();
 
 drop trigger if exists oa_admin_events_append_only_v1 on public.oa_administration_events_v1;
 create trigger oa_admin_events_append_only_v1
@@ -131,7 +241,7 @@ create or replace function public.oa_hatch_agent_v1(
   p_runtime_agent_id uuid,
   p_version text,
   p_genome jsonb,
-  p_created_by text default 'OPERATOR'
+  p_created_by text
 )
 returns uuid
 language plpgsql
@@ -145,7 +255,19 @@ declare
   v_event_payload jsonb;
   v_state jsonb;
   v_state_hash text;
+  v_source_class text;
+  v_request_role text;
 begin
+  v_request_role := coalesce(current_setting('request.jwt.claim.role', true), session_user);
+  if session_user not in ('postgres','supabase_admin','service_role')
+     and v_request_role <> 'service_role' then
+    raise exception 'oa_hatch_agent_v1 requires service_role or migration owner';
+  end if;
+
+  if p_created_by is null or btrim(p_created_by) = '' then
+    raise exception 'created_by identity is required';
+  end if;
+  v_source_class := public.oa_source_class_v1(p_created_by);
   if p_logical_agent_id is null or btrim(p_logical_agent_id) = '' then
     raise exception 'logical_agent_id is required';
   end if;
@@ -163,7 +285,7 @@ begin
     raise exception 'all 12 chromosomes are required';
   end if;
 
-  v_genome_hash := encode(digest(p_genome::text, 'sha256'), 'hex');
+  v_genome_hash := encode(digest(jsonb_strip_nulls(p_genome)::text, 'sha256'), 'hex');
 
   insert into public.oa_agent_genomes_v1 (
     logical_agent_id, runtime_agent_id, parent_logical_agent_id, domain_key,
@@ -171,7 +293,7 @@ begin
     operator_root, authority_source, jurisdiction, scope_boundaries, continuity_contract
   ) values (
     p_logical_agent_id, p_runtime_agent_id, p_parent_logical_agent_id, p_domain_key,
-    p_display_name, p_purpose, 'ACTIVE', p_version, 1,
+    p_display_name, p_purpose, 'HATCHED', p_version, 1,
     'OPERATOR', 'OPERATOR', '{}'::jsonb, '{}'::jsonb,
     jsonb_build_object(
       'priority', 1,
@@ -184,9 +306,9 @@ begin
   );
 
   insert into public.oa_agent_genome_versions_v1 (
-    logical_agent_id, version, genome, genome_sha256, activation_status, created_by, activated_at
+    logical_agent_id, version, genome, genome_sha256, activation_status, created_by, created_source_class, activated_at
   ) values (
-    p_logical_agent_id, p_version, p_genome, v_genome_hash, 'ACTIVE', p_created_by, now()
+    p_logical_agent_id, p_version, p_genome, v_genome_hash, 'ACTIVE', p_created_by, v_source_class, now()
   )
   returning genome_version_id into v_version_id;
 
@@ -199,26 +321,27 @@ begin
   );
 
   insert into public.oa_administration_events_v1 (
-    logical_agent_id, event_type, payload, payload_sha256, created_by
+    logical_agent_id, event_type, payload, payload_sha256, created_by, created_source_class
   ) values (
     p_logical_agent_id,
     'AGENT_HATCHED',
     v_event_payload,
-    encode(digest(v_event_payload::text, 'sha256'), 'hex'),
-    p_created_by
+    encode(digest(jsonb_strip_nulls(v_event_payload)::text, 'sha256'), 'hex'),
+    p_created_by,
+    v_source_class
   )
   returning admin_event_id into v_event_id;
 
   v_state := jsonb_build_object(
     'logical_agent_id', p_logical_agent_id,
-    'lifecycle', 'ACTIVE',
+    'lifecycle', 'HATCHED',
     'genome_version', p_version,
     'genome_version_id', v_version_id,
     'runtime_agent_id', p_runtime_agent_id,
     'continuity_priority', 1,
     'administration_event_id', v_event_id
   );
-  v_state_hash := encode(digest(v_state::text, 'sha256'), 'hex');
+  v_state_hash := encode(digest(jsonb_strip_nulls(v_state)::text, 'sha256'), 'hex');
 
   insert into public.oa_continuity_heads_v1 (
     logical_agent_id, sequence, genome_version_id, state, state_sha256,
@@ -254,6 +377,7 @@ select distinct on (h.logical_agent_id)
   h.verified_at,
   h.created_at
 from public.oa_continuity_heads_v1 h
+where h.verified = true
 order by h.logical_agent_id, h.sequence desc, h.created_at desc;
 
 alter table public.oa_agent_genomes_v1 enable row level security;
@@ -270,6 +394,8 @@ revoke all on public.oa_continuity_heads_v1 from anon, authenticated;
 revoke all on public.oa_current_continuity_heads_v1 from anon, authenticated;
 revoke all on function public.oa_hatch_agent_v1(text,text,text,text,text,uuid,text,jsonb,text) from public, anon, authenticated;
 revoke all on function public.oa_reject_history_mutation_v1() from public, anon, authenticated;
+revoke all on function public.oa_validate_content_hash_v1() from public, anon, authenticated;
+revoke all on function public.oa_source_class_v1(text) from public, anon, authenticated;
 
 grant all on public.oa_agent_genomes_v1 to service_role;
 grant all on public.oa_agent_genome_versions_v1 to service_role;
@@ -305,43 +431,54 @@ begin
       )
     );
     perform public.oa_hatch_agent_v1(
-      'OA.OPERATOR','root','Operator','Root mission authority',null,null,'1.0.0',v_root_genome,'OPERATOR'
+      'OA.OPERATOR','root','Operator','Root mission authority',null,null,'1.0.0',v_root_genome,'migration:operator_administration_genome_v1'
     );
   end if;
 
-  for a in select * from public.agents loop
-    v_logical_id := 'OA.RUNTIME.' || upper(regexp_replace(a.name, '[^a-zA-Z0-9]+', '_', 'g'));
-    if not exists (select 1 from public.oa_agent_genomes_v1 where logical_agent_id = v_logical_id) then
-      v_agent_genome := jsonb_build_object(
-        'schema','glaciereq.operator-agent-genome.v1',
-        'chromosomes', jsonb_build_object(
-          'continuity', jsonb_build_object('priority',1,'resumable',true,'source','legacy_runtime_import'),
-          'authority', jsonb_build_object('authority_holder','OPERATOR','delegated',true),
-          'identity_lineage', jsonb_build_object('logical_agent_id',v_logical_id,'parent','OA.OPERATOR','runtime_agent_id',a.id),
-          'mission', jsonb_build_object('purpose',coalesce(a.description,a.display_name),'category',a.category),
-          'cognition', jsonb_build_object('recover_before_recreate',true,'continue_before_reconstructing',true,'compound_before_replacing',true),
-          'knowledge_memory', jsonb_build_object('provenance_required',true),
-          'capability', jsonb_build_object('runtime_binding',a.id,'runtime_name',a.name),
-          'execution', jsonb_build_object('blocked_route_changes_route_not_objective',true),
-          'evidence_provenance', jsonb_build_object('provider_native_receipts_required',true),
-          'verification', jsonb_build_object('readback_required',true),
-          'integrity_security', jsonb_build_object('hash_algorithm','sha256','least_privilege',true),
-          'administration_observability', jsonb_build_object('audit_required',true,'legacy_status',a.status)
-        )
-      );
-      perform public.oa_hatch_agent_v1(
-        v_logical_id,
-        coalesce(nullif(a.category,''),'runtime'),
-        a.display_name,
-        a.description,
-        'OA.OPERATOR',
-        a.id,
-        'legacy-1',
-        v_agent_genome,
-        'migration:operator_administration_genome_v1'
-      );
-    end if;
-  end loop;
+  if to_regclass('public.agents') is not null then
+    for a in execute
+      'select id, name, display_name, category, description, status from public.agents'
+    loop
+      v_logical_id := 'OA.RUNTIME.'
+        || upper(regexp_replace(a.name, '[^a-zA-Z0-9]+', '_', 'g'))
+        || '_'
+        || upper(replace(a.id::text, '-', ''));
+
+      if not exists (
+        select 1 from public.oa_agent_genomes_v1
+        where runtime_agent_id = a.id
+      ) then
+        v_agent_genome := jsonb_build_object(
+          'schema','glaciereq.operator-agent-genome.v1',
+          'chromosomes', jsonb_build_object(
+            'continuity', jsonb_build_object('priority',1,'resumable',true,'source','legacy_runtime_import'),
+            'authority', jsonb_build_object('authority_holder','OPERATOR','delegated',true),
+            'identity_lineage', jsonb_build_object('logical_agent_id',v_logical_id,'parent','OA.OPERATOR','runtime_agent_id',a.id),
+            'mission', jsonb_build_object('purpose',coalesce(a.description,a.display_name),'category',a.category),
+            'cognition', jsonb_build_object('recover_before_recreate',true,'continue_before_reconstructing',true,'compound_before_replacing',true),
+            'knowledge_memory', jsonb_build_object('provenance_required',true),
+            'capability', jsonb_build_object('runtime_binding',a.id,'runtime_name',a.name),
+            'execution', jsonb_build_object('blocked_route_changes_route_not_objective',true),
+            'evidence_provenance', jsonb_build_object('provider_native_receipts_required',true),
+            'verification', jsonb_build_object('readback_required',true),
+            'integrity_security', jsonb_build_object('hash_algorithm','sha256','least_privilege',true),
+            'administration_observability', jsonb_build_object('audit_required',true,'legacy_status',a.status)
+          )
+        );
+        perform public.oa_hatch_agent_v1(
+          v_logical_id,
+          coalesce(nullif(a.category,''),'runtime'),
+          a.display_name,
+          a.description,
+          'OA.OPERATOR',
+          a.id,
+          'legacy-1',
+          v_agent_genome,
+          'migration:operator_administration_genome_v1'
+        );
+      end if;
+    end loop;
+  end if;
 end;
 $$;
 
