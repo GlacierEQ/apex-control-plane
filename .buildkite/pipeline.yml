@@ -157,13 +157,15 @@ steps:
       test "$actual" = "$BUILDKITE_COMMIT"
       PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
       test -x "$$PYTHON_BIN"
-      "$$PYTHON_BIN" scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
+      "$PYTHON_BIN" scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
+      "$PYTHON_BIN" scripts/reconcile_helix_buildkite.py 2>&1 | tee artifacts/buildkite/helix-reconciliation.log
       test -s artifacts/buildkite/genius-reconciliation.json
       buildkite-agent meta-data set genius-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/genius-reconciliation.json | cut -d ' ' -f 1)"
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/genius-reconciliation.json
       - artifacts/buildkite/genius-reconciliation.log
+      - artifacts/buildkite/helix-reconciliation.log
 
   - label: ":brain: Reconcile + verify Mastermind"
     key: mastermind-reconcile
