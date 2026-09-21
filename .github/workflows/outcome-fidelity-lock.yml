@@ -80,6 +80,13 @@ jobs:
               source_refs=("case-source:known",),
               verification_plan=("verify case-state change",),
           )
+          kernel.record_context_recovery(
+              "context-recovery:outcome-fidelity-probe",
+              recovered_refs=(
+                  "case-proposition:before",
+                  "case-source:known",
+              ),
+          )
           kernel.begin()
           kernel.record_execution("execution:artifact-only")
           kernel.record_test("test:artifact-only", passed=True)

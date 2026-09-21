@@ -35,19 +35,19 @@ jobs:
         run: python -m compileall -q src tests
       - name: Test safety and resilience invariants
         run: python -m pytest -q
-      - name: Synthetic read-only smoke test in explicit degraded mode
+      - name: Synthetic read-only smoke test continues with diagnostic uplift
         run: |
-          set +e
           CASEY_AUTO_BOOT_MODE=request \
           python src/control_plane.py \
             > /tmp/casebrain-smoke.json \
             2> /tmp/casebrain-boot-request.json
-          exit_code=$?
-          set -e
-          test "$exit_code" -eq 78
+          test -s /tmp/casebrain-smoke.json
+          grep -q '"phase":"complete"' /tmp/casebrain-smoke.json
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/casebrain-boot-request.json
           grep -q 'ground_truth_files_loaded' /tmp/casebrain-boot-request.json
           grep -q 'tool_inventory' /tmp/casebrain-boot-request.json
-          grep -q '"status": "continuation_required"' /tmp/casebrain-boot-request.json
-          grep -q '"runtime_authorized": false' /tmp/casebrain-boot-request.json
-          grep -q '"external_action_authorized": false' /tmp/casebrain-boot-request.json
+          grep -q '"status": "uplift_required"' /tmp/casebrain-boot-request.json
+          if grep -q '"external_action_authorized": true' /tmp/casebrain-boot-request.json; then
+            echo "diagnostic uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi

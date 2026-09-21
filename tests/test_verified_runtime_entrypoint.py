@@ -35,6 +35,12 @@ class FakeKernel:
     def bind_task(self, **kwargs):
         self.calls.append(("bind_task", kwargs))
         self.task_id = "task-1"
+        self.phase.value = "context_recovering"
+        return self.snapshot()
+
+    def record_context_recovery(self, reference, *, recovered_refs, details=None):
+        self.calls.append(("record_context_recovery", (reference, tuple(recovered_refs))))
+        self.receipts.append("context_recovery")
         self.phase.value = "ready"
         return self.snapshot()
 
@@ -154,6 +160,7 @@ def test_verified_smoke_traverses_kernel_to_complete_readback(monkeypatch) -> No
 
     assert [name for name, _ in kernel.calls] == [
         "bind_task",
+        "record_context_recovery",
         "assert_instruction_fidelity",
         "begin",
         "record_observation",
@@ -163,6 +170,7 @@ def test_verified_smoke_traverses_kernel_to_complete_readback(monkeypatch) -> No
     assert kernel.phase.value == "complete"
     assert payload["apex_runtime"]["phase"] == "complete"
     assert payload["apex_runtime"]["receipt_kinds"] == [
+        "context_recovery",
         "observation",
         "verification",
         "readback",
