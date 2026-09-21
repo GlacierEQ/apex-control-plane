@@ -2,28 +2,46 @@
 """Install/update the GlacierEQ managed block in ~/.codex/AGENTS.md.
 
 Preserves all non-managed existing AGENTS content, writes a local mirror of the
-shared kernel, creates a timestamped backup when AGENTS changes, and prints
-SHA-256 receipts for readback.
+shared kernel, creates an exact-byte unique backup when AGENTS changes, and
+prints SHA-256 receipts from the bytes that were actually persisted.
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
-from pathlib import Path
+import secrets
 from datetime import datetime, timezone
+from pathlib import Path
 
 BEGIN = "<!-- GLACIEREQ_OPERATOR_KERNEL:BEGIN -->"
 END = "<!-- GLACIEREQ_OPERATOR_KERNEL:END -->"
 
 
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+def sha256_file(path: Path) -> str:
+    """Return the SHA-256 digest of the exact bytes persisted at path."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_marker_layout(existing: str) -> None:
+    """Reject incomplete, duplicated, or misordered managed-block markers."""
+    begin_count = existing.count(BEGIN)
+    end_count = existing.count(END)
+    if begin_count == 0 and end_count == 0:
+        return
+    if begin_count != 1 or end_count != 1:
+        raise ValueError(
+            "AGENTS.md must contain either no GlacierEQ markers or exactly one BEGIN/END pair"
+        )
+    if existing.index(BEGIN) > existing.index(END):
+        raise ValueError("AGENTS.md GlacierEQ markers are misordered")
 
 
 def replace_managed_block(existing: str, managed: str) -> str:
+    """Replace one valid managed block or prepend it when none exists."""
+    validate_marker_layout(existing)
     managed = managed.strip() + "\n"
-    if BEGIN in existing and END in existing:
+    if BEGIN in existing:
         before, rest = existing.split(BEGIN, 1)
         _, after = rest.split(END, 1)
         return before.rstrip() + "\n\n" + managed + after.lstrip()
@@ -32,7 +50,17 @@ def replace_managed_block(existing: str, managed: str) -> str:
     return managed
 
 
+def create_exact_backup(path: Path, destination_dir: Path) -> Path:
+    """Create an exclusive exact-byte backup with a collision-resistant name."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    backup = destination_dir / f"AGENTS.md.backup.{stamp}.{secrets.token_hex(4)}"
+    with backup.open("xb") as handle:
+        handle.write(path.read_bytes())
+    return backup
+
+
 def main() -> int:
+    """Install the managed bootstrap and verify exact persisted state."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--codex-home", type=Path, default=Path.home() / ".codex")
@@ -52,23 +80,24 @@ def main() -> int:
 
     if updated != existing:
         if agents_path.exists():
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            backup = codex_home / f"AGENTS.md.backup.{stamp}"
-            backup.write_text(existing, encoding="utf-8")
+            backup = create_exact_backup(agents_path, codex_home)
             print(f"backup={backup}")
-        agents_path.write_text(updated, encoding="utf-8")
+        agents_path.write_bytes(updated.encode("utf-8"))
 
-    mirror_path.write_text(canonical, encoding="utf-8")
+    mirror_path.write_bytes(canonical.encode("utf-8"))
 
     readback_agents = agents_path.read_text(encoding="utf-8")
     readback_kernel = mirror_path.read_text(encoding="utf-8")
-    assert BEGIN in readback_agents and END in readback_agents
-    assert readback_kernel == canonical
+    if readback_agents != updated:
+        raise RuntimeError("AGENTS.md readback verification failed")
+    if readback_kernel != canonical:
+        raise RuntimeError("kernel mirror readback verification failed")
+    validate_marker_layout(readback_agents)
 
     print(f"agents={agents_path}")
-    print(f"agents_sha256={sha256_text(readback_agents)}")
+    print(f"agents_sha256={sha256_file(agents_path)}")
     print(f"kernel={mirror_path}")
-    print(f"kernel_sha256={sha256_text(readback_kernel)}")
+    print(f"kernel_sha256={sha256_file(mirror_path)}")
     print("status=verified")
     return 0
 
