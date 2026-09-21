@@ -59,6 +59,12 @@ def _bind_mutation(kernel: ApexRuntimeKernel) -> None:
             "github:existing-apex-control-plane",
             "github:control-plane.py",
         ),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
     )
 
 
@@ -104,11 +110,23 @@ def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
         kernel.record_context_recovery(
             "context-recovery:empty",
             recovered_refs=(),
+            details={
+                "prior_corrections_checked": True,
+                "material_context_found": False,
+                "material_context_applied": False,
+                "applied_context_refs": (),
+            },
         )
 
     result = kernel.record_context_recovery(
         "context-recovery:operator-context",
         recovered_refs=("memory:operator-context",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
     )
     assert result.phase == "ready"
     kernel.begin()
@@ -223,6 +241,12 @@ def test_observation_has_separate_non_mutating_lifecycle(monkeypatch) -> None:
     kernel.record_context_recovery(
         "context-recovery:runtime-kernel",
         recovered_refs=("github:runtime-kernel",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
     )
     kernel.begin()
     kernel.record_observation("github-read:runtime-kernel")
@@ -254,6 +278,12 @@ def test_observation_verification_miss_routes_to_repair(monkeypatch) -> None:
     kernel.record_context_recovery(
         "context-recovery:inspect-state",
         recovered_refs=("runtime-state:current",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
     )
     kernel.begin()
     kernel.record_observation("read:state")
@@ -349,6 +379,12 @@ def test_audit_never_contains_literal_instruction_or_receipt_details(monkeypatch
     kernel.record_context_recovery(
         "context-recovery:audit-test",
         recovered_refs=("operator-context:current",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
     )
     kernel.begin()
     kernel.record_execution(
