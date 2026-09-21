@@ -21,7 +21,8 @@ create table if not exists public.oa_role_versions_v1 (
   activation_status text not null default 'ACTIVE'
     check (activation_status in ('CANDIDATE','ACTIVE','SUPERSEDED','RETIRED')),
   previous_version_id uuid null references public.oa_role_versions_v1(role_version_id) on delete restrict,
-  created_by text not null default 'OPERATOR',
+  created_by text not null,
+  created_source_class text not null check (created_source_class in ('OPERATOR','AGENT','SYSTEM','EVIDENCE','MIGRATION')),
   created_at timestamptz not null default now(),
   activated_at timestamptz,
   unique (role_key, version),
@@ -61,7 +62,8 @@ create table if not exists public.oa_agent_role_assignments_v1 (
   continuity_handoff jsonb not null default '{}'::jsonb,
   status text not null default 'ACTIVE'
     check (status in ('ACTIVE','SUSPENDED','REVOKED','SUPERSEDED','EXPIRED')),
-  assigned_by text not null default 'OPERATOR',
+  assigned_by text not null,
+  assigned_source_class text not null check (assigned_source_class in ('OPERATOR','AGENT','SYSTEM','EVIDENCE','MIGRATION')),
   assigned_at timestamptz not null default now(),
   valid_until timestamptz,
   revoked_at timestamptz,
@@ -78,6 +80,57 @@ create index if not exists oa_agent_role_active_idx
 create index if not exists oa_role_versions_current_idx
   on public.oa_role_versions_v1(role_key, activation_status, created_at desc);
 
+create or replace function public.oa_validate_role_content_hash_v1()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public, extensions
+as $
+declare
+  v_expected text;
+begin
+  if tg_table_name = 'oa_role_versions_v1' then
+    v_expected := encode(digest(jsonb_strip_nulls(new.contract)::text, 'sha256'), 'hex');
+    if new.contract_sha256 <> v_expected then
+      raise exception 'contract_sha256 does not match role contract';
+    end if;
+  elsif tg_table_name = 'oa_agent_role_assignments_v1' then
+    v_expected := encode(
+      digest(
+        jsonb_strip_nulls(
+          jsonb_build_object(
+            'logical_agent_id',new.logical_agent_id,
+            'role_key',new.role_key,
+            'role_version_id',new.role_version_id,
+            'assignment_mode',new.assignment_mode,
+            'mission_ref',new.mission_ref,
+            'scope',new.scope,
+            'authority_constraints',new.authority_constraints,
+            'continuity_handoff',new.continuity_handoff,
+            'assigned_by',new.assigned_by
+          )
+        )::text,
+        'sha256'
+      ),
+      'hex'
+    );
+    if new.assignment_sha256 <> v_expected then
+      raise exception 'assignment_sha256 does not match role assignment payload';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists oa_role_versions_hash_check_v1 on public.oa_role_versions_v1;
+create trigger oa_role_versions_hash_check_v1
+before insert on public.oa_role_versions_v1
+for each row execute function public.oa_validate_role_content_hash_v1();
+
+drop trigger if exists oa_role_assignments_hash_check_v1 on public.oa_agent_role_assignments_v1;
+create trigger oa_role_assignments_hash_check_v1
+before insert on public.oa_agent_role_assignments_v1
+for each row execute function public.oa_validate_role_content_hash_v1();
+
 create or replace view public.oa_current_role_versions_v1
 with (security_invoker = true)
 as
@@ -89,6 +142,7 @@ select distinct on (v.role_key)
   v.contract_sha256,
   v.activation_status,
   v.created_by,
+  v.created_source_class,
   v.created_at,
   v.activated_at
 from public.oa_role_versions_v1 v
@@ -112,6 +166,7 @@ select
   a.continuity_handoff,
   a.status,
   a.assigned_by,
+  a.assigned_source_class,
   a.assigned_at,
   a.valid_until,
   rv.version as role_version,
@@ -311,17 +366,18 @@ begin
           )
         )
       );
-      v_hash := encode(digest(v_contract::text,'sha256'),'hex');
+      v_hash := encode(digest(jsonb_strip_nulls(v_contract)::text,'sha256'),'hex');
 
       insert into public.oa_role_versions_v1(
-        role_key,version,contract,contract_sha256,activation_status,created_by,activated_at
+        role_key,version,contract,contract_sha256,activation_status,created_by,created_source_class,activated_at
       ) values (
-        r.role_key,'1.0.0',v_contract,v_hash,'ACTIVE','OPERATOR',now()
+        r.role_key,'1.0.0',v_contract,v_hash,'ACTIVE','migration:operator_administration_roles_v1','MIGRATION',now()
       );
     end if;
-  end loop;
+    end loop;
+  end if;
 end;
-$$;
+$;
 
 -- Existing runtime workers receive explicit role identities without changing
 -- their original public.agents rows or inventing new runtime agents.
@@ -333,7 +389,8 @@ declare
   v_role_version uuid;
   v_payload jsonb;
 begin
-  for a in select id, name from public.agents loop
+  if to_regclass('public.agents') is not null then
+    for a in execute 'select id, name from public.agents' loop
     v_role_key := case a.name
       when 'capacity-planner' then 'OA.ROLE.CAPACITY_PLANNER'
       when 'config-validator' then 'OA.ROLE.CONFIG_VALIDATOR'
@@ -358,7 +415,10 @@ begin
     end;
 
     if v_role_key is not null then
-      v_logical_id := 'OA.RUNTIME.' || upper(regexp_replace(a.name,'[^a-zA-Z0-9]+','_','g'));
+      v_logical_id := 'OA.RUNTIME.'
+        || upper(regexp_replace(a.name,'[^a-zA-Z0-9]+','_','g'))
+        || '_'
+        || upper(replace(a.id::text,'-',''));
 
       select role_version_id into v_role_version
       from public.oa_role_versions_v1
@@ -385,7 +445,7 @@ begin
         insert into public.oa_agent_role_assignments_v1(
           logical_agent_id,role_key,role_version_id,assignment_mode,
           scope,authority_constraints,continuity_handoff,status,
-          assigned_by,assignment_sha256
+          assigned_by,assigned_source_class,assignment_sha256
         ) values (
           v_logical_id,v_role_key,v_role_version,'PRIMARY',
           jsonb_build_object('runtime_agent_id',a.id),
@@ -393,13 +453,16 @@ begin
           jsonb_build_object('continuity_priority',1,'replacement_executor_must_rehydrate',true),
           'ACTIVE',
           'migration:operator_administration_roles_v1',
-          encode(digest(v_payload::text,'sha256'),'hex')
+          'MIGRATION',
+          encode(digest(jsonb_strip_nulls(v_payload)::text,'sha256'),'hex')
         );
       end if;
     end if;
   end loop;
 end;
 $$;
+
+revoke all on function public.oa_validate_role_content_hash_v1() from public, anon, authenticated;
 
 comment on table public.oa_roles_v1 is
   'Stable Operator Administration responsibilities. A role is not an agent or authority grant.';
