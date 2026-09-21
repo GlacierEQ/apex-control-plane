@@ -93,7 +93,7 @@ create table if not exists public.oa_continuity_heads_v1 (
 -- Optional estate dependencies are bound when present. The migration remains
 -- installable in a fresh control plane where legacy runtime/continuity tables
 -- have not yet been created.
-do $
+do $$
 begin
   if to_regclass('public.agents') is not null
      and not exists (
@@ -130,7 +130,7 @@ begin
     end if;
   end if;
 end;
-$;
+$$;
 
 create unique index if not exists oa_agent_genomes_runtime_agent_idx
   on public.oa_agent_genomes_v1(runtime_agent_id)
@@ -154,7 +154,7 @@ returns text
 language sql
 immutable
 set search_path = pg_catalog, public
-as $
+as $$
   select case
     when p_identity = 'OPERATOR' then 'OPERATOR'
     when p_identity like 'agent:%' then 'AGENT'
@@ -162,13 +162,13 @@ as $
     when p_identity like 'migration:%' then 'MIGRATION'
     else 'SYSTEM'
   end;
-$;
+$$;
 
 create or replace function public.oa_validate_content_hash_v1()
 returns trigger
 language plpgsql
 set search_path = pg_catalog, public, extensions
-as $
+as $$
 declare
   v_expected text;
 begin
@@ -190,7 +190,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 create or replace function public.oa_reject_history_mutation_v1()
 returns trigger
