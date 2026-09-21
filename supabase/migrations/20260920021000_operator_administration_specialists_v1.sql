@@ -100,7 +100,7 @@ create or replace function public.oa_assign_role_v1(
   p_scope jsonb default '{}'::jsonb,
   p_authority_constraints jsonb default '{}'::jsonb,
   p_continuity_handoff jsonb default '{}'::jsonb,
-  p_assigned_by text default 'OPERATOR'
+  p_assigned_by text
 )
 returns uuid
 language plpgsql
@@ -112,7 +112,19 @@ declare
   v_assignment_id uuid;
   v_payload jsonb;
   v_hash text;
+  v_source_class text;
+  v_request_role text;
 begin
+  v_request_role := coalesce(current_setting('request.jwt.claim.role', true), session_user);
+  if session_user not in ('postgres','supabase_admin','service_role')
+     and v_request_role <> 'service_role' then
+    raise exception 'oa_assign_role_v1 requires service_role or migration owner';
+  end if;
+  if p_assigned_by is null or btrim(p_assigned_by) = '' then
+    raise exception 'assigned_by identity is required';
+  end if;
+  v_source_class := public.oa_source_class_v1(p_assigned_by);
+
   if not exists (
     select 1 from public.oa_agent_genomes_v1
     where logical_agent_id = p_logical_agent_id
@@ -162,28 +174,29 @@ begin
     'continuity_handoff',coalesce(p_continuity_handoff,'{}'::jsonb),
     'assigned_by',p_assigned_by
   );
-  v_hash := encode(digest(v_payload::text,'sha256'),'hex');
+  v_hash := encode(digest(jsonb_strip_nulls(v_payload)::text,'sha256'),'hex');
 
   insert into public.oa_agent_role_assignments_v1(
     logical_agent_id,role_key,role_version_id,assignment_mode,mission_ref,
-    scope,authority_constraints,continuity_handoff,status,assigned_by,assignment_sha256
+    scope,authority_constraints,continuity_handoff,status,assigned_by,assigned_source_class,assignment_sha256
   ) values (
     p_logical_agent_id,p_role_key,v_role_version_id,p_assignment_mode,p_mission_ref,
     coalesce(p_scope,'{}'::jsonb),
     coalesce(p_authority_constraints,'{}'::jsonb),
     coalesce(p_continuity_handoff,'{}'::jsonb),
-    'ACTIVE',p_assigned_by,v_hash
+    'ACTIVE',p_assigned_by,v_source_class,v_hash
   )
   returning assignment_id into v_assignment_id;
 
   insert into public.oa_administration_events_v1(
-    logical_agent_id,event_type,payload,payload_sha256,created_by
+    logical_agent_id,event_type,payload,payload_sha256,created_by,created_source_class
   ) values (
     p_logical_agent_id,
     'ROLE_ASSIGNED',
     v_payload,
     v_hash,
-    p_assigned_by
+    p_assigned_by,
+    v_source_class
   );
 
   return v_assignment_id;
@@ -199,7 +212,7 @@ create or replace function public.oa_hatch_specialist_v1(
   p_version text,
   p_specialization jsonb,
   p_role_stack jsonb,
-  p_created_by text default 'OPERATOR'
+  p_created_by text
 )
 returns text
 language plpgsql
@@ -209,7 +222,17 @@ as $$
 declare
   v_genome jsonb;
   v_role jsonb;
+  v_request_role text;
 begin
+  v_request_role := coalesce(current_setting('request.jwt.claim.role', true), session_user);
+  if session_user not in ('postgres','supabase_admin','service_role')
+     and v_request_role <> 'service_role' then
+    raise exception 'oa_hatch_specialist_v1 requires service_role or migration owner';
+  end if;
+  if p_created_by is null or btrim(p_created_by) = '' then
+    raise exception 'created_by identity is required';
+  end if;
+
   if jsonb_typeof(p_role_stack) <> 'array' or jsonb_array_length(p_role_stack) = 0 then
     raise exception 'specialist role stack must be a non-empty array';
   end if;
