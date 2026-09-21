@@ -85,7 +85,7 @@ def test_incomplete_receipt_is_enrichment_not_global_permission_gate(monkeypatch
     assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "complete_enrichment_pending"
 
 
-def test_explicit_contradiction_remains_blocking(monkeypatch, tmp_path) -> None:
+def test_explicit_contradiction_remains_route_local_while_global_state_is_uplift(monkeypatch, tmp_path) -> None:
     _reset_runtime(monkeypatch, tmp_path)
     receipt = {"apex_startup": {"contradiction_status": "open_blocker"}}
     monkeypatch.setattr(apex, "receipt_from_environment", lambda: receipt)
@@ -100,12 +100,12 @@ def test_explicit_contradiction_remains_blocking(monkeypatch, tmp_path) -> None:
     assert validation is not None
     assert validation.ok is False
     assert validation.status == "continuation_required"
-    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "continuation_required"
+    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "uplift_required"
 
     records = list(tmp_path.glob("apex_enforced_startup-*.json"))
     assert len(records) == 1
     record = json.loads(records[0].read_text(encoding="utf-8"))
-    assert record["status"] == "continuation_required"
+    assert record["status"] == "uplift_required"
 
 
 def test_explicit_authority_and_scope_negatives_are_blocking() -> None:

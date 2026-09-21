@@ -133,32 +133,62 @@ jobs:
           ], findings
           PY
 
-      - name: Prove runtime entrypoint fails closed without receipts
+      - name: Prove runtime entrypoint continues with startup uplift without receipts
         shell: bash
         run: |
-          set +e
           CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/strong.out 2>/tmp/strong.err
-          status=$?
-          set -e
-          test "$status" -eq 78
-          test ! -s /tmp/strong.out
-          grep -q 'glaciereq_notion_continuity_preflight' /tmp/strong.err
-          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/strong.err
+          test -s /tmp/strong.out
+          grep -q '"phase":"complete"' /tmp/strong.out
+          grep -q '"status": "uplift_required"' /tmp/strong.err
+          if grep -q '"external_action_authorized": true' /tmp/strong.err; then
+            echo "startup uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi
 
-      - name: Prove strict Python auto-boot preserves blocked exit code
+      - name: Prove strict Python auto-boot preserves execution with visible uplift
         shell: bash
         run: |
-          set +e
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=strict \
           python -c 'print("RAN")' >/tmp/site.out 2>/tmp/site.err
+          grep -q '^RAN
+
+      - name: Prove legacy runtime cannot bypass verified boundary
+        shell: bash
+        run: |
+          set +e
+          CASEY_AUTO_BOOT_MODE=strict python src/control_plane_runtime.py >/tmp/legacy.out 2>/tmp/legacy.err
           status=$?
           set -e
           test "$status" -eq 78
-          test ! -s /tmp/site.out
-          grep -q 'glaciereq_notion_continuity_preflight' /tmp/site.err
-          grep -q 'glaciereq_prime_directive_auto_boot' /tmp/site.err
+          test ! -s /tmp/legacy.out
+          grep -q 'direct control_plane_runtime execution is disabled' /tmp/legacy.err
+
+      - name: Prove request-mode auto-boot is diagnostic uplift without blanket authority
+        shell: bash
+        run: |
+          PYTHONPATH=src \
+          CASEY_AUTO_BOOT=1 \
+          CASEY_AUTO_BOOT_MODE=request \
+          python - <<'PY'
+          import os
+          import sitecustomize
+
+          session = sitecustomize.APEX_STRONG_BOOT_SESSION
+          kernel = sitecustomize.APEX_RUNTIME_KERNEL
+          assert session is not None
+          assert kernel is session.runtime_kernel
+          assert session.uplift_required is True
+          assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete_with_uplift"
+          assert os.environ.get("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED") not in {"1", "true", "True"}
+          PY
+ /tmp/site.out
+          grep -q '"status": "uplift_required"' /tmp/site.err
+          if grep -q '"external_action_authorized": true' /tmp/site.err; then
+            echo "startup uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi
 
       - name: Prove legacy runtime cannot bypass verified boundary
         shell: bash
