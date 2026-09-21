@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3",
+  "schema_version": "1.4",
   "status": "ACTIVE",
   "principle": "Backend Ops and GlacierEQ are scoped peer planes in a polycentric estate. Backend Ops owns connector/control/cognitive capability state within its domain; GlacierEQ maintains mission/substantive operational projections and working state within its domain; source-bearing case repositories, Operator firsthand records, provider-native systems, evidence artifacts, and other qualified peers retain proposition-specific authority for the facts and bytes they actually bear. No plane becomes universal truth by convenience or topology.",
   "planes": {
@@ -128,12 +128,38 @@
     "No hidden platform system or developer prompt is claimed, reconstructed, or stored as GlacierEQ-controlled authority; only Operator-controlled behavioral artifacts and explicit source references belong in the control plane."
   ],
   "critical_repository_roles": {
-    "GlacierEQ/apex-control-plane": ["kernel", "operator_contracts", "execution_semantics", "anti_hidden_harm"],
-    "GlacierEQ/aspen-grove-core": ["boot_protocol", "memory_and_context_routing", "runtime_continuity"],
-    "GlacierEQ/Genius-Mastery": ["capability_forge", "instruction_engineering", "progress_protocol", "case_position_mastery"],
-    "GlacierEQ/mega-skills": ["skills", "combo_skills", "mega_skills", "capability_sources"],
-    "GlacierEQ/AKOS": ["epistemology", "operational_cognition", "methodologies"],
-    "GlacierEQ/mastermind": ["reasoning_composition", "operator_impact_first_projection"]
+    "GlacierEQ/apex-control-plane": [
+      "kernel",
+      "operator_contracts",
+      "execution_semantics",
+      "anti_hidden_harm"
+    ],
+    "GlacierEQ/aspen-grove-core": [
+      "boot_protocol",
+      "memory_and_context_routing",
+      "runtime_continuity"
+    ],
+    "GlacierEQ/Genius-Mastery": [
+      "capability_forge",
+      "instruction_engineering",
+      "progress_protocol",
+      "case_position_mastery"
+    ],
+    "GlacierEQ/mega-skills": [
+      "skills",
+      "combo_skills",
+      "mega_skills",
+      "capability_sources"
+    ],
+    "GlacierEQ/AKOS": [
+      "epistemology",
+      "operational_cognition",
+      "methodologies"
+    ],
+    "GlacierEQ/mastermind": [
+      "reasoning_composition",
+      "operator_impact_first_projection"
+    ]
   },
   "cutover": {
     "backend_ops_migration": "establish_canonical_control_plane_v1",
@@ -143,5 +169,19 @@
     "glaciereq_security_migration": "fix_mission_plane_view_security_v1",
     "destructive_moves": false,
     "legacy_rows_preserved": true
+  },
+  "operator_kernel_propagation": {
+    "status": "ACTIVE",
+    "contract_path": "config/operator_kernel_propagation_v1.json",
+    "inheritance_mode": "reference_and_compose_not_copy",
+    "applies_to": [
+      "control_plane",
+      "mission_plane",
+      "memory_continuity",
+      "capability_fabric",
+      "critical_repository_roles",
+      "operator_ui_projections"
+    ],
+    "authority_rule": "Current explicit Operator instruction controls; this projection never displaces provider-native or source-bearing proposition authority."
   }
 }
