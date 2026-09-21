@@ -258,15 +258,25 @@ class ApexRuntimeKernel:
             RuntimePhase.PERSISTING,
             RuntimePhase.READBACK,
             RuntimePhase.REPAIRING,
+            RuntimePhase.BLOCKED,
         )
         refs = tuple(_validated_receipt_refs(recovered_refs))
         if not refs:
             raise RuntimeViolation(
                 "context recovery requires at least one recovered source reference"
             )
+        recovery_details = dict(details or {})
+        recovery_state = str(recovery_details.get("state", "hydrated")).strip().lower()
+        if recovery_state not in {"hydrated", "degraded"}:
+            raise RuntimeViolation(
+                "context recovery state must be hydrated or degraded"
+            )
+        recovery_details["state"] = recovery_state
+        recovery_details.setdefault("mission_stop", False)
+        recovery_details.setdefault("transition_semantics", "enrichment_not_permission")
         self.task.source_refs = tuple(dict.fromkeys((*self.task.source_refs, *refs)))
-        self._record_receipt("context_recovery", reference, True, details)
-        self.task.context_state = "hydrated"
+        self._record_receipt("context_recovery", reference, True, recovery_details)
+        self.task.context_state = recovery_state
         if self.phase is RuntimePhase.CONTEXT_RECOVERING:
             self.phase = RuntimePhase.READY
             self._audit_event("context_recovered")
@@ -274,19 +284,52 @@ class ApexRuntimeKernel:
             self._audit_event("context_recovered_in_flight")
         return self.snapshot()
 
+    def record_context_recovery_debt(
+        self,
+        reference: str,
+        *,
+        attempted_refs: Sequence[str],
+        details: Mapping[str, Any] | None = None,
+    ) -> RuntimeSnapshot:
+        """Record a real context-retrieval attempt that did not fully hydrate context."""
+        self._require_phase(
+            RuntimePhase.CONTEXT_RECOVERING,
+            RuntimePhase.READY,
+            RuntimePhase.OBSERVING,
+            RuntimePhase.EXECUTING,
+            RuntimePhase.TESTING,
+            RuntimePhase.ADVERSARIAL_TESTING,
+            RuntimePhase.VERIFYING,
+            RuntimePhase.VERIFIED,
+            RuntimePhase.PERSISTING,
+            RuntimePhase.READBACK,
+            RuntimePhase.REPAIRING,
+            RuntimePhase.BLOCKED,
+        )
+        refs = tuple(_validated_receipt_refs(attempted_refs))
+        if not refs:
+            raise RuntimeViolation(
+                "context recovery debt requires at least one retrieval-attempt reference"
+            )
+        debt_details = dict(details or {})
+        debt_state = str(debt_details.get("state", "recovery_pending")).strip().lower()
+        if debt_state not in {"recovery_pending", "degraded"}:
+            raise RuntimeViolation(
+                "context recovery debt state must be recovery_pending or degraded"
+            )
+        debt_details["state"] = debt_state
+        debt_details["mission_stop"] = False
+        debt_details.setdefault("route_effect", "enrich_and_continue")
+        debt_details.setdefault("transition_semantics", "enrichment_not_permission")
+        debt_details["attempted_refs"] = refs
+        self._record_receipt("context_recovery_debt", reference, True, debt_details)
+        self.task.context_state = debt_state
+        self._audit_event("context_recovery_debt_recorded")
+        return self.snapshot()
+
     def begin(self) -> RuntimeSnapshot:
         self._require_phase(RuntimePhase.CONTEXT_RECOVERING, RuntimePhase.READY)
         if self.phase is RuntimePhase.CONTEXT_RECOVERING:
-            self._record_receipt(
-                "context_recovery_debt",
-                f"runtime-context-debt:{self.task.task_id}",
-                False,
-                {
-                    "state": "recovery_pending",
-                    "mission_stop": False,
-                    "route_effect": "enrich_and_continue",
-                },
-            )
             self.task.context_state = "recovery_pending"
             self._audit_event("context_recovery_pending_continue")
         self.phase = (
