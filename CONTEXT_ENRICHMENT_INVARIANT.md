@@ -49,7 +49,7 @@ The invariant must be inherited by:
 - action outboxes and execution-awareness surfaces
 - memory and retrieval providers
 - case, email, telecom, drafting, engineering, research, and other domain agents
-- projections into Notion, Google Drive, OneDrive/SharePoint, and other operator-facing knowledge surfaces
+- projections into Notion, Google Drive, OneDrive/SharePoint, and other Operator-facing knowledge surfaces
 
 Projection copies are navigation and continuity aids. GitHub/Supabase provider-native contracts and source-bearing records remain authoritative according to their existing stewardship boundaries.
 
