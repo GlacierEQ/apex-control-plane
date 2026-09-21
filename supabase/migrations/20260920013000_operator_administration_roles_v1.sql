@@ -84,7 +84,7 @@ create or replace function public.oa_validate_role_content_hash_v1()
 returns trigger
 language plpgsql
 set search_path = pg_catalog, public, extensions
-as $
+as $$
 declare
   v_expected text;
 begin
@@ -119,7 +119,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists oa_role_versions_hash_check_v1 on public.oa_role_versions_v1;
 create trigger oa_role_versions_hash_check_v1
@@ -374,8 +374,7 @@ begin
         r.role_key,'1.0.0',v_contract,v_hash,'ACTIVE','migration:operator_administration_roles_v1','MIGRATION',now()
       );
     end if;
-    end loop;
-  end if;
+  end loop;
 end;
 $;
 
@@ -439,7 +438,11 @@ begin
           'role_key',v_role_key,
           'role_version_id',v_role_version,
           'assignment_mode','PRIMARY',
-          'source','existing_runtime_agent_mapping'
+          'mission_ref',null,
+          'scope',jsonb_build_object('runtime_agent_id',a.id),
+          'authority_constraints',jsonb_build_object('authority_source','OPERATOR','no_silent_scope_expansion',true),
+          'continuity_handoff',jsonb_build_object('continuity_priority',1,'replacement_executor_must_rehydrate',true),
+          'assigned_by','migration:operator_administration_roles_v1'
         );
 
         insert into public.oa_agent_role_assignments_v1(
@@ -458,9 +461,10 @@ begin
         );
       end if;
     end if;
-  end loop;
+    end loop;
+  end if;
 end;
-$$;
+$;
 
 revoke all on function public.oa_validate_role_content_hash_v1() from public, anon, authenticated;
 
