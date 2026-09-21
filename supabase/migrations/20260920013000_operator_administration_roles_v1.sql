@@ -376,7 +376,7 @@ begin
     end if;
   end loop;
 end;
-$;
+$$;
 
 -- Existing runtime workers receive explicit role identities without changing
 -- their original public.agents rows or inventing new runtime agents.
@@ -464,7 +464,7 @@ begin
     end loop;
   end if;
 end;
-$;
+$$;
 
 revoke all on function public.oa_validate_role_content_hash_v1() from public, anon, authenticated;
 
