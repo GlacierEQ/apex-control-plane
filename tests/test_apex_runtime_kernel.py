@@ -84,21 +84,24 @@ def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> Non
     assert any("apex_startup: validation missing" in item for item in kernel.startup_findings)
 
 
-def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
+def test_context_recovery_enriches_but_missing_context_does_not_stop_begin(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     kernel.bind_task(
         literal_instruction="use context first",
-        target_state="context is recovered before work",
+        target_state="context recovery enriches work without becoming permission",
         operation_class="context_first",
         mode=TaskMode.OBSERVATION,
         action_scope="none",
         source_refs=("memory:operator-context",),
-        verification_plan=("verify context receipt precedes observation",),
+        verification_plan=("verify context enrichment remains non-stopping",),
     )
 
     assert kernel.phase is RuntimePhase.CONTEXT_RECOVERING
-    with pytest.raises(RuntimeViolation, match="expected one of: ready"):
-        kernel.begin()
+
+    started = kernel.begin()
+    assert started.phase == "observing"
+    assert started.context_state == "recovery_pending"
+    assert "context_recovery_debt" in started.receipt_kinds
 
     with pytest.raises(RuntimeViolation, match="at least one recovered source reference"):
         kernel.record_context_recovery(
@@ -106,13 +109,37 @@ def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
             recovered_refs=(),
         )
 
-    result = kernel.record_context_recovery(
+    recovered = kernel.record_context_recovery(
         "context-recovery:operator-context",
         recovered_refs=("memory:operator-context",),
     )
-    assert result.phase == "ready"
+    assert recovered.phase == "observing"
+    assert recovered.context_state == "hydrated"
+    assert "context_recovery" in recovered.receipt_kinds
+
+
+def test_context_debt_satisfies_enrichment_receipt_without_claiming_recovery(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="inspect with degraded context",
+        target_state="observation completes truthfully while context debt remains visible",
+        operation_class="inspect",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
     kernel.begin()
-    assert kernel.phase is RuntimePhase.OBSERVING
+    kernel.record_observation("read:state")
+    kernel.record_verification("verification:state", passed=True)
+    result = kernel.record_readback(
+        "readback:state",
+        matches_expected_state=True,
+        target_reached=True,
+    )
+
+    assert result.phase == "complete"
+    assert result.context_state == "recovery_pending"
+    assert "context_recovery_debt" in result.receipt_kinds
+    assert "context_recovery" not in result.receipt_kinds
 
 
 def test_routine_mutation_needs_no_separate_authorization_reference(monkeypatch) -> None:
