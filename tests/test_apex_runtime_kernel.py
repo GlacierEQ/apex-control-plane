@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
 import sys
@@ -82,6 +83,48 @@ def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> Non
     assert kernel.phase is RuntimePhase.BOOTSTRAPPED
     assert kernel.startup_gates == runtime.EXPECTED_STARTUP_OBSERVERS
     assert any("apex_startup: validation missing" in item for item in kernel.startup_findings)
+
+
+def test_runtime_policy_contract_is_versioned_and_preserves_legacy_21() -> None:
+    current = load_runtime_policy()
+    assert current["schema_version"] == "2.2.0"
+    assert (
+        current["execution_semantics"]
+        == "context_enrich_execute_harden_verify_repair_complete_receipt"
+    )
+
+    legacy = deepcopy(current)
+    legacy["schema_version"] = "2.1.0"
+    legacy["execution_semantics"] = "execute_harden_verify_repair_complete_receipt"
+    for mode in ("observation", "mutation"):
+        legacy["receipt_requirements"][mode] = [
+            "context_recovery" if value == "context_enrichment" else value
+            for value in legacy["receipt_requirements"][mode]
+        ]
+
+    runtime._validate_policy(legacy)
+
+
+def test_runtime_policy_rejects_cross_version_execution_semantics() -> None:
+    policy = deepcopy(load_runtime_policy())
+    policy["execution_semantics"] = "execute_harden_verify_repair_complete_receipt"
+
+    with pytest.raises(
+        RuntimeViolation,
+        match=r"unsupported APEX execution_semantics for schema 2\.2\.0",
+    ):
+        runtime._validate_policy(policy)
+
+
+def test_runtime_policy_rejects_legacy_context_receipt_under_22() -> None:
+    policy = deepcopy(load_runtime_policy())
+    policy["receipt_requirements"]["observation"][0] = "context_recovery"
+
+    with pytest.raises(
+        RuntimeViolation,
+        match=r"receipt_requirements\.observation must contain the full evidence set",
+    ):
+        runtime._validate_policy(policy)
 
 
 def test_context_recovery_enriches_but_missing_context_does_not_stop_begin(monkeypatch) -> None:
