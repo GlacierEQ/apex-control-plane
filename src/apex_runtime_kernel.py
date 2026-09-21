@@ -41,6 +41,15 @@ EXPECTED_STARTUP_OBSERVERS = (
     "operator_fidelity",
     "apex_startup",
 )
+
+_SUPPORTED_EXECUTION_SEMANTICS = {
+    "2.1.0": "execute_harden_verify_repair_complete_receipt",
+    "2.2.0": "context_enrich_execute_harden_verify_repair_complete_receipt",
+}
+_CONTEXT_RECEIPT_REQUIREMENT = {
+    "2.1.0": "context_recovery",
+    "2.2.0": "context_enrichment",
+}
 _DESTRUCTIVE_OPERATION = re.compile(
     r"(?i)(?:^|[_\-. ])(delete|destroy|purge|wipe|revoke|drop|force[_\- ]?push)(?:$|[_\-. ])"
 )
@@ -658,9 +667,19 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
 
     if policy.get("objective") != "maximum_coherent_advance":
         raise RuntimeViolation("APEX runtime objective must remain maximum_coherent_advance")
+
+    schema_version = str(policy.get("schema_version", "")).strip()
+    expected_semantics = _SUPPORTED_EXECUTION_SEMANTICS.get(schema_version)
+    if expected_semantics is None:
+        raise RuntimeViolation(
+            f"unsupported APEX runtime policy schema_version: {schema_version or '<empty>'}"
+        )
+
     semantics = str(policy.get("execution_semantics", "")).strip()
-    if semantics and semantics != "execute_harden_verify_repair_complete_receipt":
-        raise RuntimeViolation("unsupported APEX execution_semantics")
+    if semantics and semantics != expected_semantics:
+        raise RuntimeViolation(
+            f"unsupported APEX execution_semantics for schema {schema_version}"
+        )
     if policy.get("fail_closed") is True and semantics:
         raise RuntimeViolation(
             "fail_closed cannot retain authority under execution-uplift semantics"
@@ -678,10 +697,16 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
     requirements = policy.get("receipt_requirements")
     if not isinstance(requirements, Mapping):
         raise RuntimeViolation("receipt_requirements must be an object")
+    context_requirement = _CONTEXT_RECEIPT_REQUIREMENT[schema_version]
     expected = {
-        "observation": {"context_recovery", "observation", "verification", "readback"},
+        "observation": {
+            context_requirement,
+            "observation",
+            "verification",
+            "readback",
+        },
         "mutation": {
-            "context_recovery",
+            context_requirement,
             "execution",
             "test",
             "adversarial_test",
