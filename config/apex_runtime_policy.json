@@ -1,8 +1,8 @@
 {
-  "schema_version": "2.1.0",
+  "schema_version": "2.2.0",
   "name": "APEX Execution Uplift Runtime Kernel",
   "objective": "maximum_coherent_advance",
-  "execution_semantics": "execute_harden_verify_repair_complete_receipt",
+  "execution_semantics": "context_enrich_execute_harden_verify_repair_complete_receipt",
   "legacy_fail_closed_field_semantics": "deprecated_non_authorizing_compatibility_only",
   "fail_closed": false,
   "startup_observers": [
@@ -33,13 +33,13 @@
   },
   "receipt_requirements": {
     "observation": [
-      "context_recovery",
+      "context_enrichment",
       "observation",
       "verification",
       "readback"
     ],
     "mutation": [
-      "context_recovery",
+      "context_enrichment",
       "execution",
       "test",
       "adversarial_test",
@@ -71,7 +71,7 @@
     "complete"
   ],
   "uplift_invariants": {
-    "context_recovery_must_precede_work": true,
+    "context_recovery_must_precede_work": false,
     "context_recovery_requires_source_reference": true,
     "test_failure_routes_to_repair": true,
     "adversarial_test_failure_routes_to_repair": true,
@@ -80,7 +80,12 @@
     "missing_quality_receipt_routes_to_repair": true,
     "missing_verified_gain_routes_to_repair": true,
     "unresolved_startup_observer_does_not_veto_kernel_creation": true,
-    "risk_increases_hardening_not_permission": true
+    "risk_increases_hardening_not_permission": true,
+    "context_recovery_attempt_precedes_discretionary_selection": true,
+    "context_recovery_is_enrichment_not_permission": true,
+    "missing_context_creates_recovery_debt_not_mission_stop": true,
+    "context_provider_failure_changes_route_not_mission": true,
+    "context_may_recover_in_flight": true
   },
   "completion_truth": {
     "complete_claim_requires_successful_receipt_chain": true,
@@ -102,5 +107,20 @@
     "audit_tool_payloads": false,
     "public_snapshot_uses_instruction_sha256": true,
     "receipt_details_are_digest_only": true
+  },
+  "context_enrichment": {
+    "states": [
+      "hydrated",
+      "degraded",
+      "recovery_pending",
+      "not_applicable"
+    ],
+    "satisfied_by_receipts": [
+      "context_recovery",
+      "context_recovery_debt"
+    ],
+    "mission_stop_authority": false,
+    "packet_authority": "input_not_sovereign",
+    "failure_effect": "record_recovery_debt_and_continue_best_available_route"
   }
 }
