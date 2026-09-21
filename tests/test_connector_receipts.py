@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-from copy import deepcopy
-from datetime import UTC, datetime, timedelta
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-import sys
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
+from casebrain_orchestrator import CaseBrainOrchestrator, Producer
 from connector_bridge_contract import build_action_proposal, build_read_request
 from connector_receipts import (
     ConnectorReceiptError,
@@ -20,9 +14,8 @@ from connector_receipts import (
     validate_action_request,
     validate_read_receipt,
 )
-from control_plane_runtime import CaseBrainOrchestrator, Producer
 
-
+ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = ROOT / "config" / "apex_connector_catalog.json"
 NOW = datetime(2026, 8, 22, 12, 0, tzinfo=UTC)
 
@@ -31,15 +24,13 @@ def read_receipt(**overrides):
     payload = {
         "schema_version": 1,
         "receipt_id": "receipt-dropbox-001",
-        "request_id": "request-dropbox-001",
         "connector": "dropbox",
         "operation": "file.metadata.read",
-        "profile": "evidence_intake",
-        "target": {"file_id": "id:evidence-001", "revision": "r1"},
-        "result_state": "success",
-        "observed_at": NOW.isoformat().replace("+00:00", "Z"),
+        "profile": "evidence_acquisition",
+        "target": {"path": "/cases/cherry/evidence.pdf"},
+        "observed_at": NOW.isoformat(),
+        "provider_native_id": "id:abc123",
         "content_sha256": "a" * 64,
-        "source_refs": ["dropbox:id:evidence-001"],
         "external_action_authorized": False,
     }
     payload.update(overrides)
@@ -49,29 +40,28 @@ def read_receipt(**overrides):
 def action_request(**overrides):
     payload = {
         "schema_version": 1,
-        "action_request_id": "action-github-001",
+        "request_id": "request-github-001",
         "connector": "github",
         "operation": "issue.create",
         "target": {"repository": "GlacierEQ/apex-control-plane"},
-        "consequence": "Creates one named issue visible to repository collaborators.",
-        "evidence_refs": ["receipt-github-001"],
+        "consequence": "Creates one issue visible to repository collaborators.",
         "approval": {
             "approved_by": "GlacierEQ",
-            "approved_at": NOW.isoformat().replace("+00:00", "Z"),
+            "approved_at": NOW.isoformat(),
             "approval_reference": "task-approval-001",
         },
+        "idempotency_key": "github-issue-create-001",
+        "terminal_readback_required": True,
     }
     payload.update(overrides)
     return payload
 
 
-def write_catalog(tmp_path, *, enable_github_issue=False):
-    raw = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-    raw["connectors"]["github"]["write_operations"]["issue.create"]["enabled"] = (
-        enable_github_issue
-    )
+def write_catalog(tmp_path: Path, *, enable_github_issue: bool):
+    payload = json.loads(CATALOG_PATH.read_text())
+    payload["connectors"]["github"]["write_operations"]["issue.create"]["enabled"] = enable_github_issue
     path = tmp_path / "catalog.json"
-    path.write_text(json.dumps(raw), encoding="utf-8")
+    path.write_text(json.dumps(payload))
     return load_connector_catalog(path)
 
 
@@ -88,7 +78,7 @@ def test_catalog_loads_and_prohibits_credential_storage():
     )
     github_issue = catalog.connectors["github"]["write_operations"]["issue.create"]
     assert github_issue["enabled"] is True
-    assert github_issue["approval_required"] is True
+    assert github_issue["authorization_required"] is True
     assert github_issue["idempotency_required"] is True
     assert github_issue["terminal_readback_required"] is True
 
@@ -219,5 +209,5 @@ def test_action_proposal_remains_non_authorizing_when_route_is_active():
     )
 
     assert proposal["operation_active"] is True
-    assert proposal["approval_required"] is True
+    assert proposal["authorization_required"] is True
     assert proposal["external_action_authorized"] is False
