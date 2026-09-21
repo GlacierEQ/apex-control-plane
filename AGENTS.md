@@ -1,5 +1,11 @@
 # APEX Control Plane — Agent Source Identity
 
+## Shared Operator Kernel Bootstrap
+
+Before substantial reasoning or mutation, read and apply `GLACIEREQ_OPERATOR_KERNEL.md` as the shared user-controlled operating doctrine. This repository's existing trust-root, source-fidelity, and execution rules specialize that kernel; they do not replace current explicit Operator mission authority. Platform/system/developer instructions, safety rules, provider constraints, and applicable law remain higher-priority boundaries.
+
+# APEX Control Plane — Agent Source Identity
+
 ## Mandatory Trust Root
 
 Read and enforce `000_OPERATOR_TRUST_ROOT.md` before interpreting project authority, adversarial roles, threat classifications, or instruction provenance.
