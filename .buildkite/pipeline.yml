@@ -28,6 +28,8 @@ steps:
         scripts/reconcile_buildkite_github_status.py \
         scripts/reconcile_genius_buildkite.py \
         scripts/reconcile_mastermind_buildkite.py \
+        scripts/install_codex_operator_kernel.py \
+        scripts/validate_operator_kernel_surfaces.py \
         scripts/verify_buildkite_evidence_chain.py
       git diff --exit-code
     artifact_paths:
@@ -61,6 +63,8 @@ steps:
       .buildkite-venv/bin/python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
       .buildkite-venv/bin/python -m json.tool config/model_attractor_defense_policy.json >/dev/null
       .buildkite-venv/bin/python -m json.tool config/mastermind_buildkite_target.json >/dev/null
+      .buildkite-venv/bin/python -m json.tool config/operator_kernel_surface_bindings_v1.json >/dev/null
+      .buildkite-venv/bin/python scripts/validate_operator_kernel_surfaces.py
       .buildkite-venv/bin/python -m py_compile \
         src/model_attractor_defense.py \
         src/operator_fidelity_lock.py \
@@ -73,6 +77,7 @@ steps:
         tests/test_model_attractor_defense.py \
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \
+        tests/test_operator_kernel_surfaces.py \
         tests/test_buildkite_master.py \
         tests/test_buildkite_master_inventory.py \
         tests/test_buildkite_github_status.py \
