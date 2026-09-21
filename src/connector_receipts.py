@@ -2,6 +2,8 @@
 
 This module validates data returned by an authenticated external bridge. It does not
 store credentials, invoke provider APIs, or authorize an external action by itself.
+Authorization may be exact-action or source-bound; this layer only requires an
+attributable authorization record plus idempotency and terminal readback policy.
 """
 from __future__ import annotations
 
@@ -151,8 +153,8 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
         raise ConnectorReceiptError("catalog must prohibit credentials in source")
     if security.get("bridge_receipt_required") is not True:
         raise ConnectorReceiptError("catalog must require bridge receipts")
-    if security.get("external_write_requires_exact_approval") is not True:
-        raise ConnectorReceiptError("catalog must require exact approval for external writes")
+    if security.get("external_write_requires_source_bound_authorization") is not True:
+        raise ConnectorReceiptError("catalog must require source-bound authorization for external writes")
 
     connectors: dict[str, Mapping[str, Any]] = {}
     for raw_name, raw_definition in raw_connectors.items():
@@ -160,11 +162,7 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
         if not isinstance(raw_definition, Mapping):
             raise ConnectorReceiptError(f"connector {name} definition must be an object")
         _required_text(raw_definition.get("data_class"), f"connector {name}.data_class")
-        read_operations = _string_list(
-            raw_definition.get("read_operations"),
-            f"connector {name}.read_operations",
-            required=False,
-        )
+        read_operations = _string_list(raw_definition.get("read_operations"), f"connector {name}.read_operations", required=False)
         write_operations = raw_definition.get("write_operations")
         if not isinstance(write_operations, Mapping):
             raise ConnectorReceiptError(f"connector {name}.write_operations must be an object")
@@ -175,24 +173,14 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
                 raise ConnectorReceiptError(f"connector {name}.{operation} must be an object")
             if not isinstance(raw_rule.get("enabled"), bool):
                 raise ConnectorReceiptError(f"connector {name}.{operation}.enabled must be boolean")
-            if raw_rule.get("approval_required") is not True:
-                raise ConnectorReceiptError(
-                    f"connector {name}.{operation} must require exact approval"
-                )
+            if raw_rule.get("authorization_required") is not True:
+                raise ConnectorReceiptError(f"connector {name}.{operation} must require attributable authorization")
             if raw_rule.get("idempotency_required") is not True:
-                raise ConnectorReceiptError(
-                    f"connector {name}.{operation} must require idempotency"
-                )
+                raise ConnectorReceiptError(f"connector {name}.{operation} must require idempotency")
             if raw_rule.get("terminal_readback_required") is not True:
-                raise ConnectorReceiptError(
-                    f"connector {name}.{operation} must require terminal readback"
-                )
+                raise ConnectorReceiptError(f"connector {name}.{operation} must require terminal readback")
             checked_writes[operation] = dict(raw_rule)
-        connectors[name] = {
-            "data_class": str(raw_definition["data_class"]),
-            "read_operations": read_operations,
-            "write_operations": checked_writes,
-        }
+        connectors[name] = {"data_class": str(raw_definition["data_class"]), "read_operations": read_operations, "write_operations": checked_writes}
 
     profiles: dict[str, tuple[str, ...]] = {}
     for raw_profile, raw_members in raw_profiles.items():
@@ -200,19 +188,10 @@ def load_connector_catalog(path: Path | None = None) -> ConnectorCatalog:
         members = _string_list(raw_members, f"profile {profile}")
         unknown = sorted(set(members).difference(connectors))
         if unknown:
-            raise ConnectorReceiptError(
-                f"profile {profile} names unknown connector(s): {', '.join(unknown)}"
-            )
+            raise ConnectorReceiptError(f"profile {profile} names unknown connector(s): {', '.join(unknown)}")
         profiles[profile] = members
 
-    return ConnectorCatalog(
-        schema_version=schema_version,
-        catalog_id=_required_text(payload.get("catalog_id"), "catalog_id"),
-        version=version,
-        profiles=profiles,
-        connectors=connectors,
-        maximum_receipt_age_seconds=maximum_age,
-    )
+    return ConnectorCatalog(schema_version=schema_version, catalog_id=_required_text(payload.get("catalog_id"), "catalog_id"), version=version, profiles=profiles, connectors=connectors, maximum_receipt_age_seconds=maximum_age)
 
 
 def _connector_definition(catalog: ConnectorCatalog, connector: str) -> Mapping[str, Any]:
@@ -222,12 +201,7 @@ def _connector_definition(catalog: ConnectorCatalog, connector: str) -> Mapping[
         raise ConnectorReceiptError(f"connector is not catalogued: {connector}") from exc
 
 
-def validate_read_receipt(
-    payload: Mapping[str, Any],
-    catalog: ConnectorCatalog,
-    *,
-    now: datetime | None = None,
-) -> ConnectorReadReceipt:
+def validate_read_receipt(payload: Mapping[str, Any], catalog: ConnectorCatalog, *, now: datetime | None = None) -> ConnectorReadReceipt:
     if not isinstance(payload, Mapping):
         raise ConnectorReceiptError("read receipt must be an object")
     if payload.get("schema_version") != RECEIPT_SCHEMA_VERSION:
@@ -236,7 +210,6 @@ def validate_read_receipt(
         raise ConnectorReceiptError("read receipt result_state must be success")
     if payload.get("external_action_authorized") is not False:
         raise ConnectorReceiptError("read receipt must be non-authorizing")
-
     connector = _required_text(payload.get("connector"), "connector")
     operation = _required_text(payload.get("operation"), "operation")
     profile = _required_text(payload.get("profile"), "profile")
@@ -245,7 +218,6 @@ def validate_read_receipt(
         raise ConnectorReceiptError(f"read operation is not allowed: {connector}.{operation}")
     if profile not in catalog.profiles or connector not in catalog.profiles[profile]:
         raise ConnectorReceiptError(f"connector {connector} is not active in profile {profile}")
-
     observed_at = _parse_timestamp(payload.get("observed_at"), "observed_at")
     current = now or datetime.now(UTC)
     if current.tzinfo is None or current.utcoffset() is None:
@@ -255,38 +227,18 @@ def validate_read_receipt(
         raise ConnectorReceiptError("read receipt observed_at is materially in the future")
     if age_seconds > catalog.maximum_receipt_age_seconds:
         raise ConnectorReceiptError("read receipt is stale")
-
     digest_value = payload.get("content_sha256")
-    content_sha256: str | None
-    if digest_value is None:
-        content_sha256 = None
-    else:
-        content_sha256 = _required_text(digest_value, "content_sha256")
-        if not _is_sha256(content_sha256):
-            raise ConnectorReceiptError("content_sha256 must be a 64-character lowercase hex digest")
-
-    return ConnectorReadReceipt(
-        receipt_id=_required_text(payload.get("receipt_id"), "receipt_id"),
-        request_id=_required_text(payload.get("request_id"), "request_id"),
-        connector=connector,
-        operation=operation,
-        profile=profile,
-        target=_validate_target(payload.get("target")),
-        observed_at=observed_at,
-        content_sha256=content_sha256,
-        source_refs=_string_list(payload.get("source_refs"), "source_refs"),
-    )
+    content_sha256 = None if digest_value is None else _required_text(digest_value, "content_sha256")
+    if content_sha256 is not None and not _is_sha256(content_sha256):
+        raise ConnectorReceiptError("content_sha256 must be a 64-character lowercase hex digest")
+    return ConnectorReadReceipt(receipt_id=_required_text(payload.get("receipt_id"), "receipt_id"), request_id=_required_text(payload.get("request_id"), "request_id"), connector=connector, operation=operation, profile=profile, target=_validate_target(payload.get("target")), observed_at=observed_at, content_sha256=content_sha256, source_refs=_string_list(payload.get("source_refs"), "source_refs"))
 
 
-def validate_action_request(
-    payload: Mapping[str, Any],
-    catalog: ConnectorCatalog,
-) -> ConnectorActionRequest:
+def validate_action_request(payload: Mapping[str, Any], catalog: ConnectorCatalog) -> ConnectorActionRequest:
     if not isinstance(payload, Mapping):
         raise ConnectorReceiptError("action request must be an object")
     if payload.get("schema_version") != RECEIPT_SCHEMA_VERSION:
         raise ConnectorReceiptError("action request schema_version is unsupported")
-
     connector = _required_text(payload.get("connector"), "connector")
     operation = _required_text(payload.get("operation"), "operation")
     definition = _connector_definition(catalog, connector)
@@ -295,39 +247,13 @@ def validate_action_request(
         raise ConnectorReceiptError(f"write operation is not catalogued: {connector}.{operation}")
     if write_rule.get("enabled") is not True:
         raise ConnectorReceiptError(f"write operation is inactive: {connector}.{operation}")
-    if write_rule.get("approval_required") is not True:
-        raise ConnectorReceiptError(f"write operation lacks exact approval rule: {connector}.{operation}")
-
+    if write_rule.get("authorization_required") is not True:
+        raise ConnectorReceiptError(f"write operation lacks authorization rule: {connector}.{operation}")
     approval = payload.get("approval")
     if not isinstance(approval, Mapping):
         raise ConnectorReceiptError("action request approval must be an object")
-
-    return ConnectorActionRequest(
-        action_request_id=_required_text(payload.get("action_request_id"), "action_request_id"),
-        connector=connector,
-        operation=operation,
-        target=_validate_target(payload.get("target")),
-        consequence=_required_text(payload.get("consequence"), "consequence"),
-        evidence_refs=_string_list(payload.get("evidence_refs"), "evidence_refs"),
-        approved_by=_required_text(approval.get("approved_by"), "approval.approved_by"),
-        approved_at=_parse_timestamp(approval.get("approved_at"), "approval.approved_at"),
-        approval_reference=_required_text(
-            approval.get("approval_reference"), "approval.approval_reference"
-        ),
-    )
+    return ConnectorActionRequest(action_request_id=_required_text(payload.get("action_request_id"), "action_request_id"), connector=connector, operation=operation, target=_validate_target(payload.get("target")), consequence=_required_text(payload.get("consequence"), "consequence"), evidence_refs=_string_list(payload.get("evidence_refs"), "evidence_refs"), approved_by=_required_text(approval.get("approved_by"), "approval.approved_by"), approved_at=_parse_timestamp(approval.get("approved_at"), "approval.approved_at"), approval_reference=_required_text(approval.get("approval_reference"), "approval.approval_reference"))
 
 
 def receipt_audit_details(receipt: ConnectorReadReceipt) -> dict[str, Any]:
-    """Return safe metadata for APEX audit records without raw provider content."""
-    return {
-        "receipt_id": receipt.receipt_id,
-        "request_id": receipt.request_id,
-        "connector": receipt.connector,
-        "operation": receipt.operation,
-        "profile": receipt.profile,
-        "observed_at": receipt.observed_at.isoformat().replace("+00:00", "Z"),
-        "target_sha256": canonical_sha256(receipt.target),
-        "content_sha256": receipt.content_sha256,
-        "source_ref_count": len(receipt.source_refs),
-        "external_action_authorized": False,
-    }
+    return {"receipt_id": receipt.receipt_id, "request_id": receipt.request_id, "connector": receipt.connector, "operation": receipt.operation, "profile": receipt.profile, "observed_at": receipt.observed_at.isoformat().replace("+00:00", "Z"), "target_sha256": canonical_sha256(receipt.target), "content_sha256": receipt.content_sha256, "source_ref_count": len(receipt.source_refs), "external_action_authorized": False}
