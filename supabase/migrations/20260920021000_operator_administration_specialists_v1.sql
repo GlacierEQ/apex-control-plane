@@ -100,7 +100,7 @@ create or replace function public.oa_assign_role_v1(
   p_scope jsonb default '{}'::jsonb,
   p_authority_constraints jsonb default '{}'::jsonb,
   p_continuity_handoff jsonb default '{}'::jsonb,
-  p_assigned_by text
+  p_assigned_by text default null
 )
 returns uuid
 language plpgsql
