@@ -32,7 +32,8 @@ def validate() -> list[str]:
     for name, text in {"chatgpt_project": project, "chatgpt_custom": custom}.items():
         if "OpenAI system/developer instructions" not in text:
             errors.append(f"{name} missing platform authority boundary")
-        if "Recover" not in text or "readback" not in text.lower():
+        lower = text.lower()
+        if "recover" not in lower or ("readback" not in lower and "read back" not in lower):
             errors.append(f"{name} missing recovery/readback contract")
 
     cc = bindings["canonical_contract"]
