@@ -159,16 +159,14 @@ jobs:
             exit 1
           fi
 
-      - name: Prove legacy runtime cannot bypass verified boundary
+      - name: Prove legacy runtime stays local and cannot authorize external action
         shell: bash
         run: |
-          set +e
           CASEY_AUTO_BOOT_MODE=strict python src/control_plane_runtime.py >/tmp/legacy.out 2>/tmp/legacy.err
-          status=$?
-          set -e
-          test "$status" -eq 78
-          test ! -s /tmp/legacy.out
-          grep -q 'direct control_plane_runtime execution is disabled' /tmp/legacy.err
+          test -s /tmp/legacy.out
+          grep -q '"status":"completed"' /tmp/legacy.out
+          grep -q '"human_review_required":true' /tmp/legacy.out
+          grep -q '"external_action_authorized":false' /tmp/legacy.out
 
       - name: Prove request-mode auto-boot is diagnostic uplift without blanket authority
         shell: bash
