@@ -99,8 +99,8 @@ def test_explicit_contradiction_remains_blocking(monkeypatch, tmp_path) -> None:
 
     assert validation is not None
     assert validation.ok is False
-    assert validation.status == "continuation_required"
-    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "continuation_required"
+    assert validation.status == "uplift_required"
+    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "uplift_required"
 
     records = list(tmp_path.glob("apex_enforced_startup-*.json"))
     assert len(records) == 1
