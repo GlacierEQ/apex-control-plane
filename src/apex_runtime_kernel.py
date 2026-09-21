@@ -107,6 +107,7 @@ class RuntimeSnapshot:
     startup_gates: tuple[str, ...]
     startup_findings: tuple[str, ...] = ()
     repair_reasons: tuple[str, ...] = ()
+    context_state: str | None = None
 
 
 @dataclass(slots=True)
@@ -126,6 +127,7 @@ class _TaskState:
     verified_gain_refs: list[str] = field(default_factory=list)
     unresolved_blockers: list[str] = field(default_factory=list)
     repair_reasons: list[str] = field(default_factory=list)
+    context_state: str = "recovery_pending"
     resume_phase: RuntimePhase | None = None
 
 
@@ -234,8 +236,20 @@ class ApexRuntimeKernel:
         recovered_refs: Sequence[str],
         details: Mapping[str, Any] | None = None,
     ) -> RuntimeSnapshot:
-        """Record recovered context before task execution or observation begins."""
-        self._require_phase(RuntimePhase.CONTEXT_RECOVERING)
+        """Record recovered context as an enrichment transition, never a mission gate."""
+        self._require_phase(
+            RuntimePhase.CONTEXT_RECOVERING,
+            RuntimePhase.READY,
+            RuntimePhase.OBSERVING,
+            RuntimePhase.EXECUTING,
+            RuntimePhase.TESTING,
+            RuntimePhase.ADVERSARIAL_TESTING,
+            RuntimePhase.VERIFYING,
+            RuntimePhase.VERIFIED,
+            RuntimePhase.PERSISTING,
+            RuntimePhase.READBACK,
+            RuntimePhase.REPAIRING,
+        )
         refs = tuple(_validated_receipt_refs(recovered_refs))
         if not refs:
             raise RuntimeViolation(
@@ -243,12 +257,29 @@ class ApexRuntimeKernel:
             )
         self.task.source_refs = tuple(dict.fromkeys((*self.task.source_refs, *refs)))
         self._record_receipt("context_recovery", reference, True, details)
-        self.phase = RuntimePhase.READY
-        self._audit_event("context_recovered")
+        self.task.context_state = "hydrated"
+        if self.phase is RuntimePhase.CONTEXT_RECOVERING:
+            self.phase = RuntimePhase.READY
+            self._audit_event("context_recovered")
+        else:
+            self._audit_event("context_recovered_in_flight")
         return self.snapshot()
 
     def begin(self) -> RuntimeSnapshot:
-        self._require_phase(RuntimePhase.READY)
+        self._require_phase(RuntimePhase.CONTEXT_RECOVERING, RuntimePhase.READY)
+        if self.phase is RuntimePhase.CONTEXT_RECOVERING:
+            self._record_receipt(
+                "context_recovery_debt",
+                f"runtime-context-debt:{self.task.task_id}",
+                False,
+                {
+                    "state": "recovery_pending",
+                    "mission_stop": False,
+                    "route_effect": "enrich_and_continue",
+                },
+            )
+            self.task.context_state = "recovery_pending"
+            self._audit_event("context_recovery_pending_continue")
         self.phase = (
             RuntimePhase.OBSERVING
             if self.task.mode is TaskMode.OBSERVATION
@@ -471,6 +502,7 @@ class ApexRuntimeKernel:
             startup_gates=self.startup_gates,
             startup_findings=self.startup_findings,
             repair_reasons=tuple(task.repair_reasons) if task else (),
+            context_state=task.context_state if task else None,
         )
 
     def receipts(self) -> tuple[RuntimeReceipt, ...]:
@@ -522,7 +554,14 @@ class ApexRuntimeKernel:
         successful_kinds = {
             receipt.kind for receipt in self.task.receipts if receipt.successful
         }
-        gaps.extend(kind for kind in required if kind not in successful_kinds)
+        recorded_kinds = {receipt.kind for receipt in self.task.receipts}
+        for kind in required:
+            if kind == "context_enrichment":
+                if not ({"context_recovery", "context_recovery_debt"} & recorded_kinds):
+                    gaps.append(kind)
+                continue
+            if kind not in successful_kinds:
+                gaps.append(kind)
         if self.task.mode is TaskMode.MUTATION and not self.task.verified_gain_refs:
             gaps.append("verified_gain")
         return list(dict.fromkeys(gaps))
