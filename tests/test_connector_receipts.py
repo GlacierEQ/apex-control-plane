@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from casebrain_orchestrator import CaseBrainOrchestrator, Producer
+from control_plane_runtime import CaseBrainOrchestrator, Producer
 from connector_bridge_contract import build_action_proposal, build_read_request
 from connector_receipts import (
     ConnectorReceiptError,
