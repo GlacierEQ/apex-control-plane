@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "status": "ACTIVE",
   "authority": "OPERATOR_CONTROLLED",
   "source_ref": "operator_current_message_2026-09-20_glaciereq_operator_kernel_enforced_hourly_case_advancement_engine",
@@ -74,6 +74,21 @@
     "connectors_mcp": {
       "role": "execution_capability_fabric",
       "mode": "apply_kernel_at_route_selection_receipt_and_readback_boundaries"
+    },
+    "codex": {
+      "role": "native_global_instruction_surface",
+      "native_entrypoint": "~/.codex/AGENTS.md",
+      "managed_block": "adapters/codex/GLOBAL_AGENTS_MANAGED_BLOCK.md",
+      "installer": "scripts/install_codex_operator_kernel.py",
+      "local_kernel_mirror": "~/.codex/GLACIEREQ_OPERATOR_KERNEL.md"
+    },
+    "chatgpt": {
+      "role": "native_project_and_custom_instruction_projection",
+      "project_instructions": "adapters/chatgpt/PROJECT_INSTRUCTIONS.md",
+      "custom_instructions": "adapters/chatgpt/CUSTOM_INSTRUCTIONS.md",
+      "full_kernel_source": "GLACIEREQ_OPERATOR_KERNEL.md",
+      "deterministic_project_bootstrap_requires_native_project_instructions": true,
+      "repo_cannot_mutate_account_settings": true
     }
   },
   "non_flattening": [
@@ -90,5 +105,11 @@
     "outbound_boundary": "build execution-ready objects; do not send/call/file/publish/change permissions without exact current authorization"
   },
   "anti_rediscovery": true,
-  "readback_required": true
+  "readback_required": true,
+  "shared_kernel": {
+    "path": "GLACIEREQ_OPERATOR_KERNEL.md",
+    "version": "1.0.0",
+    "role": "highest_user_controlled_shared_operator_contract",
+    "adapters": "reference_and_project_not_competing_authority"
+  }
 }
