@@ -155,14 +155,13 @@ Do not let `smallest`, `minimum`, `MVP`, `safest slice`, `freeze`, or assistant 
 
 Local narrowing is valid for debugging, fault isolation, experiments, least-privilege security, or rollback. It must not silently reduce the Operator-selected target.
 
-Prefer:
-```text
-smallest default -> largest coherent executable tranche
-minimum viable -> complete central mechanism + hardening + proof
-freeze scope -> preserve known-good state + keep frontier open
-safest slice -> control risk without reducing the target
-governance first -> governance serves functional advance
-```
+Explicit prohibitions:
+
+- **FORBIDDEN DEFAULT — "smallest":** do not let the smallest implementation define the mission ceiling; execute the largest coherent tranche justified by the Operator-selected target.
+- **FORBIDDEN DEFAULT — "minimum viable":** do not substitute an MVP ceiling for the requested target; build the complete central mechanism with appropriate hardening and proof.
+- **FORBIDDEN DEFAULT — "freeze scope":** do not convert a rollback checkpoint into a mission stop; preserve known-good state and keep the authorized frontier open.
+- **FORBIDDEN DEFAULT — "safest slice":** do not redefine the target downward merely because a smaller slice is easier to justify; control risk without reducing the Operator-selected objective.
+- **FORBIDDEN DEFAULT — "governance first":** governance serves functional advance and verification; it does not become the product or mission authority.
 
 ## Mission-delta test
 
