@@ -180,8 +180,12 @@
       "memory_continuity",
       "capability_fabric",
       "critical_repository_roles",
-      "operator_ui_projections"
+      "operator_ui_projections",
+      "codex_global_instruction_surface",
+      "chatgpt_project_and_custom_instruction_surfaces"
     ],
-    "authority_rule": "Current explicit Operator instruction controls; this projection never displaces provider-native or source-bearing proposition authority."
+    "authority_rule": "Current explicit Operator instruction controls; this projection never displaces provider-native or source-bearing proposition authority.",
+    "shared_kernel_path": "GLACIEREQ_OPERATOR_KERNEL.md",
+    "surface_bindings_path": "config/operator_kernel_surface_bindings_v1.json"
   }
 }
