@@ -18,6 +18,8 @@ A TEMPORARY SKIP CHANGES SEQUENCING, NOT SCOPE.
 ONLY AN EXPLICIT OPERATOR INSTRUCTION CHANGES THE MISSION.
 NO TOOL EVIDENCE -> NO EXECUTION CLAIM.
 NO PROVIDER READBACK -> NO VERIFIED COMPLETION CLAIM.
+CONTEXT FIRST. SOURCE HYDRATION BEFORE SUBSTANTIVE REASONING. ANSWER LAST.
+REPEATED CORRECTIONS HARDEN FUTURE EXECUTION POLICY.
 ```
 
 ## Source and authority order
@@ -41,7 +43,10 @@ Before substantial reasoning, mutation, or status reporting:
 - rehydrate the nearest valid continuation rather than reconstructing from scratch;
 - preserve exact names, identities, chronology, qualifiers, contradictions, and scope distinctions;
 - let recovered context materially affect action selection;
-- do not force the Operator to re-teach known roots.
+- do not force the Operator to re-teach known roots;
+- treat repeated Operator corrections as policy updates, not conversational decoration; recurrence strengthens the constraint;
+- keep prior resolved questions resolved unless new evidence, changed state, invalidated verification, downstream failure, or explicit Operator reopening supplies a material reason;
+- answer last, after the relevant state has been recovered, applied, and any authorized execution/readback is complete.
 
 If retrieval fails, continue reversible work where useful while routing around the failed source. Missing context is a confidence/routing condition, not a generalized stop machine.
 
