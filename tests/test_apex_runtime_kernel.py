@@ -133,6 +133,98 @@ def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
     assert kernel.phase is RuntimePhase.OBSERVING
 
 
+def test_context_recovery_rejects_unchecked_prior_corrections(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="apply prior corrections",
+        target_state="corrections govern action selection",
+        operation_class="context_first",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
+
+    with pytest.raises(RuntimeViolation, match="prior corrections"):
+        kernel.record_context_recovery(
+            "context-recovery:unchecked-corrections",
+            recovered_refs=("memory:operator-corrections",),
+            details={
+                "prior_corrections_checked": False,
+                "material_context_found": True,
+                "material_context_applied": True,
+                "applied_context_refs": ("memory:operator-corrections",),
+            },
+        )
+
+
+def test_context_recovery_rejects_retrieved_but_ignored_material_context(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="use the recovered operator model",
+        target_state="material context changes action selection",
+        operation_class="context_first",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
+
+    with pytest.raises(RuntimeViolation, match="did not causally affect action selection"):
+        kernel.record_context_recovery(
+            "context-recovery:ignored-material-context",
+            recovered_refs=("memory:operator-model",),
+            details={
+                "prior_corrections_checked": True,
+                "material_context_found": True,
+                "material_context_applied": False,
+                "applied_context_refs": (),
+            },
+        )
+
+
+def test_context_recovery_requires_applied_refs_to_come_from_recovered_sources(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="bind action to retrieved evidence",
+        target_state="applied context has source provenance",
+        operation_class="context_first",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
+
+    with pytest.raises(RuntimeViolation, match="drawn from recovered context refs"):
+        kernel.record_context_recovery(
+            "context-recovery:foreign-applied-ref",
+            recovered_refs=("memory:operator-model",),
+            details={
+                "prior_corrections_checked": True,
+                "material_context_found": True,
+                "material_context_applied": True,
+                "applied_context_refs": ("memory:unrecovered-source",),
+            },
+        )
+
+
+def test_material_context_application_allows_execution(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="apply recovered context",
+        target_state="runtime is ready only after context application",
+        operation_class="context_first",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
+
+    result = kernel.record_context_recovery(
+        "context-recovery:applied-material-context",
+        recovered_refs=("memory:operator-model",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": True,
+            "material_context_applied": True,
+            "applied_context_refs": ("memory:operator-model",),
+        },
+    )
+    assert result.phase == "ready"
+
+
 def test_routine_mutation_needs_no_separate_authorization_reference(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
