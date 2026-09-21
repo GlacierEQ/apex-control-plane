@@ -48,6 +48,13 @@ def _bind_mutation(kernel) -> None:
             "read back the resulting case state",
         ),
     )
+    kernel.record_context_recovery(
+        "context-recovery:active-case",
+        recovered_refs=(
+            "case-proposition:ALG-NEX-641@ITEMS_MATCHED",
+            "case-source:ticket-100859",
+        ),
+    )
     kernel.begin()
     kernel.record_execution("execution:case-pass")
     kernel.record_test("test:case-pass", passed=True)
@@ -231,6 +238,10 @@ def test_observation_tasks_are_not_forced_to_fake_progress(monkeypatch) -> None:
         action_scope="none",
         source_refs=("github:runtime",),
         verification_plan=("cross-check source",),
+    )
+    kernel.record_context_recovery(
+        "context-recovery:runtime-inspection",
+        recovered_refs=("github:runtime",),
     )
     kernel.begin()
     kernel.record_observation("github-read:runtime")
