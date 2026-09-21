@@ -131,7 +131,7 @@ class _TaskState:
 
 @dataclass(slots=True)
 class ApexRuntimeKernel:
-    """Single-owner repair-forward lifecycle kernel for one active task."""
+    """Repair-forward lifecycle kernel for one locally bound active task; never an estate-wide ownership or authority boundary."""
 
     policy: Mapping[str, Any]
     startup_gates: tuple[str, ...]

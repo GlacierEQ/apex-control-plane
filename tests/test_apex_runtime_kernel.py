@@ -31,6 +31,13 @@ _GATE_GETTERS = (
 )
 
 
+def test_kernel_contract_is_task_local_and_non_sovereign() -> None:
+    contract = ApexRuntimeKernel.__doc__ or ""
+    assert "locally bound active task" in contract
+    assert "never an estate-wide ownership or authority boundary" in contract
+    assert "Single-owner" not in contract
+
+
 def _arm(monkeypatch) -> ApexRuntimeKernel:
     valid = SimpleNamespace(ok=True, status="complete")
     for getter in _GATE_GETTERS:
