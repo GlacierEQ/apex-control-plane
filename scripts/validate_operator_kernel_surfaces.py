@@ -40,13 +40,9 @@ def validate() -> list[str]:
         if "OpenAI system/developer instructions" not in text:
             errors.append(f"{name} missing platform authority boundary")
         lower = text.lower()
-        required_fragments = (
-            "context-first",
-            "repeated corrections",
-            "answer last",
-            "recover",
-        )
-        for fragment in required_fragments:
+        if "context-first" not in lower and "context first" not in lower:
+            errors.append(f"{name} missing standing hardlock fragment: context-first")
+        for fragment in ("repeated corrections", "answer last", "recover"):
             if fragment not in lower:
                 errors.append(f"{name} missing standing hardlock fragment: {fragment}")
         if "readback" not in lower and "read back" not in lower:
