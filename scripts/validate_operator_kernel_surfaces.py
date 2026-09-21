@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Validate GlacierEQ Operator Kernel projections and hardlock invariants."""
+
 from __future__ import annotations
 
 import json
@@ -11,10 +13,13 @@ REQUIRED_LAWS = [
     "COMPOUND BEFORE REPLACING",
     "A BLOCKED TOOL CHANGES THE ROUTE, NOT THE OBJECTIVE",
     "NO TOOL EVIDENCE -> NO EXECUTION CLAIM",
+    "CONTEXT FIRST. SOURCE HYDRATION BEFORE SUBSTANTIVE REASONING. ANSWER LAST.",
+    "REPEATED CORRECTIONS HARDEN FUTURE EXECUTION POLICY.",
 ]
 
 
 def validate() -> list[str]:
+    """Return surface-binding defects; an empty list means the contract is coherent."""
     errors: list[str] = []
     kernel = (ROOT / "GLACIEREQ_OPERATOR_KERNEL.md").read_text(encoding="utf-8")
     codex = (ROOT / "adapters/codex/GLOBAL_AGENTS_MANAGED_BLOCK.md").read_text(encoding="utf-8")
@@ -28,12 +33,23 @@ def validate() -> list[str]:
 
     if "GLACIEREQ_OPERATOR_KERNEL:BEGIN" not in codex or "GLACIEREQ_OPERATOR_KERNEL:END" not in codex:
         errors.append("Codex managed block markers missing")
+    if "If `~/.codex/skills/casey-operator-execution-kernel/SKILL.md` exists" not in codex:
+        errors.append("Codex skill dependency must be conditional")
 
     for name, text in {"chatgpt_project": project, "chatgpt_custom": custom}.items():
         if "OpenAI system/developer instructions" not in text:
             errors.append(f"{name} missing platform authority boundary")
         lower = text.lower()
-        if "recover" not in lower or ("readback" not in lower and "read back" not in lower):
+        required_fragments = (
+            "context-first",
+            "repeated corrections",
+            "answer last",
+            "recover",
+        )
+        for fragment in required_fragments:
+            if fragment not in lower:
+                errors.append(f"{name} missing standing hardlock fragment: {fragment}")
+        if "readback" not in lower and "read back" not in lower:
             errors.append(f"{name} missing recovery/readback contract")
 
     cc = bindings["canonical_contract"]
