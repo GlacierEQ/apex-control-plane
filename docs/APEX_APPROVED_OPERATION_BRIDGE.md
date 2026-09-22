@@ -2,9 +2,9 @@
 
 ## Purpose
 
-The APEX connector layer supports more than evidence retrieval. It can prepare and govern a **specific provider mutation** when the operator has explicitly approved that exact mutation. The repository remains unable to obtain provider credentials or make network calls. Instead, it validates an immutable operation request, issues a direct authenticated-host operation plan, and admits a digest-only execution receipt after the host completes the provider action.
+The APEX connector layer supports more than evidence retrieval. It can prepare and govern a **specific provider mutation** when attributable Operator source authorizes that action either directly or as a routine constituent of a bounded plan, batch, or action class. The repository remains unable to obtain provider credentials or make network calls. Instead, it validates the action against the recovered authorization scope, binds the constituent operation immutably for idempotency/readback, issues a direct authenticated-host operation plan, and admits a digest-only execution receipt after the host completes the provider action.
 
-> A provider capability is not standing access to act. A validated read receipt is not a write approval. A generic approval, a prior approval, a recommendation, or a broad instruction cannot authorize a different provider operation, target, payload, consequence, or idempotency key.
+> A provider capability is not standing access to act. A validated read receipt is not write authority. Authorization must be attributable to recovered Operator source and must cover the constituent action. A valid explicit-action, plan/batch, or action-class envelope may cover routine constituent actions without manufacturing a fresh per-action approval; destructive actions and material strategy deltas require renewed explicit authority unless the source-bound envelope expressly covers them.
 
 ## Core invariants
 
@@ -21,7 +21,7 @@ The APEX connector layer supports more than evidence retrieval. It can prepare a
 
 ## Immutable action and approval scope
 
-An action proposal remains non-authorizing. It becomes an executable host plan only after APEX validates a request whose approval scope exactly matches the proposed action.
+An action proposal remains non-authorizing. It becomes an executable host plan only after APEX validates either (a) a legacy exact-action approval or (b) a source-bound authorization envelope whose immutable scope covers the proposed constituent action. The legacy exact-action digest is retained as a compatibility/idempotency binding, not as a new Operator approval when authority is inherited from a valid envelope.
 
 ```json
 {
@@ -56,25 +56,25 @@ An action proposal remains non-authorizing. It becomes an executable host plan o
 }
 ```
 
-The immutable action scope contains only the connector, operation, target, provider-input digest, stated consequence, sorted evidence references, and idempotency key. The approval reference identifies the user authorization record; the scope digest proves that this record applies to this action and no other action.
+The immutable action binding contains only the connector, operation, target, provider-input digest, stated consequence, sorted evidence references, and idempotency key. For the legacy explicit-action path, the approval reference identifies that exact authorization record. For source-bound authorization, `authorization_envelope.source_ref` identifies the controlling Operator source and the envelope proves the constituent action is within the permitted connector/operation/target scope; the exact-action digest is then synthesized internally so downstream idempotency and receipt machinery can remain unchanged.
 
 ## Host execution sequence
 
 | Stage | APEX responsibility | Authenticated host responsibility | Result |
 | --- | --- | --- | --- |
 | Proposal | Build a non-authorizing proposal and calculate its immutable scope digest. | None. | Reviewable proposal with `external_action_authorized: false`. |
-| Approval validation | Verify catalog activation, exact approval scope, evidence references, mutation readiness, and idempotency. | None. | One execution plan with `external_action_authorized: true`. |
+| Authorization validation | Verify catalog activation, attributable source-bound authorization (explicit action, plan/batch, or action class), constituent-action membership, evidence references, mutation readiness, and idempotency. | None. | One execution plan with `external_action_authorized: true`. |
 | Provider action | None. | Perform exactly the provider operation named in the plan using the active authenticated session. | Provider result retained outside Git history. |
 | Readback | None. | Perform the plan’s required terminal readback and preserve a local observation. | Provider object reference and local verification material. |
 | Receipt admission | Hash the local execution and readback observations; validate and append safe audit metadata. | Supply the local manifest and observation paths. | Immutable audit receipt with no credentials or provider content. |
 
-The host receives an execution plan only after validation. It must not substitute a different provider tool, target, payload, or operation. A host refusal, provider error, expired approval, missing readback, or mismatched receipt is recorded as a refusal or failure, never rewritten as a completed action.
+The host receives an execution plan only after validation. It must not substitute a different provider tool, target, payload, or operation. A host refusal, provider error, out-of-scope or stale authorization, missing readback, or mismatched receipt is recorded as a refusal or failure, never rewritten as a completed action.
 
 ## Execution receipt
 
 A successful receipt is a record of a provider action that has already occurred, not an authorization to act. It contains the action-request ID, idempotency key, connector, operation, execution time, target digest, provider-input digest, provider-output digest, result-object reference digest, terminal-readback digest, verification state, and source-reference count. Raw provider material, request payloads, and provider credentials never enter the receipt ledger.
 
-The runtime records accepted execution receipts as `admit_connector_execution_receipt` audit entries. These entries may report `external_action_authorized: true` only because the validated action scope carried an exact approval and the receipt proves the one corresponding provider action completed. Read-receipt admission remains permanently non-authorizing.
+The runtime records accepted execution receipts as `admit_connector_execution_receipt` audit entries. These entries may report `external_action_authorized: true` only because the validated action was covered by attributable Operator authority and the receipt proves the one corresponding provider action completed. That authority may be an exact explicit action or a source-bound plan/batch/action-class envelope covering the routine constituent action. Read-receipt admission remains permanently non-authorizing.
 
 ## Initial operation policy
 
@@ -98,14 +98,14 @@ The implementation adds validation and audit code only. It does not create a pro
 
 | Surface | Responsibility |
 | --- | --- |
-| `connector_receipts.py` | Validate immutable action scope, exact approval binding, action execution receipts, and safe audit details. |
-| `connector_bridge_contract.py` | Build non-authorizing proposals and approval-validated execution requests. |
+| `connector_receipts.py` / `authorization_compat.py` / `source_bound_authorization.py` | Validate immutable action binding, source-bound authorization membership, legacy exact-action compatibility, action execution receipts, and safe audit details. |
+| `connector_bridge_contract.py` | Build non-authorizing proposals and authorization-validated execution requests. |
 | `session_connector_dispatch.py` | Map a validated action request to one direct authenticated provider-operation plan without invoking it. |
 | `authenticated_session_bridge.py` | Build digest-only execution receipts from host-side action and readback observations. |
 | `control_plane_runtime.py` | Admit execution receipts with action-level idempotency and immutable audit records. |
 | Operator scripts | Prepare validated plans and admit local receipts. They read local manifests and observations but never call provider tools. |
-| Tests | Prove refusal for inactive routes, scope mismatches, expired or generic approvals, unsafe query payloads, failed readiness gates, duplicate requests, provider-content leakage, missing readback, and provider-call attempts. |
+| Tests | Prove plan/batch/action-class inheritance for routine constituents and refusal for inactive routes, out-of-scope actions, destructive/material deltas without renewed authority, unsafe query payloads, failed readiness gates, duplicate requests, provider-content leakage, missing readback, and provider-call attempts. |
 
 ## Operating limit
 
-The bridge can make approved operations available; it does not grant ongoing authority. Every mutation still needs its own exact approval record and must be initiated from the current task through an authenticated host session. No scheduled workflow, automation rule, or background runner may consume action requests.
+The bridge can make approved operations available; it does not grant ongoing authority. Every mutation still needs attributable source-bound Operator authority covering the action and must be initiated from the current task through an authenticated host session. Routine constituent actions may inherit a valid explicit-action, plan/batch, or action-class authorization; they do not require a newly manufactured per-action approval. Destructive actions or material strategy deltas require renewed explicit authority unless expressly covered by the recovered authorization scope. No scheduled workflow, automation rule, or background runner may consume action requests.
