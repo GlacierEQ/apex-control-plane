@@ -72,6 +72,25 @@ def action_request() -> dict:
     return request
 
 
+def source_bound_action_request() -> dict:
+    request = action_request()
+    source_ref = "operator://2026-09-22/command-source-bound"
+    request["approval"] = dict(
+        request["approval"],
+        approval_reference=source_ref,
+        approval_scope_sha256="",
+    )
+    request["authorization_envelope"] = {
+        "source_ref": source_ref,
+        "kind": "plan_batch",
+        "connector": "github",
+        "operations": ["issue.create"],
+        "target_constraints": {"repository": "GlacierEQ/apex-control-plane"},
+        "plan_ref": "plan://command-source-bound",
+    }
+    return request
+
+
 def test_prepare_command_issues_an_exact_approved_host_plan(tmp_path):
     module = _load_script("prepare_approved_connector_action.py")
     action_path = tmp_path / "action.json"
@@ -86,6 +105,20 @@ def test_prepare_command_issues_an_exact_approved_host_plan(tmp_path):
     assert result["plan"]["provider_operation"] == "issue.create"
     assert result["audit_scope"]["provider_input_sha256"]
     assert "provider_input" not in result["audit_scope"]
+
+
+def test_prepare_command_accepts_source_bound_plan_without_fresh_exact_approval(tmp_path):
+    module = _load_script("prepare_approved_connector_action.py")
+    action_path = tmp_path / "source-bound-action.json"
+    action_path.write_text(json.dumps(source_bound_action_request()), encoding="utf-8")
+
+    result = module.prepare_action_plan(action_request_path=action_path, now=NOW)
+
+    assert result["status"] == "approved_for_direct_host_execution"
+    assert result["external_action_authorized"] is True
+    assert result["plan"]["approval_reference"].startswith(
+        "operator://2026-09-22/command-source-bound#auth="
+    )
 
 
 def test_execution_admission_command_keeps_provider_material_out_of_ledger(tmp_path):
@@ -131,3 +164,48 @@ def test_execution_admission_command_keeps_provider_material_out_of_ledger(tmp_p
     assert "Command test" not in content
     assert "execution_content_sha256" in content
     assert "readback_content_sha256" in content
+
+
+def test_execution_admission_command_accepts_source_bound_plan(tmp_path):
+    module = _load_script("admit_session_connector_execution_receipts.py")
+    action_path = tmp_path / "source-bound-action.json"
+    action_path.write_text(json.dumps(source_bound_action_request()), encoding="utf-8")
+    execution_path = tmp_path / "source-bound-provider-execution.json"
+    readback_path = tmp_path / "source-bound-provider-readback.json"
+    execution_path.write_text('{"provider_id": 202}', encoding="utf-8")
+    readback_path.write_text('{"number": 202, "state": "open"}', encoding="utf-8")
+    manifest_path = tmp_path / "source-bound-execution-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "result_state": "success",
+                "verification_passed": True,
+                "execution_source_refs": ["github://issue/create/202"],
+                "execution_observation_path": str(execution_path),
+                "executed_at": NOW.isoformat().replace("+00:00", "Z"),
+                "result_target": {
+                    "repository": "GlacierEQ/apex-control-plane",
+                    "issue_number": 202,
+                },
+                "readback_source_refs": ["github://issue/202"],
+                "readback_observation_path": str(readback_path),
+                "readback_at": (NOW + timedelta(seconds=1)).isoformat().replace(
+                    "+00:00", "Z"
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+    ledger_path = tmp_path / "source-bound-execution-receipts.jsonl"
+
+    result = module.admit_execution_manifest(
+        action_request_path=action_path,
+        execution_manifest_path=manifest_path,
+        receipt_ledger_path=ledger_path,
+        commit_sha="d" * 40,
+        now=NOW,
+    )
+
+    assert result["status"] == "accepted"
+    assert result["external_action_authorized"] is True
+    assert "execution_content_sha256" in ledger_path.read_text(encoding="utf-8")
