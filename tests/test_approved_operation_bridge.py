@@ -208,7 +208,7 @@ def test_runtime_admits_source_bound_execution_receipt_end_to_end():
     assert accepted["status"] == "accepted"
     assert accepted["external_action_authorized"] is True
     assert runtime.receipts[-1].details["approval_reference"].startswith(
-        "operator://2026-09-22/continuity-authority#auth="
+        "source:continuity-authority#auth="
     )
 
 
