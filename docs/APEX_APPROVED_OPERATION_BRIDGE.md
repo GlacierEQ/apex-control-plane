@@ -62,6 +62,8 @@ The immutable action binding contains only the connector, operation, target, pro
 
 ### Authorization inheritance contract
 
+The runtime independently resolves the `source_binding`, verifies source/span hashes and active supersession state, and compares the recovered Operator-authored authorization record with the submitted envelope. The request cannot self-attest its own authority.
+
 Routine constituent actions inherit authority only from an independently resolved Operator source record whose verified scope covers the connector, operation/action class, target constraints, provider-input constraints, and consequence constraints; no action request can manufacture that source record. Concrete provider input, consequence, evidence references, and idempotency are bound into the action digest after scope validation; that digest is an idempotency/readback binding, not a new approval. A strategy-changing action outside the verified scope requires a new Operator source record; a caller-supplied material-strategy flag cannot expand or prove authority.
 
 ## Host execution sequence
