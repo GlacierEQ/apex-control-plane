@@ -1,0 +1,25 @@
+{
+  "schema": "JACK_LEGAL_CASE_PLANE_V1",
+  "mode": "read_only_fail_closed",
+  "environment": {
+    "url": "SUPABASE_URL",
+    "key_priority": [
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "SUPABASE_ANON_KEY"
+    ]
+  },
+  "table_contract": {
+    "case": "apex_legal_cases",
+    "actors": "apex_legal_case_actors",
+    "propositions": "apex_legal_case_propositions",
+    "contradictions": "apex_legal_case_contradictions",
+    "evidence_targets": "apex_legal_case_evidence_targets",
+    "receipts": "apex_legal_projection_receipts"
+  },
+  "privacy": {
+    "case_specific_data_in_public_repo": false,
+    "runtime_input": "stable case_id supplied at execution time",
+    "log_secrets": false
+  },
+  "mutation_policy": "No mutation methods. Writes require explicit connector/action surfaces and receipts."
+}
