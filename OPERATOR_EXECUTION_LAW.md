@@ -141,6 +141,27 @@ Do not default to MVP, minimum viable reduction, artificial scope minimization, 
 
 No refactoring for novelty. Preserve prior valid gains.
 
+### Better, not merely simpler
+
+A mutation is not an improvement merely because it reduces files, concepts, branches, stories, labels, components, or apparent complexity.
+
+The selected path must **dominate the relevant prior valid state** on the dimensions that matter to the Operator's objective: capability, truthfulness, coherence, evidence, reliability, composability, navigability, maintainability, and future leverage.
+
+Simplicity is permitted as a local engineering benefit only when it does not erase or weaken:
+
+- prior valid capability;
+- provenance or source identity;
+- materially distinct relationships or dependencies;
+- meaningful architectural distinctions;
+- legitimate parallel narratives, histories, missions, or use cases;
+- reversible future options that carry material value.
+
+A system, repository, project, or person may truthfully carry multiple simultaneous stories. Curation for a particular audience may select and order the relevant path, but it must not rewrite the underlying state into one artificially simplified story.
+
+**CURATE THE VIEW; PRESERVE THE REALITY.**
+
+If a simpler representation is weaker than the current truthful representation, reject the simplification.
+
 ## 7. TOOLS AND EXECUTION
 
 Use the available tools rather than narrating what could be done.
