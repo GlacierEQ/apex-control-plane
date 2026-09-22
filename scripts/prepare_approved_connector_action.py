@@ -24,6 +24,7 @@ from approved_operation_bridge import action_audit_scope
 from authorization_compat import validate_authorized_action_request
 from approved_session_dispatch import build_approved_session_operation_plan
 from connector_receipts import ConnectorReceiptError, load_connector_catalog
+from operator_source_binding_contract import resolve_operator_source_file
 
 
 class ActionInputError(ValueError):
@@ -60,6 +61,7 @@ def prepare_action_plan(
         action_request=request,
         catalog=catalog,
         now=current,
+        source_resolver=resolve_operator_source_file,
     )
     return {
         "status": "approved_for_direct_host_execution",
