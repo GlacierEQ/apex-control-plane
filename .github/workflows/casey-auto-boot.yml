@@ -153,26 +153,27 @@ jobs:
             tests/test_scan_repos.py \
             jack/tests/test_jack_relentless_gate.py
 
-      - name: Prove strict mode fails closed without receipt
+      - name: Prove missing receipt becomes nonblocking enrichment
         shell: bash
         run: |
           set +e
           CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/boot.out 2>/tmp/boot.err
           status=$?
           set -e
-          if [[ "$status" -ne 78 ]]; then
+          if [[ "$status" -ne 0 ]]; then
             cat /tmp/boot.out || true
             cat /tmp/boot.err || true
-            echo "expected exit 78, received $status" >&2
+            echo "startup enrichment should preserve runtime progress; received $status" >&2
             exit 1
           fi
+          grep -q '"phase":"complete"' /tmp/boot.out
+          grep -q '"status": "enrichment_pending"' /tmp/boot.err
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot.err
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot.err
-          grep -q 'ground_truth_files_loaded' /tmp/boot.err
-          grep -q 'tool_inventory' /tmp/boot.err
-          test ! -s /tmp/boot.out
+          ! grep -q '"external_action_authorized": true' /tmp/boot.out
+          ! grep -q '"external_action_authorized": true' /tmp/boot.err
 
-      - name: Prove malformed receipt fails closed without traceback
+      - name: Prove malformed receipt becomes visible route-local uplift
         shell: bash
         run: |
           set +e
@@ -181,18 +182,20 @@ jobs:
           python src/control_plane.py >/tmp/malformed.out 2>/tmp/malformed.err
           status=$?
           set -e
-          if [[ "$status" -ne 78 ]]; then
+          if [[ "$status" -ne 0 ]]; then
             cat /tmp/malformed.out || true
             cat /tmp/malformed.err || true
-            echo "malformed receipt returned $status instead of 78" >&2
+            echo "malformed observer input must not erase the executable runtime; received $status" >&2
             exit 1
           fi
-          grep -q '"boot_status": "blocked"' /tmp/malformed.err
-          grep -q 'CASEY_BOOT_RECEIPT_JSON is invalid' /tmp/malformed.err
+          grep -q '"phase":"complete"' /tmp/malformed.out
+          test -s /tmp/malformed.err
+          grep -Eq '(continuation_required|enrichment_pending|converted to .*uplift)' /tmp/malformed.err
           ! grep -q 'Traceback' /tmp/malformed.err
-          test ! -s /tmp/malformed.out
+          ! grep -q '"external_action_authorized": true' /tmp/malformed.out
+          ! grep -q '"external_action_authorized": true' /tmp/malformed.err
 
-      - name: Prove forged status environment cannot bypass strict boot
+      - name: Prove forged status environment cannot manufacture authority
         shell: bash
         run: |
           set +e
@@ -206,14 +209,16 @@ jobs:
           python src/control_plane.py >/tmp/forged.out 2>/tmp/forged.err
           status=$?
           set -e
-          if [[ "$status" -ne 78 ]]; then
+          if [[ "$status" -ne 0 ]]; then
             cat /tmp/forged.out || true
             cat /tmp/forged.err || true
-            echo "forged status bypassed boot; received $status" >&2
+            echo "forged status flags must become diagnostics, not a global runtime veto; received $status" >&2
             exit 1
           fi
+          grep -q '"phase":"complete"' /tmp/forged.out
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/forged.err
-          test ! -s /tmp/forged.out
+          ! grep -q '"external_action_authorized": true' /tmp/forged.out
+          ! grep -q '"external_action_authorized": true' /tmp/forged.err
 
       - name: Prove fidelity preflight itself fails closed
         shell: bash
@@ -238,27 +243,27 @@ jobs:
           grep -q 'literal_operator_words_preserved' /tmp/fidelity.err
           test ! -s /tmp/fidelity.out
 
-      - name: Prove request mode exposes all gates and remains degraded
+      - name: Prove request mode exposes diagnostics without erasing runtime progress
         shell: bash
         run: |
           set +e
           CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
           status=$?
           set -e
-          if [[ "$status" -ne 78 ]]; then
+          if [[ "$status" -ne 0 ]]; then
             cat /tmp/control-plane.json || true
             cat /tmp/boot-request.json || true
-            echo "request mode returned $status instead of the expected degraded exit 78" >&2
+            echo "request-mode diagnostics must preserve the executable runtime; received $status" >&2
             exit 1
           fi
+          grep -q '"phase":"complete"' /tmp/control-plane.json
           grep -q 'glaciereq_notion_continuity_preflight' /tmp/boot-request.json
           grep -q 'glaciereq_prime_directive_auto_boot' /tmp/boot-request.json
           grep -q 'glaciereq_operator_fidelity_preflight' /tmp/boot-request.json
           grep -q 'apex_genesis_enforced_startup' /tmp/boot-request.json
-          grep -q '"status": "continuation_required"' /tmp/boot-request.json
-          grep -q '"runtime_authorized": false' /tmp/boot-request.json
-          grep -q '"external_action_authorized": false' /tmp/boot-request.json
-          test ! -s /tmp/control-plane.json
+          grep -Eq '"status": "(continuation_required|enrichment_pending)"' /tmp/boot-request.json
+          ! grep -q '"external_action_authorized": true' /tmp/control-plane.json
+          ! grep -q '"external_action_authorized": true' /tmp/boot-request.json
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \

@@ -70,6 +70,8 @@ steps:
         src/operator_fidelity_lock.py \
         src/operator_fidelity_preflight.py \
         src/operator_source_binding_contract.py \
+        src/source_bound_authorization.py \
+        src/authorization_compat.py \
         src/control_plane.py \
         src/sitecustomize.py \
         scripts/reconcile_mastermind_buildkite.py
@@ -78,6 +80,10 @@ steps:
         tests/test_operator_fidelity_lock.py \
         tests/test_operator_fidelity_preflight.py \
         tests/test_operator_kernel_surfaces.py \
+        tests/test_source_bound_authorization.py \
+        tests/test_authorization_documentation_contract.py \
+        tests/test_approved_operation_bridge.py \
+        tests/test_approved_operation_commands.py \
         tests/test_buildkite_master.py \
         tests/test_buildkite_master_inventory.py \
         tests/test_buildkite_github_status.py \

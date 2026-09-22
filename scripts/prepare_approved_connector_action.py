@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare one exact-approved APEX provider-operation plan.
+"""Prepare one source-authorized APEX provider-operation plan.
 
 This command validates a local action-request JSON document against the active catalog
 and returns the one direct authenticated host operation plan. It does not call a provider,
@@ -20,13 +20,15 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from approved_operation_bridge import action_audit_scope, validate_approved_action_request
+from approved_operation_bridge import action_audit_scope
+from authorization_compat import validate_authorized_action_request
 from approved_session_dispatch import build_approved_session_operation_plan
 from connector_receipts import ConnectorReceiptError, load_connector_catalog
+from operator_source_binding_contract import resolve_operator_source_file
 
 
 class ActionInputError(ValueError):
-    """Raised for malformed local exact-approval action input."""
+    """Raised for malformed local authorized-action input."""
 
 
 def _mapping(value: Any, name: str) -> Mapping[str, Any]:
@@ -50,15 +52,21 @@ def prepare_action_plan(
     action_request_path: Path,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Return an approved host plan and digest-only audit scope for one exact action."""
+    """Return an authorized host plan and digest-only audit scope for one action."""
     catalog = load_connector_catalog(ROOT / "config" / "apex_connector_catalog.json")
     current = (now or datetime.now(UTC)).astimezone(UTC)
     request = load_action_request(action_request_path)
-    action = validate_approved_action_request(request, catalog, now=current)
+    action = validate_authorized_action_request(
+        request,
+        catalog,
+        now=current,
+        source_resolver=resolve_operator_source_file,
+    )
     plan = build_approved_session_operation_plan(
         action_request=request,
         catalog=catalog,
         now=current,
+        source_resolver=resolve_operator_source_file,
     )
     return {
         "status": "approved_for_direct_host_execution",

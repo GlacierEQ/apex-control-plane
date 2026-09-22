@@ -71,3 +71,8 @@ python scripts/admit_session_connector_receipts.py \
 ```
 
 The manifest is operator-controlled, remains outside Git history, and points to local observation files created by direct authenticated reads. It must name a catalogued connector, read operation, profile, target, RFC3339 observation time, source reference, and the local observation path. Any malformed, stale, unlisted, or action-claiming item is refused.
+
+
+### Authorization inheritance contract
+
+Routine constituent actions inherit authority only from an independently resolved Operator source record whose verified scope covers the connector, operation/action class, target constraints, provider-input constraints, and consequence constraints; no action request can manufacture that source record. Concrete provider input, consequence, evidence references, and idempotency are bound into the action digest after scope validation; that digest is an idempotency/readback binding, not a new approval. A strategy-changing action outside the verified scope requires a new Operator source record; a caller-supplied material-strategy flag cannot expand or prove authority.

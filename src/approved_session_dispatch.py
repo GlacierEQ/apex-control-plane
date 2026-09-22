@@ -13,6 +13,7 @@ from typing import Any, Mapping
 from approved_operation_bridge import ApprovedConnectorAction
 from authorization_compat import validate_authorized_action_request
 from connector_receipts import ConnectorCatalog, ConnectorReceiptError, canonical_json
+from operator_source_binding_contract import SourceResolver
 
 
 class ApprovedSessionDispatchError(RuntimeError):
@@ -109,10 +110,21 @@ def _plan(*, action: ApprovedConnectorAction, provider_kind: str, provider_name:
     )
 
 
-def build_approved_session_operation_plan(*, action_request: Mapping[str, Any], catalog: ConnectorCatalog, now=None) -> ApprovedSessionOperationPlan:
+def build_approved_session_operation_plan(
+    *,
+    action_request: Mapping[str, Any],
+    catalog: ConnectorCatalog,
+    now=None,
+    source_resolver: SourceResolver | None = None,
+) -> ApprovedSessionOperationPlan:
     """Validate attributable Operator authority and return one authenticated provider plan."""
     try:
-        action = validate_authorized_action_request(action_request, catalog, now=now)
+        action = validate_authorized_action_request(
+            action_request,
+            catalog,
+            now=now,
+            source_resolver=source_resolver,
+        )
     except (ConnectorReceiptError, ValueError) as exc:
         raise ApprovedSessionDispatchError(str(exc)) from exc
     _validate_supabase_write_input(action)

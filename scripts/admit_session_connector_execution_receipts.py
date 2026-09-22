@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Admit host-side exact-approved provider execution observations into APEX.
+"""Admit host-side source-authorized provider execution observations into APEX.
 
 The manifest points to local action-result and terminal-readback files created by a direct
 authenticated host operation. This command reads those files only to calculate SHA-256
@@ -24,10 +24,11 @@ from approved_operation_bridge import (
     ProviderExecutionObservation,
     build_execution_receipt,
     render_safe_execution_receipt,
-    validate_approved_action_request,
 )
+from authorization_compat import validate_authorized_action_request
 from connector_receipts import ConnectorReceiptError, load_connector_catalog
 from control_plane_runtime import CaseBrainOrchestrator, Producer, to_jsonable
+from operator_source_binding_contract import resolve_operator_source_file
 
 
 class ExecutionAdmissionInputError(ValueError):
@@ -97,11 +98,16 @@ def admit_execution_manifest(
     commit_sha: str,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Validate and admit one host-completed exact-approved provider operation."""
+    """Validate and admit one host-completed source-authorized provider operation."""
     catalog = load_connector_catalog(ROOT / "config" / "apex_connector_catalog.json")
     current = (now or datetime.now(UTC)).astimezone(UTC)
     action_request = load_json(action_request_path, "action request")
-    action = validate_approved_action_request(action_request, catalog, now=current)
+    action = validate_authorized_action_request(
+        action_request,
+        catalog,
+        now=current,
+        source_resolver=resolve_operator_source_file,
+    )
     manifest = load_json(execution_manifest_path, "execution manifest")
     result_state = _text(manifest.get("result_state"), "execution manifest result_state")
     if result_state not in {"success", "failure"}:
@@ -143,6 +149,7 @@ def admit_execution_manifest(
         receipt,
         catalog,
         now=current,
+        source_resolver=resolve_operator_source_file,
     )
     receipt_ledger_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_ledger_path.write_text(render_safe_execution_receipt(receipt), encoding="utf-8")
