@@ -234,15 +234,16 @@ class ApexRuntimeKernel:
         recovered_refs: Sequence[str],
         details: Mapping[str, Any] | None = None,
     ) -> RuntimeSnapshot:
-        """Record recovered context before task execution or observation begins."""
+        """Record recovered context and prove material corrections affected action selection."""
         self._require_phase(RuntimePhase.CONTEXT_RECOVERING)
         refs = tuple(_validated_receipt_refs(recovered_refs))
         if not refs:
             raise RuntimeViolation(
                 "context recovery requires at least one recovered source reference"
             )
+        context_details = _validated_context_recovery_details(details, refs)
         self.task.source_refs = tuple(dict.fromkeys((*self.task.source_refs, *refs)))
-        self._record_receipt("context_recovery", reference, True, details)
+        self._record_receipt("context_recovery", reference, True, context_details)
         self.phase = RuntimePhase.READY
         self._audit_event("context_recovered")
         return self.snapshot()
@@ -689,6 +690,57 @@ def _validated_receipt_refs(values: Sequence[str]) -> list[str]:
         _require_receipt_ref(value)
         output.append(value)
     return output
+
+
+def _validated_context_recovery_details(
+    details: Mapping[str, Any] | None,
+    recovered_refs: Sequence[str],
+) -> dict[str, Any]:
+    if not isinstance(details, Mapping):
+        raise RuntimeViolation("context recovery details are required")
+
+    payload = dict(details)
+    if payload.get("prior_corrections_checked") is not True:
+        raise RuntimeViolation(
+            "context recovery requires prior corrections to be checked before action selection"
+        )
+
+    material_found = payload.get("material_context_found")
+    material_applied = payload.get("material_context_applied")
+    if not isinstance(material_found, bool):
+        raise RuntimeViolation("material_context_found must be explicit boolean")
+    if not isinstance(material_applied, bool):
+        raise RuntimeViolation("material_context_applied must be explicit boolean")
+
+    raw_applied_refs = payload.get("applied_context_refs", ())
+    if not isinstance(raw_applied_refs, (list, tuple)):
+        raise RuntimeViolation("applied_context_refs must be a list or tuple")
+    applied_refs = tuple(_validated_receipt_refs(raw_applied_refs))
+
+    recovered_set = set(recovered_refs)
+    unknown_refs = tuple(ref for ref in applied_refs if ref not in recovered_set)
+    if unknown_refs:
+        raise RuntimeViolation(
+            "applied context refs must be drawn from recovered context refs"
+        )
+
+    if material_found:
+        if material_applied is not True:
+            raise RuntimeViolation(
+                "material context was found but did not causally affect action selection"
+            )
+        if not applied_refs:
+            raise RuntimeViolation(
+                "material context application requires at least one applied context ref"
+            )
+    else:
+        if material_applied is True or applied_refs:
+            raise RuntimeViolation(
+                "context cannot be marked applied when no material context was found"
+            )
+
+    payload["applied_context_refs"] = applied_refs
+    return payload
 
 
 def _optional_receipt_ref(value: str | None) -> str | None:

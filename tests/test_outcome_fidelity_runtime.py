@@ -54,6 +54,15 @@ def _bind_mutation(kernel) -> None:
             "case-proposition:ALG-NEX-641@ITEMS_MATCHED",
             "case-source:ticket-100859",
         ),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": True,
+            "material_context_applied": True,
+            "applied_context_refs": (
+                "case-proposition:ALG-NEX-641@ITEMS_MATCHED",
+                "case-source:ticket-100859",
+            ),
+        },
     )
     kernel.begin()
     kernel.record_execution("execution:case-pass")
@@ -242,6 +251,12 @@ def test_observation_tasks_are_not_forced_to_fake_progress(monkeypatch) -> None:
     kernel.record_context_recovery(
         "context-recovery:runtime-inspection",
         recovered_refs=("github:runtime",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": True,
+            "material_context_applied": True,
+            "applied_context_refs": ("github:runtime",),
+        },
     )
     kernel.begin()
     kernel.record_observation("github-read:runtime")

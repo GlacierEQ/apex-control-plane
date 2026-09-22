@@ -86,6 +86,15 @@ jobs:
                   "case-proposition:before",
                   "case-source:known",
               ),
+              details={
+                  "prior_corrections_checked": True,
+                  "material_context_found": True,
+                  "material_context_applied": True,
+                  "applied_context_refs": (
+                      "case-proposition:before",
+                      "case-source:known",
+                  ),
+              },
           )
           kernel.begin()
           kernel.record_execution("execution:artifact-only")
