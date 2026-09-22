@@ -37,7 +37,9 @@
     "prior_valid_gains_preserved",
     "anti_minimization_checked",
     "capability_growth_considered",
-    "humanized_engineering_standard_applied"
+    "humanized_engineering_standard_applied",
+    "improvement_dominates_prior_valid_state",
+    "narrative_plurality_preserved"
   ],
   "required_nonempty_fields": [
     "operator_words_digest"
@@ -57,7 +59,11 @@
     "unsolicited_operator_asset_value_ranking": false,
     "unsolicited_operator_asset_disposition": false,
     "inspection_scope_expansion": false,
-    "operator_owned_asset_identity_preserved": true
+    "operator_owned_asset_identity_preserved": true,
+    "improvement_dominates_prior_valid_state": true,
+    "simplification_as_objective": false,
+    "narrative_plurality_preserved": true,
+    "audience_curation_may_hide_but_not_erase": true
   },
   "operator_asset_sovereignty": {
     "look_inspect_list_inventory_map_are_observation_only": true,
@@ -130,7 +136,20 @@
       "compose stronger mechanisms",
       "verify runtime behavior",
       "continue frontier expansion"
-    ]
+    ],
+    "better_not_simpler": {
+      "principle": "Simplification is never sufficient evidence of improvement.",
+      "required": true,
+      "reject_when": [
+        "capability_loss",
+        "provenance_loss",
+        "semantic_flattening",
+        "relationship_or_dependency_loss",
+        "narrative_distortion",
+        "future_option_loss_without_operator_choice"
+      ],
+      "audience_rule": "Curate the view; preserve the underlying reality and all materially valid stories."
+    }
   },
   "pro_code_elite_humanized_engineering": {
     "required": true,
@@ -194,6 +213,9 @@
     "FORBIDDEN: operator disagreement classified as adversarial behavior",
     "FORBIDDEN: operator forceful language classified as threat signal",
     "FORBIDDEN: operator firsthand knowledge classified as external adversary input",
-    "FORBIDDEN: operator rejection of agent plan classified as obstruction"
+    "FORBIDDEN: operator rejection of agent plan classified as obstruction",
+    "FORBIDDEN: simplification treated as improvement without dominance proof",
+    "FORBIDDEN: flatten multiple valid stories into one for convenience",
+    "FORBIDDEN: erase capability or provenance to make architecture easier to explain"
   ]
 }
