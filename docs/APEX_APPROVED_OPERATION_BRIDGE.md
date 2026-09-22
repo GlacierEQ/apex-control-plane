@@ -10,7 +10,7 @@ The APEX connector layer supports more than evidence retrieval. It can prepare a
 
 | Invariant | Enforcement |
 | --- | --- |
-| Exact scope | The approval binds the connector, operation, target, provider-input digest, stated consequence, evidence references, and idempotency key through `approval_scope_sha256`. |
+| Authorization scope | A legacy explicit-action approval binds the full immutable action through `approval_scope_sha256`. A source-bound envelope authorizes only the connector, allowed operation set, target constraints, scope kind/source reference, and destructive/material-delta flags it actually carries; the concrete payload, consequence, evidence references, and idempotency key are then bound to the constituent action for integrity/readback rather than silently treated as separately Operator-approved fields. |
 | Catalog allowlist | A request must name a catalogued write operation whose `enabled` setting is `true` and whose `approval_required` setting remains `true`. |
 | Direct authenticated boundary | Repository code never invokes an MCP tool, browser action, `gws` command, or provider API. The task host performs exactly one approved provider action directly. |
 | No credential or provider-content retention | Plans, audit records, and JSONL ledgers contain provider identifiers and SHA-256 digests only. Provider credentials, raw input, raw output, and manifest files remain outside Git history. |
@@ -21,7 +21,7 @@ The APEX connector layer supports more than evidence retrieval. It can prepare a
 
 ## Immutable action and approval scope
 
-An action proposal remains non-authorizing. It becomes an executable host plan only after APEX validates either (a) a legacy exact-action approval or (b) a source-bound authorization envelope whose immutable scope covers the proposed constituent action. The legacy exact-action digest is retained as a compatibility/idempotency binding, not as a new Operator approval when authority is inherited from a valid envelope.
+An action proposal remains non-authorizing. It becomes an executable host plan only after APEX validates either (a) a legacy exact-action approval or (b) a source-bound authorization envelope whose connector/operation/target constraints cover the proposed routine constituent action. The legacy exact-action digest is retained as a compatibility/idempotency binding, not as a new Operator approval when authority is inherited from a valid envelope.
 
 ```json
 {
@@ -56,19 +56,21 @@ An action proposal remains non-authorizing. It becomes an executable host plan o
 }
 ```
 
-The immutable action binding contains only the connector, operation, target, provider-input digest, stated consequence, sorted evidence references, and idempotency key. For the legacy explicit-action path, the approval reference identifies that exact authorization record. For source-bound authorization, `authorization_envelope.source_ref` identifies the controlling Operator source and the envelope proves the constituent action is within the permitted connector/operation/target scope; the exact-action digest is then synthesized internally so downstream idempotency and receipt machinery can remain unchanged.
+The immutable action binding contains only the connector, operation, target, provider-input digest, stated consequence, sorted evidence references, and idempotency key. For the legacy explicit-action path, the approval reference identifies that exact authorization record. For source-bound authorization, `authorization_envelope.source_ref` identifies the controlling Operator source and the envelope proves only the scope it actually encodes: connector, allowed operation set, target constraints, scope kind, and destructive/material-delta flags. The concrete payload, consequence, evidence references, and idempotency key are accepted as constituent-action data only after that membership check and are then locked by the synthesized exact-action digest for idempotency/readback integrity.
+
+`plan_ref` is a provenance/plan-identity pointer required for `plan_batch`; the runtime does not dereference it as a second approval service. Mechanical membership is enforced by the envelope's operation and target constraints. If the controlling Operator source intends payload-specific authorization rather than a routine action class, use the explicit-action path (or a future narrower envelope contract) instead of pretending the current plan/action-class envelope constrains fields it does not encode.
 
 ## Host execution sequence
 
 | Stage | APEX responsibility | Authenticated host responsibility | Result |
 | --- | --- | --- | --- |
 | Proposal | Build a non-authorizing proposal and calculate its immutable scope digest. | None. | Reviewable proposal with `external_action_authorized: false`. |
-| Authorization validation | Verify catalog activation, attributable source-bound authorization (explicit action, plan/batch, or action class), constituent-action membership, evidence references, mutation readiness, and idempotency. | None. | One execution plan with `external_action_authorized: true`. |
+| Authorization validation | Verify catalog activation, attributable source-bound authorization (explicit action, plan/batch, or action class), membership under the envelope's encoded connector/operation/target constraints, evidence references, mutation readiness, and idempotency. | None. | One execution plan with `external_action_authorized: true`. |
 | Provider action | None. | Perform exactly the provider operation named in the plan using the active authenticated session. | Provider result retained outside Git history. |
 | Readback | None. | Perform the plan’s required terminal readback and preserve a local observation. | Provider object reference and local verification material. |
 | Receipt admission | Hash the local execution and readback observations; validate and append safe audit metadata. | Supply the local manifest and observation paths. | Immutable audit receipt with no credentials or provider content. |
 
-The host receives an execution plan only after validation. It must not substitute a different provider tool, target, payload, or operation. A host refusal, provider error, out-of-scope or stale authorization, missing readback, or mismatched receipt is recorded as a refusal or failure, never rewritten as a completed action.
+The host receives an execution plan only after validation. It must not substitute a different provider tool, target, payload, or operation. A host refusal, provider error, out-of-scope or stale authorization, missing readback, or mismatched receipt must surface as a refusal or failure and may never be rewritten as a completed action. Accepted execution receipts are durably audited by `control_plane_runtime.py`; pre-admission validation failures raise to the caller and are persisted only when the calling host/runtime explicitly records that failed attempt.
 
 ## Execution receipt
 
@@ -102,7 +104,7 @@ The implementation adds validation and audit code only. It does not create a pro
 | `connector_bridge_contract.py` | Build non-authorizing proposals and authorization-validated execution requests. |
 | `session_connector_dispatch.py` | Map a validated action request to one direct authenticated provider-operation plan without invoking it. |
 | `authenticated_session_bridge.py` | Build digest-only execution receipts from host-side action and readback observations. |
-| `control_plane_runtime.py` | Admit execution receipts with action-level idempotency and immutable audit records. |
+| `control_plane_runtime.py` | Revalidate exact-action or source-bound authorization through the compatibility adapter, then admit execution receipts with action-level idempotency and immutable audit records. |
 | Operator scripts | Prepare validated plans and admit local receipts. They read local manifests and observations but never call provider tools. |
 | Tests | Prove plan/batch/action-class inheritance for routine constituents and refusal for inactive routes, out-of-scope actions, destructive/material deltas without renewed authority, unsafe query payloads, failed readiness gates, duplicate requests, provider-content leakage, missing readback, and provider-call attempts. |
 
