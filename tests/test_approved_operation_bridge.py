@@ -22,6 +22,7 @@ from approved_session_dispatch import (
     ApprovedSessionDispatchError,
     build_approved_session_operation_plan,
 )
+from authorization_compat import validate_authorized_action_request
 from connector_receipts import load_connector_catalog
 from control_plane_runtime import CaseBrainOrchestrator, Producer
 
@@ -76,6 +77,25 @@ def approved_action(**overrides):
     return payload
 
 
+def source_bound_action() -> dict:
+    request = approved_action()
+    source_ref = "operator://2026-09-22/continuity-authority"
+    request["approval"] = dict(
+        request["approval"],
+        approval_reference=source_ref,
+        approval_scope_sha256="",
+    )
+    request["authorization_envelope"] = {
+        "source_ref": source_ref,
+        "kind": "plan_batch",
+        "connector": "github",
+        "operations": ["issue.create"],
+        "target_constraints": {"repository": "GlacierEQ/apex-control-plane"},
+        "plan_ref": "plan://continuity-authority-repair",
+    }
+    return request
+
+
 def test_exact_approval_scope_builds_one_github_session_plan():
     catalog = load_connector_catalog(CATALOG_PATH)
     request = approved_action()
@@ -92,6 +112,68 @@ def test_exact_approval_scope_builds_one_github_session_plan():
     assert plan.required_readback_operation == "provider_object.read"
     assert plan.external_action_authorized is True
     assert plan.provider_input["title"] == "Approval-gated issue"
+
+
+def test_source_bound_plan_batch_builds_one_github_session_plan():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    request = source_bound_action()
+
+    plan = build_approved_session_operation_plan(
+        action_request=request,
+        catalog=catalog,
+        now=NOW,
+    )
+
+    assert plan.connector == "github"
+    assert plan.provider_operation == "issue.create"
+    assert plan.external_action_authorized is True
+    assert plan.approval_reference.startswith(
+        "operator://2026-09-22/continuity-authority#auth="
+    )
+
+
+def test_runtime_admits_source_bound_execution_receipt_end_to_end():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    action_request = source_bound_action()
+    action = validate_authorized_action_request(action_request, catalog, now=NOW)
+    receipt = build_execution_receipt(
+        action=action,
+        execution=ProviderExecutionObservation(
+            source_refs=("github://issue/create/source-bound-result",),
+            material=b'{"id": 456, "title": "Source-bound issue"}',
+            observed_at=NOW,
+        ),
+        result_target={
+            "repository": "GlacierEQ/apex-control-plane",
+            "issue_number": 456,
+        },
+        readback=ProviderExecutionObservation(
+            source_refs=("github://issue/456",),
+            material=b'{"number": 456, "state": "open"}',
+            observed_at=NOW + timedelta(seconds=1),
+        ),
+        verification_passed=True,
+    )
+    runtime = CaseBrainOrchestrator(
+        producer=Producer(
+            repo="GlacierEQ/apex-control-plane",
+            commit_sha="c" * 40,
+            component="source-bound-operation-test",
+        )
+    )
+
+    accepted = runtime.admit_connector_execution_receipt(
+        action_request,
+        receipt,
+        catalog,
+        now=NOW,
+    )
+
+    assert accepted["status"] == "accepted"
+    assert accepted["external_action_authorized"] is True
+    assert runtime.receipts[-1].details["approval_reference"].startswith(
+        "operator://2026-09-22/continuity-authority#auth="
+    )
 
 
 def test_scope_cannot_be_reused_for_a_different_provider_payload():
