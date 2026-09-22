@@ -102,6 +102,7 @@ def source_bound_action() -> tuple[dict, bytes]:
     digest = "sha256:" + hashlib.sha256(source).hexdigest()
     request["approval"] = dict(
         request["approval"],
+        approved_at=(NOW - timedelta(days=30)).isoformat().replace("+00:00", "Z"),
         approval_reference=source_ref,
         approval_scope_sha256="",
     )
@@ -157,7 +158,7 @@ def test_source_bound_plan_batch_builds_one_github_session_plan():
     assert plan.provider_operation == "issue.create"
     assert plan.external_action_authorized is True
     assert plan.approval_reference.startswith(
-        "operator://2026-09-22/continuity-authority#auth="
+        "source:continuity-authority#auth="
     )
 
 
