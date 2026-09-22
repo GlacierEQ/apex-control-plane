@@ -102,7 +102,12 @@ def admit_execution_manifest(
     catalog = load_connector_catalog(ROOT / "config" / "apex_connector_catalog.json")
     current = (now or datetime.now(UTC)).astimezone(UTC)
     action_request = load_json(action_request_path, "action request")
-    action = validate_authorized_action_request(action_request, catalog, now=current)
+    action = validate_authorized_action_request(
+        action_request,
+        catalog,
+        now=current,
+        source_resolver=resolve_operator_source_file,
+    )
     manifest = load_json(execution_manifest_path, "execution manifest")
     result_state = _text(manifest.get("result_state"), "execution manifest result_state")
     if result_state not in {"success", "failure"}:
