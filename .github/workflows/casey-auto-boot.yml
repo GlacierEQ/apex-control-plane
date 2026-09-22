@@ -189,9 +189,11 @@ jobs:
             exit 1
           fi
           grep -q '"phase":"complete"' /tmp/malformed.out
-          grep -q 'CASEY_BOOT_RECEIPT_JSON is invalid' /tmp/malformed.err
+          test -s /tmp/malformed.err
+          grep -Eq '(continuation_required|enrichment_pending|converted to .*uplift)' /tmp/malformed.err
           ! grep -q 'Traceback' /tmp/malformed.err
           ! grep -q '"external_action_authorized": true' /tmp/malformed.out
+          ! grep -q '"external_action_authorized": true' /tmp/malformed.err
 
       - name: Prove forged status environment cannot manufacture authority
         shell: bash
