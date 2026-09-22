@@ -28,9 +28,9 @@ from approved_operation_bridge import (
     ConnectorExecutionReceipt,
     action_audit_scope,
     execution_receipt_audit_details,
-    validate_approved_action_request,
     validate_execution_receipt,
 )
+from authorization_compat import validate_authorized_action_request
 from connector_receipts import ConnectorReadReceipt, receipt_audit_details, validate_read_receipt
 
 ENVELOPE_VERSION = "1.0.0"
@@ -666,13 +666,13 @@ class CaseBrainOrchestrator:
         *,
         now: datetime | None = None,
     ) -> dict[str, Any]:
-        """Admit a completed exact-approved provider action without provider content.
+        """Admit a completed source-authorized provider action without provider content.
 
         The runtime revalidates the active catalog rule, immutable approval scope, and
         mutation readiness. A duplicate idempotency key may only name the same approval
         scope, and a duplicate execution receipt may only repeat its original payload.
         """
-        action: ApprovedConnectorAction = validate_approved_action_request(
+        action: ApprovedConnectorAction = validate_authorized_action_request(
             action_request,
             catalog,
             now=now,
