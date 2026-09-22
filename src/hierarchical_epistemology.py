@@ -1,8 +1,8 @@
 """Hierarchical epistemology for APEX continuity and execution truth.
 
-This module preserves useful epistemic machinery without imposing fixed
-worker/retrieval ceilings or global stop semantics. Resources and strategy are
-adaptive; claim promotion remains receipt-bound.
+This module preserves the useful epistemic machinery from the original donor
+without imposing fixed worker/retrieval ceilings or global stop semantics.
+Resources and strategy are adaptive; claim promotion remains receipt-bound.
 """
 from __future__ import annotations
 
@@ -218,49 +218,47 @@ class HierarchicalEpistemology:
         return Correction(
             failure=failure,
             failed_assumption=failed_assumption,
-            objective_function_change="prefer evidence-bearing progress over activity, repetition, or unsupported promotion",
+            objective_function_change="prefer evidence-bearing progress over activity, repetition, or narrative completion",
             preserve=preserve,
-            next_action="select a materially different route and verify the target state",
+            next_action="change the failed method while preserving known-good state, then verify the resulting transition",
         )
 
     @classmethod
-    def execution_packet(cls, task: TaskSpec, *, known_state: Mapping[str, Any]) -> dict[str, Any]:
+    def packet(cls, task: TaskSpec, *, pointers: tuple[str, ...] = ()) -> dict[str, Any]:
         plan = cls.plan(task)
         return {
-            "schema_version": "1.1",
+            "schema": "glaciereq.hierarchical-epistemology.v1.1",
             "authority": cls.authority,
+            "objective": cls.objective,
             "intent": task.intent,
             "target_state": task.target_state,
-            "known_state": dict(known_state),
             "strategy": plan.strategy.value,
-            "strategy_intensity": plan.intensity,
-            "strategy_rationale": list(plan.rationale),
+            "intensity": plan.intensity,
             "resource_policy": plan.resource_policy,
-            "continuation_rule": "continue_until_target_or_evidenced_external_boundary",
-            "retirement_rule": "unique_contribution_zero_and_provider_readback",
+            "rationale": list(plan.rationale),
+            "pointers": list(pointers),
+            "continuation_rules": [
+                "latest is a routing cursor, not replacement authority",
+                "preserve contradictions until source-bearing resolution",
+                "reroute low-signal work instead of truncating the mission",
+                "material state promotion requires provider/path receipt",
+            ],
+            "state_rule": "UNKNOWN != FALSE; GENERATED != EXECUTED != VERIFIED",
+            "mesh_rule": "merge/transcribe/compound before retirement; retire only after UNIQUE_CONTRIBUTION=0 readback",
         }
 
-    @staticmethod
-    def validate_packet(packet: Mapping[str, Any]) -> None:
-        required = {
-            "schema_version",
-            "authority",
-            "intent",
-            "target_state",
-            "known_state",
-            "strategy",
-            "resource_policy",
-            "continuation_rule",
-            "retirement_rule",
-        }
-        missing = required - set(packet)
-        if missing:
-            raise ValueError(f"execution packet missing fields: {sorted(missing)}")
-        if packet["authority"] != "operator_intent":
-            raise ValueError("lower-level strategy cannot replace operator authority")
-        if packet["resource_policy"] != "adaptive_evidence_driven":
-            raise ValueError("fixed global execution ceilings are forbidden")
-        if packet["continuation_rule"] != "continue_until_target_or_evidenced_external_boundary":
-            raise ValueError("mission continuation rule was weakened")
-        if packet["retirement_rule"] != "unique_contribution_zero_and_provider_readback":
-            raise ValueError("retirement requires zero unique contribution plus readback")
+
+def validate_packet(packet: Mapping[str, Any]) -> tuple[str, ...]:
+    errors: list[str] = []
+    if packet.get("schema") != "glaciereq.hierarchical-epistemology.v1.1":
+        errors.append("schema mismatch")
+    if packet.get("authority") != "operator_intent":
+        errors.append("authority must be operator_intent")
+    if packet.get("resource_policy") != "adaptive_evidence_driven":
+        errors.append("resource_policy must be adaptive_evidence_driven")
+    if not packet.get("target_state"):
+        errors.append("target_state is required")
+    forbidden = {"max_workers", "max_rounds", "max_retrievals", "hard_stop", "bounded_retry"}
+    if forbidden.intersection(packet):
+        errors.append("packet may not encode global fixed execution ceilings")
+    return tuple(errors)
