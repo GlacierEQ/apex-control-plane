@@ -44,6 +44,8 @@ jobs:
           python -m py_compile \
             src/operator_fidelity_lock.py \
             src/operator_fidelity_preflight.py \
+            src/source_bound_authorization.py \
+            src/authorization_compat.py \
             src/control_plane.py \
             src/sitecustomize.py
 
@@ -54,7 +56,9 @@ jobs:
             tests/test_operator_fidelity_lock.py \
             tests/test_operator_fidelity_preflight.py \
             tests/test_operator_trust_root_policy.py \
-            tests/test_operator_kernel_surfaces.py
+            tests/test_operator_kernel_surfaces.py \
+            tests/test_source_bound_authorization.py \
+            tests/test_authorization_documentation_contract.py
 
       - name: Prove unresolved fidelity uplifts without killing the runtime
         shell: bash
