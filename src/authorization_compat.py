@@ -8,6 +8,7 @@ fresh per-operation approval.
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime
 from typing import Any, Mapping
 
@@ -120,9 +121,7 @@ def validate_authorized_action_request(
         destructive=destructive,
     )
 
-    object.__setattr__(
+    return replace(
         action,
-        "approval_reference",
-        f"{authorization.source_ref}#auth={envelope_digest}",
+        approval_reference=f"{authorization.source_ref}#auth={envelope_digest}",
     )
-    return action
