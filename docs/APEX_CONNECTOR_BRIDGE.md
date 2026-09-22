@@ -10,7 +10,7 @@ The connector bridge allows APEX to admit evidence from authenticated session in
 
 The active catalog is [`../config/apex_connector_catalog.json`](../config/apex_connector_catalog.json). It declares the provider, profile, operation, data class, and write policy. The initial profiles support repository integrity, evidence intake, current-source review, knowledge continuity, structured-state review, and API verification.
 
-GitHub, Dropbox, Google Workspace, Notion, Mem, Supabase, and Postman may provide receipt-backed retrieval when their named catalog operation is requested. The catalog also identifies selected provider mutations that can become available only through the exact-approval action bridge described below. Connector credentials remain in the authenticated session environment and never appear in repository source, tests, artifacts, workflow logs, audit receipts, or GitHub Actions configuration.
+GitHub, Dropbox, Google Workspace, Notion, Mem, Supabase, and Postman may provide receipt-backed retrieval when their named catalog operation is requested. The catalog also identifies selected provider mutations that can become available through the source-bound authorization bridge described below. Connector credentials remain in the authenticated session environment and never appear in repository source, tests, artifacts, workflow logs, audit receipts, or GitHub Actions configuration.
 
 ## Read flow
 
@@ -24,25 +24,25 @@ A failed, malformed, stale, unlisted, or action-claiming read receipt is refused
 
 ## External action flow
 
-A provider mutation can be considered only when its specific catalog operation is active. Activation does not create standing authority: every use still requires an immutable, exact approval scope, a direct authenticated-host operation plan, and an execution receipt with terminal readback. Provider surfaces whose host mappings have not been verified remain inactive.
+A provider mutation can be considered only when its specific catalog operation is active. Activation does not create standing authority: every use still requires attributable source-bound Operator authorization covering the action, a direct authenticated-host operation plan, and an execution receipt with terminal readback. Authorization may be an explicit action, approved plan/batch, or action class whose immutable scope covers the routine constituent action. Provider surfaces whose host mappings have not been verified remain inactive.
 
 An action can be considered only when all of the following records exist:
 
-1. The specific provider operation is active in the versioned catalog and is marked as requiring approval.
+1. The specific provider operation is active in the versioned catalog and is marked as requiring authorization.
 2. A request names the provider, operation, target, stated consequence, and evidence receipts.
-3. The user has supplied an exact approval record naming the approver, approval time, approval reference, and the SHA-256 digest of the immutable action scope.
+3. The action carries an attributable Operator authorization record identifying its source reference and immutable scope; that scope must cover the provider, operation, target/action class, and consequence. Routine constituent actions may inherit a valid plan/batch/action-class authorization. Destructive actions or material strategy deltas require renewed authority.
 4. The action supplies an idempotency key and passes mutation-readiness evidence, including the necessary preservation, staging, reversibility, and recovery controls.
 5. The authenticated host performs exactly the mapped provider action, then produces an execution receipt and terminal readback observation identifying the resulting provider object.
 
-The bridge contract rejects generic, targetless, stale, missing, or mismatched approval records; reused idempotency keys with different scopes; unsafe database mutation input; missing terminal readback; and incomplete mutation-readiness evidence. Health probes, prior read receipts, system recommendations, and broad prior instructions are not execution authority. The repository itself never invokes a provider. See [Approved Provider-Operation Bridge](APEX_APPROVED_OPERATION_BRIDGE.md) for the complete contract and the safe local operator commands.
+The bridge contract rejects missing, stale, contradictory, target-mismatched, or out-of-scope authorization; reused idempotency keys with different scopes; unsafe database mutation input; missing terminal readback; and incomplete mutation-readiness evidence. Health probes, prior read receipts, and system recommendations are not execution authority. Broad Operator instructions count only when their recoverable source-bound scope actually covers the constituent action; they are not automatically rejected merely for being plan-, batch-, or action-class-level. The repository itself never invokes a provider. See [Approved Provider-Operation Bridge](APEX_APPROVED_OPERATION_BRIDGE.md) for the complete contract and the safe local operator commands.
 
 ## Operational limits
 
-Scheduled connector writes remain disabled. The connector bridge does not introduce a background write loop or a direct network client into APEX. Any future background or event-triggered connector operation requires its own reviewed design, operation allowlist, schema validation, durable receipt strategy, and explicit user approval.
+Scheduled connector writes remain disabled. The connector bridge does not introduce a background write loop or a direct network client into APEX. Any future background or event-triggered connector operation requires its own reviewed design, operation allowlist, schema validation, durable receipt strategy, and source-bound Operator authorization covering that action class.
 
 ## Verification
 
-Run the connector receipt, exact-approval action, and audit-hardening suites:
+Run the connector receipt, authorization-scope action, and audit-hardening suites:
 
 ```bash
 python -m pytest -q tests/test_connector_receipts.py
