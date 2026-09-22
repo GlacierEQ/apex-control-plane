@@ -79,23 +79,49 @@ def approved_action(**overrides):
     return payload
 
 
-def source_bound_action() -> dict:
+def source_bound_action() -> tuple[dict, bytes]:
     request = approved_action()
-    source_ref = "operator://2026-09-22/continuity-authority"
+    source_ref = "source:continuity-authority"
+    scope = {
+        "schema_version": 1,
+        "source_ref": source_ref,
+        "kind": "plan_batch",
+        "connector": "github",
+        "operations": ["issue.create"],
+        "target_constraints": {"repository": "GlacierEQ/apex-control-plane"},
+        "provider_input_constraints": {"title": "Approval-gated issue"},
+        "consequence_prefixes": ["Creates one named issue"],
+        "plan_ref": "plan://continuity-authority-repair",
+        "allow_destructive": False,
+    }
+    source = json.dumps(
+        {"authorization_scope": scope},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    digest = "sha256:" + hashlib.sha256(source).hexdigest()
     request["approval"] = dict(
         request["approval"],
         approval_reference=source_ref,
         approval_scope_sha256="",
     )
     request["authorization_envelope"] = {
-        "source_ref": source_ref,
-        "kind": "plan_batch",
-        "connector": "github",
-        "operations": ["issue.create"],
-        "target_constraints": {"repository": "GlacierEQ/apex-control-plane"},
-        "plan_ref": "plan://continuity-authority-repair",
+        **scope,
+        "source_binding": {
+            "proposition_id": "operator:authorization:continuity-test",
+            "source_kind": "operator_record",
+            "source_ref": source_ref,
+            "source_sha256": digest,
+            "span_start_byte": 0,
+            "span_end_byte": len(source),
+            "span_sha256": digest,
+            "temporal_context": "test-current",
+            "contradiction_state": "active",
+            "superseded_by": None,
+            "verification_state": "source_resolved",
+        },
     }
-    return request
+    return request, source
 
 
 def test_exact_approval_scope_builds_one_github_session_plan():
@@ -118,12 +144,13 @@ def test_exact_approval_scope_builds_one_github_session_plan():
 
 def test_source_bound_plan_batch_builds_one_github_session_plan():
     catalog = load_connector_catalog(CATALOG_PATH)
-    request = source_bound_action()
+    request, source = source_bound_action()
 
     plan = build_approved_session_operation_plan(
         action_request=request,
         catalog=catalog,
         now=NOW,
+        source_resolver=lambda ref: source,
     )
 
     assert plan.connector == "github"
@@ -136,8 +163,13 @@ def test_source_bound_plan_batch_builds_one_github_session_plan():
 
 def test_runtime_admits_source_bound_execution_receipt_end_to_end():
     catalog = load_connector_catalog(CATALOG_PATH)
-    action_request = source_bound_action()
-    action = validate_authorized_action_request(action_request, catalog, now=NOW)
+    action_request, source = source_bound_action()
+    action = validate_authorized_action_request(
+        action_request,
+        catalog,
+        now=NOW,
+        source_resolver=lambda ref: source,
+    )
     receipt = build_execution_receipt(
         action=action,
         execution=ProviderExecutionObservation(
@@ -169,6 +201,7 @@ def test_runtime_admits_source_bound_execution_receipt_end_to_end():
         receipt,
         catalog,
         now=NOW,
+        source_resolver=lambda ref: source,
     )
 
     assert accepted["status"] == "accepted"
