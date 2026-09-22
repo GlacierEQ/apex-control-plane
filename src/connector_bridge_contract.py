@@ -72,6 +72,6 @@ def build_action_proposal(
         "consequence": str(consequence).strip(),
         "evidence_refs": refs,
         "operation_active": rule["enabled"],
-        "approval_required": rule["approval_required"],
+        "authorization_required": rule["authorization_required"],
         "external_action_authorized": False,
     }
