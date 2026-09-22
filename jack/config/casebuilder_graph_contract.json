@@ -1,0 +1,72 @@
+{
+  "contract_id": "JTR-CASEGRAPH-v1",
+  "version": "1.0.0",
+  "extends": "JTR-CASEBUILDER-v1",
+  "prime_directive": "TURN EVERY MATERIAL EVENT INTO A PROPOSITION THAT CAN BE PROVEN, ATTACKED, STRENGTHENED, AND USED.",
+  "typed_objects": [
+    "SourceRef",
+    "FactProposition",
+    "ActorNode",
+    "EventNode",
+    "Allegation",
+    "AllegationLink",
+    "ElementSupport",
+    "Contradiction",
+    "ContradictionAssessment",
+    "DefenseTheory",
+    "DiscoveryTarget",
+    "DamageRecord",
+    "RemedyPath",
+    "AccountabilityPath"
+  ],
+  "graph_path": [
+    "source",
+    "fact",
+    "event",
+    "actor",
+    "allegation",
+    "element",
+    "contradiction",
+    "knowledge",
+    "causation",
+    "damage",
+    "defense",
+    "discovery",
+    "remedy",
+    "accountability"
+  ],
+  "invariants": [
+    "facts and legal theories remain separate",
+    "every graph allegation links to factual propositions and a duty or prohibition",
+    "unknown material actors require identity discovery targets",
+    "all graph references validate before derived state is mutated",
+    "defenses are first-class and can carry supporting facts, rebuttal facts, and unresolved risk",
+    "damages require event and source lineage",
+    "contradictions carry explicit resolution state before trial-ready promotion",
+    "P0 and P1 discovery targets block trial-ready promotion until resolved",
+    "referral-ready requires a ready accountability path",
+    "trial-ready requires satisfied elements, resolved high-priority discovery, and resolved or impeachment-ready contradictions",
+    "pressure output is a vector, not an opaque composite ranking",
+    "orphan detection exposes material objects floating outside the case graph",
+    "private case evidence never enters the public control-plane repository"
+  ],
+  "promotion_extension": {
+    "PLEADING_READY": "base CaseBuilder allegation survives proof, element, defense, mental-state, causation, and gap gates",
+    "REFERRAL_READY": "at least one linked accountability path is explicitly ready",
+    "TRIAL_READY": "elements satisfied; no allegation missing-evidence IDs; P0/P1 discovery resolved; linked contradictions resolved or impeachment-ready"
+  },
+  "outputs": [
+    "master_fact_ledger",
+    "master_event_timeline",
+    "actor_index",
+    "allegation_ledger",
+    "contradiction_matrix",
+    "damages_ledger",
+    "discovery_matrix",
+    "defense_matrix",
+    "accountability_map",
+    "promotion_report",
+    "pressure_map",
+    "orphan_report"
+  ]
+}
