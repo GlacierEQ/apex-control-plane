@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.4.0",
+  "schema_version": "1.4.1",
   "manifest_name": "Casey Continuity Auto-Boot + APEX Genesis",
   "project_direction_authority": "operator_intent",
   "state_evolution": "current_state_plus_verified_gain",
@@ -53,7 +53,7 @@
     "enforcer_module": "src/apex_enforced_startup.py",
     "required": true,
     "fail_closed": true,
-    "requires_context_before_mutation": true,
+    "requires_context_before_mutation": false,
     "requires_continuation_before_restart": true,
     "requires_operator_intent_binding": true,
     "requires_prior_valid_gain_preservation": true,
@@ -61,7 +61,14 @@
     "requires_state_model": true,
     "requires_maximum_coherent_path": true,
     "requires_verification_plan": true,
-    "requires_receipts_for_material_state_promotion": true
+    "requires_receipts_for_material_state_promotion": true,
+    "requires_context_attempt_before_discretionary_mutation": true,
+    "context_missing_effect": "RECOVERY_DEBT_AND_ROUTE_ENRICHMENT",
+    "context_permission_gate": false,
+    "context_mission_stop_authority": false,
+    "context_recovery_may_continue_in_flight": true,
+    "context_preserves_prior_verified_gain": true,
+    "context_invariant_ref": "CONTEXT_ENRICHMENT_INVARIANT.md"
   },
   "prime_directive": {
     "policy_path": "config/prime_directive_policy.json",
@@ -162,26 +169,86 @@
     ]
   },
   "required_note_versions": {
-    "fc259258-55b6-5008-a8d1-d8db22a2d8c6": {"mode": "at_least", "version": 2},
-    "ffd1101e-d209-5bf7-8009-0d190bd3263c": {"mode": "at_least", "version": 1},
-    "54b47921-92c3-56b7-a4fa-de115e12d273": {"mode": "exact", "version": 2},
-    "e98732a2-0564-5b64-b5ad-9360a8cdcc3d": {"mode": "exact", "version": 1},
-    "39447e48-0aeb-5c7a-91bc-7ab0bd40313f": {"mode": "at_least", "version": 2},
-    "63f1d7cd-9202-577a-8d0d-211c40a07606": {"mode": "at_least", "version": 7},
-    "035886f7-e0fd-5fcd-aeb6-55b282e09904": {"mode": "at_least", "version": 5},
-    "774ac390-77d9-57be-adcf-3d830816b8bd": {"mode": "at_least", "version": 2},
-    "714910a8-14ae-50f5-9e2e-16566369edac": {"mode": "at_least", "version": 2},
-    "43a23b64-46eb-530c-9521-9787b038c53a": {"mode": "at_least", "version": 2},
-    "07a207af-619c-5066-8c93-2a73968ba015": {"mode": "at_least", "version": 1},
-    "aabad775-39e8-5b61-9f99-5c3bd3251d37": {"mode": "at_least", "version": 1},
-    "16810f77-d8c7-5bc3-8f94-2ea1f93237cb": {"mode": "at_least", "version": 1},
-    "d72c91b3-4e6e-5658-bc1c-073e64ba7775": {"mode": "at_least", "version": 1},
-    "2924f088-4a6f-5a82-8588-e19749483467": {"mode": "at_least", "version": 1},
-    "0ec6224d-88ee-5d99-a220-6a07bc24eeed": {"mode": "at_least", "version": 1},
-    "6e8499ba-e92e-5b95-9734-589deb648874": {"mode": "at_least", "version": 1},
-    "636af3f6-0cfe-55d7-9151-8ba0d621c60a": {"mode": "at_least", "version": 1},
-    "a4cf7086-b558-52e1-8398-b699ce6d309a": {"mode": "at_least", "version": 1},
-    "9cb96498-23b3-501b-864b-a029d2e0f612": {"mode": "at_least", "version": 1}
+    "fc259258-55b6-5008-a8d1-d8db22a2d8c6": {
+      "mode": "at_least",
+      "version": 2
+    },
+    "ffd1101e-d209-5bf7-8009-0d190bd3263c": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "54b47921-92c3-56b7-a4fa-de115e12d273": {
+      "mode": "exact",
+      "version": 2
+    },
+    "e98732a2-0564-5b64-b5ad-9360a8cdcc3d": {
+      "mode": "exact",
+      "version": 1
+    },
+    "39447e48-0aeb-5c7a-91bc-7ab0bd40313f": {
+      "mode": "at_least",
+      "version": 2
+    },
+    "63f1d7cd-9202-577a-8d0d-211c40a07606": {
+      "mode": "at_least",
+      "version": 7
+    },
+    "035886f7-e0fd-5fcd-aeb6-55b282e09904": {
+      "mode": "at_least",
+      "version": 5
+    },
+    "774ac390-77d9-57be-adcf-3d830816b8bd": {
+      "mode": "at_least",
+      "version": 2
+    },
+    "714910a8-14ae-50f5-9e2e-16566369edac": {
+      "mode": "at_least",
+      "version": 2
+    },
+    "43a23b64-46eb-530c-9521-9787b038c53a": {
+      "mode": "at_least",
+      "version": 2
+    },
+    "07a207af-619c-5066-8c93-2a73968ba015": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "aabad775-39e8-5b61-9f99-5c3bd3251d37": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "16810f77-d8c7-5bc3-8f94-2ea1f93237cb": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "d72c91b3-4e6e-5658-bc1c-073e64ba7775": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "2924f088-4a6f-5a82-8588-e19749483467": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "0ec6224d-88ee-5d99-a220-6a07bc24eeed": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "6e8499ba-e92e-5b95-9734-589deb648874": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "636af3f6-0cfe-55d7-9151-8ba0d621c60a": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "a4cf7086-b558-52e1-8398-b699ce6d309a": {
+      "mode": "at_least",
+      "version": 1
+    },
+    "9cb96498-23b3-501b-864b-a029d2e0f612": {
+      "mode": "at_least",
+      "version": 1
+    }
   },
   "profile_requirements": {
     "always": {

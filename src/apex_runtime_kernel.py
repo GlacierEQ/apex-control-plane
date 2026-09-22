@@ -41,6 +41,15 @@ EXPECTED_STARTUP_OBSERVERS = (
     "operator_fidelity",
     "apex_startup",
 )
+
+_SUPPORTED_EXECUTION_SEMANTICS = {
+    "2.1.0": "execute_harden_verify_repair_complete_receipt",
+    "2.2.0": "context_enrich_execute_harden_verify_repair_complete_receipt",
+}
+_CONTEXT_RECEIPT_REQUIREMENT = {
+    "2.1.0": "context_recovery",
+    "2.2.0": "context_enrichment",
+}
 _DESTRUCTIVE_OPERATION = re.compile(
     r"(?i)(?:^|[_\-. ])(delete|destroy|purge|wipe|revoke|drop|force[_\- ]?push)(?:$|[_\-. ])"
 )
@@ -107,6 +116,7 @@ class RuntimeSnapshot:
     startup_gates: tuple[str, ...]
     startup_findings: tuple[str, ...] = ()
     repair_reasons: tuple[str, ...] = ()
+    context_state: str | None = None
 
 
 @dataclass(slots=True)
@@ -126,6 +136,7 @@ class _TaskState:
     verified_gain_refs: list[str] = field(default_factory=list)
     unresolved_blockers: list[str] = field(default_factory=list)
     repair_reasons: list[str] = field(default_factory=list)
+    context_state: str = "recovery_pending"
     resume_phase: RuntimePhase | None = None
 
 
@@ -234,21 +245,93 @@ class ApexRuntimeKernel:
         recovered_refs: Sequence[str],
         details: Mapping[str, Any] | None = None,
     ) -> RuntimeSnapshot:
-        """Record recovered context before task execution or observation begins."""
-        self._require_phase(RuntimePhase.CONTEXT_RECOVERING)
+        """Record recovered context as an enrichment transition, never a mission gate."""
+        self._require_phase(
+            RuntimePhase.CONTEXT_RECOVERING,
+            RuntimePhase.READY,
+            RuntimePhase.OBSERVING,
+            RuntimePhase.EXECUTING,
+            RuntimePhase.TESTING,
+            RuntimePhase.ADVERSARIAL_TESTING,
+            RuntimePhase.VERIFYING,
+            RuntimePhase.VERIFIED,
+            RuntimePhase.PERSISTING,
+            RuntimePhase.READBACK,
+            RuntimePhase.REPAIRING,
+            RuntimePhase.BLOCKED,
+        )
         refs = tuple(_validated_receipt_refs(recovered_refs))
         if not refs:
             raise RuntimeViolation(
                 "context recovery requires at least one recovered source reference"
             )
+        recovery_details = dict(details or {})
+        recovery_state = str(recovery_details.get("state", "hydrated")).strip().lower()
+        if recovery_state not in {"hydrated", "degraded"}:
+            raise RuntimeViolation(
+                "context recovery state must be hydrated or degraded"
+            )
+        recovery_details["state"] = recovery_state
+        recovery_details.setdefault("mission_stop", False)
+        recovery_details.setdefault("transition_semantics", "enrichment_not_permission")
         self.task.source_refs = tuple(dict.fromkeys((*self.task.source_refs, *refs)))
-        self._record_receipt("context_recovery", reference, True, details)
-        self.phase = RuntimePhase.READY
-        self._audit_event("context_recovered")
+        self._record_receipt("context_recovery", reference, True, recovery_details)
+        self.task.context_state = recovery_state
+        if self.phase is RuntimePhase.CONTEXT_RECOVERING:
+            self.phase = RuntimePhase.READY
+            self._audit_event("context_recovered")
+        else:
+            self._audit_event("context_recovered_in_flight")
+        return self.snapshot()
+
+    def record_context_recovery_debt(
+        self,
+        reference: str,
+        *,
+        attempted_refs: Sequence[str],
+        details: Mapping[str, Any] | None = None,
+    ) -> RuntimeSnapshot:
+        """Record a real context-retrieval attempt that did not fully hydrate context."""
+        self._require_phase(
+            RuntimePhase.CONTEXT_RECOVERING,
+            RuntimePhase.READY,
+            RuntimePhase.OBSERVING,
+            RuntimePhase.EXECUTING,
+            RuntimePhase.TESTING,
+            RuntimePhase.ADVERSARIAL_TESTING,
+            RuntimePhase.VERIFYING,
+            RuntimePhase.VERIFIED,
+            RuntimePhase.PERSISTING,
+            RuntimePhase.READBACK,
+            RuntimePhase.REPAIRING,
+            RuntimePhase.BLOCKED,
+        )
+        refs = tuple(_validated_receipt_refs(attempted_refs))
+        if not refs:
+            raise RuntimeViolation(
+                "context recovery debt requires at least one retrieval-attempt reference"
+            )
+        debt_details = dict(details or {})
+        debt_state = str(debt_details.get("state", "recovery_pending")).strip().lower()
+        if debt_state not in {"recovery_pending", "degraded"}:
+            raise RuntimeViolation(
+                "context recovery debt state must be recovery_pending or degraded"
+            )
+        debt_details["state"] = debt_state
+        debt_details["mission_stop"] = False
+        debt_details.setdefault("route_effect", "enrich_and_continue")
+        debt_details.setdefault("transition_semantics", "enrichment_not_permission")
+        debt_details["attempted_refs"] = refs
+        self._record_receipt("context_recovery_debt", reference, True, debt_details)
+        self.task.context_state = debt_state
+        self._audit_event("context_recovery_debt_recorded")
         return self.snapshot()
 
     def begin(self) -> RuntimeSnapshot:
-        self._require_phase(RuntimePhase.READY)
+        self._require_phase(RuntimePhase.CONTEXT_RECOVERING, RuntimePhase.READY)
+        if self.phase is RuntimePhase.CONTEXT_RECOVERING:
+            self.task.context_state = "recovery_pending"
+            self._audit_event("context_recovery_pending_continue")
         self.phase = (
             RuntimePhase.OBSERVING
             if self.task.mode is TaskMode.OBSERVATION
@@ -471,6 +554,7 @@ class ApexRuntimeKernel:
             startup_gates=self.startup_gates,
             startup_findings=self.startup_findings,
             repair_reasons=tuple(task.repair_reasons) if task else (),
+            context_state=task.context_state if task else None,
         )
 
     def receipts(self) -> tuple[RuntimeReceipt, ...]:
@@ -522,7 +606,14 @@ class ApexRuntimeKernel:
         successful_kinds = {
             receipt.kind for receipt in self.task.receipts if receipt.successful
         }
-        gaps.extend(kind for kind in required if kind not in successful_kinds)
+        recorded_kinds = {receipt.kind for receipt in self.task.receipts}
+        for kind in required:
+            if kind == "context_enrichment":
+                if not ({"context_recovery", "context_recovery_debt"} & recorded_kinds):
+                    gaps.append(kind)
+                continue
+            if kind not in successful_kinds:
+                gaps.append(kind)
         if self.task.mode is TaskMode.MUTATION and not self.task.verified_gain_refs:
             gaps.append("verified_gain")
         return list(dict.fromkeys(gaps))
@@ -619,9 +710,19 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
 
     if policy.get("objective") != "maximum_coherent_advance":
         raise RuntimeViolation("APEX runtime objective must remain maximum_coherent_advance")
+
+    schema_version = str(policy.get("schema_version", "")).strip()
+    expected_semantics = _SUPPORTED_EXECUTION_SEMANTICS.get(schema_version)
+    if expected_semantics is None:
+        raise RuntimeViolation(
+            f"unsupported APEX runtime policy schema_version: {schema_version or '<empty>'}"
+        )
+
     semantics = str(policy.get("execution_semantics", "")).strip()
-    if semantics and semantics != "execute_harden_verify_repair_complete_receipt":
-        raise RuntimeViolation("unsupported APEX execution_semantics")
+    if semantics and semantics != expected_semantics:
+        raise RuntimeViolation(
+            f"unsupported APEX execution_semantics for schema {schema_version}"
+        )
     if policy.get("fail_closed") is True and semantics:
         raise RuntimeViolation(
             "fail_closed cannot retain authority under execution-uplift semantics"
@@ -639,10 +740,16 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
     requirements = policy.get("receipt_requirements")
     if not isinstance(requirements, Mapping):
         raise RuntimeViolation("receipt_requirements must be an object")
+    context_requirement = _CONTEXT_RECEIPT_REQUIREMENT[schema_version]
     expected = {
-        "observation": {"context_recovery", "observation", "verification", "readback"},
+        "observation": {
+            context_requirement,
+            "observation",
+            "verification",
+            "readback",
+        },
         "mutation": {
-            "context_recovery",
+            context_requirement,
             "execution",
             "test",
             "adversarial_test",

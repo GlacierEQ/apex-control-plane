@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
 import sys
@@ -91,21 +92,66 @@ def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> Non
     assert any("apex_startup: validation missing" in item for item in kernel.startup_findings)
 
 
-def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
+def test_runtime_policy_contract_is_versioned_and_preserves_legacy_21() -> None:
+    current = load_runtime_policy()
+    assert current["schema_version"] == "2.2.0"
+    assert (
+        current["execution_semantics"]
+        == "context_enrich_execute_harden_verify_repair_complete_receipt"
+    )
+
+    legacy = deepcopy(current)
+    legacy["schema_version"] = "2.1.0"
+    legacy["execution_semantics"] = "execute_harden_verify_repair_complete_receipt"
+    for mode in ("observation", "mutation"):
+        legacy["receipt_requirements"][mode] = [
+            "context_recovery" if value == "context_enrichment" else value
+            for value in legacy["receipt_requirements"][mode]
+        ]
+
+    runtime._validate_policy(legacy)
+
+
+def test_runtime_policy_rejects_cross_version_execution_semantics() -> None:
+    policy = deepcopy(load_runtime_policy())
+    policy["execution_semantics"] = "execute_harden_verify_repair_complete_receipt"
+
+    with pytest.raises(
+        RuntimeViolation,
+        match=r"unsupported APEX execution_semantics for schema 2\.2\.0",
+    ):
+        runtime._validate_policy(policy)
+
+
+def test_runtime_policy_rejects_legacy_context_receipt_under_22() -> None:
+    policy = deepcopy(load_runtime_policy())
+    policy["receipt_requirements"]["observation"][0] = "context_recovery"
+
+    with pytest.raises(
+        RuntimeViolation,
+        match=r"receipt_requirements\.observation must contain the full evidence set",
+    ):
+        runtime._validate_policy(policy)
+
+
+def test_context_recovery_enriches_but_missing_context_does_not_stop_begin(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     kernel.bind_task(
         literal_instruction="use context first",
-        target_state="context is recovered before work",
+        target_state="context recovery enriches work without becoming permission",
         operation_class="context_first",
         mode=TaskMode.OBSERVATION,
         action_scope="none",
         source_refs=("memory:operator-context",),
-        verification_plan=("verify context receipt precedes observation",),
+        verification_plan=("verify context enrichment remains non-stopping",),
     )
 
     assert kernel.phase is RuntimePhase.CONTEXT_RECOVERING
-    with pytest.raises(RuntimeViolation, match="expected one of: ready"):
-        kernel.begin()
+
+    started = kernel.begin()
+    assert started.phase == "observing"
+    assert started.context_state == "recovery_pending"
+    assert "context_recovery_debt" not in started.receipt_kinds
 
     with pytest.raises(RuntimeViolation, match="at least one recovered source reference"):
         kernel.record_context_recovery(
@@ -113,13 +159,124 @@ def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
             recovered_refs=(),
         )
 
-    result = kernel.record_context_recovery(
+    recovered = kernel.record_context_recovery(
         "context-recovery:operator-context",
         recovered_refs=("memory:operator-context",),
     )
-    assert result.phase == "ready"
+    assert recovered.phase == "observing"
+    assert recovered.context_state == "hydrated"
+    assert "context_recovery" in recovered.receipt_kinds
+
+
+def test_context_debt_requires_attempt_provenance_and_satisfies_enrichment(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="inspect with degraded context",
+        target_state="observation completes truthfully while context debt remains visible",
+        operation_class="inspect",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
     kernel.begin()
-    assert kernel.phase is RuntimePhase.OBSERVING
+
+    with pytest.raises(RuntimeViolation, match="retrieval-attempt reference"):
+        kernel.record_context_recovery_debt(
+            "context-debt:empty",
+            attempted_refs=(),
+        )
+
+    debt = kernel.record_context_recovery_debt(
+        "context-debt:memory-provider-unavailable",
+        attempted_refs=("mem0-search:provider-unavailable",),
+        details={"reason": "provider unavailable"},
+    )
+    assert debt.context_state == "recovery_pending"
+
+    kernel.record_observation("read:state")
+    kernel.record_verification("verification:state", passed=True)
+    result = kernel.record_readback(
+        "readback:state",
+        matches_expected_state=True,
+        target_reached=True,
+    )
+
+    assert result.phase == "complete"
+    assert result.context_state == "recovery_pending"
+    assert "context_recovery_debt" in result.receipt_kinds
+    assert "context_recovery" not in result.receipt_kinds
+
+
+def test_skipping_context_attempt_cannot_claim_complete(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="continue while context is still being recovered",
+        target_state="work advances without pretending context recovery was attempted",
+        operation_class="inspect",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
+    kernel.begin()
+    kernel.record_observation("read:state")
+    kernel.record_verification("verification:state", passed=True)
+    result = kernel.record_readback(
+        "readback:state",
+        matches_expected_state=True,
+        target_reached=True,
+    )
+
+    assert result.phase == "repairing"
+    assert any("context_enrichment" in reason for reason in result.repair_reasons)
+    assert "context_recovery_debt" not in result.receipt_kinds
+
+
+def test_partial_context_recovery_preserves_degraded_state(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="recover available context",
+        target_state="partial context remains explicitly degraded",
+        operation_class="inspect",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
+
+    recovered = kernel.record_context_recovery(
+        "context-recovery:partial",
+        recovered_refs=("supabase:partial-context",),
+        details={"state": "degraded", "missing_sources": ["onedrive"]},
+    )
+
+    assert recovered.phase == "ready"
+    assert recovered.context_state == "degraded"
+
+
+def test_context_can_hydrate_while_route_is_blocked(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="continue on strongest route",
+        target_state="context hydration remains independent from provider blocker",
+        operation_class="inspect",
+        mode=TaskMode.OBSERVATION,
+        action_scope="none",
+    )
+    kernel.begin()
+    blocked = kernel.block(
+        "provider credential unavailable",
+        reference="provider-error:credential",
+    )
+    assert blocked.phase == "blocked"
+
+    enriched = kernel.record_context_recovery(
+        "context-recovery:alternate-source",
+        recovered_refs=("supabase:alternate-context",),
+    )
+    assert enriched.phase == "blocked"
+    assert enriched.context_state == "hydrated"
+
+    resumed = kernel.resolve_blocker(
+        "provider credential unavailable",
+        resolution_reference="provider-recovery:alternate-route",
+    )
+    assert resumed.phase == "observing"
 
 
 def test_routine_mutation_needs_no_separate_authorization_reference(monkeypatch) -> None:

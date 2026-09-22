@@ -35,6 +35,8 @@ Use `src/turn_context_guard.py` to produce an inspectable per-turn context decis
 
 Missing context may reduce certainty or alter routing. It does **not** create a generalized mission stop, approval gate, or new veto authority. Support mechanisms remain subordinate to the Operator mission.
 
+This rule is estate-wide, not local to chat turns. Every compatible action, MCP run, connector bundle, logical agent, Agent Genome, continuity transition, case worker, email worker, telecom worker, engineering worker, memory projection, and cognition runtime must inherit `CONTEXT_ENRICHMENT_INVARIANT.md`. Context state follows the work lineage as enrichment metadata/receipts. It never becomes a separate sovereign approval system.
+
 ## Verbatim Source Fidelity
 
 Summaries are navigation aids. They are not the Operator source.
