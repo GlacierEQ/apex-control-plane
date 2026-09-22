@@ -1,0 +1,10 @@
+{
+  "schema": "glaciereq.cognitive-mesh.bootstrap.v1",
+  "rule": "This file is only a peer bootstrap list. Discover each repository's current head and repo-owned surfaces at use time; never treat this file as a capability map, maturity map, hierarchy, or finish line.",
+  "peers": [
+    "GlacierEQ/mega-skills",
+    "GlacierEQ/the-tower-of-babel",
+    "GlacierEQ/aspen-grove-core",
+    "GlacierEQ/apex-control-plane"
+  ]
+}
