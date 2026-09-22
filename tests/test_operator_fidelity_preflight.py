@@ -58,6 +58,8 @@ def _receipt() -> dict:
             "anti_minimization_checked": True,
             "capability_growth_considered": True,
             "humanized_engineering_standard_applied": True,
+            "improvement_dominates_prior_valid_state": True,
+            "narrative_plurality_preserved": True,
             "operator_words_digest": digest_operator_words(*words),
             "literal_constraints": list(words),
             "operator_source_bindings": _source_bindings(words),
@@ -87,6 +89,10 @@ def _receipt() -> dict:
                 "unsolicited_operator_asset_disposition": False,
                 "inspection_scope_expansion": False,
                 "operator_owned_asset_identity_preserved": True,
+                "improvement_dominates_prior_valid_state": True,
+                "simplification_as_objective": False,
+                "narrative_plurality_preserved": True,
+                "audience_curation_may_hide_but_not_erase": True,
                 "functional_advance": "bind semantic fidelity enforcement into runtime boot",
                 "strongest_coherent_path": "reject contradictory routing prose before runtime authorization",
             },
@@ -126,6 +132,43 @@ def test_policy_cannot_disable_semantic_scan(tmp_path) -> None:
 
     with pytest.raises(BootError, match="semantic_selected_path_scan must be true"):
         load_operator_fidelity_policy(target)
+
+
+def test_policy_cannot_disable_better_not_simpler(tmp_path) -> None:
+    policy = load_operator_fidelity_policy()
+    policy["anti_minimization"]["better_not_simpler"]["required"] = False
+    target = tmp_path / "disabled-better-not-simpler.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+
+    with pytest.raises(BootError, match="better_not_simpler.required must be true"):
+        load_operator_fidelity_policy(target)
+
+
+def test_policy_requires_dominance_and_plurality_path_contract(tmp_path) -> None:
+    policy = load_operator_fidelity_policy()
+    policy["selected_path_requirements"]["improvement_dominates_prior_valid_state"] = False
+    target = tmp_path / "weakened-dominance-policy.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+
+    with pytest.raises(
+        BootError,
+        match="selected_path_requirements.improvement_dominates_prior_valid_state must be True",
+    ):
+        load_operator_fidelity_policy(target)
+
+
+def test_better_not_simpler_receipt_regressions_are_rejected() -> None:
+    policy = load_operator_fidelity_policy()
+    receipt = _receipt()
+    receipt["operator_fidelity"]["selected_path"]["simplification_as_objective"] = True
+    receipt["operator_fidelity"]["selected_path"][
+        "improvement_dominates_prior_valid_state"
+    ] = False
+
+    errors = validate_operator_fidelity_receipt(policy, receipt)
+
+    assert any("simplification_as_objective" in error for error in errors)
+    assert any("improvement_dominates_prior_valid_state" in error for error in errors)
 
 
 def test_request_contract_can_satisfy_current_policy() -> None:
