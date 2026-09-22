@@ -47,7 +47,7 @@ def test_connector_docs_share_the_same_operational_authorization_contract() -> N
 
 def test_approved_operation_doc_requires_independent_source_readback() -> None:
     approved, _ = _docs()
-    assert "independently resolves the `source_binding`" in approved
+    assert "The runtime independently resolves the `source_binding`" in approved
     assert "source/span hashes and active supersession state" in approved
     assert "The request cannot self-attest its own authority." in approved
     assert "`authorization_required` setting remains `true`" in approved
