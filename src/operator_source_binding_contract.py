@@ -11,8 +11,10 @@ identity. This module is therefore a shared primitive, not a global sovereign.
 from __future__ import annotations
 
 import hashlib
+import os
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 SourceResolver = Callable[[str], bytes]
@@ -37,6 +39,42 @@ SOURCE_VERIFICATION_STATE = "source_resolved"
 
 class SourceReadbackUnresolved(RuntimeError):
     """Typed boundary for retrieval failures that must not become evidence absence."""
+
+
+def resolve_operator_source_file(source_ref: str) -> bytes:
+    """Resolve an Operator-authored file source without allowing root escape.
+
+    Retrieval failure remains unresolved evidence; it never becomes proof that the
+    referenced authorization or instruction is absent.
+    """
+    if not source_ref.startswith("file:"):
+        raise SourceReadbackUnresolved(
+            "source_ref must use file: under GLACIEREQ_OPERATOR_SOURCE_ROOT"
+        )
+    root_value = os.getenv("GLACIEREQ_OPERATOR_SOURCE_ROOT", "").strip()
+    if not root_value:
+        raise SourceReadbackUnresolved(
+            "operator source readback unresolved: GLACIEREQ_OPERATOR_SOURCE_ROOT is not set"
+        )
+    root = Path(root_value).expanduser().resolve()
+    relative = source_ref.removeprefix("file:").lstrip("/")
+    if not relative:
+        raise SourceReadbackUnresolved(
+            "operator source readback unresolved: empty file: source_ref"
+        )
+    candidate = (root / relative).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise SourceReadbackUnresolved(
+            "operator source readback rejected: source_ref escapes source root"
+        ) from exc
+    try:
+        return candidate.read_bytes()
+    except OSError as exc:
+        raise SourceReadbackUnresolved(
+            f"operator source readback unresolved: {exc.__class__.__name__}"
+        ) from exc
 
 
 @dataclass(frozen=True, slots=True)
