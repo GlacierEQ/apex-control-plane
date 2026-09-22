@@ -9,6 +9,7 @@ as a library behind that boundary rather than executed directly.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import runpy
 import sys
@@ -39,11 +40,31 @@ def _require_completed_startup_validations(
         )
 
 
+def _validate_explicit_boot_receipt_syntax() -> None:
+    """Reject malformed explicit receipt input without turning absence into a gate.
+
+    Missing receipt is an uplift/continuation condition handled by strongest boot.
+    A caller that explicitly supplies syntactically invalid JSON has instead
+    supplied unusable provider evidence; fail that route closed before legacy
+    observers can convert the parsing error into a generic uplift finding.
+    """
+    inline = os.getenv("CASEY_BOOT_RECEIPT_JSON", "").strip()
+    if not inline:
+        return
+    try:
+        payload = json.loads(inline)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"CASEY_BOOT_RECEIPT_JSON is invalid: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("CASEY_BOOT_RECEIPT_JSON must contain an object")
+
+
 if __name__ == "__main__":
     from apex_strong_boot import apply_strongest_boot
     from auto_boot import EXIT_BOOT_BLOCKED
 
     try:
+        _validate_explicit_boot_receipt_syntax()
         boot_session = apply_strongest_boot()
         runtime_kernel = boot_session.runtime_kernel
     except SystemExit:
