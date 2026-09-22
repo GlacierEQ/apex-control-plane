@@ -37,8 +37,8 @@ credentials.json
 1. Session-level OAuth credentials, API keys, cookies, and temporary download URLs remain outside this repository.
 2. APEX admits connector results only through the versioned receipt contract in `config/apex_connector_catalog.json`.
 3. A successful provider probe or read receipt does not authorize an external write.
-4. Every external write requires an active catalog operation, an exact approval record naming target and consequence, and a resulting provider execution receipt.
-5. Scheduled connector writes remain disabled unless the user approves a reviewed workflow specifically for that operation.
+4. Every external write requires an active catalog operation, attributable source-bound Operator authorization covering the operation, target, payload/consequence, and authorization scope, plus a resulting provider execution receipt. Explicit-action, approved plan/batch, and approved action-class authority may cover routine constituent actions within that scope; a new per-operation approval is not required merely because execution is external.
+5. Destructive actions or material strategy/consequence changes outside the recovered authorization scope require renewed Operator authority. Scheduled connector writes may execute only when covered by current or standing Operator authorization for that workflow; schedule recurrence does not manufacture, narrow, or revoke authority.
 
 ### If a Secret Is Exposed
 
