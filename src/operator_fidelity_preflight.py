@@ -139,6 +139,48 @@ def load_operator_fidelity_policy(
             "operator-fidelity anti_minimization.semantic_selected_path_scan must be true"
         )
 
+    better_not_simpler = anti_minimization.get("better_not_simpler")
+    if not isinstance(better_not_simpler, Mapping):
+        raise BootError(
+            "operator-fidelity anti_minimization.better_not_simpler must be an object"
+        )
+    if better_not_simpler.get("required") is not True:
+        raise BootError(
+            "operator-fidelity anti_minimization.better_not_simpler.required must be true"
+        )
+    required_rejections = {
+        "capability_loss",
+        "provenance_loss",
+        "semantic_flattening",
+        "relationship_or_dependency_loss",
+        "narrative_distortion",
+        "future_option_loss_without_operator_choice",
+    }
+    declared_rejections = better_not_simpler.get("reject_when")
+    if not isinstance(declared_rejections, list) or not required_rejections.issubset(
+        {str(item) for item in declared_rejections}
+    ):
+        raise BootError(
+            "operator-fidelity better-not-simpler reject_when must preserve capability, provenance, semantics, dependencies, narrative plurality, and future options"
+        )
+
+    selected_requirements = value.get("selected_path_requirements")
+    if not isinstance(selected_requirements, Mapping):
+        raise BootError(
+            "operator-fidelity selected_path_requirements must be an object"
+        )
+    dominance_requirements = {
+        "improvement_dominates_prior_valid_state": True,
+        "simplification_as_objective": False,
+        "narrative_plurality_preserved": True,
+        "audience_curation_may_hide_but_not_erase": True,
+    }
+    for field_name, expected in dominance_requirements.items():
+        if selected_requirements.get(field_name) is not expected:
+            raise BootError(
+                f"operator-fidelity selected_path_requirements.{field_name} must be {expected!r}"
+            )
+
     declared_codes = anti_minimization.get("required_semantic_rule_codes")
     if not isinstance(declared_codes, list) or not all(
         isinstance(item, str) and item.strip() for item in declared_codes
@@ -361,6 +403,10 @@ def build_operator_fidelity_request(
             "consider_capability_growth": True,
             "apply_pro_code_elite_humanized_engineering": True,
             "preserve_prior_valid_gains": True,
+            "prove_improvement_dominates_prior_valid_state": True,
+            "preserve_narrative_plurality": True,
+            "treat_simplification_as_non_objective": True,
+            "curate_views_without_erasing_underlying_state": True,
             "preserve_literal_operator_operation_scope": True,
             "no_unsolicited_operator_asset_value_ranking": True,
             "no_unsolicited_operator_asset_disposition": True,
@@ -386,6 +432,8 @@ def build_operator_fidelity_request(
                 "anti_minimization_checked": True,
                 "capability_growth_considered": True,
                 "humanized_engineering_standard_applied": True,
+                "improvement_dominates_prior_valid_state": True,
+                "narrative_plurality_preserved": True,
                 "operator_words_digest": "sha256:<64 hex over exact/resolved operator words>",
                 "literal_constraints": ["exact or resolved operator constraint"],
                 "operator_source_bindings": operator_source_binding_receipt_contract(),
