@@ -204,7 +204,7 @@ jobs:
             exit 1
           fi
 
-      - name: Prove fidelity preflight emits continuation without becoming a global stop
+      - name: Prove fidelity preflight emits uplift continuation without becoming a global stop
         shell: bash
         run: |
           set +e
@@ -218,12 +218,13 @@ jobs:
           if [[ "$status" -ne 0 ]]; then
             cat /tmp/fidelity.out || true
             cat /tmp/fidelity.err || true
-            echo "fidelity preflight returned $status instead of emitting a continuation" >&2
+            echo "fidelity preflight returned $status instead of emitting an uplift continuation" >&2
             exit 1
           fi
           grep -q '"gate": "operator_fidelity_preflight"' /tmp/fidelity.err
-          grep -q '"status": "continuation_required"' /tmp/fidelity.err
-          grep -q '"external_action_authorized": false' /tmp/fidelity.err
+          grep -q '"status": "uplift_required"' /tmp/fidelity.err
+          grep -q '"external_action_authorized": "route_local_only"' /tmp/fidelity.err
+          grep -q '"mission_execution": "continue_known_executable_frontiers"' /tmp/fidelity.err
           grep -q 'literal_operator_words_preserved' /tmp/fidelity.err
           test ! -s /tmp/fidelity.out
 
