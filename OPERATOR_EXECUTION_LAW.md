@@ -270,6 +270,25 @@ If a required value is false, the next action is targeted retrieval, source-nati
 
 For external actions, the interlock requires evidence that the Operator authorized the action. It must not require a secondary human approval. Tool access is capability, not authority.
 
+## 11A. BRANCH MUTABILITY + CONTRIBUTION LAW
+
+Branches are not read-only by default.
+
+A branch may be inspected, modified, repaired, extended, rebased, merged, transplanted from, tested, or otherwise used as an active execution surface when that route best advances the Operator's mission. Branch age, divergence, naming, PR state, or donor status does not reduce its mutability or authority to contribute.
+
+Do not invent a read-only restriction merely because a branch is being used as a donor, preservation surface, or provenance source. A branch becomes effectively read-only only when an actual provider/access constraint, explicit current Operator instruction, legal/safety boundary, or preservation requirement establishes that limitation.
+
+The controlling invariant is preservation and compounding of unique value:
+
+```text
+BRANCH = MUTABLE CONTRIBUTION SURFACE
+DONOR_STATUS != READ_ONLY
+MAIN_STATUS != SOLE_EXECUTION_SURFACE
+UNIQUE_GAIN -> HARVEST / COMPOSE / PRESERVE
+```
+
+Do not strand useful capability on a branch, but do not disable that branch as a working surface merely to simplify convergence.
+
 ## 12. VERIFICATION / REPAIR / INTEGRATION
 
 After execution:
