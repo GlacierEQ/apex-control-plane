@@ -7,10 +7,12 @@ digest-only receipts.
 """
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import Enum
 from hashlib import sha256
-from typing import Any, Mapping
+from typing import Any
 from uuid import uuid4
 
 from connector_receipts import (
@@ -28,6 +30,28 @@ from epistemic_risk_gate import (
     Reversibility,
     evaluate_execution,
     validate_completion_claim,
+)
+
+
+class EvidenceAuthority(str, Enum):
+    PROVIDER_NATIVE = "provider_native"
+    CAPTURED_ARTIFACT = "captured_artifact"
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedProviderEvidence:
+    material: bytes
+    authority: EvidenceAuthority
+    verifier_ref: str
+
+
+ProviderEvidenceResolver = Callable[[str], ResolvedProviderEvidence]
+_SELF_CERTIFYING_EVIDENCE_PREFIXES = (
+    "assistant_summary:",
+    "memory_summary:",
+    "working_model:",
+    "execution_receipt:",
+    "receipt:",
 )
 
 
@@ -88,6 +112,7 @@ class ConnectorExecutionReceipt:
     readback_at: datetime | None
     readback_content_sha256: str | None
     readback_source_refs: tuple[str, ...]
+    evidence_verification_state: str
 
 
 def _text(value: Any, name: str) -> str:
@@ -137,6 +162,40 @@ def _content_sha256(material: str | bytes | None) -> str | None:
         return None
     raw = material.encode("utf-8") if isinstance(material, str) else material
     return sha256(raw).hexdigest()
+
+
+def _resolve_provider_evidence(
+    refs: tuple[str, ...],
+    expected_digest: str | None,
+    *,
+    resolver: ProviderEvidenceResolver | None,
+    name: str,
+) -> ResolvedProviderEvidence:
+    """Resolve receipt evidence independently; receipt refs are routing hints only."""
+    if resolver is None:
+        raise ApprovedOperationError(f"{name} readback unresolved: no independent evidence resolver")
+    if expected_digest is None:
+        raise ApprovedOperationError(f"{name} content digest is required for independent verification")
+    if len(refs) != 1:
+        raise ApprovedOperationError(f"{name} must identify exactly one independently resolvable evidence object")
+    source_ref = refs[0]
+    if source_ref.lower().startswith(_SELF_CERTIFYING_EVIDENCE_PREFIXES):
+        raise ApprovedOperationError(
+            f"{name} source reference is derivative/self-certifying and cannot authorize execution state"
+        )
+    try:
+        resolution = resolver(source_ref)
+    except Exception as exc:
+        raise ApprovedOperationError(f"{name} readback unresolved: {exc.__class__.__name__}") from exc
+    if not isinstance(resolution, ResolvedProviderEvidence):
+        raise ApprovedOperationError(f"{name} resolver must return ResolvedProviderEvidence")
+    if not isinstance(resolution.material, bytes):
+        raise ApprovedOperationError(f"{name} resolved material must be bytes")
+    if not resolution.verifier_ref.strip():
+        raise ApprovedOperationError(f"{name} verifier_ref must be non-empty")
+    if sha256(resolution.material).hexdigest() != expected_digest:
+        raise ApprovedOperationError(f"{name} digest does not match independently resolved evidence bytes")
+    return resolution
 
 
 def action_scope_payload(
@@ -336,6 +395,8 @@ def build_execution_receipt(
 def validate_execution_receipt(
     payload: Mapping[str, Any],
     action: ApprovedConnectorAction,
+    *,
+    evidence_resolver: ProviderEvidenceResolver | None = None,
 ) -> ConnectorExecutionReceipt:
     """Validate receipt scope and completion evidence without retaining provider material."""
     if not isinstance(payload, Mapping):
@@ -374,6 +435,16 @@ def validate_execution_receipt(
     readback_digest = payload.get("readback_content_sha256")
     if readback_digest is not None and (not isinstance(readback_digest, str) or not _is_sha256(readback_digest)):
         raise ApprovedOperationError("execution receipt readback_content_sha256 is invalid")
+    execution_resolution = _resolve_provider_evidence(
+        execution_refs, execution_digest, resolver=evidence_resolver,
+        name="execution receipt execution evidence",
+    )
+    readback_resolution: ResolvedProviderEvidence | None = None
+    if readback_refs:
+        readback_resolution = _resolve_provider_evidence(
+            readback_refs, readback_digest, resolver=evidence_resolver,
+            name="execution receipt terminal readback evidence",
+        )
     verification_passed = payload.get("verification_passed")
     if not isinstance(verification_passed, bool):
         raise ApprovedOperationError("execution receipt verification_passed must be boolean")
@@ -381,6 +452,11 @@ def validate_execution_receipt(
         raise ApprovedOperationError("successful execution receipt requires readback_at")
     if state == "success" and not verification_passed:
         raise ApprovedOperationError("successful execution receipt requires verified terminal readback")
+    if state == "success":
+        if execution_resolution.authority is not EvidenceAuthority.PROVIDER_NATIVE:
+            raise ApprovedOperationError("successful execution requires provider-native execution evidence")
+        if readback_resolution is None or readback_resolution.authority is not EvidenceAuthority.PROVIDER_NATIVE:
+            raise ApprovedOperationError("successful execution requires provider-native terminal readback")
     if readback_at is not None and readback_at < executed_at:
         raise ApprovedOperationError("execution receipt readback precedes the provider action")
     if state == "success":
@@ -411,6 +487,12 @@ def validate_execution_receipt(
         readback_at=readback_at,
         readback_content_sha256=readback_digest,
         readback_source_refs=readback_refs,
+        evidence_verification_state=(
+            "provider_native_evidence_resolved"
+            if execution_resolution.authority is EvidenceAuthority.PROVIDER_NATIVE
+            and (readback_resolution is None or readback_resolution.authority is EvidenceAuthority.PROVIDER_NATIVE)
+            else "captured_artifact_evidence_resolved"
+        ),
     )
 
 
@@ -436,6 +518,7 @@ def execution_receipt_audit_details(
             "readback_content_sha256": receipt.readback_content_sha256,
             "readback_source_ref_count": len(receipt.readback_source_refs),
             "verification_passed": receipt.verification_passed,
+            "evidence_verification_state": receipt.evidence_verification_state,
             "external_action_authorized": True,
         }
     )
