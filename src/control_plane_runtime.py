@@ -32,6 +32,7 @@ from approved_operation_bridge import (
 )
 from authorization_compat import validate_authorized_action_request
 from connector_receipts import ConnectorReadReceipt, receipt_audit_details, validate_read_receipt
+from operator_source_binding_contract import SourceResolver
 
 ENVELOPE_VERSION = "1.0.0"
 CASE_EVENT_SCHEMA_ID = "urn:casebrain:schema:case-event:1.0.0"
@@ -665,6 +666,7 @@ class CaseBrainOrchestrator:
         catalog: Any,
         *,
         now: datetime | None = None,
+        source_resolver: SourceResolver | None = None,
     ) -> dict[str, Any]:
         """Admit a completed source-authorized provider action without provider content.
 
@@ -676,6 +678,7 @@ class CaseBrainOrchestrator:
             action_request,
             catalog,
             now=now,
+            source_resolver=source_resolver,
         )
         prior_scope = self.connector_action_idempotency_index.get(action.idempotency_key)
         if prior_scope is not None and prior_scope != action.approval_scope_sha256:
