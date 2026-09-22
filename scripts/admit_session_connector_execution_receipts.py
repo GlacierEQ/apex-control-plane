@@ -28,6 +28,7 @@ from approved_operation_bridge import (
 from authorization_compat import validate_authorized_action_request
 from connector_receipts import ConnectorReceiptError, load_connector_catalog
 from control_plane_runtime import CaseBrainOrchestrator, Producer, to_jsonable
+from operator_source_binding_contract import resolve_operator_source_file
 
 
 class ExecutionAdmissionInputError(ValueError):
@@ -143,6 +144,7 @@ def admit_execution_manifest(
         receipt,
         catalog,
         now=current,
+        source_resolver=resolve_operator_source_file,
     )
     receipt_ledger_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_ledger_path.write_text(render_safe_execution_receipt(receipt), encoding="utf-8")
