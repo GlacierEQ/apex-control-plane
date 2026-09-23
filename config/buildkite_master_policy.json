@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "name": "APEX Buildkite Master",
   "role": "verified_execution_fabric",
   "authority_boundary": {
@@ -33,18 +33,14 @@
       "name": "apex-control-plane",
       "repository": "GlacierEQ/apex-control-plane",
       "evidence": ".buildkite/pipeline.yml",
-      "queues": [
-        "macos-self"
-      ],
-      "status": "source_observed"
+      "queues": ["linux-small"],
+      "status": "source_observed_post_trial_portable_rail"
     },
     {
       "name": "oracle-independent-runner",
       "repository": "GlacierEQ/apex-stack",
       "evidence": "PR #4 feat(infra): add Oracle-backed Buildkite runner path",
-      "queues": [
-        "oracle-arm64"
-      ],
+      "queues": ["oracle-arm64"],
       "status": "repository_evidence_observed_live_build_unverified"
     },
     {
@@ -58,20 +54,20 @@
       "name": "genius-family-api-reconciler",
       "repository": "GlacierEQ/apex-control-plane",
       "evidence": "scripts/reconcile_genius_buildkite.py",
-      "target_repositories": [
-        "GlacierEQ/Genius-Mastery",
-        "GlacierEQ/Genius-Code",
-        "GlacierEQ/Genius-Verification"
-      ],
+      "target_repositories": ["GlacierEQ/Genius-Mastery", "GlacierEQ/Genius-Code", "GlacierEQ/Genius-Verification"],
       "status": "source_hardened_terminal_verification_pending_live_main_proof",
       "routing_registry": "config/genius_buildkite_targets.json",
       "terminal_verification": "Buildkite child readback + exact-head GitHub projection"
     }
   ],
   "queue_contracts": {
+    "linux-small": {
+      "purpose": "post_trial_portable_control_plane_verification",
+      "source_status": "observed_in_apex_control_plane_post_trial_pipeline"
+    },
     "macos-self": {
-      "purpose": "control_plane_verification",
-      "source_status": "observed_in_apex_control_plane_main"
+      "purpose": "explicit_macos_capability_only",
+      "source_status": "historical_self_hosted_capability_not_default_execution_rail"
     },
     "oracle-arm64": {
       "purpose": "independent_linux_execution",
@@ -82,6 +78,8 @@
     "pipeline_as_code": true,
     "require_step_keys": true,
     "require_explicit_queue": true,
+    "require_declared_queue_contract": true,
+    "portable_default_queue": "linux-small",
     "require_timeouts": true,
     "require_exact_commit_verification": true,
     "require_fail_closed_shell": true,
@@ -96,20 +94,8 @@
     "terminal_github_projection_verification": true
   },
   "receipt_contract": {
-    "required_identity": [
-      "commit",
-      "branch",
-      "build_id",
-      "build_number",
-      "pipeline"
-    ],
-    "required_proof": [
-      "test_result",
-      "artifact_digest",
-      "child_terminal_build",
-      "child_github_projection",
-      "readback"
-    ],
+    "required_identity": ["commit", "branch", "build_id", "build_number", "pipeline"],
+    "required_proof": ["test_result", "artifact_digest", "child_terminal_build", "child_github_projection", "readback"],
     "completion_rule": "no_verified_delta_no_success"
   },
   "security_target": {
@@ -129,28 +115,14 @@
     "live oracle-arm64 proof build on the promoted lineage",
     "current GitHub Buildkite required-check mapping",
     "authenticated active-build inventory for organization casey-1",
-    "current live job identity for macos-self and oracle-arm64",
+    "current live job identity for linux-small, macos-self and oracle-arm64",
     "current FILEBOSS Buildkite build state",
     "current Genius family Buildkite pipeline and exact-SHA build state"
   ],
   "live_readback_contract": {
     "observation_only": true,
-    "active_build_states": [
-      "scheduled",
-      "running",
-      "failing",
-      "blocked",
-      "waiting"
-    ],
-    "required_resources": [
-      "active_builds",
-      "pipelines",
-      "clusters",
-      "queues",
-      "agents",
-      "agent_token_metadata",
-      "secret_metadata"
-    ],
+    "active_build_states": ["scheduled", "running", "failing", "blocked", "waiting"],
+    "required_resources": ["active_builds", "pipelines", "clusters", "queues", "agents", "agent_token_metadata", "secret_metadata"],
     "credential_values_forbidden": true,
     "missing_scope_state": "UNVERIFIED_MISSING_SCOPE"
   },
@@ -171,7 +143,7 @@
     "apex_control_plane": {
       "commit": "283bb698526b89125836a0511af86048f943d6bb",
       "github_context": "buildkite/apex-control-plane",
-      "state": "success",
+      "state": "historical_success",
       "build_url": "https://buildkite.com/casey-1/apex-control-plane/builds/79"
     },
     "apex_stack_oracle": {

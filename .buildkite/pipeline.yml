@@ -1,6 +1,8 @@
 # Source-controlled Buildkite CI for GlacierEQ/apex-control-plane.
-# Mirrors the repository's existing GitHub Actions quality contracts and adds
-# durable Buildkite receipts and artifacts.
+# Post-trial policy: run portable validation on Buildkite hosted Linux Small.
+# Self-hosted/macOS execution must be an explicit capability requirement, never
+# an inherited default. Provider/agent unavailability is infrastructure state,
+# not evidence that source invariants failed.
 env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PYTHONUNBUFFERED: "1"
@@ -11,8 +13,7 @@ steps:
     key: buildkite-master
     timeout_in_minutes: 5
     agents:
-      queue: macos-self
-      os: macos
+      queue: linux-small
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
@@ -20,17 +21,8 @@ steps:
       test "$$actual" = "$BUILDKITE_COMMIT"
       PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
       test -x "$$PYTHON_BIN"
-      "$$PYTHON_BIN" scripts/validate_buildkite_master.py \
-        --emit-receipt artifacts/buildkite/buildkite-master-validation.json
-      "$$PYTHON_BIN" -m py_compile \
-        scripts/validate_buildkite_master.py \
-        scripts/buildkite_master_inventory.py \
-        scripts/reconcile_buildkite_github_status.py \
-        scripts/reconcile_genius_buildkite.py \
-        scripts/reconcile_mastermind_buildkite.py \
-        scripts/install_codex_operator_kernel.py \
-        scripts/validate_operator_kernel_surfaces.py \
-        scripts/verify_buildkite_evidence_chain.py
+      "$$PYTHON_BIN" scripts/validate_buildkite_master.py --emit-receipt artifacts/buildkite/buildkite-master-validation.json
+      "$$PYTHON_BIN" -m py_compile scripts/validate_buildkite_master.py scripts/buildkite_master_inventory.py scripts/reconcile_buildkite_github_status.py scripts/reconcile_genius_buildkite.py scripts/reconcile_mastermind_buildkite.py scripts/install_codex_operator_kernel.py scripts/validate_operator_kernel_surfaces.py scripts/verify_buildkite_evidence_chain.py
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/buildkite-master-validation.json
@@ -38,10 +30,9 @@ steps:
   - label: ":shield: Source and operator-fidelity gate"
     key: source-fidelity
     depends_on: buildkite-master
-    timeout_in_minutes: 20
+    timeout_in_minutes: 10
     agents:
-      queue: macos-self
-      os: macos
+      queue: linux-small
     retry:
       automatic:
         - exit_status: -1
@@ -67,31 +58,8 @@ steps:
       .buildkite-venv/bin/python -m json.tool config/apex_connector_contract_registry.json >/dev/null
       .buildkite-venv/bin/python -m json.tool config/apex_direct_connector_runtime.json >/dev/null
       .buildkite-venv/bin/python scripts/validate_operator_kernel_surfaces.py
-      .buildkite-venv/bin/python -m py_compile \
-        src/model_attractor_defense.py \
-        src/operator_fidelity_lock.py \
-        src/operator_fidelity_preflight.py \
-        src/operator_source_binding_contract.py \
-        src/control_plane.py \
-        src/direct_connector_runtime_contract.py \
-        src/sitecustomize.py \
-        scripts/admit_session_connector_receipts.py \
-        scripts/prepare_approved_connector_action.py \
-        scripts/admit_session_connector_execution_receipts.py \
-        scripts/reconcile_mastermind_buildkite.py
-      CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q \
-        tests/test_model_attractor_defense.py \
-        tests/test_operator_fidelity_lock.py \
-        tests/test_operator_fidelity_preflight.py \
-        tests/test_operator_kernel_surfaces.py \
-        tests/test_buildkite_master.py \
-        tests/test_buildkite_master_inventory.py \
-        tests/test_buildkite_github_status.py \
-        tests/test_reconcile_genius_buildkite.py \
-        tests/test_verify_buildkite_evidence_chain.py \
-        tests/test_direct_connector_runtime_contract.py \
-        --junitxml=artifacts/buildkite/operator-fidelity.xml \
-        2>&1 | tee artifacts/buildkite/operator-fidelity.log
+      .buildkite-venv/bin/python -m py_compile src/model_attractor_defense.py src/operator_fidelity_lock.py src/operator_fidelity_preflight.py src/operator_source_binding_contract.py src/control_plane.py src/direct_connector_runtime_contract.py src/sitecustomize.py scripts/admit_session_connector_receipts.py scripts/prepare_approved_connector_action.py scripts/admit_session_connector_execution_receipts.py scripts/reconcile_mastermind_buildkite.py
+      CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q tests/test_model_attractor_defense.py tests/test_operator_fidelity_lock.py tests/test_operator_fidelity_preflight.py tests/test_operator_kernel_surfaces.py tests/test_buildkite_master.py tests/test_buildkite_master_inventory.py tests/test_buildkite_github_status.py tests/test_reconcile_genius_buildkite.py tests/test_verify_buildkite_evidence_chain.py tests/test_direct_connector_runtime_contract.py --junitxml=artifacts/buildkite/operator-fidelity.xml 2>&1 | tee artifacts/buildkite/operator-fidelity.log
       buildkite-agent meta-data set operator-fidelity-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/operator-fidelity.xml | cut -d ' ' -f 1)"
       git diff --exit-code
     artifact_paths:
@@ -101,10 +69,9 @@ steps:
   - label: ":mag: Registry and audit hardening"
     key: registry-audit
     depends_on: source-fidelity
-    timeout_in_minutes: 25
+    timeout_in_minutes: 10
     agents:
-      queue: macos-self
-      os: macos
+      queue: linux-small
     retry:
       automatic:
         - exit_status: -1
@@ -119,45 +86,10 @@ steps:
       "$$PYTHON_BIN" -m venv .buildkite-venv
       .buildkite-venv/bin/python -m pip install --upgrade pip
       .buildkite-venv/bin/python -m pip install -r requirements.txt ruff mypy pytest
-      .buildkite-venv/bin/ruff check \
-        scripts/scan_repos.py \
-        scripts/admit_session_connector_receipts.py \
-        scripts/prepare_approved_connector_action.py \
-        scripts/admit_session_connector_execution_receipts.py \
-        src/audit_engine.py \
-        src/direct_connector_runtime_contract.py \
-        apex_runner.py \
-        daily_audit.py \
-        apex_issue_writer.py \
-        tests/test_scan_repos.py \
-        tests/test_audit_hardening.py \
-        tests/test_direct_connector_runtime_contract.py
-      .buildkite-venv/bin/ruff format --check \
-        scripts/scan_repos.py \
-        scripts/admit_session_connector_receipts.py \
-        scripts/prepare_approved_connector_action.py \
-        scripts/admit_session_connector_execution_receipts.py \
-        src/audit_engine.py \
-        src/direct_connector_runtime_contract.py \
-        apex_runner.py \
-        daily_audit.py \
-        apex_issue_writer.py \
-        tests/test_scan_repos.py \
-        tests/test_audit_hardening.py \
-        tests/test_direct_connector_runtime_contract.py
-      .buildkite-venv/bin/mypy \
-        scripts/scan_repos.py \
-        scripts/admit_session_connector_receipts.py \
-        scripts/prepare_approved_connector_action.py \
-        scripts/admit_session_connector_execution_receipts.py \
-        src/direct_connector_runtime_contract.py \
-        --ignore-missing-imports
-      PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q \
-        tests/test_scan_repos.py \
-        tests/test_audit_hardening.py \
-        tests/test_direct_connector_runtime_contract.py \
-        --junitxml=artifacts/buildkite/registry-audit.xml \
-        2>&1 | tee artifacts/buildkite/registry-audit.log
+      .buildkite-venv/bin/ruff check scripts/scan_repos.py scripts/admit_session_connector_receipts.py scripts/prepare_approved_connector_action.py scripts/admit_session_connector_execution_receipts.py src/audit_engine.py src/direct_connector_runtime_contract.py apex_runner.py daily_audit.py apex_issue_writer.py tests/test_scan_repos.py tests/test_audit_hardening.py tests/test_direct_connector_runtime_contract.py
+      .buildkite-venv/bin/ruff format --check scripts/scan_repos.py scripts/admit_session_connector_receipts.py scripts/prepare_approved_connector_action.py scripts/admit_session_connector_execution_receipts.py src/audit_engine.py src/direct_connector_runtime_contract.py apex_runner.py daily_audit.py apex_issue_writer.py tests/test_scan_repos.py tests/test_audit_hardening.py tests/test_direct_connector_runtime_contract.py
+      .buildkite-venv/bin/mypy scripts/scan_repos.py scripts/admit_session_connector_receipts.py scripts/prepare_approved_connector_action.py scripts/admit_session_connector_execution_receipts.py src/direct_connector_runtime_contract.py --ignore-missing-imports
+      PYTHONPATH=src:. .buildkite-venv/bin/python -m pytest -q tests/test_scan_repos.py tests/test_audit_hardening.py tests/test_direct_connector_runtime_contract.py --junitxml=artifacts/buildkite/registry-audit.xml 2>&1 | tee artifacts/buildkite/registry-audit.log
       buildkite-agent meta-data set registry-audit-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/registry-audit.xml | cut -d ' ' -f 1)"
       git diff --exit-code
     artifact_paths:
@@ -168,29 +100,18 @@ steps:
     key: genius-reconcile
     depends_on: source-fidelity
     branches: main
-    timeout_in_minutes: 15
+    timeout_in_minutes: 10
     cancel_on_build_failing: true
-    retry:
-      automatic:
-        - exit_status: -1
-          limit: 1
-        - exit_status: 255
-          limit: 1
     agents:
-      queue: macos-self
-      os: macos
+      queue: linux-small
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
-      actual="$(git rev-parse HEAD)"
-      test "$actual" = "$BUILDKITE_COMMIT"
       PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
-      test -x "$$PYTHON_BIN"
       "$$PYTHON_BIN" scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
       "$$PYTHON_BIN" scripts/reconcile_helix_buildkite.py 2>&1 | tee artifacts/buildkite/helix-reconciliation.log
       test -s artifacts/buildkite/genius-reconciliation.json
       buildkite-agent meta-data set genius-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/genius-reconciliation.json | cut -d ' ' -f 1)"
-      git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/genius-reconciliation.json
       - artifacts/buildkite/genius-reconciliation.log
@@ -200,32 +121,21 @@ steps:
     key: mastermind-reconcile
     depends_on: source-fidelity
     branches: main
-    timeout_in_minutes: 30
+    timeout_in_minutes: 10
     cancel_on_build_failing: true
-    retry:
-      automatic:
-        - exit_status: -1
-          limit: 1
-        - exit_status: 255
-          limit: 1
     agents:
-      queue: macos-self
-      os: macos
+      queue: linux-small
     env:
       MASTERMIND_BUILD_REF: "restore/mastermind-former-glory-20260905"
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite
-      actual="$(git rev-parse HEAD)"
-      test "$actual" = "$BUILDKITE_COMMIT"
       PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
-      test -x "$$PYTHON_BIN"
       "$$PYTHON_BIN" scripts/reconcile_mastermind_buildkite.py 2>&1 | tee artifacts/buildkite/mastermind-reconciliation.log
       test -s artifacts/buildkite/mastermind-reconciliation.json
       test -s artifacts/buildkite/mastermind-reconciliation.json.sha256
       shasum -a 256 -c artifacts/buildkite/mastermind-reconciliation.json.sha256
       buildkite-agent meta-data set mastermind-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/mastermind-reconciliation.json | cut -d ' ' -f 1)"
-      git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/mastermind-reconciliation.json
       - artifacts/buildkite/mastermind-reconciliation.json.sha256
@@ -241,8 +151,7 @@ steps:
       - mastermind-reconcile
     timeout_in_minutes: 8
     agents:
-      queue: macos-self
-      os: macos
+      queue: linux-small
     command: |
       set -euo pipefail
       mkdir -p artifacts/buildkite/upstream
@@ -250,38 +159,19 @@ steps:
       test "$$actual" = "$BUILDKITE_COMMIT"
       build_id="$BUILDKITE_BUILD_ID"
       PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
-      test -x "$$PYTHON_BIN"
-
       operator_fidelity_sha="$$(buildkite-agent meta-data get operator-fidelity-junit-sha256 --build "$$build_id")"
       registry_audit_sha="$$(buildkite-agent meta-data get registry-audit-junit-sha256 --build "$$build_id")"
       buildkite-agent artifact download "artifacts/buildkite/operator-fidelity.xml" artifacts/buildkite/upstream --step source-fidelity --build "$$build_id"
       buildkite-agent artifact download "artifacts/buildkite/registry-audit.xml" artifacts/buildkite/upstream --step registry-audit --build "$$build_id"
-
-      evidence_args=(
-        --evidence "operator_fidelity=source-fidelity:artifacts/buildkite/upstream/artifacts/buildkite/operator-fidelity.xml:$$operator_fidelity_sha"
-        --evidence "registry_audit=registry-audit:artifacts/buildkite/upstream/artifacts/buildkite/registry-audit.xml:$$registry_audit_sha"
-      )
-
+      evidence_args=(--evidence "operator_fidelity=source-fidelity:artifacts/buildkite/upstream/artifacts/buildkite/operator-fidelity.xml:$$operator_fidelity_sha" --evidence "registry_audit=registry-audit:artifacts/buildkite/upstream/artifacts/buildkite/registry-audit.xml:$$registry_audit_sha")
       if [ "$BUILDKITE_BRANCH" = "main" ]; then
         genius_reconciliation_sha="$$(buildkite-agent meta-data get genius-reconciliation-sha256 --build "$$build_id")"
         mastermind_reconciliation_sha="$$(buildkite-agent meta-data get mastermind-reconciliation-sha256 --build "$$build_id")"
         buildkite-agent artifact download "artifacts/buildkite/genius-reconciliation.json" artifacts/buildkite/upstream --step genius-reconcile --build "$$build_id"
         buildkite-agent artifact download "artifacts/buildkite/mastermind-reconciliation.json" artifacts/buildkite/upstream --step mastermind-reconcile --build "$$build_id"
-        evidence_args+=(
-          --evidence "genius_reconciliation=genius-reconcile:artifacts/buildkite/upstream/artifacts/buildkite/genius-reconciliation.json:$$genius_reconciliation_sha"
-          --evidence "mastermind_reconciliation=mastermind-reconcile:artifacts/buildkite/upstream/artifacts/buildkite/mastermind-reconciliation.json:$$mastermind_reconciliation_sha"
-        )
+        evidence_args+=(--evidence "genius_reconciliation=genius-reconcile:artifacts/buildkite/upstream/artifacts/buildkite/genius-reconciliation.json:$$genius_reconciliation_sha" --evidence "mastermind_reconciliation=mastermind-reconcile:artifacts/buildkite/upstream/artifacts/buildkite/mastermind-reconciliation.json:$$mastermind_reconciliation_sha")
       fi
-
-      "$$PYTHON_BIN" scripts/verify_buildkite_evidence_chain.py \
-        --expected-commit "$BUILDKITE_COMMIT" \
-        --branch "$BUILDKITE_BRANCH" \
-        --build-id "$$build_id" \
-        --build-number "$BUILDKITE_BUILD_NUMBER" \
-        --pipeline "$BUILDKITE_PIPELINE_SLUG" \
-        --output artifacts/buildkite/verified-ci-receipt.json \
-        --sums-output artifacts/buildkite/SHA256SUMS \
-        "$${evidence_args[@]}"
+      "$$PYTHON_BIN" scripts/verify_buildkite_evidence_chain.py --expected-commit "$BUILDKITE_COMMIT" --branch "$BUILDKITE_BRANCH" --build-id "$$build_id" --build-number "$BUILDKITE_BUILD_NUMBER" --pipeline "$BUILDKITE_PIPELINE_SLUG" --output artifacts/buildkite/verified-ci-receipt.json --sums-output artifacts/buildkite/SHA256SUMS "$${evidence_args[@]}"
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/verified-ci-receipt.json
