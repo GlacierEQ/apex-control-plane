@@ -190,3 +190,20 @@ def test_cross_project_federation_migrations_preserve_authority_boundaries():
     assert "continuity_record_peer_frontier_v1" in backend
     assert "hash_watermark_receipts_only" in backend
     assert "fail_closed_on_conflicting_authority_claims" in backend
+
+def test_stale_context_preflight_reroutes_without_weakening_independent_safety_gates():
+    sql = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260923112000_continuity_stale_context_reroute_v1.sql"
+    ).read_text().lower()
+    assert "v_stale then v_block_reason:='context_packet_stale'" not in sql
+    assert "context_stale_recovery_debt" in sql
+    assert "'mission_stop',false" in sql
+    assert "'route_effect',case when v_stale then 'enrich_and_continue'" in sql
+    assert "v_recent_duplicate>0 then v_block_reason:='recent_duplicate_action'" in sql
+    assert "target_has_unrepaired_delivery_failure" in sql
+    assert "context_packet_expired" in sql
+    assert "channel_mismatch" in sql
+
