@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Admit host-side exact-approved provider execution observations into APEX.
+"""Admit host-side provider execution observations into APEX.
 
 The manifest points to local action-result and terminal-readback files created by a direct
 authenticated host operation. This command reads those files only to calculate SHA-256
 digests. It never invokes a provider, loads credentials, schedules a write, or copies
 provider material to the JSONL receipt ledger.
+
+Transport identity is resolved before capability/authority evaluation so permissions
+cannot be unioned across connector transports. Authorization itself remains source-bound
+and route-scoped under the current authority model; transport admission does not create
+permission and verification/readback does not manufacture permission.
 """
 from __future__ import annotations
 
@@ -28,6 +33,7 @@ from approved_operation_bridge import (
 )
 from connector_receipts import ConnectorReceiptError, load_connector_catalog
 from control_plane_runtime import CaseBrainOrchestrator, Producer, to_jsonable
+from direct_connector_runtime_contract import validate_connector_transport_admission
 
 
 class ExecutionAdmissionInputError(ValueError):
@@ -97,7 +103,10 @@ def admit_execution_manifest(
     commit_sha: str,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Validate and admit one host-completed exact-approved provider operation."""
+    """Validate and admit one host-completed provider operation."""
+    transport_admission = validate_connector_transport_admission(
+        "authenticated_session_provider_bridge"
+    )
     catalog = load_connector_catalog(ROOT / "config" / "apex_connector_catalog.json")
     current = (now or datetime.now(UTC)).astimezone(UTC)
     action_request = load_json(action_request_path, "action request")
@@ -150,7 +159,13 @@ def admit_execution_manifest(
         "status": "accepted",
         "accepted": accepted,
         "audit_receipts": [to_jsonable(item) for item in runtime.receipts],
-        "external_action_authorized": True,
+        "connector_transport": transport_admission["transport"],
+        "connector_contract": transport_admission["contract"],
+        "permission_union_allowed": transport_admission["permission_union_allowed"],
+        "authority_mode_for_routine_recoverable_write": transport_admission[
+            "authority_mode_for_routine_recoverable_write"
+        ],
+        "terminal_readback_required": transport_admission["terminal_readback_required"],
         "repository_provider_execution": False,
     }
 
