@@ -24,6 +24,7 @@ from authenticated_session_bridge import ProviderObservation, build_read_receipt
 from connector_bridge_contract import build_read_request
 from connector_receipts import ConnectorReceiptError, canonical_json, load_connector_catalog
 from control_plane_runtime import CaseBrainOrchestrator, Producer, to_jsonable
+from direct_connector_runtime_contract import validate_connector_transport_admission
 
 
 class AdmissionInputError(ValueError):
@@ -93,6 +94,7 @@ def admit_manifest(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Build and admit safe read receipts from a local authenticated-observation manifest."""
+    validate_connector_transport_admission("authenticated_session_provider_bridge")
     catalog = load_connector_catalog(ROOT / "config" / "apex_connector_catalog.json")
     runtime = CaseBrainOrchestrator(
         producer=Producer(
