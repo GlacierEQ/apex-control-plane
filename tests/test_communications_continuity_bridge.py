@@ -126,6 +126,20 @@ def test_manifest_composes_with_case_execution_mesh():
     assert continuity["outbound_transaction"]["external_action_authorized_default"] is False
     assert continuity["calendar"]["source_of_truth"] is False
     assert continuity["failure_policy"]["ambiguous_matter_binding_fails_closed"] is True
+    assert continuity["failure_policy"]["stale_context_blocks_action"] is False
+    assert continuity["failure_policy"]["stale_context_requires_re_evaluation"] is True
+    assert continuity["failure_policy"]["stale_context_creates_recovery_debt"] is True
+    assert (
+        continuity["failure_policy"]["context_recovery_failure_changes_route_not_mission"]
+        is True
+    )
+    assert continuity["failure_policy"]["context_hydration_is_permission_gate"] is False
+    assert continuity["failure_policy"]["context_missing_mission_stop"] is False
+    assert continuity["context_enrichment"]["mission_stop_authority"] is False
+    assert (
+        continuity["context_enrichment"]["stale_context_effect"]
+        == "REEVALUATE_ENRICH_AND_CONTINUE"
+    )
 
 
 def test_sql_contracts_preserve_security_and_fail_closed_behavior():
