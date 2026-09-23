@@ -23,6 +23,7 @@ if str(SRC) not in sys.path:
 from approved_operation_bridge import action_audit_scope, validate_approved_action_request
 from approved_session_dispatch import build_approved_session_operation_plan
 from connector_receipts import ConnectorReceiptError, load_connector_catalog
+from direct_connector_runtime_contract import validate_connector_transport_admission
 
 
 class ActionInputError(ValueError):
@@ -51,6 +52,7 @@ def prepare_action_plan(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Return an approved host plan and digest-only audit scope for one exact action."""
+    validate_connector_transport_admission("authenticated_session_provider_bridge")
     catalog = load_connector_catalog(ROOT / "config" / "apex_connector_catalog.json")
     current = (now or datetime.now(UTC)).astimezone(UTC)
     request = load_action_request(action_request_path)
