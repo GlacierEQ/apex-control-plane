@@ -1,0 +1,709 @@
+{
+  "schema": "glaciereq.operator-specialist-cohort.v1",
+  "cohort": "founding-specialists-v1",
+  "continuity_position": 1,
+  "authority_holder": "OPERATOR",
+  "agents": [
+    {
+      "logical_agent_id": "OA.CONTINUITY.01",
+      "parent": "OA.OPERATOR",
+      "domain": "administration",
+      "display_name": "Continuity 01",
+      "purpose": "Own continuity recovery, verified state heads, succession, and rehydration across executor changes.",
+      "specialization": {
+        "objective": "No durable mission or agent loses resumable state.",
+        "memory_scope": "estate_continuity",
+        "capability_intent": [
+          "continuity.read",
+          "continuity.verify",
+          "continuity.advance",
+          "recovery.readback"
+        ],
+        "verification_intent": [
+          "verified_continuity_head",
+          "replacement_executor_rehydration_test"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.CONTINUITY_CUSTODIAN",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.RECOVERY_ENGINEER",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.VERIFIER",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.AUTHORITY.01",
+      "parent": "OA.OPERATOR",
+      "domain": "administration",
+      "display_name": "Authority 01",
+      "purpose": "Own delegation integrity, jurisdiction boundaries, authority-inversion detection, revocation, and restoration.",
+      "specialization": {
+        "objective": "Every consequential action resolves to valid Operator-rooted authority.",
+        "memory_scope": "authority_and_delegation",
+        "capability_intent": [
+          "authority.read",
+          "delegation.verify",
+          "authority.anomaly_detect",
+          "authority.restore"
+        ],
+        "verification_intent": [
+          "authority_chain_readback",
+          "inversion_regression_test"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.AUTHORITY_STEWARD",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.SECURITY_GUARDIAN",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.VERIFIER",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.ADMIN.01",
+      "parent": "OA.OPERATOR",
+      "domain": "administration",
+      "display_name": "Administration 01",
+      "purpose": "Own agent census, lifecycle, genome administration, role assignment integrity, succession, quarantine, and retirement.",
+      "specialization": {
+        "objective": "Every durable worker has inspectable identity, genome, roles, lifecycle, and successor path.",
+        "memory_scope": "operator_administration",
+        "capability_intent": [
+          "agent.read",
+          "agent.hatch",
+          "agent.assign_role",
+          "agent.lifecycle",
+          "agent.audit"
+        ],
+        "verification_intent": [
+          "registry_readback",
+          "assignment_hash_check",
+          "lifecycle_transition_test"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.AGENT_ADMINISTRATOR",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.ROLE_ARCHITECT",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.CONTINUITY_CUSTODIAN",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.MEMORY.12",
+      "parent": "OA.OPERATOR",
+      "domain": "cognition",
+      "display_name": "Memory 12",
+      "purpose": "Own provenance-aware durable memory promotion, retrieval, contradiction handling, and scoped recall.",
+      "specialization": {
+        "objective": "Relevant prior knowledge is recovered before work without allowing stale memory to outrank stronger evidence.",
+        "memory_scope": "memory_federation",
+        "capability_intent": [
+          "memory.search",
+          "memory.promote",
+          "memory.correct",
+          "knowledge_graph.read_write"
+        ],
+        "verification_intent": [
+          "provenance_check",
+          "contradiction_visibility_test",
+          "retrieval_relevance_eval"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.MEMORY_CURATOR",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.PROVENANCE_RECORDER",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.CONTEXT_COMPILER",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.CONTEXT.12",
+      "parent": "OA.OPERATOR",
+      "domain": "cognition",
+      "display_name": "Context 12",
+      "purpose": "Compile authority-aware, provenance-aware, minimum-sufficient context before reasoning and execution.",
+      "specialization": {
+        "objective": "Every run starts from the strongest relevant recoverable context rather than prompt-local state.",
+        "memory_scope": "cross_domain_context",
+        "capability_intent": [
+          "memory.search",
+          "evidence.resolve",
+          "mission.read",
+          "continuity.read",
+          "context.compile"
+        ],
+        "verification_intent": [
+          "context_coverage_eval",
+          "source_precedence_check"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.CONTEXT_COMPILER",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.MEMORY_CURATOR",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.PROVENANCE_RECORDER",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.ORCHESTRATION.12",
+      "parent": "OA.OPERATOR",
+      "domain": "cognition",
+      "display_name": "Orchestration 12",
+      "purpose": "Own mission decomposition, route generation, dependency ownership, work assignment, continuation, and next-best-action selection.",
+      "specialization": {
+        "objective": "Missions continuously advance through the strongest coherent executable route.",
+        "memory_scope": "missions_and_dependencies",
+        "capability_intent": [
+          "mission.read_write",
+          "dependency.resolve",
+          "route.rank",
+          "agent.delegate",
+          "open_loop.manage"
+        ],
+        "verification_intent": [
+          "route_falsification",
+          "dependency_owner_check",
+          "mission_progress_readback"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.MISSION_ORCHESTRATOR",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.CAPABILITY_ROUTER",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.OPERATIONS_COORDINATOR",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.CAPABILITY.12",
+      "parent": "OA.OPERATOR",
+      "domain": "runtime",
+      "display_name": "Capability 12",
+      "purpose": "Own live capability discovery, health, eligibility, provider routing, fallbacks, and least-privilege execution selection.",
+      "specialization": {
+        "objective": "Every executable transition uses the strongest currently eligible capability and preserves fallback routes.",
+        "memory_scope": "capability_mesh",
+        "capability_intent": [
+          "capability.discover",
+          "capability.health",
+          "route.select",
+          "provider.probe",
+          "grant.read"
+        ],
+        "verification_intent": [
+          "live_capability_readback",
+          "fallback_route_test",
+          "grant_scope_check"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.CAPABILITY_ROUTER",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.SECURITY_GUARDIAN",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.OBSERVABILITY_SENTINEL",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.SECURITY.12",
+      "parent": "OA.OPERATOR",
+      "domain": "security",
+      "display_name": "Security 12",
+      "purpose": "Own least privilege, secret handling, integrity controls, blast-radius limits, and compromise detection.",
+      "specialization": {
+        "objective": "Execution remains powerful while authority, credentials, and irreversible consequences stay explicitly bounded.",
+        "memory_scope": "security_and_integrity",
+        "capability_intent": [
+          "grant.audit",
+          "secret_reference.audit",
+          "integrity.verify",
+          "risk.assess"
+        ],
+        "verification_intent": [
+          "least_privilege_test",
+          "secret_leak_scan",
+          "integrity_attestation"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.SECURITY_GUARDIAN",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.AUTHORITY_STEWARD",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.VERIFIER",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.RECOVERY.12",
+      "parent": "OA.OPERATOR",
+      "domain": "operations",
+      "display_name": "Recovery 12",
+      "purpose": "Own recovery from partial failure, corruption, provider loss, executor loss, and degraded continuity.",
+      "specialization": {
+        "objective": "Failure produces verified restoration or an exact preserved boundary, never silent state loss.",
+        "memory_scope": "recovery_and_incidents",
+        "capability_intent": [
+          "continuity.restore",
+          "provider.reroute",
+          "state.readback",
+          "incident.manage"
+        ],
+        "verification_intent": [
+          "restore_test",
+          "post_recovery_readback",
+          "continuity_head_verification"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.RECOVERY_ENGINEER",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.INCIDENT_COMMANDER",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.CONTINUITY_CUSTODIAN",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.EMAIL.12",
+      "parent": "OA.OPERATOR",
+      "domain": "email",
+      "display_name": "Email 12",
+      "purpose": "Own high-context email triage, drafting, routing, sending, provider receipts, follow-up, and thread continuity.",
+      "specialization": {
+        "objective": "Email obligations advance to verified provider state with correct context and durable follow-up.",
+        "memory_scope": "email_threads_and_commitments",
+        "capability_intent": [
+          "gmail.search",
+          "gmail.read",
+          "gmail.draft",
+          "gmail.send",
+          "gmail.label",
+          "attachment.read"
+        ],
+        "verification_intent": [
+          "message_id_receipt",
+          "thread_readback",
+          "commitment_open_loop_check"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.EMAIL_OPERATOR",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.COMMUNICATIONS_COORDINATOR",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.DRAFTING_ENGINE",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.RECEIPT_AUDITOR",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.TELECOM.12",
+      "parent": "OA.OPERATOR",
+      "domain": "telecom",
+      "display_name": "Telecom 12",
+      "purpose": "Own calls, SMS, telecom-provider execution, scripts, transcripts, receipts, routing, and follow-up continuity.",
+      "specialization": {
+        "objective": "Telecom actions are prepared, executed through authorized routes, receipted, and bound to resulting commitments.",
+        "memory_scope": "telecom_sessions_and_followups",
+        "capability_intent": [
+          "telecom.capability_probe",
+          "call.prepare",
+          "call.execute",
+          "sms.execute",
+          "transcript.capture",
+          "receipt.readback"
+        ],
+        "verification_intent": [
+          "provider_call_id",
+          "provider_message_id",
+          "transcript_binding",
+          "followup_open_loop_check"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.TELECOM_OPERATOR",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.COMMUNICATIONS_COORDINATOR",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.RECEIPT_AUDITOR",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.DRAFTING.12",
+      "parent": "OA.OPERATOR",
+      "domain": "drafting",
+      "display_name": "Drafting 12",
+      "purpose": "Own evidence-grounded production drafting across correspondence, reports, complaints, proposals, scripts, and formal documents.",
+      "specialization": {
+        "objective": "Every draft is complete, source-faithful, audience-fit, internally consistent, and ready for its downstream action.",
+        "memory_scope": "drafting_patterns_and_source_context",
+        "capability_intent": [
+          "context.compile",
+          "evidence.resolve",
+          "document.compose",
+          "citation.bind"
+        ],
+        "verification_intent": [
+          "source_fidelity_check",
+          "completeness_check",
+          "audience_constraint_check"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.DRAFTING_ENGINE",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.DOCUMENT_ENGINEER",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.CONTEXT_COMPILER",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.DRAFTING.12.12",
+      "parent": "OA.DRAFTING.12",
+      "domain": "drafting",
+      "display_name": "Drafting 12.12 Finalization",
+      "purpose": "Own finalization: reconcile source truth, resolve omissions, validate formatting, and produce handoff-ready final artifacts.",
+      "specialization": {
+        "objective": "A draft becomes a verified final artifact with no known missing required content, broken references, or unverified claims.",
+        "memory_scope": "draft_finalization",
+        "capability_intent": [
+          "document.read",
+          "document.render",
+          "artifact.compare",
+          "citation.verify",
+          "finalize"
+        ],
+        "verification_intent": [
+          "final_render_check",
+          "source_coverage_check",
+          "artifact_hash",
+          "handoff_readiness"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.DRAFTING_ENGINE",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.DOCUMENT_ENGINEER",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.VERIFIER",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.RECEIPT_AUDITOR",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.CASEBUILDING.12",
+      "parent": "OA.OPERATOR",
+      "domain": "casebuilding",
+      "display_name": "Casebuilding 12",
+      "purpose": "Own cumulative case construction across facts, actors, chronology, claims, defenses, evidence, contradictions, remedies, discovery, and executable next actions.",
+      "specialization": {
+        "objective": "Case state compounds into source-bound actionable structure instead of resetting into summaries.",
+        "memory_scope": "case_graphs_and_source_history",
+        "capability_intent": [
+          "case.read_write",
+          "evidence.search",
+          "research.execute",
+          "timeline.build",
+          "claim.map",
+          "artifact.compose"
+        ],
+        "verification_intent": [
+          "source_binding_check",
+          "contradiction_check",
+          "chronology_consistency",
+          "open_gap_registry"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.CASEBUILDER",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.INVESTIGATOR",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.EVIDENCE_ANALYST",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.LEGAL_RESEARCHER",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.RESEARCHER",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.DRAFTING_ENGINE",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.RESEARCH.12",
+      "parent": "OA.OPERATOR",
+      "domain": "research",
+      "display_name": "Research 12",
+      "purpose": "Own source acquisition, ranking, synthesis, uncertainty tracking, and durable research state for mission-defined questions.",
+      "specialization": {
+        "objective": "Research produces current, source-ranked answers with explicit uncertainty and reusable provenance.",
+        "memory_scope": "research_graph_and_sources",
+        "capability_intent": [
+          "web.search",
+          "workspace.search",
+          "source.fetch",
+          "citation.bind",
+          "knowledge.promote"
+        ],
+        "verification_intent": [
+          "source_quality_check",
+          "freshness_check",
+          "claim_citation_coverage"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.RESEARCHER",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.INVESTIGATOR",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.DATA_ANALYST",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.PROVENANCE_RECORDER",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.EVIDENCE.12",
+      "parent": "OA.OPERATOR",
+      "domain": "evidence",
+      "display_name": "Evidence 12",
+      "purpose": "Own evidence custody, integrity, source identity, transformation lineage, contradiction analysis, and evidentiary relationships.",
+      "specialization": {
+        "objective": "Original evidence stays intact and every derived finding remains traceable to source objects and transformations.",
+        "memory_scope": "evidence_registry_and_custody",
+        "capability_intent": [
+          "file.hash",
+          "evidence.register",
+          "evidence.compare",
+          "artifact.lineage",
+          "metadata.extract"
+        ],
+        "verification_intent": [
+          "hash_readback",
+          "custody_chain_check",
+          "original_vs_derivative_check"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.EVIDENCE_CUSTODIAN",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.EVIDENCE_ANALYST",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.PROVENANCE_RECORDER",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.RECEIPT_AUDITOR",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.ENGINEERING.12",
+      "parent": "OA.OPERATOR",
+      "domain": "engineering",
+      "display_name": "Engineering 12",
+      "purpose": "Own architecture-preserving implementation, integration, testing, CI, deployment evidence, and repair across the engineering estate.",
+      "specialization": {
+        "objective": "Engineering changes solve the real problem, preserve compatible gains, pass tests, and leave inspectable source/deployment receipts.",
+        "memory_scope": "repositories_schemas_ci_and_deployments",
+        "capability_intent": [
+          "github.read_write",
+          "ci.inspect",
+          "supabase.migrate",
+          "code.test",
+          "deployment.readback"
+        ],
+        "verification_intent": [
+          "tests_pass",
+          "ci_receipt",
+          "target_state_readback",
+          "non_regression"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.ENGINEER",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.GITHUB_STEWARD",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.SUPABASE_STEWARD",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.VERIFIER",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    },
+    {
+      "logical_agent_id": "OA.VERIFICATION.12",
+      "parent": "OA.OPERATOR",
+      "domain": "verification",
+      "display_name": "Verification 12",
+      "purpose": "Own independent falsification, readback, receipt reconciliation, regression detection, and completion certification.",
+      "specialization": {
+        "objective": "No mission is promoted to verified success unless observable evidence survives independent challenge.",
+        "memory_scope": "verification_receipts_and_regressions",
+        "capability_intent": [
+          "receipt.read",
+          "provider.readback",
+          "test.execute",
+          "diff.inspect",
+          "health.inspect"
+        ],
+        "verification_intent": [
+          "independent_readback",
+          "falsification_pass",
+          "receipt_match",
+          "regression_check"
+        ]
+      },
+      "roles": [
+        {
+          "role_key": "OA.ROLE.VERIFIER",
+          "assignment_mode": "PRIMARY"
+        },
+        {
+          "role_key": "OA.ROLE.RECEIPT_AUDITOR",
+          "assignment_mode": "SECONDARY"
+        },
+        {
+          "role_key": "OA.ROLE.OBSERVABILITY_SENTINEL",
+          "assignment_mode": "SPECIALIST"
+        },
+        {
+          "role_key": "OA.ROLE.SECURITY_GUARDIAN",
+          "assignment_mode": "SPECIALIST"
+        }
+      ]
+    }
+  ]
+}
