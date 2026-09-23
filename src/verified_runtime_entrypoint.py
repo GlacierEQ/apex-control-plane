@@ -92,7 +92,13 @@ def execute_verified_local_smoke(namespace: Mapping[str, Any]) -> dict[str, Any]
     kernel.record_context_recovery(
         "context-recovery:verified-local-smoke",
         recovered_refs=("runtime-source:control_plane_runtime",),
-        details={"strong_boot_session_id": session.session_id},
+        details={
+            "strong_boot_session_id": session.session_id,
+            "prior_corrections_checked": True,
+            "material_context_found": True,
+            "material_context_applied": True,
+            "applied_context_refs": ("runtime-source:control_plane_runtime",),
+        },
     )
     kernel.assert_instruction_fidelity(SMOKE_INSTRUCTION)
     kernel.begin()
