@@ -183,13 +183,13 @@ steps:
       set -euo pipefail
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
-      test "$actual" = "$BUILDKITE_COMMIT"
+      test "$$actual" = "$BUILDKITE_COMMIT"
       PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
       test -x "$$PYTHON_BIN"
       "$$PYTHON_BIN" scripts/reconcile_genius_buildkite.py 2>&1 | tee artifacts/buildkite/genius-reconciliation.log
       "$$PYTHON_BIN" scripts/reconcile_helix_buildkite.py 2>&1 | tee artifacts/buildkite/helix-reconciliation.log
       test -s artifacts/buildkite/genius-reconciliation.json
-      buildkite-agent meta-data set genius-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/genius-reconciliation.json | cut -d ' ' -f 1)"
+      buildkite-agent meta-data set genius-reconciliation-sha256 "$$(shasum -a 256 artifacts/buildkite/genius-reconciliation.json | cut -d ' ' -f 1)"
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/genius-reconciliation.json
@@ -217,14 +217,14 @@ steps:
       set -euo pipefail
       mkdir -p artifacts/buildkite
       actual="$(git rev-parse HEAD)"
-      test "$actual" = "$BUILDKITE_COMMIT"
+      test "$$actual" = "$BUILDKITE_COMMIT"
       PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"
       test -x "$$PYTHON_BIN"
       "$$PYTHON_BIN" scripts/reconcile_mastermind_buildkite.py 2>&1 | tee artifacts/buildkite/mastermind-reconciliation.log
       test -s artifacts/buildkite/mastermind-reconciliation.json
       test -s artifacts/buildkite/mastermind-reconciliation.json.sha256
       shasum -a 256 -c artifacts/buildkite/mastermind-reconciliation.json.sha256
-      buildkite-agent meta-data set mastermind-reconciliation-sha256 "$(shasum -a 256 artifacts/buildkite/mastermind-reconciliation.json | cut -d ' ' -f 1)"
+      buildkite-agent meta-data set mastermind-reconciliation-sha256 "$$(shasum -a 256 artifacts/buildkite/mastermind-reconciliation.json | cut -d ' ' -f 1)"
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/mastermind-reconciliation.json
