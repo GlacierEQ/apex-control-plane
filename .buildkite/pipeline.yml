@@ -74,6 +74,8 @@ steps:
         src/operator_source_binding_contract.py \
         src/control_plane.py \
         src/direct_connector_runtime_contract.py \
+        src/continuous_execution_kernel.py \
+        src/continuous_control_plane_supabase.py \
         src/sitecustomize.py \
         scripts/admit_session_connector_receipts.py \
         scripts/prepare_approved_connector_action.py \
@@ -90,6 +92,8 @@ steps:
         tests/test_reconcile_genius_buildkite.py \
         tests/test_verify_buildkite_evidence_chain.py \
         tests/test_direct_connector_runtime_contract.py \
+        tests/test_continuous_execution_kernel.py \
+        tests/test_continuous_control_plane_supabase.py \
         --junitxml=artifacts/buildkite/operator-fidelity.xml \
         2>&1 | tee artifacts/buildkite/operator-fidelity.log
       buildkite-agent meta-data set operator-fidelity-junit-sha256 "$$(shasum -a 256 artifacts/buildkite/operator-fidelity.xml | cut -d ' ' -f 1)"
@@ -228,7 +232,6 @@ steps:
       git diff --exit-code
     artifact_paths:
       - artifacts/buildkite/mastermind-reconciliation.json
-      - artifacts/buildkite/mastermind-reconciliation.json.sha256
       - artifacts/buildkite/mastermind-reconciliation.log
 
   - label: ":receipt: Verified control-plane CI receipt"
