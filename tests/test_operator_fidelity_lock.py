@@ -66,6 +66,8 @@ def _receipt() -> dict:
             "anti_minimization_checked": True,
             "capability_growth_considered": True,
             "humanized_engineering_standard_applied": True,
+            "improvement_dominates_prior_valid_state": True,
+            "narrative_plurality_preserved": True,
             "operator_words_digest": digest_operator_words(*words),
             "literal_constraints": words,
             "operator_source_bindings": _source_bindings(words),
@@ -88,6 +90,10 @@ def _receipt() -> dict:
                 "unsolicited_operator_asset_disposition": False,
                 "inspection_scope_expansion": False,
                 "operator_owned_asset_identity_preserved": True,
+                "improvement_dominates_prior_valid_state": True,
+                "simplification_as_objective": False,
+                "narrative_plurality_preserved": True,
+                "audience_curation_may_hide_but_not_erase": True,
                 "preserves_prior_valid_gain": True,
                 "maximum_coherent_advance": True,
                 "pro_code_elite_humanized_engineered": True,
@@ -292,3 +298,11 @@ def test_capability_reduction_requires_operator_direction() -> None:
 
     receipt["operator_fidelity"]["operator_directed_reduction"] = True
     assert validate_operator_fidelity_lock(receipt) == ()
+
+def test_better_not_simpler_dominance_is_machine_bound() -> None:
+    receipt = _receipt()
+    receipt["operator_fidelity"]["improvement_dominates_prior_valid_state"] = False
+    receipt["operator_fidelity"]["selected_path"]["simplification_as_objective"] = True
+    errors = validate_operator_fidelity_lock(receipt)
+    assert any("improvement_dominates_prior_valid_state" in error for error in errors)
+    assert any("simplification_as_objective" in error for error in errors)
