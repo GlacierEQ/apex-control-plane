@@ -126,6 +126,20 @@ def test_manifest_composes_with_case_execution_mesh():
     assert continuity["outbound_transaction"]["external_action_authorized_default"] is False
     assert continuity["calendar"]["source_of_truth"] is False
     assert continuity["failure_policy"]["ambiguous_matter_binding_fails_closed"] is True
+    assert continuity["failure_policy"]["stale_context_blocks_action"] is False
+    assert continuity["failure_policy"]["stale_context_requires_re_evaluation"] is True
+    assert continuity["failure_policy"]["stale_context_creates_recovery_debt"] is True
+    assert (
+        continuity["failure_policy"]["context_recovery_failure_changes_route_not_mission"]
+        is True
+    )
+    assert continuity["failure_policy"]["context_hydration_is_permission_gate"] is False
+    assert continuity["failure_policy"]["context_missing_mission_stop"] is False
+    assert continuity["context_enrichment"]["mission_stop_authority"] is False
+    assert (
+        continuity["context_enrichment"]["stale_context_effect"]
+        == "REEVALUATE_ENRICH_AND_CONTINUE"
+    )
 
 
 def test_sql_contracts_preserve_security_and_fail_closed_behavior():
@@ -176,3 +190,20 @@ def test_cross_project_federation_migrations_preserve_authority_boundaries():
     assert "continuity_record_peer_frontier_v1" in backend
     assert "hash_watermark_receipts_only" in backend
     assert "fail_closed_on_conflicting_authority_claims" in backend
+
+def test_stale_context_preflight_reroutes_without_weakening_independent_safety_gates():
+    sql = (
+        ROOT
+        / "db"
+        / "migrations"
+        / "20260923112000_continuity_stale_context_reroute_v1.sql"
+    ).read_text().lower()
+    assert "v_stale then v_block_reason:='context_packet_stale'" not in sql
+    assert "context_stale_recovery_debt" in sql
+    assert "'mission_stop',false" in sql
+    assert "'route_effect',case when v_stale then 'enrich_and_continue'" in sql
+    assert "v_recent_duplicate>0 then v_block_reason:='recent_duplicate_action'" in sql
+    assert "target_has_unrepaired_delivery_failure" in sql
+    assert "context_packet_expired" in sql
+    assert "channel_mismatch" in sql
+

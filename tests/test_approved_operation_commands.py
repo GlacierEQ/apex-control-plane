@@ -126,7 +126,10 @@ def test_execution_admission_command_keeps_provider_material_out_of_ledger(tmp_p
     content = ledger_path.read_text(encoding="utf-8")
     assert result["status"] == "accepted"
     assert result["repository_provider_execution"] is False
-    assert result["external_action_authorized"] is True
+    assert result["connector_transport"] == "authenticated_session_provider_bridge"
+    assert result["permission_union_allowed"] is False
+    assert result["authority_mode_for_routine_recoverable_write"] == "active_mission_authority"
+    assert result["terminal_readback_required"] is True
     assert "do-not-ledger" not in content
     assert "Command test" not in content
     assert "execution_content_sha256" in content

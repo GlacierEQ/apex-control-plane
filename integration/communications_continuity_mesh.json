@@ -87,7 +87,7 @@
     "rule": "deadlines and follow-ups originate in case/continuity commitments; calendar mirrors them idempotently"
   },
   "failure_policy": {
-    "stale_context_blocks_action": true,
+    "stale_context_blocks_action": false,
     "recent_duplicate_blocks_action": true,
     "known_bounced_target_blocks_normal_email": true,
     "delivery_repair_may_target_known_bounce": true,
@@ -96,6 +96,18 @@
     "action_receipts_append_only": true,
     "provider_attempt_never_equals_provider_success": true,
     "cross_project_bulk_case_replication_forbidden": true,
-    "conflicting_authority_claims_fail_closed": true
+    "conflicting_authority_claims_fail_closed": true,
+    "stale_context_requires_re_evaluation": true,
+    "stale_context_creates_recovery_debt": true,
+    "context_recovery_failure_changes_route_not_mission": true,
+    "context_hydration_is_permission_gate": false,
+    "context_missing_mission_stop": false
+  },
+  "context_enrichment": {
+    "transition_semantics": "ENRICHMENT_NOT_PERMISSION",
+    "mission_stop_authority": false,
+    "stale_context_effect": "REEVALUATE_ENRICH_AND_CONTINUE",
+    "recovery_debt_effect": "PRESERVE_GAIN_AND_CONTINUE_STRONGEST_COHERENT_ROUTE",
+    "provider_failure_effect": "ROUTE_LOCAL_DEGRADATION"
   }
 }
