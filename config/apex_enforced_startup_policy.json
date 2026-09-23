@@ -194,6 +194,8 @@
       "context_reconstructed",
       "prior_state_retrieved",
       "continuation_resolved",
+      "operator_input_required_proven_or_not_applicable",
+      "dependency_ownership_classified",
       "target_identity_resolved",
       "operator_intent_resolved",
       "prior_valid_gains_identified",
