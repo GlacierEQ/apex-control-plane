@@ -111,3 +111,50 @@ steps:
 """
     results = {item.name: item for item in MODULE.validate_pipeline(text, policy())}
     assert not results["pipeline.steps_have_queues"].passed
+
+
+def test_linux_small_is_portable_default_and_apex_lineage() -> None:
+    data = policy()
+    results = {item.name: item for item in MODULE.validate_policy(data)}
+    assert results["policy.post_trial_portable_default"].passed
+    assert results["policy.apex_lineage_matches_post_trial_rail"].passed
+    assert data["pipeline_contract"]["portable_default_queue"] == "linux-small"
+
+
+def test_stale_macos_default_is_rejected() -> None:
+    data = policy()
+    data["pipeline_contract"]["portable_default_queue"] = "macos-self"
+    results = {item.name: item for item in MODULE.validate_policy(data)}
+    assert not results["policy.post_trial_portable_default"].passed
+
+
+def test_undeclared_pipeline_queue_is_rejected() -> None:
+    data = policy()
+    text = """
+steps:
+  - label: "bad queue"
+    key: bad-queue
+    timeout_in_minutes: 5
+    agents:
+      queue: ghost-queue
+    command: |
+      set -euo pipefail
+"""
+    results = {item.name: item for item in MODULE.validate_pipeline(text, data)}
+    assert not results["pipeline.queues_declared_in_policy"].passed
+
+
+def test_pipeline_queue_must_match_portable_default() -> None:
+    data = policy()
+    text = """
+steps:
+  - label: "stale macos rail"
+    key: stale-macos
+    timeout_in_minutes: 5
+    agents:
+      queue: macos-self
+    command: |
+      set -euo pipefail
+"""
+    results = {item.name: item for item in MODULE.validate_pipeline(text, data)}
+    assert not results["pipeline.portable_default_queue"].passed
