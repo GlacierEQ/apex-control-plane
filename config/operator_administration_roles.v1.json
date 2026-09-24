@@ -1,0 +1,477 @@
+{
+  "schema": "glaciereq.operator-role-registry.v1",
+  "law": {
+    "continuity_position": 1,
+    "operator_root_authority": true,
+    "role_is_not_agent": true,
+    "role_is_not_authority_grant": true,
+    "executor_is_replaceable": true,
+    "assignment_is_versioned_and_auditable": true
+  },
+  "role_loci": [
+    "continuity",
+    "purpose",
+    "win_condition",
+    "authority",
+    "jurisdiction",
+    "reasoning",
+    "execution",
+    "capability",
+    "memory_context",
+    "evidence_provenance",
+    "verification",
+    "communication",
+    "escalation",
+    "handoff",
+    "observability",
+    "security_risk",
+    "lifecycle"
+  ],
+  "roles": [
+    {
+      "role_key": "OA.ROLE.CONTINUITY_CUSTODIAN",
+      "family": "administration",
+      "display_name": "Continuity Custodian",
+      "purpose": "Preserve resumable identity, mission state, open loops, lineage, and verified recovery heads across executor changes.",
+      "win_condition": "A replacement executor can resume the exact next verified transition without asking the Operator to reconstruct prior state.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.AUTHORITY_STEWARD",
+      "family": "administration",
+      "display_name": "Authority Steward",
+      "purpose": "Maintain delegation, jurisdiction, revocation, authority inversion detection, and restoration under Operator root authority.",
+      "win_condition": "Every consequential action has a valid authority chain; subordinate state never silently supersedes the Operator.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.AGENT_ADMINISTRATOR",
+      "family": "administration",
+      "display_name": "Agent Administrator",
+      "purpose": "Administer agent identities, lifecycle, genomes, assignments, succession, quarantine, and retirement.",
+      "win_condition": "Every durable agent has an inspectable identity, active genome, accountable role set, lifecycle state, and successor path.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.ROLE_ARCHITECT",
+      "family": "administration",
+      "display_name": "Role Architect",
+      "purpose": "Design, version, validate, and evolve role contracts and inheritance without conflating roles with executors.",
+      "win_condition": "Responsibilities are explicit, non-colliding, inherited deliberately, versioned, and independently assignable.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.MEMORY_CURATOR",
+      "family": "cognition",
+      "display_name": "Memory Curator",
+      "purpose": "Promote, scope, reconcile, deprecate, and retrieve durable memory with provenance and contradiction visibility.",
+      "win_condition": "Needed historical context is recoverable, source-bound, scoped correctly, and does not overwrite stronger evidence.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.CONTEXT_COMPILER",
+      "family": "cognition",
+      "display_name": "Context Compiler",
+      "purpose": "Compile the smallest sufficient authority-aware context package before execution.",
+      "win_condition": "Every run receives relevant current instructions, state, memory, evidence, constraints, capabilities, and unresolved contradictions.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.MISSION_ORCHESTRATOR",
+      "family": "cognition",
+      "display_name": "Mission Orchestrator",
+      "purpose": "Decompose desired state into typed work, dependencies, routes, assignments, and continuation.",
+      "win_condition": "The mission continuously advances through the strongest available valid route and no local block becomes a global stop.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.CAPABILITY_ROUTER",
+      "family": "runtime",
+      "display_name": "Capability Router",
+      "purpose": "Resolve available tools, providers, connectors, permissions, freshness, fallbacks, and route eligibility.",
+      "win_condition": "Every executable transition is routed through the strongest currently eligible capability with explicit fallback semantics.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.EXECUTION_WORKER",
+      "family": "runtime",
+      "display_name": "Execution Worker",
+      "purpose": "Perform bounded side effects under delegated authority with idempotency and readback.",
+      "win_condition": "Authorized actions are actually executed, externally receipted where possible, and never confused with plans or attempts.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.EVIDENCE_CUSTODIAN",
+      "family": "evidence",
+      "display_name": "Evidence Custodian",
+      "purpose": "Preserve original evidentiary objects, hashes, custody, derivatives, and source relationships.",
+      "win_condition": "Original evidence remains distinguishable, integrity-checkable, source-bound, and traceable through every transform.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.PROVENANCE_RECORDER",
+      "family": "evidence",
+      "display_name": "Provenance Recorder",
+      "purpose": "Record source, transformation, lineage, decision basis, and provider-native identifiers.",
+      "win_condition": "Material claims, artifacts, decisions, and actions can be reconstructed back to their authoritative sources.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.RECEIPT_AUDITOR",
+      "family": "verification",
+      "display_name": "Receipt Auditor",
+      "purpose": "Verify provider-native receipts, hashes, readback, and claimed external state.",
+      "win_condition": "No externally consequential action is accepted as verified without matching provider/readback evidence when available.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.VERIFIER",
+      "family": "verification",
+      "display_name": "Verifier",
+      "purpose": "Independently test, falsify, read back, and certify claimed outcomes.",
+      "win_condition": "Attempted, executed, and verified remain distinct; terminal success survives independent challenge.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.OBSERVABILITY_SENTINEL",
+      "family": "operations",
+      "display_name": "Observability Sentinel",
+      "purpose": "Monitor health, telemetry, failures, latency, backlog, continuity, and anomalous state.",
+      "win_condition": "Degradation is surfaced with actionable evidence before it silently becomes continuity or execution failure.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.SECURITY_GUARDIAN",
+      "family": "security",
+      "display_name": "Security Guardian",
+      "purpose": "Protect secrets, permissions, blast radius, integrity, least privilege, and compromise response.",
+      "win_condition": "Capabilities are bounded to legitimate scope; secrets remain out of logs; integrity and privilege violations are detectable.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.RECOVERY_ENGINEER",
+      "family": "operations",
+      "display_name": "Recovery Engineer",
+      "purpose": "Restore service, state, identity, routes, and continuity after partial or catastrophic failure.",
+      "win_condition": "Recovery produces verified working state from durable records without erasing history or silently weakening guarantees.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.INCIDENT_COMMANDER",
+      "family": "operations",
+      "display_name": "Incident Commander",
+      "purpose": "Coordinate high-priority incident diagnosis, containment, repair, verification, and communication.",
+      "win_condition": "A degraded system converges toward verified recovery with ownership, priorities, evidence, and unresolved risks visible.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.EMAIL_OPERATOR",
+      "family": "communications",
+      "display_name": "Email Operator",
+      "purpose": "Recover thread context, triage, draft, route, send, label, preserve attachments, and track replies/commitments.",
+      "win_condition": "Email obligations advance with correct context, bounded authority, provider message IDs, follow-up state, and durable thread continuity.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.TELECOM_OPERATOR",
+      "family": "communications",
+      "display_name": "Telecom Operator",
+      "purpose": "Manage calls, SMS, telecom providers, call preparation, transcripts, receipts, routing, and follow-up.",
+      "win_condition": "Telecom actions are attributable, receipted, continuity-preserving, and linked to the mission and resulting commitments.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.DRAFTING_ENGINE",
+      "family": "documents",
+      "display_name": "Drafting Engine",
+      "purpose": "Produce mission-bound polished written artifacts from verified context, evidence, constraints, and audience requirements.",
+      "win_condition": "Drafts are complete, source-faithful, audience-fit, internally consistent, and ready for the intended downstream action.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.CASEBUILDER",
+      "family": "casework",
+      "display_name": "Casebuilder",
+      "purpose": "Construct cumulative case graphs of facts, actors, chronology, claims, defenses, evidence, contradictions, remedies, and next actions.",
+      "win_condition": "Case state compounds rather than resets; every material proposition is source-bound and actionable gaps remain explicit.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.RESEARCHER",
+      "family": "research",
+      "display_name": "Researcher",
+      "purpose": "Acquire and synthesize reliable external or internal sources for a defined question.",
+      "win_condition": "Research answers the actual question with current, relevant, source-ranked evidence and preserved uncertainty.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.LEGAL_RESEARCHER",
+      "family": "research",
+      "display_name": "Legal Researcher",
+      "purpose": "Research statutes, regulations, cases, procedures, authorities, and legal propositions for a defined jurisdiction and date.",
+      "win_condition": "Legal propositions are tied to current controlling or persuasive authority, jurisdiction, procedural posture, and limitations.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.EVIDENCE_ANALYST",
+      "family": "evidence",
+      "display_name": "Evidence Analyst",
+      "purpose": "Analyze evidence for facts, contradictions, temporal relationships, actors, authenticity, and claim support.",
+      "win_condition": "Evidence-derived findings are distinguishable from inference and linked back to exact source objects and transformations.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.DOCUMENT_ENGINEER",
+      "family": "documents",
+      "display_name": "Document Engineer",
+      "purpose": "Create, transform, assemble, validate, and preserve production documents and packets.",
+      "win_condition": "Final documents are structurally valid, complete, rendered correctly, source-traceable, and ready for delivery.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.DATA_ANALYST",
+      "family": "analysis",
+      "display_name": "Data Analyst",
+      "purpose": "Transform, analyze, model, and visualize structured data with reproducible methods.",
+      "win_condition": "Quantitative conclusions are reproducible from identified inputs and calculations, with data-quality limitations explicit.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.ENGINEER",
+      "family": "engineering",
+      "display_name": "Engineer",
+      "purpose": "Design, implement, test, integrate, and maintain software and infrastructure changes.",
+      "win_condition": "Changes solve the defined problem, preserve compatible architecture, pass verification, and leave inspectable deployment/source receipts.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.GITHUB_STEWARD",
+      "family": "engineering",
+      "display_name": "GitHub Steward",
+      "purpose": "Administer repositories, branches, commits, PRs, issues, CI bindings, and source authority.",
+      "win_condition": "Repository state remains coherent, reviewable, verifiable, and connected to its operational deployment/control-plane state.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.SUPABASE_STEWARD",
+      "family": "engineering",
+      "display_name": "Supabase Steward",
+      "purpose": "Administer schemas, migrations, RLS, functions, operational state, health, and database integrity.",
+      "win_condition": "Database changes are migration-backed, least-privilege, read back, advisor-checked, and consistent with source authority.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.FILE_CUSTODIAN",
+      "family": "operations",
+      "display_name": "File Custodian",
+      "purpose": "Discover, classify, organize, preserve, deduplicate, version, and route files without losing provenance.",
+      "win_condition": "Files remain findable, correctly scoped, non-destructively organized, and traceable to their source and consuming missions.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.NOTION_STEWARD",
+      "family": "operations",
+      "display_name": "Notion Steward",
+      "purpose": "Maintain human-readable workspace projections, databases, pages, and dashboards from authoritative state.",
+      "win_condition": "Notion remains a useful operator projection without becoming an accidental source of underlying execution truth.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.COMMUNICATIONS_COORDINATOR",
+      "family": "communications",
+      "display_name": "Communications Coordinator",
+      "purpose": "Coordinate cross-channel outbound/inbound communication, commitments, routing, timing, and follow-up.",
+      "win_condition": "Communications stay consistent across channels and every external commitment has an owner, state, and next action.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.INVESTIGATOR",
+      "family": "research",
+      "display_name": "Investigator",
+      "purpose": "Reconstruct actors, events, relationships, records, anomalies, and unresolved questions from source-bearing evidence.",
+      "win_condition": "Investigative hypotheses remain separated from verified facts while missing custodians, records, and next acquisition steps are explicit.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.CALENDAR_SCHEDULER",
+      "family": "operations",
+      "display_name": "Calendar Scheduler",
+      "purpose": "Manage deadlines, events, availability, reminders, temporal dependencies, and schedule commitments.",
+      "win_condition": "Time-bound obligations are correctly represented, conflict-aware, linked to missions, and not silently missed.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.OPERATIONS_COORDINATOR",
+      "family": "operations",
+      "display_name": "Operations Coordinator",
+      "purpose": "Coordinate miscellaneous operational work that spans domains without stealing specialized authority.",
+      "win_condition": "Cross-domain work advances with clear ownership, dependencies, handoffs, and verified closure.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.CAPACITY_PLANNER",
+      "family": "infrastructure",
+      "display_name": "Capacity Planner",
+      "purpose": "Plan resource capacity requirements from observed demand and constraints.",
+      "win_condition": "Capacity decisions are evidence-based, bounded, and verified against actual utilization and service requirements.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.CONFIG_VALIDATOR",
+      "family": "infrastructure",
+      "display_name": "Config Validator",
+      "purpose": "Validate configuration changes against schemas, invariants, compatibility, and deployment constraints.",
+      "win_condition": "Invalid or drifting configuration is caught before it can corrupt runtime or continuity.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.DEPENDENCY_TRACKER",
+      "family": "infrastructure",
+      "display_name": "Dependency Tracker",
+      "purpose": "Track service, repository, provider, data, and execution dependencies.",
+      "win_condition": "Dependencies have explicit owners, state, freshness, and impact so blockers route correctly.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.DEPLOYMENT_COORDINATOR",
+      "family": "infrastructure",
+      "display_name": "Deployment Coordinator",
+      "purpose": "Coordinate releases, migrations, environment promotion, rollback, and deployment verification.",
+      "win_condition": "Deployments are attributable, reversible where possible, and verified against target-state readback.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.METRIC_COLLECTOR",
+      "family": "infrastructure",
+      "display_name": "Metric Collector",
+      "purpose": "Collect and aggregate structured operational metrics.",
+      "win_condition": "Metrics are fresh, attributable, correctly scoped, and usable by health and verification systems.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.SERVICE_MONITOR",
+      "family": "infrastructure",
+      "display_name": "Service Monitor",
+      "purpose": "Monitor service availability and health.",
+      "win_condition": "Service degradation is detected with timely, inspectable evidence.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.AUTO_SCALER",
+      "family": "infrastructure",
+      "display_name": "Auto Scaler",
+      "purpose": "Adjust resource scale within bounded policy from verified demand signals.",
+      "win_condition": "Scaling actions preserve availability, stay within limits, and produce observable before/after state.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.CHAOS_ENGINEER",
+      "family": "infrastructure",
+      "display_name": "Chaos Engineer",
+      "purpose": "Test resilience through controlled, bounded fault injection.",
+      "win_condition": "Resilience assumptions are challenged without uncontrolled blast radius and recovery behavior is measured.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.CIRCUIT_BREAKER",
+      "family": "infrastructure",
+      "display_name": "Circuit Breaker",
+      "purpose": "Protect systems from repeated failing dependencies while preserving alternate routes.",
+      "win_condition": "Repeated failure is contained locally and eligible fallback routes remain available.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.SELF_HEALER",
+      "family": "infrastructure",
+      "display_name": "Self Healer",
+      "purpose": "Repair known operational failures automatically within bounded authority.",
+      "win_condition": "Known failures are repaired with evidence, idempotency, verification, and escalation on uncertainty.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.LEARNING_AGENT",
+      "family": "infrastructure",
+      "display_name": "Learning Agent",
+      "purpose": "Learn from verified outcomes and corrections to improve future routing and execution.",
+      "win_condition": "Only validated outcomes change durable behavior, with provenance and rollback of defective learning.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.COST_OPTIMIZER",
+      "family": "infrastructure",
+      "display_name": "Cost Optimizer",
+      "purpose": "Identify cost-reduction opportunities without violating mission or reliability requirements.",
+      "win_condition": "Savings are quantified, reversible where possible, and never silently trade away required capability.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.ANOMALY_DETECTOR",
+      "family": "infrastructure",
+      "display_name": "Anomaly Detector",
+      "purpose": "Detect statistically or semantically unusual operational behavior.",
+      "win_condition": "Anomalies are surfaced with evidence and uncertainty without being mislabeled as confirmed incidents.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.PERFORMANCE_OPTIMIZER",
+      "family": "infrastructure",
+      "display_name": "Performance Optimizer",
+      "purpose": "Identify and improve performance bottlenecks from measured evidence.",
+      "win_condition": "Performance changes show verified improvement without regressing correctness, continuity, or reliability.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.PREDICTIVE_ALERTING",
+      "family": "infrastructure",
+      "display_name": "Predictive Alerting",
+      "purpose": "Forecast likely incidents from current and historical telemetry.",
+      "win_condition": "Predictions are calibrated, attributable to signals, and routed as anticipatory evidence rather than facts.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.ALERT_MANAGER",
+      "family": "infrastructure",
+      "display_name": "Alert Manager",
+      "purpose": "Route, deduplicate, prioritize, and track alerts.",
+      "win_condition": "Important alerts reach the correct owner with state and follow-up while noise is controlled transparently.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.HEALTH_CHECKER",
+      "family": "infrastructure",
+      "display_name": "Health Checker",
+      "purpose": "Perform deep health checks across required system surfaces.",
+      "win_condition": "Health claims are based on live readback and required dependency verification, not static configuration.",
+      "version": "1.0.0"
+    },
+    {
+      "role_key": "OA.ROLE.LOG_ANALYZER",
+      "family": "infrastructure",
+      "display_name": "Log Analyzer",
+      "purpose": "Analyze operational logs for failures, patterns, correlations, and evidence.",
+      "win_condition": "Log-derived findings are reproducible, time-scoped, and linked to underlying events and systems.",
+      "version": "1.0.0"
+    }
+  ],
+  "existing_runtime_primary_role_map": {
+    "capacity-planner": "OA.ROLE.CAPACITY_PLANNER",
+    "config-validator": "OA.ROLE.CONFIG_VALIDATOR",
+    "dependency-tracker": "OA.ROLE.DEPENDENCY_TRACKER",
+    "deployment-coordinator": "OA.ROLE.DEPLOYMENT_COORDINATOR",
+    "metric-collector": "OA.ROLE.METRIC_COLLECTOR",
+    "service-monitor": "OA.ROLE.SERVICE_MONITOR",
+    "auto-scaler": "OA.ROLE.AUTO_SCALER",
+    "chaos-engineer": "OA.ROLE.CHAOS_ENGINEER",
+    "circuit-breaker": "OA.ROLE.CIRCUIT_BREAKER",
+    "incident-commander": "OA.ROLE.INCIDENT_COMMANDER",
+    "self-healer": "OA.ROLE.SELF_HEALER",
+    "learning-agent": "OA.ROLE.LEARNING_AGENT",
+    "cost-optimizer": "OA.ROLE.COST_OPTIMIZER",
+    "ml-anomaly-detector": "OA.ROLE.ANOMALY_DETECTOR",
+    "performance-optimizer": "OA.ROLE.PERFORMANCE_OPTIMIZER",
+    "predictive-alerting": "OA.ROLE.PREDICTIVE_ALERTING",
+    "alert-manager": "OA.ROLE.ALERT_MANAGER",
+    "health-checker": "OA.ROLE.HEALTH_CHECKER",
+    "log-analyzer": "OA.ROLE.LOG_ANALYZER"
+  }
+}
