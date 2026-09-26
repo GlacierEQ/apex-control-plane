@@ -21,7 +21,10 @@ from pathlib import Path
 import threading
 from typing import Any, Callable, Mapping, Sequence
 
-from operator_source_binding_contract import verify_source_span_binding
+from operator_source_authority import (
+    OperatorSourceAuthorityError,
+    enforce_verbatim_response_fidelity,
+)
 
 LOGGER = logging.getLogger("glaciereq.gatekeeper")
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -498,23 +501,17 @@ class StartupGateEnforcer:
                 "verbatim source span is unresolved; recover and bind the exact Operator source span before emitting text"
             )
 
-        verification = verify_source_span_binding(
-            binding,
-            resolver=resolver,
-            prefix="verbatim_response",
-            require_unsuperseded=True,
-        )
-        if verification.errors or verification.span_text is None:
-            detail = verification.errors[0] if verification.errors else "source span unresolved"
-            return self._verbatim_correction(
-                "verbatim source verification failed: " + detail
-            )
-
         emitted = _primary_provider_text(output)
-        if emitted != verification.span_text:
-            return self._verbatim_correction(
-                "emitted verbatim text must exactly equal the independently verified requested source span"
+        try:
+            enforce_verbatim_response_fidelity(
+                requested_verbatim=True,
+                source_binding=binding,
+                source_resolver=resolver,
+                emitted_operator_quote=emitted,
             )
+        except OperatorSourceAuthorityError as exc:
+            return self._verbatim_correction(str(exc))
+
         self._audit("verbatim_response_verified", success=True)
         return dict(output)
 
