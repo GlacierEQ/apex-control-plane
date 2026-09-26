@@ -132,8 +132,10 @@ jobs:
               matches_expected_state=True,
               target_reached=True,
           )
-          if final.phase != "complete":
-              raise SystemExit("truthful intermediate execution did not complete")
+          if final.phase != "repairing":
+              raise SystemExit("mutation completed without a demonstrated mission outcome")
+          if "mission_outcome_required_for_mutation_completion" not in final.repair_reasons:
+              raise SystemExit("missing mission-outcome completion repair reason")
           if kernel.outcome_state()["recorded"] is not False:
-              raise SystemExit("intermediate completion was incorrectly promoted to mission outcome")
+              raise SystemExit("intermediate gain was incorrectly promoted to mission outcome")
           PY
