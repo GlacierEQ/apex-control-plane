@@ -1,0 +1,55 @@
+name: Notion Mission Cockpit Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "config/notion_mission_cockpit_projection.v1.json"
+      - "src/notion_mission_cockpit_contract.py"
+      - "tests/test_notion_mission_cockpit_contract.py"
+      - ".github/workflows/notion-mission-cockpit-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "config/notion_mission_cockpit_projection.v1.json"
+      - "src/notion_mission_cockpit_contract.py"
+      - "tests/test_notion_mission_cockpit_contract.py"
+      - ".github/workflows/notion-mission-cockpit-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Notion cockpit projection contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact source identity
+        shell: bash
+        run: |
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$(git rev-parse HEAD)" = "$expected"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependency
+        run: python -m pip install --upgrade pytest
+
+      - name: Validate JSON and compile contract
+        run: |
+          python -m json.tool config/notion_mission_cockpit_projection.v1.json >/dev/null
+          python -m py_compile src/notion_mission_cockpit_contract.py
+
+      - name: Run cockpit donor regression tests
+        run: PYTHONPATH=src:. python -m pytest -q tests/test_notion_mission_cockpit_contract.py
