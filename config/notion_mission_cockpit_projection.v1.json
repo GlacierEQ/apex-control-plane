@@ -1,0 +1,32 @@
+{
+  "contract_id": "notion-mission-cockpit-projection",
+  "donor": {
+    "blob_sha": "1c889132dfb1a1a846cd8c2d1500d85d21fdb6d6",
+    "branch": "feat/durable-workflow-machine",
+    "path": "adapters/notion/adapter.py"
+  },
+  "fields": {
+    "Current Step": "current_step",
+    "Failed Mutations": "failed_mutations",
+    "GitHub": "repositories",
+    "Mission": "objective",
+    "Open Blocker": "open_blocker",
+    "Priority": "priority",
+    "Receipt": "receipt_id",
+    "Run": "correlation_id",
+    "Started": "created_at",
+    "Status": "status",
+    "Verified Mutations": "verified_mutations",
+    "Worker": "worker"
+  },
+  "schema_version": 1,
+  "semantics": {
+    "authority": "projection_only",
+    "in_memory_readback_allowed": false,
+    "mock_success_allowed": false,
+    "provider": "notion",
+    "provider_receipt_required": true,
+    "provider_write_enabled": false,
+    "terminal_readback_required": true
+  }
+}
