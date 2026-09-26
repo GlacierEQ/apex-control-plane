@@ -169,6 +169,20 @@ def validate_operator_fidelity_lock(
             )
         errors.extend(_validate_operator_source_bindings(row, constraints))
 
+    if (
+        (isinstance(task, str) and "verbatim" in task.casefold())
+        or row.get("verbatim_request_active") is True
+    ):
+        verbatim_binding = row.get("verbatim_response_binding")
+        if isinstance(verbatim_binding, Mapping):
+            verification = verify_source_span_binding(
+                verbatim_binding,
+                resolver=_operator_source_resolver,
+                prefix="operator_fidelity.verbatim_response_binding",
+                require_unsuperseded=True,
+            )
+            errors.extend(verification.errors)
+
     normalized = "\n".join(constraints).lower()
     anchor_groups = (
         ("context first",),
@@ -205,6 +219,7 @@ def validate_operator_fidelity_lock(
 
 
 def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
+    global _IN_PROCESS
     os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
     validation = _issue(False, "uplift_required", errors)
     _IN_PROCESS = validation
@@ -287,4 +302,6 @@ def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
     )
     emit_startup_continuation(continuation)
     os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
-    return _issue(False, "uplift_required", errors)
+    validation = _issue(False, "uplift_required", errors)
+    _IN_PROCESS = validation
+    return validation
