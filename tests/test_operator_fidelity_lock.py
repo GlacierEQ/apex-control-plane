@@ -338,3 +338,33 @@ def test_lock_applies_verbatim_task_requirements() -> None:
     )
     assert any("verbatim_request_active" in error for error in errors)
     assert any("verbatim_source_rehydrated" in error for error in errors)
+
+
+def test_verbatim_response_binding_is_independently_read_back() -> None:
+    receipt = _receipt()
+    row = receipt["operator_fidelity"]
+    row["verbatim_request_active"] = True
+    row["verbatim_source_rehydrated"] = True
+    row["verbatim_paraphrase_substitution"] = False
+    row["verbatim_quote_spans_exact_source"] = True
+    row["verbatim_response_binding"] = dict(row["operator_source_bindings"][1])
+    row["verbatim_response_binding"]["source_sha256"] = "sha256:" + "0" * 64
+
+    errors = validate_operator_fidelity_lock(
+        receipt,
+        task="Return that instruction VERBATIM",
+    )
+
+    assert any(
+        "verbatim_response_binding.source_sha256 does not match" in error
+        for error in errors
+    )
+
+
+def test_failed_lock_result_replaces_prior_success_readback(monkeypatch, tmp_path) -> None:
+    lock._IN_PROCESS = lock._issue(True, "complete")
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    result = lock._continue_lock(("fresh failure",))
+
+    assert result.ok is False
+    assert lock.get_in_process_operator_fidelity_lock() is result
