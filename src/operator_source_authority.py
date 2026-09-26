@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
+from operator_source_binding_contract import SourceResolver, verify_source_span_binding
+
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / "config" / "operator_source_authority_contract.json"
 
@@ -29,21 +31,16 @@ def _require(mapping: Mapping[str, Any], key: str, expected: Any, *, scope: str)
 def enforce_verbatim_response_fidelity(
     *,
     requested_verbatim: bool,
-    recovered_operator_source: str | None,
+    source_binding: Mapping[str, Any] | None,
+    source_resolver: SourceResolver | None,
     emitted_operator_quote: str | None,
 ) -> None:
-    """Reject paraphrase or unsourced text when the Operator requests verbatim words.
-
-    This is output fidelity, not a new permission gate. A failed source recovery
-    means the verbatim claim is unresolved; it never authorizes a paraphrase to
-    impersonate the Operator's literal words.
-    """
+    """Require an exact, independently resolved Operator source span."""
     if not requested_verbatim:
         return
 
     policy = enforce_operator_source_authority()
     source_fidelity = policy["source_fidelity"]
-
     if (
         source_fidelity.get("verbatim_request_requires_source_rehydration_before_response")
         is not True
@@ -55,17 +52,29 @@ def enforce_verbatim_response_fidelity(
             "verbatim response fidelity policy is not fully enforced"
         )
 
-    if not isinstance(recovered_operator_source, str) or not recovered_operator_source:
+    if not isinstance(source_binding, Mapping) or source_resolver is None:
         raise OperatorSourceAuthorityError(
-            "verbatim response requires recovered Operator source before response"
+            "verbatim response requires an independently resolved source binding"
         )
     if not isinstance(emitted_operator_quote, str) or not emitted_operator_quote:
         raise OperatorSourceAuthorityError(
             "verbatim response requires a non-empty exact Operator quote"
         )
-    if emitted_operator_quote not in recovered_operator_source:
+
+    verification = verify_source_span_binding(
+        source_binding,
+        resolver=source_resolver,
+        prefix="verbatim_response",
+        require_unsuperseded=True,
+    )
+    if verification.errors or verification.span_text is None:
+        detail = verification.errors[0] if verification.errors else "source span unresolved"
         raise OperatorSourceAuthorityError(
-            "verbatim response must be an exact source span; paraphrase is invalid"
+            "verbatim source verification failed: " + detail
+        )
+    if emitted_operator_quote != verification.span_text:
+        raise OperatorSourceAuthorityError(
+            "verbatim response must exactly equal the exact requested source span"
         )
 
 
