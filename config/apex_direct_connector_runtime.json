@@ -32,11 +32,7 @@
   "harvested_mechanisms": [
     "transport_identity_before_capability_resolution",
     "cross_transport_permission_union_rejection",
-    "route_mutation_class_validation",
     "same_connector_same_target_terminal_readback",
-    "pipeline_definition_hash_binding",
-    "acyclic_dependency_validation",
-    "receipt_identity_and_stage_count_validation",
     "explicit_nonclaims_for_undeployed_capabilities"
   ],
   "superseded_donor_predicates": [
