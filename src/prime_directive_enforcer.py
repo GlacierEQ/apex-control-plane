@@ -471,6 +471,29 @@ class StartupGateEnforcer:
             return dict(output)
 
         if not isinstance(binding, Mapping) or resolver is None:
+            try:
+                from prime_directive_boot import receipt_from_environment
+                from operator_fidelity_lock import _operator_source_resolver
+
+                receipt = receipt_from_environment()
+                row = (
+                    receipt.get("operator_fidelity")
+                    if isinstance(receipt, Mapping)
+                    else None
+                )
+                if not isinstance(binding, Mapping) and isinstance(row, Mapping):
+                    candidate = row.get("verbatim_response_binding")
+                    if isinstance(candidate, Mapping):
+                        binding = candidate
+                if resolver is None:
+                    resolver = _operator_source_resolver
+            except Exception as exc:  # noqa: BLE001 - unresolved recovery is local
+                return self._verbatim_correction(
+                    "verbatim source recovery is unresolved: "
+                    + exc.__class__.__name__
+                )
+
+        if not isinstance(binding, Mapping) or resolver is None:
             return self._verbatim_correction(
                 "verbatim source span is unresolved; recover and bind the exact Operator source span before emitting text"
             )
