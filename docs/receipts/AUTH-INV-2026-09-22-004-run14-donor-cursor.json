@@ -1,0 +1,34 @@
+{
+  "schema": "glaciereq.authority-alignment.donor-cursor.v1",
+  "incident": "AUTH-INV-2026-09-22-004",
+  "recorded_at": "2026-09-26T16:22:13Z",
+  "provider_state": {
+    "apex_boot_core_main": "ad4e0d57e566970f6dab5b508e700a8538d551c1",
+    "apex_control_plane_main": "341a797a202bc1fe54423aaa4fe3e51a8ba5dd16",
+    "donor": "feat/durable-workflow-machine",
+    "donor_head": "4e40fd64ed721f932e18d1931b8ef3e3926c218b",
+    "harvest_branch": "harvest/durable-workflow-manus-safe-contract-20260925",
+    "harvest_head_before_receipt": "d8a9855d9236ad838808bffffbf88889ab51aea5"
+  },
+  "stage": [
+    "MANUS_SAFE_REWRITE_PROVIDER_WRITTEN_AND_READBACK_VERIFIED",
+    "MANUS_TEST_ARTIFACT_PROVIDER_WRITTEN_AND_READBACK_VERIFIED",
+    "AGENT_RESULT_SAFE_REWRITE_PROVIDER_WRITTEN_AND_READBACK_VERIFIED",
+    "PR_CREATION_BLOCKED_BY_PLATFORM_SAFETY_BOUNDARY"
+  ],
+  "classifications": {
+    "contracts/context_pack.py": "CONTAINED_IN_MAIN_MECHANISM",
+    "contracts/mission.py": "CONTAINED_IN_MAIN_MECHANISM",
+    "contracts/receipt.py": "CONTAINED_IN_MAIN_MECHANISM",
+    "adapters/roottruth/store.py": "CONFLICTING_DONOR_EXCLUDED"
+  },
+  "exclusions": [
+    "implicit success",
+    "implicit manus_worker provider identity",
+    "mock credentials or secrets",
+    "fabricated provider task IDs or completion",
+    "callback observation as terminal provider verification",
+    "RootTruth or single-owner authority semantics"
+  ],
+  "next_executable_transition": "Recheck exact-head workflows/PR path; if integration remains blocked, continue donor cursor after mission/receipt into unresolved adapter/infrastructure mechanisms without rescanning resolved families."
+}
