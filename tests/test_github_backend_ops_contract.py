@@ -179,3 +179,18 @@ def test_unbound_desktop_commander_is_not_claimable():
     worker = m["workers"]["glacier_desktop_commander"]
     assert worker["status"] == "source_ready_unbound"
     assert worker["selection_enabled"] is False
+
+
+def test_desktop_commander_donor_receipts_and_migrations_are_preserved():
+    connector = json.loads((ROOT / "connectors" / "github_backend_ops.json").read_text())
+    worker = connector["workers"]["glacier_desktop_commander"]
+    receipts = worker["historical_donor_receipts"]
+    assert worker["status"] == "source_ready_unbound"
+    assert receipts["source_branch"] == "feat/desktop-commander-control-plane-v1"
+    assert receipts["source_head"] == "28e738e5f27f330ad8911ce7627f6121a846529f"
+    assert receipts["bridge_function"] == "apex-desktop-commander-bridge"
+    assert receipts["bridge_version"] == 3
+    assert receipts["runtime_hardening"].startswith("passed live:")
+    assert receipts["execution_proof"].startswith("passed rollback-only live probe:")
+    assert receipts["device_binding"].startswith("passed rollback-only live probe:")
+    assert "20260902223902 desktop_commander_binding_registry_v10" in connector["migrations"]
