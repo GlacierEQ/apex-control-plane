@@ -56,7 +56,7 @@ def enforce_verbatim_response_fidelity(
         raise OperatorSourceAuthorityError(
             "verbatim response requires an independently resolved source binding"
         )
-    if not isinstance(emitted_operator_quote, str) or not emitted_operator_quote:
+    if not isinstance(emitted_operator_quote, str) or not emitted_operator_quote.strip():
         raise OperatorSourceAuthorityError(
             "verbatim response requires a non-empty exact Operator quote"
         )
