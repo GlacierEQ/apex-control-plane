@@ -28,6 +28,7 @@ from auto_boot import BootError
 from operator_source_binding_contract import (
     operator_source_binding_receipt_contract,
     validate_operator_source_binding_shape,
+    validate_source_span_binding_shape,
 )
 from prime_directive_boot import receipt_from_environment
 
@@ -321,6 +322,19 @@ def validate_operator_fidelity_receipt(
             errors.append(
                 "operator_fidelity.verbatim_quote_spans_exact_source must be true for a verbatim task"
             )
+        verbatim_binding = row.get("verbatim_response_binding")
+        if not isinstance(verbatim_binding, Mapping):
+            errors.append(
+                "operator_fidelity.verbatim_response_binding must bind the exact requested source span"
+            )
+        else:
+            errors.extend(
+                validate_source_span_binding_shape(
+                    verbatim_binding,
+                    prefix="operator_fidelity.verbatim_response_binding",
+                    require_unsuperseded=True,
+                )
+            )
 
     corrections = row.get("corrections_applied")
     if not isinstance(corrections, list):
@@ -458,6 +472,11 @@ def build_operator_fidelity_request(
                 "verbatim_source_rehydrated": verbatim_requested,
                 "verbatim_paraphrase_substitution": False,
                 "verbatim_quote_spans_exact_source": verbatim_requested,
+                "verbatim_response_binding": (
+                    operator_source_binding_receipt_contract()[0]
+                    if verbatim_requested
+                    else None
+                ),
                 "relevant_corrections_loaded": True,
                 "instruction_displacement_checked": True,
                 "objective_function_matches_operator": True,
