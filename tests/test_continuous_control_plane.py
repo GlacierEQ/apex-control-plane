@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import sys
@@ -17,8 +18,12 @@ NOW = datetime(2026, 9, 3, 9, 15, tzinfo=UTC)
 def cfg():
     return load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
 
-def plane(tmp_path):
-    return ContinuousControlPlane.from_config(JsonlControlStore(tmp_path), cfg())
+def plane(tmp_path, authorization_checker=None):
+    return ContinuousControlPlane.from_config(
+        JsonlControlStore(tmp_path),
+        cfg(),
+        authorization_checker=authorization_checker,
+    )
 
 def event(kind="gmail.reply.received"):
     return ControlEvent(
@@ -38,17 +43,25 @@ def test_event_deduplicates_and_routes_once(tmp_path):
     assert first[0].capability=="case.response.ingest"
     assert cp.ingest_event(event())==[]
 
-def test_external_mutation_requires_exact_approval(tmp_path):
-    cp=plane(tmp_path)
+def test_external_mutation_requires_verified_authorization_checker(tmp_path):
+    allowed_ref = "source:operator-plan#auth=" + ("a" * 64)
+    cp=plane(tmp_path, authorization_checker=lambda item, ref: ref == allowed_ref)
     work=cp.ingest_event(event("dockets.referral.ready"))[0]
     compile_work(cp,work.work_id)
     cp.claim_next(worker_id="case-worker",capabilities=[work.capability],now=NOW)
-    cp.transition(work.work_id,WorkState.EXECUTING,reason="execute",lease_owner="case-worker",lease_expires_at=NOW+timedelta(minutes=1))
+    cp.transition(work.work_id,WorkState.EXECUTING,reason="execute")
     cp.transition(work.work_id,WorkState.RECONCILING,reason="reconcile")
     cp.transition(work.work_id,WorkState.CHANGESET_READY,reason="ready")
     with pytest.raises(PermissionError):
-        cp.transition(work.work_id,WorkState.MUTATING,reason="send")
-    assert cp.transition(work.work_id,WorkState.MUTATING,reason="approved",approval_ref="approval://operator/1").state is WorkState.MUTATING
+        cp.transition(work.work_id,WorkState.MUTATING,reason="missing")
+    with pytest.raises(PermissionError):
+        cp.transition(work.work_id,WorkState.MUTATING,reason="fabricated",approval_ref="approval://operator/1")
+    assert cp.transition(
+        work.work_id,
+        WorkState.MUTATING,
+        reason="source-authorized",
+        approval_ref=allowed_ref,
+    ).state is WorkState.MUTATING
 
 def test_completion_requires_receipt(tmp_path):
     cp=plane(tmp_path)
@@ -96,3 +109,59 @@ def test_routes_cover_interconnected_domains():
     ):
         assert required in routes
     assert routes["dockets.referral.ready"]["external_action"] is True
+
+
+def test_executing_preserves_existing_claim_lease(tmp_path):
+    cp=plane(tmp_path)
+    work=cp.ingest_event(event())[0]
+    compile_work(cp,work.work_id)
+    claimed=cp.claim_next(worker_id="case-worker",capabilities=[work.capability],now=NOW,lease_seconds=30)
+    assert claimed is not None
+    executing=cp.transition(work.work_id,WorkState.EXECUTING,reason="execute")
+    assert executing.lease_owner == "case-worker"
+    assert executing.lease_expires_at == NOW + timedelta(seconds=30)
+
+
+def test_stale_second_instance_cannot_double_claim(tmp_path):
+    store=JsonlControlStore(tmp_path)
+    cp1=ContinuousControlPlane.from_config(store,cfg())
+    work=cp1.ingest_event(event())[0]
+    compile_work(cp1,work.work_id)
+    cp2=ContinuousControlPlane.from_config(JsonlControlStore(tmp_path),cfg())
+    first=cp1.claim_next(worker_id="worker-1",capabilities=[work.capability],now=NOW)
+    assert first is not None
+    assert cp2.claim_next(worker_id="worker-2",capabilities=[work.capability],now=NOW) is None
+
+
+def test_expired_dispatched_work_at_attempt_limit_dead_letters(tmp_path):
+    cp=plane(tmp_path)
+    work=cp.ingest_event(event())[0]
+    compile_work(cp,work.work_id)
+    claimed=cp.claim_next(worker_id="worker-1",capabilities=[work.capability],now=NOW,lease_seconds=1)
+    assert claimed is not None
+    exhausted=replace(claimed,max_attempts=claimed.attempt)
+    cp.work[work.work_id]=exhausted
+    cp.store.append_work(exhausted,reason="test_attempt_limit")
+    changed=cp.reconcile_expired_leases(NOW+timedelta(seconds=2))
+    assert changed[0].state is WorkState.DEAD_LETTER
+
+
+def test_naive_now_is_rejected_explicitly(tmp_path):
+    cp=plane(tmp_path)
+    work=cp.ingest_event(event())[0]
+    compile_work(cp,work.work_id)
+    with pytest.raises(ValueError, match="timezone-aware"):
+        cp.claim_next(
+            worker_id="worker-1",
+            capabilities=[work.capability],
+            now=datetime(2026,9,3,9,15),
+        )
+
+
+def test_recovery_tolerates_only_torn_final_jsonl_line(tmp_path):
+    cp=plane(tmp_path)
+    work=cp.ingest_event(event())[0]
+    with cp.store.work_path.open("ab") as handle:
+        handle.write(b'{"work_id":"torn"')
+    restored=plane(tmp_path)
+    assert work.work_id in restored.work
