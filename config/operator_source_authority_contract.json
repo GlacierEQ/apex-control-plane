@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.4.0",
+  "schema_version": "1.5.0",
   "name": "APEX Operator Source Authority Contract",
   "fail_closed": true,
   "personalization": {
@@ -37,7 +37,10 @@
     "compression_must_preserve_qualifiers_distinctions_scope_and_corrections": true,
     "summary_without_source_lineage_is_non_authoritative": true,
     "repeated_summary_does_not_gain_authority": true,
-    "assistant_interpretation_must_remain_separate_from_operator_words": true
+    "assistant_interpretation_must_remain_separate_from_operator_words": true,
+    "verbatim_request_requires_source_rehydration_before_response": true,
+    "verbatim_request_forbids_paraphrase_as_substitute": true,
+    "verbatim_quote_must_be_exact_source_span": true
   },
   "source_state": {
     "operator_words_are_source_state": true,
@@ -112,6 +115,9 @@
     "framework material silently promoted into Operator words",
     "assistant-originated uncontested content silently promoted to Operator intent",
     "absence of Operator objection treated as adoption",
-    "empty scaffold represented as completed organization"
+    "empty scaffold represented as completed organization",
+    "verbatim request answered from summary without source rehydration",
+    "paraphrase substituted for requested verbatim Operator words",
+    "assistant-generated wording presented as an exact Operator quote"
   ]
 }

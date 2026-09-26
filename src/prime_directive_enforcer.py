@@ -16,9 +16,15 @@ from datetime import UTC, datetime
 import hashlib
 import json
 import logging
+import os
 from pathlib import Path
 import threading
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
+
+from operator_source_authority import (
+    OperatorSourceAuthorityError,
+    enforce_verbatim_response_fidelity,
+)
 
 LOGGER = logging.getLogger("glaciereq.gatekeeper")
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -172,7 +178,13 @@ class StartupGateEnforcer:
             self._complete_if_ready()
             return self.snapshot()
 
-    def intercept_llm_response(self, llm_output: Mapping[str, Any]) -> dict[str, Any]:
+    def intercept_llm_response(
+        self,
+        llm_output: Mapping[str, Any],
+        *,
+        verbatim_binding: Mapping[str, Any] | None = None,
+        source_resolver: Callable[[str], bytes] | None = None,
+    ) -> dict[str, Any]:
         """Return a tool-only message, allowed text, or a hard correction.
 
         Pre-gate messages containing tool calls are allowed, but all supported
@@ -196,7 +208,12 @@ class StartupGateEnforcer:
                 return output
 
             if self._state.gate_passed:
-                return self._enforce_empty_memory_phrase(output)
+                output = self._enforce_empty_memory_phrase(output)
+                return self._enforce_verbatim_response(
+                    output,
+                    binding=verbatim_binding,
+                    resolver=source_resolver,
+                )
 
             return self._hard_correction(_collect_provider_text(output))
 
@@ -445,6 +462,74 @@ class StartupGateEnforcer:
             missing.append("receipt_validation")
         return missing
 
+    def _enforce_verbatim_response(
+        self,
+        output: Mapping[str, Any],
+        *,
+        binding: Mapping[str, Any] | None,
+        resolver: Callable[[str], bytes] | None,
+    ) -> dict[str, Any]:
+        task = os.getenv("CASEY_BOOT_TASK", "")
+        if "verbatim" not in task.casefold():
+            return dict(output)
+
+        if not isinstance(binding, Mapping) or resolver is None:
+            try:
+                from prime_directive_boot import receipt_from_environment
+                from operator_fidelity_lock import _operator_source_resolver
+
+                receipt = receipt_from_environment()
+                row = (
+                    receipt.get("operator_fidelity")
+                    if isinstance(receipt, Mapping)
+                    else None
+                )
+                if not isinstance(binding, Mapping) and isinstance(row, Mapping):
+                    candidate = row.get("verbatim_response_binding")
+                    if isinstance(candidate, Mapping):
+                        binding = candidate
+                if resolver is None:
+                    resolver = _operator_source_resolver
+            except Exception as exc:  # noqa: BLE001 - unresolved recovery is local
+                return self._verbatim_correction(
+                    "verbatim source recovery is unresolved: "
+                    + exc.__class__.__name__
+                )
+
+        if not isinstance(binding, Mapping) or resolver is None:
+            return self._verbatim_correction(
+                "verbatim source span is unresolved; recover and bind the exact Operator source span before emitting text"
+            )
+
+        emitted = _primary_provider_text(output)
+        try:
+            enforce_verbatim_response_fidelity(
+                requested_verbatim=True,
+                source_binding=binding,
+                source_resolver=resolver,
+                emitted_operator_quote=emitted,
+            )
+        except OperatorSourceAuthorityError as exc:
+            return self._verbatim_correction(str(exc))
+
+        self._audit("verbatim_response_verified", success=True)
+        return dict(output)
+
+    def _verbatim_correction(self, reason: str) -> dict[str, Any]:
+        self._audit("verbatim_fidelity_correction", success=False)
+        return {
+            "role": str(self.policy.get("hard_correction_role", "system")),
+            "type": "hard_correction",
+            "content": (
+                "VERBATIM FIDELITY CORRECTION: "
+                + reason
+                + ". Do not paraphrase or substitute another passage. "
+                "Recover the requested Operator source span and retry."
+            ),
+            "missing_stages": [],
+            "gate_passed": True,
+        }
+
     def _enforce_empty_memory_phrase(self, output: Mapping[str, Any]) -> dict[str, Any]:
         if (
             self._state.memory_reuse_locked
@@ -628,6 +713,14 @@ def _prepend_provider_text(output: Mapping[str, Any], phrase: str) -> dict[str, 
             return amended
     amended["content"] = phrase
     return amended
+
+
+def _primary_provider_text(output: Mapping[str, Any]) -> str:
+    for field in ("content", "output_text", "output"):
+        value = output.get(field)
+        if isinstance(value, str) and value:
+            return value
+    return ""
 
 
 def _collect_provider_text(output: Mapping[str, Any]) -> str:

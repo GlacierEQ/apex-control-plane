@@ -306,3 +306,65 @@ def test_better_not_simpler_dominance_is_machine_bound() -> None:
     errors = validate_operator_fidelity_lock(receipt)
     assert any("improvement_dominates_prior_valid_state" in error for error in errors)
     assert any("simplification_as_objective" in error for error in errors)
+
+
+def test_lock_revalidates_every_invocation(monkeypatch) -> None:
+    lock._IN_PROCESS = None
+    calls: list[str] = []
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.setenv("CASEY_BOOT_TASK", "first lock turn")
+    monkeypatch.setattr(lock, "receipt_from_environment", _receipt)
+
+    def validate(receipt, *, task=None):
+        calls.append(str(task))
+        return ()
+
+    monkeypatch.setattr(lock, "validate_operator_fidelity_lock", validate)
+
+    first = lock.automatic_operator_fidelity_lock()
+    monkeypatch.setenv("CASEY_BOOT_TASK", "second lock turn")
+    second = lock.automatic_operator_fidelity_lock()
+
+    assert first is not None and first.ok is True
+    assert second is not None and second.ok is True
+    assert calls == ["first lock turn", "second lock turn"]
+
+
+def test_lock_applies_verbatim_task_requirements() -> None:
+    receipt = _receipt()
+    errors = validate_operator_fidelity_lock(
+        receipt,
+        task="Return the Operator instruction VERBATIM",
+    )
+    assert any("verbatim_request_active" in error for error in errors)
+    assert any("verbatim_source_rehydrated" in error for error in errors)
+
+
+def test_verbatim_response_binding_is_independently_read_back() -> None:
+    receipt = _receipt()
+    row = receipt["operator_fidelity"]
+    row["verbatim_request_active"] = True
+    row["verbatim_source_rehydrated"] = True
+    row["verbatim_paraphrase_substitution"] = False
+    row["verbatim_quote_spans_exact_source"] = True
+    row["verbatim_response_binding"] = dict(row["operator_source_bindings"][1])
+    row["verbatim_response_binding"]["source_sha256"] = "sha256:" + "0" * 64
+
+    errors = validate_operator_fidelity_lock(
+        receipt,
+        task="Return that instruction VERBATIM",
+    )
+
+    assert any(
+        "verbatim_response_binding.source_sha256 does not match" in error
+        for error in errors
+    )
+
+
+def test_failed_lock_result_replaces_prior_success_readback(monkeypatch, tmp_path) -> None:
+    lock._IN_PROCESS = lock._issue(True, "complete")
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    result = lock._continue_lock(("fresh failure",))
+
+    assert result.ok is False
+    assert lock.get_in_process_operator_fidelity_lock() is result

@@ -28,6 +28,7 @@ from auto_boot import BootError
 from operator_source_binding_contract import (
     operator_source_binding_receipt_contract,
     validate_operator_source_binding_shape,
+    validate_source_span_binding_shape,
 )
 from prime_directive_boot import receipt_from_environment
 
@@ -245,8 +246,15 @@ def digest_operator_words(*parts: str) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
+def _task_requests_verbatim(task: str | None) -> bool:
+    return isinstance(task, str) and "verbatim" in task.casefold()
+
+
 def validate_operator_fidelity_receipt(
-    policy: Mapping[str, Any], receipt: Mapping[str, Any]
+    policy: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+    *,
+    task: str | None = None,
 ) -> tuple[str, ...]:
     errors: list[str] = []
     row = receipt.get("operator_fidelity")
@@ -295,6 +303,38 @@ def validate_operator_fidelity_receipt(
         errors.extend(
             validate_operator_source_binding_shape(row, tuple(literal_constraints))
         )
+
+    verbatim_required = _task_requests_verbatim(task) or row.get("verbatim_request_active") is True
+    if _task_requests_verbatim(task) and row.get("verbatim_request_active") is not True:
+        errors.append(
+            "operator_fidelity.verbatim_request_active must be true for a verbatim task"
+        )
+    if verbatim_required:
+        if row.get("verbatim_source_rehydrated") is not True:
+            errors.append(
+                "operator_fidelity.verbatim_source_rehydrated must be true for a verbatim task"
+            )
+        if row.get("verbatim_paraphrase_substitution") is not False:
+            errors.append(
+                "operator_fidelity.verbatim_paraphrase_substitution must be false for a verbatim task"
+            )
+        if row.get("verbatim_quote_spans_exact_source") is not True:
+            errors.append(
+                "operator_fidelity.verbatim_quote_spans_exact_source must be true for a verbatim task"
+            )
+        verbatim_binding = row.get("verbatim_response_binding")
+        if not isinstance(verbatim_binding, Mapping):
+            errors.append(
+                "operator_fidelity.verbatim_response_binding must bind the exact requested source span"
+            )
+        else:
+            errors.extend(
+                validate_source_span_binding_shape(
+                    verbatim_binding,
+                    prefix="operator_fidelity.verbatim_response_binding",
+                    require_unsuperseded=True,
+                )
+            )
 
     corrections = row.get("corrections_applied")
     if not isinstance(corrections, list):
@@ -366,6 +406,7 @@ def validate_operator_fidelity_receipt(
 def build_operator_fidelity_request(
     policy: Mapping[str, Any], *, task: str
 ) -> dict[str, Any]:
+    verbatim_requested = _task_requests_verbatim(task)
     selected_path_contract = {
         **dict(policy.get("selected_path_requirements", {})),
         "capability_reduction": False,
@@ -389,6 +430,10 @@ def build_operator_fidelity_request(
             "bind_literal_operator_words_to_independently_resolved_source_spans": True,
             "require_one_source_binding_per_literal_constraint": True,
             "reject_derivative_sources_for_verbatim_fidelity": True,
+            "verbatim_request_active": verbatim_requested,
+            "verbatim_response_requires_recovered_source": verbatim_requested,
+            "verbatim_response_forbids_paraphrase_substitution": verbatim_requested,
+            "verbatim_response_quotes_must_be_exact_source_spans": verbatim_requested,
             "preserve_proposition_temporal_and_contradiction_state": True,
             "treat_source_retrieval_failure_as_unresolved_not_evidence_absence": True,
             "source_bytes_must_come_from_operator_source_root_not_receipt": True,
@@ -423,6 +468,15 @@ def build_operator_fidelity_request(
                 "direction": "look_up",
                 "literal_operator_words_preserved": True,
                 "explicit_prohibitions_bound": True,
+                "verbatim_request_active": verbatim_requested,
+                "verbatim_source_rehydrated": verbatim_requested,
+                "verbatim_paraphrase_substitution": False,
+                "verbatim_quote_spans_exact_source": verbatim_requested,
+                "verbatim_response_binding": (
+                    operator_source_binding_receipt_contract()[0]
+                    if verbatim_requested
+                    else None
+                ),
                 "relevant_corrections_loaded": True,
                 "instruction_displacement_checked": True,
                 "objective_function_matches_operator": True,
@@ -454,6 +508,7 @@ def _continue_operator_fidelity(
     *,
     request: Mapping[str, Any],
 ) -> OperatorFidelityValidation:
+    global _IN_PROCESS
     from startup_continuation import (
         emit_startup_continuation,
         record_startup_continuation,
@@ -479,13 +534,16 @@ def _continue_operator_fidelity(
         environment_key="GLACIEREQ_OPERATOR_FIDELITY_STATUS",
     )
     emit_startup_continuation(continuation)
-    return _issue(False, "uplift_required", errors)
+    validation = _issue(False, "uplift_required", errors)
+    _IN_PROCESS = validation
+    return validation
 
 
 def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None:
     global _IN_PROCESS
-    if _IN_PROCESS is not None:
-        return _IN_PROCESS
+    # Every invocation is a fresh preflight for the current turn/work unit.
+    # _IN_PROCESS is a readback of the latest result, never an admission cache.
+    _IN_PROCESS = None
 
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
     if mode == "off" or os.getenv("CASEY_AUTO_BOOT_DISABLE") == "1":
@@ -512,7 +570,7 @@ def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None
             request=request,
         )
 
-    errors = validate_operator_fidelity_receipt(policy, receipt)
+    errors = validate_operator_fidelity_receipt(policy, receipt, task=task)
     if not errors:
         validation = _issue(True, "complete")
         _IN_PROCESS = validation

@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
+from operator_source_binding_contract import SourceResolver, verify_source_span_binding
+
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / "config" / "operator_source_authority_contract.json"
 
@@ -23,6 +25,56 @@ def _require(mapping: Mapping[str, Any], key: str, expected: Any, *, scope: str)
     if mapping.get(key) != expected:
         raise OperatorSourceAuthorityError(
             f"{scope}.{key} must be {expected!r}; got {mapping.get(key)!r}"
+        )
+
+
+def enforce_verbatim_response_fidelity(
+    *,
+    requested_verbatim: bool,
+    source_binding: Mapping[str, Any] | None,
+    source_resolver: SourceResolver | None,
+    emitted_operator_quote: str | None,
+) -> None:
+    """Require an exact, independently resolved Operator source span."""
+    if not requested_verbatim:
+        return
+
+    policy = enforce_operator_source_authority()
+    source_fidelity = policy["source_fidelity"]
+    if (
+        source_fidelity.get("verbatim_request_requires_source_rehydration_before_response")
+        is not True
+        or source_fidelity.get("verbatim_request_forbids_paraphrase_as_substitute")
+        is not True
+        or source_fidelity.get("verbatim_quote_must_be_exact_source_span") is not True
+    ):
+        raise OperatorSourceAuthorityError(
+            "verbatim response fidelity policy is not fully enforced"
+        )
+
+    if not isinstance(source_binding, Mapping) or source_resolver is None:
+        raise OperatorSourceAuthorityError(
+            "verbatim response requires an independently resolved source binding"
+        )
+    if not isinstance(emitted_operator_quote, str) or not emitted_operator_quote.strip():
+        raise OperatorSourceAuthorityError(
+            "verbatim response requires a non-empty exact Operator quote"
+        )
+
+    verification = verify_source_span_binding(
+        source_binding,
+        resolver=source_resolver,
+        prefix="verbatim_response",
+        require_unsuperseded=True,
+    )
+    if verification.errors or verification.span_text is None:
+        detail = verification.errors[0] if verification.errors else "source span unresolved"
+        raise OperatorSourceAuthorityError(
+            "verbatim source verification failed: " + detail
+        )
+    if emitted_operator_quote != verification.span_text:
+        raise OperatorSourceAuthorityError(
+            "verbatim response must exactly equal the exact requested source span"
         )
 
 
@@ -90,6 +142,9 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "summary_without_source_lineage_is_non_authoritative": True,
         "repeated_summary_does_not_gain_authority": True,
         "assistant_interpretation_must_remain_separate_from_operator_words": True,
+        "verbatim_request_requires_source_rehydration_before_response": True,
+        "verbatim_request_forbids_paraphrase_as_substitute": True,
+        "verbatim_quote_must_be_exact_source_span": True,
     }.items():
         _require(source_fidelity, key, expected, scope="source_fidelity")
 
