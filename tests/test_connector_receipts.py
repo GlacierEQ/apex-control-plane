@@ -168,3 +168,18 @@ def test_action_proposal_remains_non_authorizing_when_route_is_active():
     assert proposal["operation_active"] is True
     assert proposal["authorization_required"] is True
     assert proposal["external_action_authorized"] is False
+
+
+def test_recovered_execution_connectors_use_source_bound_authorization():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    raw = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    assert raw["profiles"]["communication_execution"] == ["gmail", "call_e"]
+    assert raw["profiles"]["scheduling_and_deadlines"] == ["google_calendar"]
+    assert raw["profiles"]["ci_execution"] == ["github", "buildkite"]
+    for connector_name in ("gmail", "google_calendar", "call_e", "buildkite"):
+        assert connector_name in catalog.connectors
+        for operation in catalog.connectors[connector_name]["write_operations"].values():
+            assert operation["authorization_required"] is True
+            assert operation["idempotency_required"] is True
+            assert operation["terminal_readback_required"] is True
+            assert "approval_required" not in operation
