@@ -150,7 +150,7 @@ def validate_dependency_enumeration(
     *,
     resolver: SourceResolver,
     expected_frontier_id: str,
-    declared_execution_claim_ids: Sequence[str],
+    declared_execution_claim_ids: Sequence[str] | None,
 ) -> DependencyEnumerationResult:
     """Validate enumeration against dependencies derived from independently read inputs."""
     errors: list[str] = []
@@ -284,7 +284,7 @@ def validate_dependency_enumeration(
             )
 
     required = tuple(sorted(deterministic_required))
-    if sorted(declared_execution_claim_ids) != list(required):
+    if declared_execution_claim_ids is not None and sorted(declared_execution_claim_ids) != list(required):
         errors.append(
             f"{prefix}.resolved inputs prove declared execution_claim_ids are incomplete or substituted"
         )
