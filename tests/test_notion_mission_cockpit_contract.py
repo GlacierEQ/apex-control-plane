@@ -84,3 +84,18 @@ def test_missing_mission_identity_is_rejected():
             current_step="x",
             contract=contract,
         )
+
+
+def test_contract_cannot_enable_notion_write_ahead_of_connector_catalog():
+    contract = load_contract(
+        ROOT / "config" / "notion_mission_cockpit_projection.v1.json"
+    )
+    catalog = json.loads(
+        (ROOT / "config" / "apex_connector_catalog.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    notion_writes = catalog["connectors"]["notion"]["write_operations"]
+    assert contract["semantics"]["provider_write_enabled"] is False
+    assert notion_writes["page.create"]["enabled"] is False
+    assert notion_writes["page.update"]["enabled"] is False
