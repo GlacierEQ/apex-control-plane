@@ -306,3 +306,35 @@ def test_better_not_simpler_dominance_is_machine_bound() -> None:
     errors = validate_operator_fidelity_lock(receipt)
     assert any("improvement_dominates_prior_valid_state" in error for error in errors)
     assert any("simplification_as_objective" in error for error in errors)
+
+
+def test_lock_revalidates_every_invocation(monkeypatch) -> None:
+    lock._IN_PROCESS = None
+    calls: list[str] = []
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.setenv("CASEY_BOOT_TASK", "first lock turn")
+    monkeypatch.setattr(lock, "receipt_from_environment", _receipt)
+
+    def validate(receipt, *, task=None):
+        calls.append(str(task))
+        return ()
+
+    monkeypatch.setattr(lock, "validate_operator_fidelity_lock", validate)
+
+    first = lock.automatic_operator_fidelity_lock()
+    monkeypatch.setenv("CASEY_BOOT_TASK", "second lock turn")
+    second = lock.automatic_operator_fidelity_lock()
+
+    assert first is not None and first.ok is True
+    assert second is not None and second.ok is True
+    assert calls == ["first lock turn", "second lock turn"]
+
+
+def test_lock_applies_verbatim_task_requirements() -> None:
+    receipt = _receipt()
+    errors = validate_operator_fidelity_lock(
+        receipt,
+        task="Return the Operator instruction VERBATIM",
+    )
+    assert any("verbatim_request_active" in error for error in errors)
+    assert any("verbatim_source_rehydrated" in error for error in errors)
