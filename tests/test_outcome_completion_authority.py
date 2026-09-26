@@ -77,10 +77,7 @@ def test_mutation_cannot_complete_on_intermediate_gain_without_mission_outcome(m
     assert final.phase != "complete"
     assert final.phase == "repairing"
     assert kernel.outcome_state()["recorded"] is False
-    assert any(
-        "mission outcome" in reason
-        for reason in final.repair_reasons
-    )
+    assert "mission_outcome_required_for_mutation_completion" in final.repair_reasons
 
 
 def test_observation_can_still_complete_without_mutation_outcome(monkeypatch) -> None:
