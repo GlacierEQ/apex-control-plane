@@ -84,7 +84,7 @@ def load_outcome_fidelity_policy(
         )
 
     semantics = str(payload.get("execution_semantics", "")).strip()
-    if semantics and semantics != "measure_progress_enrich_next_action_never_erase_execution":
+    if semantics and semantics != "preserve_intermediate_progress_require_outcome_for_mutation_completion":
         raise OutcomeFidelityViolation("unsupported outcome fidelity execution_semantics")
     if payload.get("fail_closed") is True and semantics:
         raise OutcomeFidelityViolation(
@@ -296,13 +296,38 @@ class OutcomeFidelityRuntime:
             )
         return self._kernel.begin_persistence()
 
-    def record_readback(self, *args: Any, **kwargs: Any):
+    def record_readback(
+        self,
+        reference: str,
+        *,
+        matches_expected_state: bool,
+        target_reached: bool,
+        details: Mapping[str, Any] | None = None,
+    ):
         task = self._kernel.task
         if task.mode is TaskMode.MUTATION and not self._outcome_recorded:
             self._finding(
-                "mission outcome remains open after this intermediate execution; select next material frontier"
+                "mission outcome remains open after this intermediate execution; continue to the next material frontier before completion"
             )
-        return self._kernel.record_readback(*args, **kwargs)
+            payload = {
+                **dict(details or {}),
+                "reported_target_reached": bool(target_reached),
+                "mission_outcome_recorded": False,
+            }
+            self._kernel.record_readback(
+                reference,
+                matches_expected_state=matches_expected_state,
+                target_reached=False,
+                details=payload,
+            )
+            self._kernel._enter_repair("mission_outcome_required_for_mutation_completion")
+            return self._kernel.snapshot()
+        return self._kernel.record_readback(
+            reference,
+            matches_expected_state=matches_expected_state,
+            target_reached=target_reached,
+            details=details,
+        )
 
     def outcome_state(self) -> dict[str, Any]:
         return {
