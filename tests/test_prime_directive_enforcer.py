@@ -615,3 +615,52 @@ def test_post_gate_verbatim_response_accepts_exact_verified_span(monkeypatch) ->
     )
 
     assert result["content"] == "SECOND."
+
+
+def test_post_gate_verbatim_response_uses_active_receipt_binding(monkeypatch, tmp_path) -> None:
+    enforcer = StartupGateEnforcer()
+    _complete_gate(enforcer)
+    monkeypatch.setenv("CASEY_BOOT_TASK", "Quote only SECOND verbatim")
+
+    source_path = tmp_path / "operator-history.txt"
+    source = b"FIRST. SECOND."
+    source_path.write_bytes(source)
+    monkeypatch.setenv("GLACIEREQ_OPERATOR_SOURCE_ROOT", str(tmp_path))
+
+    binding = _verbatim_binding(source, "SECOND.")
+    receipt = {"operator_fidelity": {"verbatim_response_binding": binding}}
+    import json
+    monkeypatch.setenv("CASEY_BOOT_RECEIPT_JSON", json.dumps(receipt))
+    monkeypatch.delenv("CASEY_BOOT_RECEIPT_PATH", raising=False)
+
+    result = enforcer.intercept_llm_response(
+        {"role": "assistant", "content": "SECOND."}
+    )
+
+    assert result["content"] == "SECOND."
+
+
+def test_post_gate_verbatim_response_rejects_receipt_bound_to_different_span(
+    monkeypatch, tmp_path
+) -> None:
+    enforcer = StartupGateEnforcer()
+    _complete_gate(enforcer)
+    monkeypatch.setenv("CASEY_BOOT_TASK", "Quote only SECOND verbatim")
+
+    source_path = tmp_path / "operator-history.txt"
+    source = b"FIRST. SECOND."
+    source_path.write_bytes(source)
+    monkeypatch.setenv("GLACIEREQ_OPERATOR_SOURCE_ROOT", str(tmp_path))
+
+    binding = _verbatim_binding(source, "SECOND.")
+    receipt = {"operator_fidelity": {"verbatim_response_binding": binding}}
+    import json
+    monkeypatch.setenv("CASEY_BOOT_RECEIPT_JSON", json.dumps(receipt))
+    monkeypatch.delenv("CASEY_BOOT_RECEIPT_PATH", raising=False)
+
+    result = enforcer.intercept_llm_response(
+        {"role": "assistant", "content": "FIRST."}
+    )
+
+    assert result["type"] == "hard_correction"
+    assert "exact" in result["content"].lower()
