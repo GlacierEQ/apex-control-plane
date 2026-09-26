@@ -128,10 +128,10 @@ def test_projection_rejects_receipt_hash_that_does_not_match_payload():
 
 def test_projection_preserves_current_receipt_identity_and_stores_digests_not_raw_state():
     opener = _StatefulOpener()
-    raw_secret = "private-body-DO-NOT-PROJECT"
+    raw_provider_state = "private-body-do-not-project"
     receipt = _receipt(
-        expected={"body": raw_secret},
-        observed={"body": raw_secret},
+        expected={"body": raw_provider_state},
+        observed={"body": raw_provider_state},
     )
     projection = SupabaseReceiptProjection(
         SupabaseReceiptProjectionConfig("https://example.supabase.co", TEST_KEY),
@@ -146,9 +146,9 @@ def test_projection_preserves_current_receipt_identity_and_stores_digests_not_ra
     assert details["mission_id"] == "mission_001"
     assert details["correlation_id"] == "corr_001"
     assert details["result"] == "SUCCEEDED"
-    assert details["expected_digest"] == _digest({"body": raw_secret})
-    assert details["observed_digest"] == _digest({"body": raw_secret})
-    assert raw_secret not in row["details"]
+    assert details["expected_digest"] == _digest({"body": raw_provider_state})
+    assert details["observed_digest"] == _digest({"body": raw_provider_state})
+    assert raw_provider_state not in row["details"]
     assert "expected" not in details and "observed" not in details
 
 
