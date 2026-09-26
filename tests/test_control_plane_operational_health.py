@@ -1,8 +1,9 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SNAPSHOT = ROOT / "db/migrations/20260902193640_control_plane_operational_snapshot_v2.sql"
+SNAPSHOT = ROOT / "db/migrations/20260902193955_control_plane_route_runtime_health_v4.sql"
 RUNTIME = ROOT / "db/migrations/20260902194020_control_plane_route_runtime_health_v4.sql"
+NOTION_SUPERSESSION = ROOT / "db/migrations/20260902193841_notion_route_supersession_v1.sql"
 
 
 def test_live_operational_snapshot_source_is_service_role_only_and_prioritized():
