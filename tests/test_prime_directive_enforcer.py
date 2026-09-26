@@ -13,6 +13,7 @@ if str(SRC) not in sys.path:
 from auto_boot import load_manifest, normalize_profiles, required_note_versions
 from prime_directive_boot import validate_combined_receipt
 from prime_directive_enforcer import GateViolation, StartupGateEnforcer, load_policy
+from operator_source_binding_contract import sha256_ref
 
 
 STATE_CONTENT = (ROOT / "STATE.md").read_text(encoding="utf-8")
@@ -550,3 +551,67 @@ def test_audit_log_never_contains_prompt_or_tool_arguments() -> None:
     assert "private-state" not in serialized
     assert "arguments" not in serialized
     assert "content" not in serialized
+
+
+def _verbatim_binding(source: bytes, expected: str) -> dict:
+    start = source.index(expected.encode("utf-8"))
+    end = start + len(expected.encode("utf-8"))
+    span = source[start:end]
+    return {
+        "proposition_id": "verbatim-response-test",
+        "source_kind": "operator_message",
+        "source_ref": "file:operator-history.txt",
+        "source_sha256": sha256_ref(source),
+        "span_start_byte": start,
+        "span_end_byte": end,
+        "span_sha256": sha256_ref(span),
+        "temporal_context": "active-turn-test",
+        "contradiction_state": "active",
+        "verification_state": "source_resolved",
+    }
+
+
+def test_post_gate_verbatim_response_requires_source_binding(monkeypatch) -> None:
+    enforcer = StartupGateEnforcer()
+    _complete_gate(enforcer)
+    monkeypatch.setenv("CASEY_BOOT_TASK", "Quote the prior instruction VERBATIM")
+
+    result = enforcer.intercept_llm_response(
+        {"role": "assistant", "content": "FIRST."}
+    )
+
+    assert result["type"] == "hard_correction"
+    assert "verbatim" in result["content"].lower()
+
+
+def test_post_gate_verbatim_response_rejects_wrong_source_span(monkeypatch) -> None:
+    enforcer = StartupGateEnforcer()
+    _complete_gate(enforcer)
+    monkeypatch.setenv("CASEY_BOOT_TASK", "Quote only SECOND verbatim")
+    source = b"FIRST. SECOND."
+    binding = _verbatim_binding(source, "SECOND.")
+
+    result = enforcer.intercept_llm_response(
+        {"role": "assistant", "content": "FIRST."},
+        verbatim_binding=binding,
+        source_resolver=lambda ref: source,
+    )
+
+    assert result["type"] == "hard_correction"
+    assert "exact" in result["content"].lower()
+
+
+def test_post_gate_verbatim_response_accepts_exact_verified_span(monkeypatch) -> None:
+    enforcer = StartupGateEnforcer()
+    _complete_gate(enforcer)
+    monkeypatch.setenv("CASEY_BOOT_TASK", "Quote only SECOND verbatim")
+    source = b"FIRST. SECOND."
+    binding = _verbatim_binding(source, "SECOND.")
+
+    result = enforcer.intercept_llm_response(
+        {"role": "assistant", "content": "SECOND."},
+        verbatim_binding=binding,
+        source_resolver=lambda ref: source,
+    )
+
+    assert result["content"] == "SECOND."
