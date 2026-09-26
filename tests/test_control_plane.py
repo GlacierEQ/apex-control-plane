@@ -7,6 +7,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+import control_plane as control_plane_module  # noqa: E402
+
 from control_plane import (  # noqa: E402
     CaseBrainOrchestrator,
     CaseEvent,
@@ -210,3 +212,8 @@ def test_connector_failure_dead_letters_without_external_action() -> None:
         )
     assert orchestrator.dead_letter
     assert orchestrator.dead_letter[0]["external_action_authorized"] is False
+
+
+def test_continuous_control_plane_is_exposed_through_control_plane_surface() -> None:
+    assert hasattr(control_plane_module, "ContinuousControlPlane")
+    assert hasattr(control_plane_module, "ControlEvent")
