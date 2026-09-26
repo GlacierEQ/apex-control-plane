@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "provider": "supabase",
+  "authoritative_project": {
+    "name": "supabase-backend-ops",
+    "project_ref": "dyhprklicgewmrimecey",
+    "observed_status": "ACTIVE_HEALTHY",
+    "purpose": "cross-session continuity, communications, legal execution, outbound control, receipts, dead-letter, deadlines"
+  },
+  "domain_projection_project": {
+    "name": "supabase-glaciereq",
+    "project_ref": "kjebemdgvjvuutzvhbtp",
+    "purpose": "case-domain evidence/data and apex_case_execution projections"
+  },
+  "continuity_tables": [
+    "continuity_matters_v1",
+    "continuity_events_v1",
+    "continuity_context_packets_v1",
+    "continuity_outbound_actions_v1",
+    "continuity_action_receipts_v1",
+    "continuity_calendar_bindings_v1",
+    "continuity_attention_queue_v1",
+    "continuity_control_state_v1",
+    "continuity_sync_cursors_v1",
+    "continuity_entities_v1",
+    "continuity_facts_v1"
+  ],
+  "legal_tables": [
+    "legal_control_events_v1",
+    "legal_control_state_v1",
+    "legal_control_outbox_v1",
+    "legal_control_deadletter_v1",
+    "legal_control_transition_rules_v1",
+    "legal_execution_state_v1",
+    "legal_execution_transitions_v1",
+    "legal_execution_control_v1"
+  ],
+  "rpcs": {
+    "ingest_external_event": "continuity_ingest_external_event_v1",
+    "build_context_packet": "continuity_build_context_packet_v1",
+    "prepare_outbound": "continuity_prepare_outbound_v1",
+    "preflight_outbound": "continuity_preflight_outbound_v2",
+    "start_outbound": "continuity_start_outbound_v1",
+    "finish_outbound": "continuity_finish_outbound_v1",
+    "record_action_receipt": "continuity_record_action_receipt_v1",
+    "legal_ingest_event": "legal_control_ingest_event_v1",
+    "legal_set_state": "legal_control_set_state_v1",
+    "legal_snapshot": "legal_execution_snapshot_v1",
+    "legal_transition": "legal_execution_transition_v1"
+  },
+  "invariants": [
+    "continuity_action_receipts_v1 is append-only",
+    "legal external actions remain approval-gated",
+    "idempotency keys bind outbound actions",
+    "provider references and receipts are durable state",
+    "legal_control_deadletter_v1 retains unresolved execution failures",
+    "continuity_attention_queue_v1 surfaces delivery/deadline/reply attention",
+    "semantic duplicate matters are archived rather than allowed to fork active truth",
+    "GitHub source must not introduce a second competing shared-control schema"
+  ],
+  "live_readback": {
+    "observed_at": "2026-09-03T09:25:34Z",
+    "active_examples": [
+      "case:1FDV-23-0001009",
+      "case:cherry-nex-jbphh-2026-08-14",
+      "CASE-CHR-003",
+      "1FDV-CWS",
+      "ops:communications-continuity"
+    ],
+    "note": "Readback is evidence of the observed runtime state at this timestamp, not a static guarantee of future state.",
+    "foundation_binding": {
+      "observed_at": "2026-09-03T09:00:00Z",
+      "status": "BOUND",
+      "matter_key": "foundation:apex-three-pillars-akos",
+      "system_entities": 12,
+      "foundation_facts": 3,
+      "control_key": "foundation:apex-three-pillars-akos:v1"
+    }
+  },
+  "epistemic_binding": {
+    "engine": "GlacierEQ/AKOS",
+    "authoritative_fact_table": "continuity_facts_v1",
+    "entity_table": "continuity_entities_v1",
+    "control_state_table": "continuity_control_state_v1",
+    "foundation_control_key": "foundation:apex-three-pillars-akos:v1",
+    "foundation_matter_key": "foundation:apex-three-pillars-akos",
+    "classes": [
+      "operator_observation",
+      "source_verified",
+      "external_verified",
+      "inference",
+      "proposal",
+      "unresolved"
+    ],
+    "rule": "verification authority is epistemic, not sovereign"
+  }
+}
