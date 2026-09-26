@@ -26,6 +26,49 @@ def _require(mapping: Mapping[str, Any], key: str, expected: Any, *, scope: str)
         )
 
 
+def enforce_verbatim_response_fidelity(
+    *,
+    requested_verbatim: bool,
+    recovered_operator_source: str | None,
+    emitted_operator_quote: str | None,
+) -> None:
+    """Reject paraphrase or unsourced text when the Operator requests verbatim words.
+
+    This is output fidelity, not a new permission gate. A failed source recovery
+    means the verbatim claim is unresolved; it never authorizes a paraphrase to
+    impersonate the Operator's literal words.
+    """
+    if not requested_verbatim:
+        return
+
+    policy = enforce_operator_source_authority()
+    source_fidelity = policy["source_fidelity"]
+
+    if (
+        source_fidelity.get("verbatim_request_requires_source_rehydration_before_response")
+        is not True
+        or source_fidelity.get("verbatim_request_forbids_paraphrase_as_substitute")
+        is not True
+        or source_fidelity.get("verbatim_quote_must_be_exact_source_span") is not True
+    ):
+        raise OperatorSourceAuthorityError(
+            "verbatim response fidelity policy is not fully enforced"
+        )
+
+    if not isinstance(recovered_operator_source, str) or not recovered_operator_source:
+        raise OperatorSourceAuthorityError(
+            "verbatim response requires recovered Operator source before response"
+        )
+    if not isinstance(emitted_operator_quote, str) or not emitted_operator_quote:
+        raise OperatorSourceAuthorityError(
+            "verbatim response requires a non-empty exact Operator quote"
+        )
+    if emitted_operator_quote not in recovered_operator_source:
+        raise OperatorSourceAuthorityError(
+            "verbatim response must be an exact source span; paraphrase is invalid"
+        )
+
+
 def enforce_operator_source_authority() -> dict[str, Any]:
     policy = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
     if policy.get("fail_closed") is not True:
@@ -90,6 +133,9 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "summary_without_source_lineage_is_non_authoritative": True,
         "repeated_summary_does_not_gain_authority": True,
         "assistant_interpretation_must_remain_separate_from_operator_words": True,
+        "verbatim_request_requires_source_rehydration_before_response": True,
+        "verbatim_request_forbids_paraphrase_as_substitute": True,
+        "verbatim_quote_must_be_exact_source_span": True,
     }.items():
         _require(source_fidelity, key, expected, scope="source_fidelity")
 
