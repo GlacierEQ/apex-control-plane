@@ -145,11 +145,15 @@ def _validate_operator_source_bindings(
     return tuple(dict.fromkeys(errors))
 
 
-def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ...]:
+def validate_operator_fidelity_lock(
+    receipt: Mapping[str, Any],
+    *,
+    task: str | None = None,
+) -> tuple[str, ...]:
     """Return fidelity findings that should be repaired or investigated."""
     errors: list[str] = []
     policy = load_operator_fidelity_policy()
-    errors.extend(validate_operator_fidelity_receipt(policy, receipt))
+    errors.extend(validate_operator_fidelity_receipt(policy, receipt, task=task))
 
     row = receipt.get("operator_fidelity")
     if not isinstance(row, Mapping):
@@ -202,14 +206,16 @@ def validate_operator_fidelity_lock(receipt: Mapping[str, Any]) -> tuple[str, ..
 
 def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
     os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
-    return _issue(False, "uplift_required", errors)
+    validation = _issue(False, "uplift_required", errors)
+    _IN_PROCESS = validation
+    return validation
 
 
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     """Issue fidelity proof or durable uplift findings without killing execution."""
     global _IN_PROCESS
-    if _IN_PROCESS is not None:
-        return _IN_PROCESS
+    # Latest-result readback only. Never reuse a prior turn's fidelity decision.
+    _IN_PROCESS = None
 
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
     if mode not in {"strict", "request", "off"}:
@@ -232,7 +238,10 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     if receipt is None:
         return _continue_lock(("operator fidelity source-bound receipt is unresolved",))
 
-    errors = validate_operator_fidelity_lock(receipt)
+    task = os.getenv(
+        "CASEY_BOOT_TASK", "resume Operator-directed unfinished material action"
+    )
+    errors = validate_operator_fidelity_lock(receipt, task=task)
     if errors:
         return _continue_lock(errors)
 
@@ -251,6 +260,7 @@ def _reject_runtime_bypass(
 
 def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
     """Record fidelity repair work while preserving executable frontiers."""
+    global _IN_PROCESS
     from startup_continuation import (
         emit_startup_continuation,
         record_startup_continuation,
