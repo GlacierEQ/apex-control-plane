@@ -366,6 +366,7 @@ def validate_operator_fidelity_receipt(
 def build_operator_fidelity_request(
     policy: Mapping[str, Any], *, task: str
 ) -> dict[str, Any]:
+    verbatim_requested = "verbatim" in task.casefold()
     selected_path_contract = {
         **dict(policy.get("selected_path_requirements", {})),
         "capability_reduction": False,
@@ -389,6 +390,10 @@ def build_operator_fidelity_request(
             "bind_literal_operator_words_to_independently_resolved_source_spans": True,
             "require_one_source_binding_per_literal_constraint": True,
             "reject_derivative_sources_for_verbatim_fidelity": True,
+            "verbatim_request_active": verbatim_requested,
+            "verbatim_response_requires_recovered_source": verbatim_requested,
+            "verbatim_response_forbids_paraphrase_substitution": verbatim_requested,
+            "verbatim_response_quotes_must_be_exact_source_spans": verbatim_requested,
             "preserve_proposition_temporal_and_contradiction_state": True,
             "treat_source_retrieval_failure_as_unresolved_not_evidence_absence": True,
             "source_bytes_must_come_from_operator_source_root_not_receipt": True,
