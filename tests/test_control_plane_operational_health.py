@@ -33,3 +33,19 @@ def test_runtime_health_preserves_backlog_and_current_failure_evidence():
     assert "batch_failed_recent_15m" in source
     assert "webhook_failed_recent_15m" in source
     assert "stale_online_worker_count" in source
+
+
+def test_snapshot_preserves_next_human_gate_and_effective_health():
+    source = SNAPSHOT.read_text().lower()
+    assert "effective_health_status" in source
+    assert "next_human_gate" in source
+
+
+def test_notion_v1_is_disabled_only_when_v2_is_healthy():
+    source = NOTION_SUPERSESSION.read_text().lower()
+    assert "notion:search:workspace_search:v1" in source
+    assert "notion:search:workspace_search:v2" in source
+    assert "r2.health_status='healthy'" in source
+    assert "r2.circuit_state='closed'" in source
+    assert "r2.consecutive_failures=0" in source
+    assert "set enabled=false" in source
