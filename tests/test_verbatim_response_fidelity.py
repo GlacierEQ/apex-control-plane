@@ -79,3 +79,14 @@ def test_non_verbatim_request_does_not_require_source_binding() -> None:
         source_resolver=None,
         emitted_operator_quote=None,
     )
+
+
+def test_verbatim_request_rejects_whitespace_only_quote() -> None:
+    source = b"FIRST. SECOND."
+    with pytest.raises(OperatorSourceAuthorityError, match="non-empty exact Operator quote"):
+        enforce_verbatim_response_fidelity(
+            requested_verbatim=True,
+            source_binding=_binding(source, "SECOND."),
+            source_resolver=lambda ref: source,
+            emitted_operator_quote="   \t",
+        )
