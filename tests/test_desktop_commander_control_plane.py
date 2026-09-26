@@ -142,11 +142,12 @@ def test_registry_runtime_ready_migration_preserves_unbound_device_boundary():
 def test_github_backend_ops_manifest_reports_desktop_commander_runtime_state():
     backend = json.loads((ROOT / "connectors" / "github_backend_ops.json").read_text())
     worker = backend["workers"]["glacier_desktop_commander"]
-    assert worker["status"] == "source_runtime_hardened_device_unbound"
+    receipts = worker["historical_donor_receipts"]
+    assert worker["status"] == "source_ready_unbound"
     assert worker["selection_enabled"] is False
-    assert worker["action_face_run_id"] == 33686159662
-    assert worker["source_merge_commit"] == "07ca4b4bd50d9ec6c368a2579c3032c1648798cf"
-    assert worker["bridge_sha256"] == "a79a9200fce9d74469b058cce24d3b9588ff182fd44109e86be54184632c2fc6"
+    assert receipts["action_face_run_id"] == 33686159662
+    assert receipts["source_merge_commit"] == "07ca4b4bd50d9ec6c368a2579c3032c1648798cf"
+    assert receipts["bridge_sha256"] == "a79a9200fce9d74469b058cce24d3b9588ff182fd44109e86be54184632c2fc6"
 
 
 def test_runtime_hardening_v4_closes_reviewed_failure_modes():
