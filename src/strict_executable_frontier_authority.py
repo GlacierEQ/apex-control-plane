@@ -1,13 +1,18 @@
-"""Composite executable-frontier authority with mandatory dependency enumeration.
+"""Composite executable-frontier authority with runtime-owned dependency discovery.
 
-This boundary composes the existing source/entailment/execution-lineage frontier
-validator with the independently materialized execution-dependency enumerator,
-material-input collector attestation, content-addressed verifier identity, and
-provider-readback proof that the bound verifier implementation actually ran.
+The runtime derives execution dependencies from independently resolved material
+inputs before base frontier authorization. Caller-supplied execution_claim_ids
+are treated as derivative projection only and are never the authority source.
+
+This boundary composes source/entailment/execution-lineage frontier validation,
+automatic dependency discovery, material-input collector attestation,
+content-addressed verifier identity, and provider-readback proof that the bound
+verifier implementation actually ran.
 """
 
 from __future__ import annotations
 
+from copy import deepcopy
 from collections.abc import Mapping
 from typing import Any
 
@@ -16,8 +21,8 @@ from executable_frontier_authority import (
     SourceResolver,
     validate_executable_frontier_authority,
 )
-from execution_dependency_enumerator_authority import validate_dependency_enumeration
 from material_input_collector_authority import validate_material_input_collector_authority
+from runtime_dependency_discovery import discover_execution_dependencies
 from verifier_execution_authority import validate_verifier_execution_authority
 from verifier_identity_authority import validate_verifier_identity_authority
 
@@ -25,11 +30,7 @@ from verifier_identity_authority import validate_verifier_identity_authority
 def validate_strict_executable_frontier_authority(
     receipt: Mapping[str, Any], *, resolver: SourceResolver
 ) -> FrontierAuthorizationResult:
-    """Authorize only when every composed authority boundary independently passes."""
-    base = validate_executable_frontier_authority(receipt, resolver=resolver)
-    if not base.ok:
-        return base
-
+    """Authorize from runtime-derived dependencies, never caller dependency claims."""
     row = receipt.get("frontier_authority")
     if not isinstance(row, Mapping):
         return FrontierAuthorizationResult(
@@ -38,53 +39,53 @@ def validate_strict_executable_frontier_authority(
             ("frontier_authority must be an object",),
         )
 
-    enumeration = row.get("dependency_enumeration")
-    if not isinstance(enumeration, Mapping):
+    discovery = discover_execution_dependencies(receipt, resolver=resolver)
+    if not discovery.ok:
+        details = list(discovery.errors)
+        details.extend(
+            f"source/provider readback unresolved: {ref}"
+            for ref in discovery.unresolved_refs
+        )
         return FrontierAuthorizationResult(
             False,
             "frontier_authorization_unresolved",
-            (
-                "frontier_authority.dependency_enumeration must contain independently resolved enumeration evidence",
+            tuple(
+                dict.fromkeys(
+                    f"frontier_authority.runtime_dependency_discovery: {item}"
+                    for item in details
+                )
             ),
         )
 
-    frontier_id = row.get("frontier_id")
-    execution_claim_ids = row.get("execution_claim_ids", [])
+    # Normalize a private copy so the caller's declared dependency list cannot
+    # control authorization. The runtime-derived set is the only set presented
+    # to downstream frontier, lineage, completeness, and entailment validation.
+    normalized_receipt = deepcopy(dict(receipt))
+    normalized_row = normalized_receipt.get("frontier_authority")
+    if not isinstance(normalized_row, dict):
+        return FrontierAuthorizationResult(
+            False,
+            "frontier_authorization_required",
+            ("frontier_authority must be a mutable object after normalization",),
+        )
+    normalized_row["execution_claim_ids"] = list(discovery.execution_claim_ids)
+
+    base = validate_executable_frontier_authority(
+        normalized_receipt, resolver=resolver
+    )
+    if not base.ok:
+        return base
+
+    frontier_id = normalized_row.get("frontier_id")
     if not isinstance(frontier_id, str) or not frontier_id:
         return FrontierAuthorizationResult(
             False,
             "frontier_authorization_unresolved",
             ("frontier_authority.frontier_id must be non-empty",),
         )
-    if not isinstance(execution_claim_ids, list):
-        return FrontierAuthorizationResult(
-            False,
-            "frontier_authorization_unresolved",
-            ("frontier_authority.execution_claim_ids must be an array",),
-        )
-
-    enumeration_result = validate_dependency_enumeration(
-        enumeration,
-        resolver=resolver,
-        expected_frontier_id=frontier_id,
-        declared_execution_claim_ids=execution_claim_ids,
-    )
-    if not enumeration_result.ok:
-        return FrontierAuthorizationResult(
-            False,
-            "frontier_authorization_unresolved",
-            tuple(
-                dict.fromkeys(
-                    [
-                        f"frontier_authority.dependency_enumeration: {error}"
-                        for error in enumeration_result.errors
-                    ]
-                )
-            ),
-        )
 
     collector_result = validate_material_input_collector_authority(
-        row, resolver=resolver
+        normalized_row, resolver=resolver
     )
     if not collector_result.ok:
         return FrontierAuthorizationResult(
@@ -100,7 +101,9 @@ def validate_strict_executable_frontier_authority(
             ),
         )
 
-    verifier_result = validate_verifier_identity_authority(row, resolver=resolver)
+    verifier_result = validate_verifier_identity_authority(
+        normalized_row, resolver=resolver
+    )
     if not verifier_result.ok:
         return FrontierAuthorizationResult(
             False,
@@ -115,7 +118,9 @@ def validate_strict_executable_frontier_authority(
             ),
         )
 
-    execution_result = validate_verifier_execution_authority(row, resolver=resolver)
+    execution_result = validate_verifier_execution_authority(
+        normalized_row, resolver=resolver
+    )
     if not execution_result.ok:
         return FrontierAuthorizationResult(
             False,
