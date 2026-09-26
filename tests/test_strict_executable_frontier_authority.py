@@ -197,12 +197,46 @@ def test_missing_verifier_execution_attestation_fails_closed() -> None:
     assert any("provider execution evidence" in error for error in result.errors)
 
 
-def test_omitted_claim_rejected_after_base_authority_passes() -> None:
+def test_caller_dependency_projection_cannot_override_runtime_discovery() -> None:
     receipt, sources = _receipt_and_sources()
-    receipt["frontier_authority"]["execution_claim_ids"] = ["execution:alpha"]
-    result = _validate(receipt, sources)
-    assert result.ok is False
-    assert any("incomplete or substituted" in error for error in result.errors)
+    receipt["frontier_authority"]["execution_claim_ids"] = ["execution:caller-wrong"]
+    observed: dict[str, object] = {}
+
+    def capture_base(value, *, resolver):
+        observed["execution_claim_ids"] = value["frontier_authority"]["execution_claim_ids"]
+        return FrontierAuthorizationResult(True, "frontier_authorized", ())
+
+    with patch(
+        "strict_executable_frontier_authority.validate_executable_frontier_authority",
+        side_effect=capture_base,
+    ):
+        result = validate_strict_executable_frontier_authority(
+            receipt, resolver=_resolver(sources)
+        )
+
+    assert result.ok is True
+    assert observed["execution_claim_ids"] == ["execution:alpha", "execution:beta"]
+
+
+def test_runtime_discovers_dependencies_when_caller_omits_dependency_list() -> None:
+    receipt, sources = _receipt_and_sources()
+    del receipt["frontier_authority"]["execution_claim_ids"]
+    observed: dict[str, object] = {}
+
+    def capture_base(value, *, resolver):
+        observed["execution_claim_ids"] = value["frontier_authority"]["execution_claim_ids"]
+        return FrontierAuthorizationResult(True, "frontier_authorized", ())
+
+    with patch(
+        "strict_executable_frontier_authority.validate_executable_frontier_authority",
+        side_effect=capture_base,
+    ):
+        result = validate_strict_executable_frontier_authority(
+            receipt, resolver=_resolver(sources)
+        )
+
+    assert result.ok is True
+    assert observed["execution_claim_ids"] == ["execution:alpha", "execution:beta"]
 
 
 def test_input_readback_failure_stays_unresolved() -> None:
