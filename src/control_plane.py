@@ -6,9 +6,16 @@ sealed strong-boot session, then transfers that exact session and runtime kernel
 to the verified runtime boundary. The preserved runtime implementation is loaded
 as a library behind that boundary rather than executed directly.
 """
-from continuous_control_plane import *  # noqa: F401,F403
 from __future__ import annotations
 
+from continuous_control_plane import (
+    ContinuousControlPlane,
+    ControlEvent,
+    ExecutionReceipt,
+    JsonlControlStore,
+    WorkItem,
+    WorkState,
+)
 import json
 import os
 from pathlib import Path
