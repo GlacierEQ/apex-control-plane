@@ -351,25 +351,28 @@ class ContinuousControlPlane:
     def ingest_event(self, event: ControlEvent) -> list[WorkItem]:
         with self.store.transaction():
             self._refresh()
-            if event.stable_dedupe_key in self._event_dedupe:
-                return []
-            self.store.append_event(event)
-            self.events[event.event_id] = event
-            self._event_dedupe.add(event.stable_dedupe_key)
+            is_new_event = event.stable_dedupe_key not in self._event_dedupe
+            if is_new_event:
+                self.store.append_event(event)
+                self.events[event.event_id] = event
+                self._event_dedupe.add(event.stable_dedupe_key)
             created = []
             for route in self.routes:
                 pattern = str(route.get("event_type") or "")
                 if not pattern or not fnmatchcase(event.event_type, pattern):
                     continue
                 key = canonical_sha256({"route": route, "event": event.stable_dedupe_key})
-                created.append(self._submit_work_unlocked(
+                existed = key in self._work_idempotency
+                item = self._submit_work_unlocked(
                     mission_id=event.subject_id, correlation_id=event.correlation_id,
                     domain=str(route["domain"]), capability=str(route["capability"]),
                     objective=str(route["objective"]), idempotency_key=key,
                     priority=int(route.get("priority", 50)), external_action=bool(route.get("external_action", False)),
                     source_event_ids=(event.event_id,), required_receipt_kinds=tuple(route.get("required_receipt_kinds") or ()),
                     metadata={"route_event_type": pattern},
-                ))
+                )
+                if not existed:
+                    created.append(item)
             self.checkpoint(event.subject_id)
             return created
 
@@ -449,7 +452,11 @@ class ContinuousControlPlane:
             if receipt.mission_id != current.mission_id or receipt.correlation_id != current.correlation_id:
                 raise ValueError("receipt mission/correlation does not match work item")
             for existing in self.receipts.values():
-                if receipt.provider_receipt_id and existing.provider_receipt_id == receipt.provider_receipt_id:
+                if (
+                    receipt.provider_receipt_id
+                    and existing.provider_receipt_id == receipt.provider_receipt_id
+                    and existing.source_system == receipt.source_system
+                ):
                     return existing
             self.store.append_receipt(receipt)
             self.receipts[receipt.receipt_id] = receipt
