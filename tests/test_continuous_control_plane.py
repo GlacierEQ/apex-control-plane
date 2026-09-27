@@ -165,3 +165,10 @@ def test_recovery_tolerates_only_torn_final_jsonl_line(tmp_path):
         handle.write(b'{"work_id":"torn"')
     restored=plane(tmp_path)
     assert work.work_id in restored.work
+
+
+def test_config_preserves_operator_identity_and_source_bound_authority():
+    authority = cfg()["authority"]
+    assert authority["operator"] == "OPERATOR"
+    assert "source-bound" in authority["external_action"]
+    assert "exact approval" not in authority["external_action"].lower()
