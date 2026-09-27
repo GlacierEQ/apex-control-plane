@@ -35,7 +35,7 @@ set display_name = excluded.display_name,
     destructive_actions_allowed = false,
     public_share_allowed = false,
     health_status = case
-      when public.connector_registry_v2.health_status in ('healthy','verified')
+      when public.connector_registry_v2.health_status in ('healthy','verified','verified_authorization')
         then public.connector_registry_v2.health_status
       else 'unknown'
     end,
