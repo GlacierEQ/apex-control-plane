@@ -6,7 +6,7 @@ Backend Ops exposes two service-role-only health surfaces.
 
 `control_plane_operational_snapshot_v2()` is the execution-priority snapshot. It does not delete or hide estate state; it classifies it into:
 
-- **operational_core** — connected + authenticated connectors with executable routes or top-tier authority.
+- **operational_core** — connected + authenticated connectors with at least one enabled execution route.
 - **integration_working_set** — connected/staging connectors still being integrated.
 - **estate_backlog** — dormant, advertised, or blocked estate records.
 
