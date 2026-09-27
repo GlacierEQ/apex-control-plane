@@ -8,6 +8,14 @@ as a library behind that boundary rather than executed directly.
 """
 from __future__ import annotations
 
+from continuous_control_plane import (
+    ContinuousControlPlane,
+    ControlEvent,
+    ExecutionReceipt,
+    JsonlControlStore,
+    WorkItem,
+    WorkState,
+)
 import json
 import os
 from pathlib import Path
