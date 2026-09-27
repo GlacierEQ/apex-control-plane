@@ -1,6 +1,7 @@
 """Durable event/work/receipt kernel for the interconnected APEX control plane."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from enum import Enum
@@ -9,12 +10,18 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 from uuid import uuid4
 
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def _require_aware(value: datetime, name: str) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{name} must be timezone-aware")
+    return value
 
 
 def canonical_json(value: Any) -> str:
@@ -26,12 +33,12 @@ def canonical_sha256(value: Any) -> str:
 
 
 def _dt(value: str | datetime | None) -> datetime | None:
-    if value is None or isinstance(value, datetime):
-        return value
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return _require_aware(value, "timestamp")
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    if parsed.tzinfo is None:
-        raise ValueError("timestamps must be timezone-aware")
-    return parsed
+    return _require_aware(parsed, "timestamp")
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -59,7 +66,7 @@ ALLOWED_TRANSITIONS = {
     WorkState.RECEIVED: {WorkState.HYDRATING, WorkState.BLOCKED},
     WorkState.HYDRATING: {WorkState.COMPILED, WorkState.BLOCKED},
     WorkState.COMPILED: {WorkState.DISPATCHED, WorkState.BLOCKED},
-    WorkState.DISPATCHED: {WorkState.EXECUTING, WorkState.WAITING, WorkState.RECONCILING, WorkState.BLOCKED},
+    WorkState.DISPATCHED: {WorkState.EXECUTING, WorkState.WAITING, WorkState.RECONCILING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
     WorkState.EXECUTING: {WorkState.RECONCILING, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
     WorkState.WAITING: {WorkState.RECEIVED, WorkState.RECONCILING, WorkState.BLOCKED},
     WorkState.RECONCILING: {WorkState.CHANGESET_READY, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
@@ -228,6 +235,34 @@ class JsonlControlStore:
         self.work_path = self.root / "work.jsonl"
         self.receipts_path = self.root / "receipts.jsonl"
         self.checkpoints_path = self.root / "checkpoints.jsonl"
+        self.lock_path = self.root / ".control-plane.lock"
+
+    @contextmanager
+    def transaction(self):
+        self.lock_path.touch(exist_ok=True)
+        with self.lock_path.open("a+b") as handle:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0, 2)
+                if handle.tell() == 0:
+                    handle.write(b"\0")
+                    handle.flush()
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                try:
+                    yield
+                finally:
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+                try:
+                    yield
+                finally:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
     @staticmethod
     def _append(path: Path, row: Mapping[str, Any]) -> None:
@@ -241,13 +276,17 @@ class JsonlControlStore:
     def _read(path: Path) -> list[dict[str, Any]]:
         if not path.exists():
             return []
+        raw = path.read_text(encoding="utf-8")
+        lines = raw.splitlines()
         rows = []
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        for number, line in enumerate(lines, 1):
             if not line.strip():
                 continue
             try:
                 row = json.loads(line)
             except json.JSONDecodeError as exc:
+                if number == len(lines) and raw and not raw.endswith(("\n", "\r")):
+                    break
                 raise RuntimeError(f"corrupt control-plane JSONL {path}:{number}") from exc
             if not isinstance(row, dict):
                 raise RuntimeError(f"control-plane record must be an object: {path}:{number}")
@@ -276,50 +315,76 @@ class JsonlControlStore:
 
 
 class ContinuousControlPlane:
-    def __init__(self, store: JsonlControlStore, routes: Iterable[Mapping[str, Any]] = ()) -> None:
+    def __init__(
+        self,
+        store: JsonlControlStore,
+        routes: Iterable[Mapping[str, Any]] = (),
+        *,
+        authorization_checker: Callable[[WorkItem, str], bool] | None = None,
+    ) -> None:
         self.store = store
         self.routes = tuple(dict(route) for route in routes)
+        self.authorization_checker = authorization_checker
         self.events, self.work, self.receipts = store.recover()
         self._event_dedupe = {event.stable_dedupe_key for event in self.events.values()}
         self._work_idempotency = {item.idempotency_key: item.work_id for item in self.work.values()}
 
+    def _refresh(self) -> None:
+        self.events, self.work, self.receipts = self.store.recover()
+        self._event_dedupe = {event.stable_dedupe_key for event in self.events.values()}
+        self._work_idempotency = {item.idempotency_key: item.work_id for item in self.work.values()}
+
     @classmethod
-    def from_config(cls, store: JsonlControlStore, config: Mapping[str, Any]) -> "ContinuousControlPlane":
-        return cls(store, config.get("event_routes") or ())
+    def from_config(
+        cls,
+        store: JsonlControlStore,
+        config: Mapping[str, Any],
+        *,
+        authorization_checker: Callable[[WorkItem, str], bool] | None = None,
+    ) -> "ContinuousControlPlane":
+        return cls(
+            store,
+            config.get("event_routes") or (),
+            authorization_checker=authorization_checker,
+        )
 
     def ingest_event(self, event: ControlEvent) -> list[WorkItem]:
-        if event.stable_dedupe_key in self._event_dedupe:
-            return []
-        self.store.append_event(event)
-        self.events[event.event_id] = event
-        self._event_dedupe.add(event.stable_dedupe_key)
-        created = []
-        for route in self.routes:
-            pattern = str(route.get("event_type") or "")
-            if not pattern or not fnmatchcase(event.event_type, pattern):
-                continue
-            key = canonical_sha256({"route": route, "event": event.stable_dedupe_key})
-            created.append(self.submit_work(
-                mission_id=event.subject_id, correlation_id=event.correlation_id,
-                domain=str(route["domain"]), capability=str(route["capability"]),
-                objective=str(route["objective"]), idempotency_key=key,
-                priority=int(route.get("priority", 50)), external_action=bool(route.get("external_action", False)),
-                source_event_ids=(event.event_id,), required_receipt_kinds=tuple(route.get("required_receipt_kinds") or ()),
-                metadata={"route_event_type": pattern},
-            ))
-        self.checkpoint(event.subject_id)
-        return created
+        with self.store.transaction():
+            self._refresh()
+            if event.stable_dedupe_key in self._event_dedupe:
+                return []
+            self.store.append_event(event)
+            self.events[event.event_id] = event
+            self._event_dedupe.add(event.stable_dedupe_key)
+            created = []
+            for route in self.routes:
+                pattern = str(route.get("event_type") or "")
+                if not pattern or not fnmatchcase(event.event_type, pattern):
+                    continue
+                key = canonical_sha256({"route": route, "event": event.stable_dedupe_key})
+                created.append(self._submit_work_unlocked(
+                    mission_id=event.subject_id, correlation_id=event.correlation_id,
+                    domain=str(route["domain"]), capability=str(route["capability"]),
+                    objective=str(route["objective"]), idempotency_key=key,
+                    priority=int(route.get("priority", 50)), external_action=bool(route.get("external_action", False)),
+                    source_event_ids=(event.event_id,), required_receipt_kinds=tuple(route.get("required_receipt_kinds") or ()),
+                    metadata={"route_event_type": pattern},
+                ))
+            self.checkpoint(event.subject_id)
+            return created
 
-    def submit_work(self, *, mission_id: str, correlation_id: str, domain: str,
-                    capability: str, objective: str, idempotency_key: str,
-                    priority: int = 50, external_action: bool = False,
-                    approval_ref: str | None = None, source_event_ids: tuple[str, ...] = (),
-                    required_receipt_kinds: tuple[str, ...] = (),
-                    not_before: datetime | None = None,
-                    metadata: Mapping[str, Any] | None = None) -> WorkItem:
+    def _submit_work_unlocked(self, *, mission_id: str, correlation_id: str, domain: str,
+                              capability: str, objective: str, idempotency_key: str,
+                              priority: int = 50, external_action: bool = False,
+                              approval_ref: str | None = None, source_event_ids: tuple[str, ...] = (),
+                              required_receipt_kinds: tuple[str, ...] = (),
+                              not_before: datetime | None = None,
+                              metadata: Mapping[str, Any] | None = None) -> WorkItem:
         existing = self._work_idempotency.get(idempotency_key)
         if existing:
             return self.work[existing]
+        if not_before is not None:
+            _require_aware(not_before, "not_before")
         item = WorkItem(
             mission_id=mission_id, correlation_id=correlation_id, domain=domain,
             capability=capability, objective=objective, idempotency_key=idempotency_key,
@@ -333,73 +398,92 @@ class ContinuousControlPlane:
         self.store.append_work(item, reason="submitted")
         return item
 
+    def submit_work(self, **kwargs: Any) -> WorkItem:
+        with self.store.transaction():
+            self._refresh()
+            return self._submit_work_unlocked(**kwargs)
+
     def transition(self, work_id: str, target: WorkState, *, reason: str,
                    approval_ref: str | None = None, not_before: datetime | None = None,
                    lease_owner: str | None = None, lease_expires_at: datetime | None = None) -> WorkItem:
-        current = self.work[work_id]
-        if target not in ALLOWED_TRANSITIONS[current.state]:
-            raise ValueError(f"invalid work transition {current.state.value}->{target.value}")
-        effective_approval = approval_ref or current.approval_ref
-        if target is WorkState.MUTATING and current.external_action and not effective_approval:
-            raise PermissionError("external mutation requires an exact approval_ref")
-        if target is WorkState.COMPLETE:
-            present = {
-                r.receipt_kind for r in self.receipts.values()
-                if r.work_id == work_id and r.status.casefold() in {"pass", "passed", "success", "succeeded", "verified"}
-            }
-            missing = sorted(set(current.required_receipt_kinds) - present)
-            if missing:
-                raise RuntimeError("completion denied; missing receipt kinds: " + ", ".join(missing))
-        updated = replace(
-            current, state=target, approval_ref=effective_approval,
-            not_before=not_before if target is WorkState.WAITING else current.not_before,
-            lease_owner=lease_owner if target in {WorkState.DISPATCHED, WorkState.EXECUTING} else None,
-            lease_expires_at=lease_expires_at if target in {WorkState.DISPATCHED, WorkState.EXECUTING} else None,
-            updated_at=utc_now(),
-        )
-        self.work[work_id] = updated
-        self.store.append_work(updated, reason=reason)
-        self.checkpoint(updated.mission_id)
-        return updated
+        if not_before is not None:
+            _require_aware(not_before, "not_before")
+        if lease_expires_at is not None:
+            _require_aware(lease_expires_at, "lease_expires_at")
+        with self.store.transaction():
+            self._refresh()
+            current = self.work[work_id]
+            if target not in ALLOWED_TRANSITIONS[current.state]:
+                raise ValueError(f"invalid work transition {current.state.value}->{target.value}")
+            effective_approval = approval_ref or current.approval_ref
+            if target is WorkState.MUTATING and current.external_action:
+                if not effective_approval:
+                    raise PermissionError("external mutation requires verified source-bound authorization")
+                if self.authorization_checker is None or not self.authorization_checker(current, effective_approval):
+                    raise PermissionError("external mutation authorization could not be verified")
+            if target is WorkState.COMPLETE:
+                present = {
+                    r.receipt_kind for r in self.receipts.values()
+                    if r.work_id == work_id and r.status.casefold() in {"pass", "passed", "success", "succeeded", "verified"}
+                }
+                missing = sorted(set(current.required_receipt_kinds) - present)
+                if missing:
+                    raise RuntimeError("completion denied; missing receipt kinds: " + ", ".join(missing))
+            active_lease = target in {WorkState.DISPATCHED, WorkState.EXECUTING}
+            updated = replace(
+                current, state=target, approval_ref=effective_approval,
+                not_before=not_before if target is WorkState.WAITING else current.not_before,
+                lease_owner=(lease_owner if lease_owner is not None else current.lease_owner) if active_lease else None,
+                lease_expires_at=(lease_expires_at if lease_expires_at is not None else current.lease_expires_at) if active_lease else None,
+                updated_at=utc_now(),
+            )
+            self.work[work_id] = updated
+            self.store.append_work(updated, reason=reason)
+            self.checkpoint(updated.mission_id)
+            return updated
 
     def record_receipt(self, receipt: ExecutionReceipt) -> ExecutionReceipt:
-        current = self.work[receipt.work_id]
-        if receipt.mission_id != current.mission_id or receipt.correlation_id != current.correlation_id:
-            raise ValueError("receipt mission/correlation does not match work item")
-        for existing in self.receipts.values():
-            if receipt.provider_receipt_id and existing.provider_receipt_id == receipt.provider_receipt_id:
-                return existing
-        self.store.append_receipt(receipt)
-        self.receipts[receipt.receipt_id] = receipt
-        self.checkpoint(receipt.mission_id)
-        return receipt
+        with self.store.transaction():
+            self._refresh()
+            current = self.work[receipt.work_id]
+            if receipt.mission_id != current.mission_id or receipt.correlation_id != current.correlation_id:
+                raise ValueError("receipt mission/correlation does not match work item")
+            for existing in self.receipts.values():
+                if receipt.provider_receipt_id and existing.provider_receipt_id == receipt.provider_receipt_id:
+                    return existing
+            self.store.append_receipt(receipt)
+            self.receipts[receipt.receipt_id] = receipt
+            self.checkpoint(receipt.mission_id)
+            return receipt
 
     def claim_next(self, *, worker_id: str, capabilities: Iterable[str],
                    now: datetime | None = None, lease_seconds: int = 90) -> WorkItem | None:
-        instant = now or utc_now()
+        instant = _require_aware(now or utc_now(), "now")
         supported = set(capabilities)
-        candidates = [
-            item for item in self.work.values()
-            if item.state is WorkState.COMPILED and item.capability in supported
-            and (item.not_before is None or item.not_before <= instant)
-            and (item.lease_expires_at is None or item.lease_expires_at <= instant)
-            and item.attempt < item.max_attempts
-        ]
-        if not candidates:
-            return None
-        chosen = sorted(candidates, key=lambda item: (-item.priority, item.created_at, item.work_id))[0]
-        dispatched = replace(
-            chosen, state=WorkState.DISPATCHED, lease_owner=worker_id,
-            lease_expires_at=instant + timedelta(seconds=max(1, lease_seconds)),
-            attempt=chosen.attempt + 1, updated_at=instant,
-        )
-        self.work[chosen.work_id] = dispatched
-        self.store.append_work(dispatched, reason="claimed")
-        self.checkpoint(dispatched.mission_id)
-        return dispatched
+        with self.store.transaction():
+            self._refresh()
+            candidates = [
+                item for item in self.work.values()
+                if item.state is WorkState.COMPILED and item.capability in supported
+                and (item.not_before is None or item.not_before <= instant)
+                and (item.lease_expires_at is None or item.lease_expires_at <= instant)
+                and item.attempt < item.max_attempts
+            ]
+            if not candidates:
+                return None
+            chosen = sorted(candidates, key=lambda item: (-item.priority, item.created_at, item.work_id))[0]
+            dispatched = replace(
+                chosen, state=WorkState.DISPATCHED, lease_owner=worker_id,
+                lease_expires_at=instant + timedelta(seconds=max(1, lease_seconds)),
+                attempt=chosen.attempt + 1, updated_at=instant,
+            )
+            self.work[chosen.work_id] = dispatched
+            self.store.append_work(dispatched, reason="claimed")
+            self.checkpoint(dispatched.mission_id)
+            return dispatched
 
     def reawaken_due(self, now: datetime | None = None) -> list[WorkItem]:
-        instant = now or utc_now()
+        instant = _require_aware(now or utc_now(), "now")
         return [
             self.transition(item.work_id, WorkState.RECEIVED, reason="waiting_deadline_due")
             for item in list(self.work.values())
@@ -407,7 +491,7 @@ class ContinuousControlPlane:
         ]
 
     def reconcile_expired_leases(self, now: datetime | None = None) -> list[WorkItem]:
-        instant = now or utc_now()
+        instant = _require_aware(now or utc_now(), "now")
         changed = []
         for item in list(self.work.values()):
             if item.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
