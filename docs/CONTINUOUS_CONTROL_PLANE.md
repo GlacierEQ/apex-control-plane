@@ -64,7 +64,7 @@ Domain-specific terminal conditions remain authoritative.
 
 - local append-only JSONL: `.apex/continuous-control-plane`
 - shared multi-worker state: Supabase migration
-  `20260903091500_continuous_control_plane_v1.sql`
+  `20260903090825_continuity_communications_intelligence_v1.sql` + `20260903091509_continuity_control_loop_v2.sql`
 
 No heartbeat, dispatch, API 200, send, or commit alone is completion.
 
