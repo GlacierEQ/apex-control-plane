@@ -49,7 +49,9 @@ Live SHA-256: `a79a9200fce9d74469b058cce24d3b9588ff182fd44109e86be54184632c2fc6`
 Live migrations mirrored here exactly:
 
 - `20260902202019_desktop_commander_local_agent_plane_v1.sql`
-- `20260902202236_desktop_commander_operation_policy_v2.sql`\n- `20260902214312_github_oidc_udc_workload_allowlist_v1.sql`\n- `20260902221859_desktop_commander_registry_runtime_ready_v3.sql`
+- `20260902202236_desktop_commander_operation_policy_v2.sql`
+- `20260902214312_github_oidc_udc_workload_allowlist_v1.sql`
+- `20260902221859_desktop_commander_registry_runtime_ready_v3.sql`
 - `20260902223005_desktop_commander_bridge_v3_registry_v6.sql`
 - `20260902223457_desktop_commander_execution_proof_registry_v8.sql`
 - `20260902223902_desktop_commander_binding_registry_v10.sql`
