@@ -3,8 +3,8 @@
   "control_plane": "GlacierEQ/apex-control-plane",
   "authority": {
     "orchestration": "APEX",
-    "operator": "operator_intent",
-    "external_action": "exact approval reference required before MUTATING",
+    "operator": "OPERATOR",
+    "external_action": "verified source-bound Operator authorization required before MUTATING",
     "epistemic": "AKOS",
     "factual_state": "question-specific live source"
   },
