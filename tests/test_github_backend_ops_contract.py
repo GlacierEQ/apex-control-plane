@@ -194,3 +194,13 @@ def test_desktop_commander_donor_receipts_and_migrations_are_preserved():
     assert receipts["execution_proof"].startswith("passed rollback-only live probe:")
     assert receipts["device_binding"].startswith("passed rollback-only live probe:")
     assert "20260902223902 desktop_commander_binding_registry_v10" in connector["migrations"]
+
+
+def test_desktop_commander_preserves_remaining_donor_semantics():
+    worker = manifest()["workers"]["glacier_desktop_commander"]
+    receipts = worker["historical_donor_receipts"]
+    assert receipts["next_gate"] == "physical_device_enrollment_then_approved_roots_then_signed_heartbeat_then_device_bound_policy_read_with_sha256_result"
+    assert receipts["execution_proof_policy"] == "current policy read + SHA-256 result hash"
+    assert receipts["device_specific_binding"] is True
+    assert receipts["secondary_device_isolation"] is True
+    assert receipts["binding_invalidation_fail_closed"] is True
