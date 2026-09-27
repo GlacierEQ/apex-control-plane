@@ -8,6 +8,7 @@ on:
       - "src/outcome_fidelity_runtime.py"
       - "src/apex_strong_boot.py"
       - "tests/test_outcome_fidelity_runtime.py"
+      - "tests/test_outcome_completion_authority.py"
       - "tests/test_apex_strong_boot.py"
       - ".github/workflows/outcome-fidelity-lock.yml"
   pull_request:
@@ -49,6 +50,7 @@ jobs:
         run: |
           CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
             tests/test_outcome_fidelity_runtime.py \
+            tests/test_outcome_completion_authority.py \
             tests/test_apex_strong_boot.py
 
       - name: Prove artifact gain is preserved without being promoted to mission outcome
@@ -130,8 +132,10 @@ jobs:
               matches_expected_state=True,
               target_reached=True,
           )
-          if final.phase != "complete":
-              raise SystemExit("truthful intermediate execution did not complete")
+          if final.phase != "repairing":
+              raise SystemExit("mutation completed without a demonstrated mission outcome")
+          if "mission_outcome_required_for_mutation_completion" not in final.repair_reasons:
+              raise SystemExit("missing mission-outcome completion repair reason")
           if kernel.outcome_state()["recorded"] is not False:
-              raise SystemExit("intermediate completion was incorrectly promoted to mission outcome")
+              raise SystemExit("intermediate gain was incorrectly promoted to mission outcome")
           PY

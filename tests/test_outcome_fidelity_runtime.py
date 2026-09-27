@@ -79,7 +79,7 @@ def _bind_mutation(kernel) -> None:
 def test_policy_measures_progress_without_fail_closed_authority() -> None:
     policy = load_outcome_fidelity_policy()
     assert policy["fail_closed"] is False
-    assert policy["required_for_mutation"] is False
+    assert policy["required_for_mutation"] is True
     assert policy["mission_outcome_measurement_required"] is True
     assert "artifact_created" in policy["activity_only_transition_kinds"]
     assert "genuine_external_boundary" in policy["allowed_transition_kinds"]
@@ -218,7 +218,7 @@ def test_genuine_external_boundary_is_recorded_with_evidence(monkeypatch) -> Non
     assert kernel.outcome_state()["transition_kind"] == "genuine_external_boundary"
 
 
-def test_intermediate_gain_can_complete_truthfully_then_raise_next_frontier(monkeypatch) -> None:
+def test_intermediate_gain_is_preserved_but_cannot_complete_mutation(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
@@ -230,11 +230,12 @@ def test_intermediate_gain_can_complete_truthfully_then_raise_next_frontier(monk
         target_reached=True,
     )
 
-    assert final.phase == "complete"
+    assert final.phase == "repairing"
     state = kernel.outcome_state()
     assert state["recorded"] is False
     assert state["uplift_required"] is True
     assert any("next material frontier" in item for item in state["findings"])
+    assert "mission_outcome_required_for_mutation_completion" in final.repair_reasons
 
 
 def test_observation_tasks_are_not_forced_to_fake_progress(monkeypatch) -> None:
