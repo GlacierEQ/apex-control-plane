@@ -172,3 +172,42 @@ def test_config_preserves_operator_identity_and_source_bound_authority():
     assert authority["operator"] == "OPERATOR"
     assert "source-bound" in authority["external_action"]
     assert "exact approval" not in authority["external_action"].lower()
+
+
+def test_duplicate_event_repairs_missing_routed_work(tmp_path):
+    store=JsonlControlStore(tmp_path)
+    original=event()
+    store.append_event(original)
+    cp=ContinuousControlPlane.from_config(store,cfg())
+    created=cp.ingest_event(original)
+    assert len(created) == 1
+    assert created[0].capability == "case.response.ingest"
+    assert cp.ingest_event(original) == []
+
+
+def test_provider_receipt_dedupe_is_scoped_by_source_system(tmp_path):
+    cp=plane(tmp_path)
+    work=cp.ingest_event(event())[0]
+    first=ExecutionReceipt(
+        work_id=work.work_id,
+        mission_id=work.mission_id,
+        correlation_id=work.correlation_id,
+        receipt_kind="verification",
+        status="verified",
+        source_system="github",
+        provider_receipt_id="provider-local-1",
+        details={"source":"github"},
+    )
+    second=ExecutionReceipt(
+        work_id=work.work_id,
+        mission_id=work.mission_id,
+        correlation_id=work.correlation_id,
+        receipt_kind="verification",
+        status="verified",
+        source_system="buildkite",
+        provider_receipt_id="provider-local-1",
+        details={"source":"buildkite"},
+    )
+    cp.record_receipt(first)
+    cp.record_receipt(second)
+    assert {r.source_system for r in cp.receipts.values()} >= {"github","buildkite"}
