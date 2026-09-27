@@ -4,6 +4,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "db/migrations/20260902193955_control_plane_route_runtime_health_v4.sql"
 RUNTIME = ROOT / "db/migrations/20260902194020_control_plane_route_runtime_health_v4.sql"
 NOTION_SUPERSESSION = ROOT / "db/migrations/20260902193841_notion_route_supersession_v1.sql"
+CALL_E_REGISTRATION = ROOT / "db/migrations/20260903094000_register_call_e_continuity_connector_v1_1.sql"
 
 
 def test_live_operational_snapshot_source_is_service_role_only_and_prioritized():
@@ -50,3 +51,8 @@ def test_notion_v1_is_disabled_only_when_v2_is_healthy():
     assert "r2.circuit_state='closed'" in source
     assert "r2.consecutive_failures=0" in source
     assert "set enabled=false" in source
+
+
+def test_call_e_replay_preserves_verified_authorization_health():
+    source = CALL_E_REGISTRATION.read_text().lower()
+    assert "('healthy','verified','verified_authorization')" in source
