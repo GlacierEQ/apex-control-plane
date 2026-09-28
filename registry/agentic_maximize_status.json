@@ -1,0 +1,124 @@
+{
+  "at": "2026-06-22T08:14:04.535776+00:00",
+  "profile": "coremaximized",
+  "quick": false,
+  "steps": [
+    {
+      "step": "prime_keys",
+      "ok": true
+    },
+    {
+      "step": "helix_maximize",
+      "ok": true
+    },
+    {
+      "step": "skills",
+      "ok": true,
+      "count": 308
+    },
+    {
+      "step": "connectors",
+      "ok": true,
+      "grok": 3,
+      "gemini": 15
+    },
+    {
+      "step": "workflow",
+      "ok": true
+    },
+    {
+      "step": "memory",
+      "ok": true,
+      "tokens": 150
+    },
+    {
+      "step": "optimizer",
+      "ok": true
+    }
+  ],
+  "outputs": {
+    "pointer_index": "${HOME}/.apex/POINTER_INDEX.json",
+    "agent_boot_md": "${HOME}/.apex/AGENT_BOOT.md",
+    "agent_boot_json": "${HOME}/.apex/AGENT_BOOT.json",
+    "live_context": "${HOME}/.supermemory/ops/live-context.md"
+  },
+  "vault": {
+    "keys": 200,
+    "at": "2026-06-22T08:13:28"
+  },
+  "helix": {
+    "loaded": true,
+    "at": "2026-06-22T08:13:55",
+    "alpha_ok": "3/3",
+    "omega_pistons": 9,
+    "mcp_ready": 7
+  },
+  "prime_tokens": 150,
+  "memory": {
+    "layers": {
+      "mem0_key": true,
+      "supermemory_key": true,
+      "apex_cache": true,
+      "live_context": true
+    },
+    "prime": {
+      "ok": true,
+      "tokens": 150,
+      "path": "${HOME}/.supermemory/ops/live-context.md"
+    },
+    "token_stats": {
+      "config": {
+        "max_context_tokens": 1000
+      },
+      "totals": {
+        "prime_calls": 25,
+        "save_calls": 29,
+        "tokens_saved_est": 188734
+      },
+      "recent_ops": [
+        {
+          "op": "prime",
+          "used": 0,
+          "budget": 1000,
+          "items": 0,
+          "at": "2026-06-22T03:56:12.612077+00:00"
+        },
+        {
+          "op": "prime",
+          "used": 0,
+          "budget": 900,
+          "items": 0,
+          "at": "2026-06-22T03:56:36.207486+00:00"
+        },
+        {
+          "op": "save",
+          "used": 36,
+          "budget": 0,
+          "items": 1,
+          "at": "2026-06-22T07:21:59.197097+00:00"
+        },
+        {
+          "op": "save",
+          "used": 30,
+          "budget": 0,
+          "items": 1,
+          "at": "2026-06-22T07:54:54.276012+00:00"
+        },
+        {
+          "op": "prime",
+          "used": 150,
+          "budget": 1000,
+          "items": 6,
+          "at": "2026-06-22T08:14:03.670218+00:00"
+        }
+      ],
+      "cache_entries": 9
+    }
+  },
+  "skills_router": "${HOME}/.apex/SKILLS_ROUTER.json",
+  "connector_mesh": "${HOME}/.apex/CONNECTOR_MESH.json",
+  "optimizer": {
+    "ok": true,
+    "mode": "syntax_check"
+  }
+}

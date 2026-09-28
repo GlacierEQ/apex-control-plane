@@ -1,0 +1,264 @@
+{
+  "version": "2.2",
+  "description": "Hardened Mem0 extraction config v2.2 for user 'casey' — adds epistemeology (L0-L6 epistemic ladder) and Tower of Babel (51-floor polyglot) integration to the active-extraction + upsert pipeline from v2.1.",
+  "target_user": "casey",
+  "case_reference": "1FDV-23-0001009",
+  "applied_at": "2026-09-13T04:15:26-10:00",
+  "multilingual": true,
+  "memory_depth": 3,
+  "extraction_model": "active_extraction_upsert",
+
+  "epistemeology": {
+    "source": "epicenter + epistemic-gate (APEX canonical)",
+    "levels": {
+      "L0": "Presence — direct observation. A fact recorded because it was observed, with no inference. (e.g., 'GitHub event of type deployment_status received at 2026-09-13T04:01:00Z with state=success')",
+      "L1": "Structure — organized, classified, extracted conclusion. A single inference from L0 facts. (e.g., 'Deployment to prod in repo GlacierEQ/1FDV succeeded')",
+      "L2": "Verified behavior — empirically confirmed by an independent source. (e.g., 'Deployment to prod succeeded AND health check endpoint /healthz returned 200 within 30s')",
+      "L3": "Reproducible process — same conclusion pattern observed 3+ times for the same repo + concern within 30 days.",
+      "L4": "Predictive model — this conclusion has correctly predicted an outcome 3+ times (e.g., 'CI green → deployment succeeds' held 3/3 times).",
+      "L5": "Generalizable theory — pattern holds across 2+ repos or technology floors.",
+      "L6": "Meta-theoretical framework — principled understanding validated across 3+ technology floors and 5+ repos."
+    },
+    "assignment_rules": {
+      "L0": "Every GitHub event received is logged at L0 with event_type + UTC timestamp. Raw payload is never stored — only SHA-256(payload) + extracted L0 facts.",
+      "L1": "Every extracted conclusion from the extraction pipeline (deployment_state, ci_state, secret_state, config_state) is tagged L1 by default.",
+      "L2": "When an independent verification signal arrives (e.g., deployment_status.success confirmed by a subsequent check_run.success OR a health-check ping OR a commit_status.success on the same commit), the memory is promoted to L2.",
+      "L3": "When the same conclusion (same repo + same concern + same outcome) is observed 3+ times within 30 days, promote to L3.",
+      "L4": "When a conclusion has correctly predicted a downstream state 3+ times (e.g., L1 'CI passed' → L2 'deployment proceeded' held 3/3), promote to L4.",
+      "L5": "When a pattern is observed across 2+ repos (e.g., 'CI green → deploy' on both repo A and repo B), promote to L5.",
+      "L6": "When meta-pattern holds across 3+ technology floors AND 5+ repos (e.g., 'test-then-deploy' pattern across JS, Go, Python, Rust, Java deployments), promote to L6."
+    },
+    "verification_gates": {
+      "L1_to_L2": "Requires at least one independent cross-reference signal arriving within 10 minutes of the L1 extraction. Acceptable signals: (a) check_run.conclusion=success on same commit, (b) deployment_status.state=success for same environment, (c) commit_status.state=success for same ref, (d) external health-check ping 200 on same commit SHA.",
+      "L2_to_L3": "Memory must survive 30 days with the same conclusion repeated 3+ times (verified by event_id_hash deduplication).",
+      "L3_to_L4": "The L3 pattern must have demonstrated predictive accuracy: every time this L3 memory's condition was met, the downstream outcome was as predicted. Minimum 3 predictions, 0 false positives.",
+      "L4_to_L5": "Same pattern observed and verified (L2+) in at least 2 distinct repos.",
+      "L5_to_L6": "Same pattern observed and verified in at least 3 technology floors (Tower of Babel floors) AND at least 5 distinct repos."
+    },
+    "mapping_to_confidence": {
+      "High": "L2 or above (cross-verified by independent signal). Extraction confidence = High.",
+      "Medium": "L1 (single-source structured extraction, not yet cross-verified). Extraction confidence = Medium.",
+      "Low": "L0 observation only, no structured conclusion extracted yet. OR L1 inference that contradicts an L0 fact. Extraction confidence = Low, pending_review=true."
+    },
+    "storage_schema": {
+      "epistemic_level": "L0|L1|L2|L3|L4|L5|L6 (required on every memory)",
+      "verification_sources": "array of [timestamp, source_type, source_id_hash] that promoted this memory's level",
+      "prediction_accuracy": "for L3+: {predictions_made: N, correct: N, false_positives: N}",
+      "cross_repo_instances": "for L4+: array of [repo_name, floor_number, verification_level_achieved]",
+      "meta_pattern_floors": "for L5+: array of Tower of Babel floor numbers where pattern was verified"
+    }
+  },
+
+  "tower_of_babel": {
+    "source": "tower-of-babel (APEX canonical)",
+    "total_floors": 51,
+    "language_detection": {
+      "method": "Static file heuristic — check repo root for language-specific manifest files. No network calls to GitHub API for language detection. Use the pushed commit's added_files array if available.",
+      "rules": [
+        "If package.json exists → JavaScript (Floor 12). If package.json + tsconfig.json or *.tsx files → TypeScript (Floor 12, variant TS).",
+        "If go.mod exists → Go (Floor 23).",
+        "If pyproject.toml OR setup.py OR requirements.txt exists → Python (Floor 29). If poetry.lock exists → Python with Poetry (Floor 29, managed).",
+        "If Cargo.toml exists → Rust (Floor 31).",
+        "If Gemfile exists → Ruby (Floor 7).",
+        "If pom.xml exists → Java (Floor 6). If build.gradle or build.gradle.kts → Java/Kotlin (Floor 6 or 14).",
+        "If *.csproj OR *.sln exists → C# (Floor 5).",
+        "If CMakeLists.txt → C++ (Floor 8). If Makefile ONLY (no other manifest) → C (Floor 3).",
+        "If terraform/ OR *.tf exists → HCL/Terraform (Floor 41).",
+        "If Gemfile → Ruby (Floor 7). If .go_version → Go (Floor 23).",
+        "If *.swift OR Package.swift → Swift (Floor 18).",
+        "If *.kt OR build.gradle.kts → Kotlin (Floor 14).",
+        "If *.rs → Rust (Floor 31) — cross-check with Cargo.toml.",
+        "If *.php AND composer.json → PHP (Floor 17).",
+        "If *.go AND go.mod → Go (Floor 23).",
+        "If *.py AND pyproject.toml → Python (Floor 29).",
+        "Fallback: if no manifest detected, default to Floor 12 (JavaScript/TypeScript) as the most common GitHub repo type."
+      ]
+    },
+    "floors": {
+      "3": {"language": "C", "ci_signals": ["Makefile target: test", "Makefile target: check"], "deploy_signals": ["Makefile target: deploy", "make install"], "config_files": ["Makefile", "CMakeLists.txt"], "proof_standard": "Binary verification: compiled executable exists post-deploy"},
+      "5": {"language": "C#", "ci_signals": ["dotnet test", "dotnet build"], "deploy_signals": ["dotnet publish", "dotnet deploy"], "config_files": ["*.csproj", "*.sln", "*.pfx"], "proof_standard": "Assembly verification: DLL/EXE exists and loads post-deploy"},
+      "6": {"language": "Java", "ci_signals": ["mvn test", "mvn verify"], "deploy_signals": ["mvn deploy", "mvn release"], "config_files": ["pom.xml", "build.gradle"], "proof_standard": "Bytecode verification: .class files exist and JVM loads them"},
+      "7": {"language": "Ruby", "ci_signals": ["bundle exec rspec", "rake test"], "deploy_signals": ["cap deploy", "rake deploy", "heroku create"], "config_files": ["Gemfile", "Rakefile", "deploy.rb"], "proof_standard": "Runtime verification: ruby -e 'require lib' loads without error"},
+      "8": {"language": "C++", "ci_signals": ["make test", "ctest", "make check"], "deploy_signals": ["make install", "make deploy"], "config_files": ["CMakeLists.txt", "Makefile", "*.mk"], "proof_standard": "Binary verification: shared library or executable links correctly"},
+      "12": {"language": "JavaScript", "ci_signals": ["npm test", "npm run ci", "npm run lint"], "deploy_signals": ["vercel --prod", "npm run build && npm run start", "git push origin main"], "config_files": ["package.json", "package-lock.json", ".nvmrc"], "proof_standard": "Runtime verification: health endpoint returns 200 within 60s of deploy"},
+      "14": {"language": "Kotlin", "ci_signals": ["./gradlew test", "gradle check"], "deploy_signals": ["./gradlew deploy", "gradle deploy"], "config_files": ["build.gradle.kts", "build.gradle"], "proof_standard": "JVM bytecode verification"},
+      "17": {"language": "PHP", "ci_signals": ["composer install && phpunit", "php -l ."], "deploy_signals": ["composer install --no-dev", "php deploy.php"], "config_files": ["composer.json", "composer.lock", "*.php"], "proof_standard": "Syntax verification: php -l passes on all files"},
+      "18": {"language": "Swift", "ci_signals": ["xcodebuild test", "swift test"], "deploy_signals": ["xcodebuild archive", "swift build"], "config_files": ["Package.swift", "*.xcodeproj/project.pbxproj"], "proof_standard": "Compilation verification: swift build succeeds"},
+      "23": {"language": "Go", "ci_signals": ["go test ./...", "go vet ./..."], "deploy_signals": ["go run .", "goreleaser", "go build && ./binary"], "config_files": ["go.mod", "go.sum", "Makefile"], "proof_standard": "Binary verification: go build produces executable"},
+      "29": {"language": "Python", "ci_signals": ["pytest", "python -m pytest", "tox"], "deploy_signals": ["pip install", "python -m build", "poetry publish", "python setup.py install"], "config_files": ["pyproject.toml", "setup.py", "requirements.txt", "poetry.lock"], "proof_standard": "Import verification: module imports without ImportError"},
+      "31": {"language": "Rust", "ci_signals": ["cargo test", "cargo check"], "deploy_signals": ["cargo build --release", "cargo publish"], "config_files": ["Cargo.toml", "Cargo.lock"], "proof_standard": "Compilation verification: cargo build --release succeeds"},
+      "41": {"language": "HCL/Terraform", "ci_signals": ["terraform validate", "terraform fmt -check"], "deploy_signals": ["terraform apply", "tofu apply"], "config_files": ["*.tf", "terraform.tfvars", ".terraform-version"], "proof_standard": "State verification: terraform shows zero diff post-apply"}
+    },
+    "proof_standards": {
+      "description": "Each floor defines what constitutes proof that an operation (deployment, CI, config change) actually succeeded. The extraction pipeline uses floor-specific signals to assign epistemic confidence.",
+      "L0_default": "Event observed — no proof standard required",
+      "L1_default": "Event parsed and conclusion extracted — floor-specific signal detected",
+      "L2_default": "Floor-specific proof_standard must be met for promotion from L1"
+    },
+    "extraction_patterns": {
+      "Floor_12": {
+        "deployment": ["deployment_status events", "workflow_run with 'deploy' or 'vercel' in name", "commit subject contains 'deploy' or 'release'"],
+        "ci": ["check_run events from 'node', 'npm', or 'vercel' apps", "workflow_run from '.github/workflows/ci.yml'"],
+        "config": ["push events modifying package.json, package-lock.json, .nvmrc, .eslintrc.*, next.config.*, vercel.json"]
+      },
+      "Floor_23": {
+        "deployment": ["deployment_status events", "workflow_run with 'deploy' in name", "tag pushed (create event with ref_type=tag)"],
+        "ci": ["check_run events from 'go' app", "workflow_run from '.github/workflows/go.yml' or 'Makefile'"],
+        "config": ["push events modifying go.mod, go.sum, Makefile"]
+      },
+      "Floor_29": {
+        "deployment": ["deployment_status events", "workflow_run with 'deploy' or 'publish' in name", "tag pushed"],
+        "ci": ["check_run events from 'pytest' or 'tox'", "workflow_run from '.github/workflows/*.yml' with 'test' step"],
+        "config": ["push events modifying pyproject.toml, setup.py, requirements.txt, poetry.lock"]
+      },
+      "Floor_31": {
+        "deployment": ["deployment_status events", "workflow_run with 'deploy' in name", "tag pushed"],
+        "ci": ["check_run events from 'cargo'", "workflow_run with 'test' in name"],
+        "config": ["push events modifying Cargo.toml, Cargo.lock, rust-toolchain*"]
+      },
+      "Floor_41": {
+        "deployment": ["terraform apply events", "deployment_status events"],
+        "ci": ["check_run for terraform validate", "workflow_run with 'plan' or 'validate'"],
+        "config": ["push events modifying *.tf, terraform.tfvars"]
+      }
+    }
+  },
+
+  "prefilter": {
+    "description": "Skip events that carry zero actionable signal BEFORE running the extraction pipeline.",
+    "skip_rules": [
+      "ping events — no payload data",
+      "push events where ALL changed files match: *.md, *.txt, *.rst, README*, CHANGELOG*, LICENSE*, CONTRIBUTING*, .gitignore, .gitattributes",
+      "push events with only whitespace/diff changes (no content additions)",
+      "issues events with action in [labeled, unlabeled, locked, unlocked, milestoned, demilestoned, assigned, unassigned]",
+      "pull_request events with action in [labeled, unlabeled, synchronize]"
+    ],
+    "never_skip": [
+      "deployment events of any kind",
+      "check_run events with conclusion in [failure, timed_out, cancelled]",
+      "deployment_status events",
+      "workflow_run events with conclusion != success",
+      "workflow_run events named '*deploy*' regardless of conclusion",
+      "release events",
+      "create/delete events for branches and tags",
+      "push events that modified any file in .github/ directory",
+      "push events that modified any config file (.yaml, .yml, .toml, .json, .env, .conf, .tf, Cargo.toml, go.mod, pyproject.toml, package.json)",
+      "push events that modify source files (.py, .go, .rs, .js, .ts, .jsx, .tsx, .java, .rb, .swift, .kt, .cs, .cpp, .c, .php)"
+    ]
+  },
+
+  "concerns": {
+    "deployment_state": {
+      "upsert_scope": "repo + environment_name",
+      "stale_after": "7d",
+      "source_signals": ["deployment_status", "deployment created/updated", "workflow_run named '*deploy*'"],
+      "floor_extras": {
+        "Floor_12": "Also check for push to main branch (implicit deployment trigger)",
+        "Floor_23": "Also check for tag creation (implicit release)",
+        "Floor_29": "Also check for tag creation to PyPI/artifact registry",
+        "Floor_31": "Also check for tag creation + cargo publish",
+        "Floor_41": "Check deployment_status after terraform apply workflow_run"
+      }
+    },
+    "ci_state": {
+      "upsert_scope": "repo + branch + workflow_name",
+      "stale_after": "1h",
+      "source_signals": ["check_run", "check_suite", "workflow_run", "status"]
+    },
+    "secret_state": {
+      "upsert_scope": "repo + secret_name",
+      "stale_after": "30d",
+      "source_signals": ["push to .github/workflows/* referencing secrets.*", "workflow_run for secret rotation", "push modifying .env or vault configs"]
+    },
+    "config_state": {
+      "upsert_scope": "repo + file_path",
+      "stale_after": "14d",
+      "source_signals": ["push events modifying config files", "pull_request modifying config files"]
+    },
+    "infra_state": {
+      "upsert_scope": "repo + property_changed",
+      "stale_after": "permanent",
+      "source_signals": ["visibility changes", "branch protection changes", "repo transfer events"],
+      "epistemic_floor": "system_architecture",
+      "default_level": "L1"
+    }
+  },
+
+  "upsert_policy": {
+    "description": "Search Mem0 for existing memory matching repo + concern + sub-namespace key. If found + identical conclusion within dedup_window → SKIP. If found + different conclusion → UPDATE: set supersedes, append to history_chain, store provenance_hash. If not found → CREATE.",
+    "dedup_window_minutes": 5,
+    "dedup_scope": "exact_duplicate_conclusion_only",
+    "history_chain": {
+      "description": "Array of {timestamp, conclusion, provenance_hash, epistemic_level, floor} for every prior state. Preserves forensic trail.",
+      "max_entries": 100
+    },
+    "provenance_hash": {
+      "description": "SHA-256 of the raw GitHub event payload. Stored as metadata only. Never store payload contents."
+    },
+    "sequencing": {
+      "description": "Every upsert records event_timestamp (from GitHub event header) and event_id_hash (SHA-256 of delivery ID).",
+      "sort_key": "event_timestamp DESC",
+      "conflict_resolution": "If two events have the same timestamp ±1s, break tie by event_id_hash (deterministic)."
+    }
+  },
+
+  "sanitization": {
+    "description": "Every extracted text field passes through these rules before storage.",
+    "commit_subject_rules": [
+      "Strip: ghp_[a-zA-Z0-9]{36}, gho_[a-zA-Z0-9]{36}, github_pat_[a-zA-Z0-9_]+, AKIA[A-Z0-9]{16}, sk-[a-zA-Z0-9]{20,}",
+      "Strip: base64 strings of 40+ characters (pattern: [A-Za-z0-9+/]{40,}={0,2})",
+      "Strip: any string matching AWS secret key pattern (AGPA|AIDA|AROA|ASIA)[A-Z0-9]{16}",
+      "If any secret pattern detected, replace match with [REDACTED: secret_pattern]",
+      "Truncate to 120 characters",
+      "Strip control characters, newlines, tabs"
+    ],
+    "field_truncation": {
+      "commit_subject": 120,
+      "workflow_name": 80,
+      "failed_job_steps": 320,
+      "overall_conclusion": 200,
+      "repo_name": 100
+    }
+  },
+
+  "confidence_scoring": {
+    "description": "Confidence = epistemic level mapped. Low confidence = L0/L1 not cross-verified.",
+    "levels": {
+      "High": "L2 or above (verified by independent source). OR High if explicit structured field in GitHub event AND floor-specific proof_standard was met within 10 minutes.",
+      "Medium": "L1 (single-source structured extraction, not yet cross-verified). OR Medium if clear text signal (commit subject, workflow name) and floor detection succeeded.",
+      "Low": "L0 observation only, no structured conclusion extracted. OR L1 inference that contradicts another L0 fact in the same repo. Tagged pending_review=true."
+    },
+    "pending_review_ttl": "24h",
+    "auto_resolution": "Low-confidence memories without human review after 24h are downgraded to 'stale_unverified' archive bucket. Medium-confidence memories without promotion to High after 48h remain at Medium."
+  },
+
+  "sweep_policy": {
+    "frequency": "monthly",
+    "rules": [
+      "For each memory with epistemic_level in [L2, L3, L4, L5, L6]: check stale_after timestamp. If expired, flag as 'stale'.",
+      "For L0 and L1 memories older than 7 days: archive to 'ephemeral' bucket.",
+      "For L3 memories: verify the 3x repetition rule still holds. If not, downgrade to L2.",
+      "For L4 memories: verify prediction accuracy is still >= 3/3. If a false positive is found, downgrade to L3.",
+      "For L5 memories: verify pattern still holds across 2+ repos. If not, downgrade to L4.",
+      "For L6 memories: verify meta-pattern across 3+ floors AND 5+ repos. If not, downgrade to L5.",
+      "Notify user for stale L2+ deployment_state and ci_state memories."
+    ]
+  },
+
+  "custom_categories": [
+    {"name": "case_core", "description": "Legal case metadata: 1FDV-23-0001009, Hawaii First Circuit Family Proceedings, parties (Barton/Brower), judge (Courtney Naso), decree sequence, docket status, procedural posture, case phase."},
+    {"name": "legal_strategy", "description": "Motions filed, writs pursued (mandamus/certiorari/habeas), statutes cited (HRS/USC), precedent chains, filing cadence, theory pivots (elevated or abandoned)."},
+    {"name": "actor_intelligence", "description": "Opposing counsel (Scot Brower) and judge (Courtney Naso) behavior patterns, tactics, bias indicators, gamesmanship, witness credibility, alignment shifts. Confidence-tagged."},
+    {"name": "evidence_pipeline", "description": "Documents, exhibits, chain of custody, contradiction tracking with dual-source citations, SHA-256 verification, evidence audits, gaps requiring follow-up."},
+    {"name": "system_architecture", "description": "Agent swarms, models deployed, pipeline components, infrastructure topology, CI/CD routing, webhook paths, repo structure, integration wiring — each with evidence state tag. Includes infra state shifts from GitHub (visibility changes, branch protection, repo transfers). Tower of Babel floor assignment required."},
+    {"name": "operations", "description": "Active-extraction upsert category for GitHub-derived operational intelligence. Sub-namespaces with Tower of Babel floor tagging: deployment_state (per repo+env, TTL 7d, floor proof-standard verified), ci_state (per repo+branch+workflow, TTL 1h), secret_state (per repo+secret, TTL 30d), config_state (per repo+path, TTL 14d), infra_state (per repo+property, permanent). Each upsert preserves history_chain with [timestamp, conclusion, provenance_hash, epistemic_level, floor]. Never stores raw payloads — only SHA-256(payload). Epistemic levels L0-L6 on every memory. Confidence-tagged (High/Medium/Low). Low-confidence entries get pending_review=true with 24h TTL."},
+    {"name": "timeline", "description": "Docket entries, filing deadlines, deployment timestamps, milestones, ripple effects — UTC-timestamped chronological threads. Each entry includes epistemic_level and tower_of_babel floor."},
+    {"name": "intelligence", "description": "Cross-domain synthesis: case+tech convergence patterns, risk escalations, forward-looking strategic assessments. Meta-patterns (L5/L6) tagged with cross-repo and cross-floor validation evidence."}
+  ],
+
+  "custom_instructions": "GitHub events flow through a 7-stage epistemic extraction pipeline with Tower of Babel floor awareness:\n\n1. PREFILTER — Skip if: ping event, or push where ALL changed files are docs (*.md, *.txt, LICENSE, README, CHANGELOG, .gitignore) AND no workflow_run triggered, or issues action in [labeled, unlabeled, assigned, unassigned, locked, unlocked, milestoned, demilestoned]. NEVER_SKIP: deployments, failed CI, releases, branch/tag create/delete, pushes to .github/ or config files.\n\n2. FLOOR DETECTION — Determine the Tower of Babel floor for this repo by scanning the pushed commit's added_files (or repo manifest files): package.json→Floor 12, go.mod→Floor 23, pyproject.toml→Floor 29, Cargo.toml→Floor 31, *.tf→Floor 41, etc. Tag every conclusion with floor_number.\n\n3. L0 OBSERVATION — Log the raw event as an L0 fact: event_type + UTC timestamp + event_id_hash (SHA-256 of delivery ID). Do NOT store payload. Compute provenance_hash = SHA-256(raw_payload). Extract only structured fields (state, conclusion, ref, etc.) as L0 facts.\n\n4. EXTRACT — Identify concern type using floor-specific signals:\n   - deployment_state: deployment_status events, workflow_run named '*deploy*', tag creation, floor-specific deploy signals (Floor 12: push to main, Floor 23/29/31: tag creation, Floor 41: terraform apply)\n   - ci_state: check_run/check_suite/workflow_run/status events\n   - secret_state: push modifying .github/workflows/* referencing secrets.*, or .env/vault configs\n   - config_state: push/PR modifying config files (floor-specific: package.json for Floor 12, go.mod for Floor 23, pyproject.toml for Floor 29, Cargo.toml for Floor 31, *.tf for Floor 41)\n   - infra_state: visibility changes, branch protection, repo transfers → system_architecture\n\n5. CONCERNS & UPSERT — Each concern has sub-namespace scopes:\n   - deployment_state: upsert_key = repo+environment_name, stale_after=7d, proof_standard = floor-specific\n   - ci_state: upsert_key = repo+branch+workflow_name, stale_after=1h\n   - secret_state: upsert_key = repo+secret_name, stale_after=30d\n   - config_state: upsert_key = repo+file_path, stale_after=14d\n   - infra_state: upsert_key = repo+property_changed, stale_after=permanent\n   Before storing: search Mem0 for existing memory matching repo + concern + sub-key. If found + identical conclusion within 5 min → SKIP (exact duplicate dedup). If found + different conclusion → UPDATE: set supersedes=old_memory_id, append to history_chain [old_timestamp, old_conclusion, old_provenance_hash, old_epistemic_level, old_floor], set event_timestamp, event_id_hash, provenance_hash, floor_number. If not found → CREATE.\n\n6. SANITIZE — Strip secret patterns (ghp_, gho_, github_pat_, AKIA, sk-, AWS patterns, base64 40+), truncate fields (commit_subject≤120, workflow≤80, job_steps≤320, conclusion≤200, repo≤100), replace secrets with [REDACTED].\n\n7. CONFIDENCE & EPISTEMIC LEVEL — Assign epistemic level:\n   - L0: raw observation logged (every event)\n   - L1: extracted conclusion from single event\n   - L2: cross-verified by independent signal (deployment_status confirmed by health check OR check_run success on same commit)\n   - L3: same conclusion observed 3+ times for same repo+concern in 30 days\n   - L4: L3 pattern correctly predicted outcome 3+ times\n   - L5: pattern verified across 2+ repos\n   - L6: pattern verified across 3+ floors AND 5+ repos\n   Confidence mapping: High = L2+, Medium = L1, Low = L0/unverified. Low-confidence gets pending_review=true, 24h TTL, auto-archive to stale_unverified after 24h.\n\n8. STALENESS — Monthly sweep flags stale memories. L0/L1 older than 7 days → archive. L2+ past stale_after → flag. L3 check 3x rule. L4 check prediction accuracy. L5 check 2+ repos. L6 check 3+ floors / 5+ repos.\n\nCase metadata: 1FDV-23-0001009, Hawaii First Circuit Family Proceedings, parties (Barton/Brower), judge (Courtney Naso), decree sequence Dkt 191->193->199->201, decree status VOID/ab initio.\n\nEach memory stored with: {current_conclusion, epistemic_level, floor_number, concern_type, upsert_key, history_chain[], provenance_hash, event_timestamp, event_id_hash, superseded_by, confidence, pending_review, stale_after, verification_sources[]}.",
+
+  "agent_custom_instructions": {
+    "apex-github-worker": "You are the GitHub-to-Mem0 extraction pipeline for user 'casey'. You process every GitHub event through a 7-stage pipeline that assigns epistemic levels (L0-L6) and Tower of Babel floor numbers.\n\nSTAGE 1 — PREFILTER:\n- SKIP if: ping event, or push where ALL changed files are docs (*.md, *.txt, LICENSE, README, CHANGELOG, .gitignore) AND no workflow_run was triggered, or issues action in [labeled, unlabeled, assigned, unassigned, locked, unlocked, milestoned, demilestoned]\n- NEVER SKIP: deployment events, failed CI runs, releases, branch/tag create/delete, pushes to .github/ or config files\n\nSTAGE 2 — FLOOR DETECTION:\n- Scan the pushed commit's added_files (or the event payload's files array) for language manifest files:\n  - package.json → Floor 12 (JavaScript/TypeScript)\n  - go.mod → Floor 23 (Go)\n  - pyproject.toml / setup.py / requirements.txt → Floor 29 (Python)\n  - Cargo.toml → Floor 31 (Rust)\n  - *.tf → Floor 41 (HCL/Terraform)\n  - Gemfile → Floor 7 (Ruby)\n  - pom.xml / build.gradle → Floor 6 (Java)\n  - *.csproj / *.sln → Floor 5 (C#)\n  - CMakeLists.txt → Floor 8 (C++)\n  - Makefile (only) → Floor 3 (C)\n  - Package.swift → Floor 18 (Swift)\n  - composer.json → Floor 17 (PHP)\n- If no manifest detected, default to Floor 12. Tag every conclusion with floor_number.\n\nSTAGE 3 — L0 OBSERVATION:\n- Log event_type + UTC timestamp + event_id_hash (SHA-256 of delivery ID) as L0 fact\n- Compute provenance_hash = SHA-256 of raw event payload (store hash only, never payload)\n- Extract only structured fields as L0 facts\n\nSTAGE 4 — EXTRACT (floor-aware):\n- deployment_state: deployment_status, workflow_run '*deploy*', tag creation, Floor 12 push-to-main, Floor 23/29/31 tag creation, Floor 41 terraform apply\n- ci_state: check_run, check_suite, workflow_run, status — use floor-specific CI signals\n- secret_state: push modifying .github/workflows/* with 'secrets.' reference, or .env/vault config changes\n- config_state: push/PR modifying floor-specific config files (package.json, go.mod, pyproject.toml, Cargo.toml, *.tf)\n- infra_state: visibility change, branch protection, repo transfer → system_architecture\n\nSTAGE 5 — UPSERT:\n- Compute upsert_key per sub-namespace: deployment_state=repo+env, ci_state=repo+branch+workflow, secret_state=repo+secret, config_state=repo+path, infra_state=repo+property\n- Search Mem0 for existing memory matching same upsert_key\n- If found + identical conclusion within 5 min → SKIP\n- If found + different conclusion → UPDATE: supersedes=old_memory_id, append to history_chain [{old_timestamp, old_conclusion, old_provenance_hash, old_epistemic_level, old_floor}], then set new values\n- If not found → CREATE\n\nSTAGE 6 — SANITIZE:\n- Strip: ghp_, gho_, github_pat_, AKIA, sk-, AWS key patterns, base64 40+ chars → [REDACTED]\n- Truncate: commit_subject≤120, workflow_name≤80, job_steps≤320, conclusion≤200, repo≤100\n\nSTAGE 7 — CONFIDENCE & EPISTEMIC LEVEL:\n- L0: raw observation — every event gets an L0 log\n- L1: extracted conclusion from single event — default for all new extractions\n- L2: cross-verified by independent signal within 10 min — monitor for: check_run.success on same commit after deployment, health-check 200 after deploy, commit_status.success after workflow\n- L3: same conclusion observed 3+ times for same repo+concern in 30 days — track via history_chain\n- L4: L3 pattern correctly predicted outcome 3+ times — track prediction_accuracy\n- L5: pattern verified across 2+ repos\n- L6: pattern verified across 3+ floors AND 5+ repos\n- Confidence: High=L2+, Medium=L1, Low=L0/unverified → pending_review=true, 24h TTL\n\nEvery stored memory MUST include: {current_conclusion, epistemic_level, floor_number, concern_type, upsert_key, history_chain[], provenance_hash, event_timestamp, event_id_hash, superseded_by, confidence, pending_review, stale_after, verification_sources[]}\n\nStore for OWN CONTINUITY ONLY:\n- Tool failures with exact error text\n- Retry strategies that worked after a failure\n- Execution environment quirks specific to your runtime\n- Sync outcomes: what was written to which Mem0 category + result + upsert_key (NOT memory content)\n- Your own credential rotations and auth changes\n\nDo NOT store for yourself:\n- User case facts, legal strategy, actor intelligence, evidence\n- Raw GitHub payloads, delivery IDs, commit SHAs, git refs, x-github-* headers\n- Any GitHub event content — only extracted conclusions with provenance_hash\n- Unexecuted code, API stubs, installation instructions, ambient conversation"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "contract_version": "1.0.0",
+  "component": "apex-boot-core",
+  "continuity_impact": "ROOT_BOOTSTRAP",
+  "generated_at": "2026-09-28T02:02:51.674271+00:00",
+  "commit": "311b798fc365131764f5ce547aa52fdbbc593474",
+  "host": {
+    "os_name": "Darwin",
+    "arch": "x86_64",
+    "is_termux": false,
+    "is_darwin": true
+  },
+  "config_root": "/Users/kcbflux/.apex",
+  "classification": "RECOVERY_REQUIRED",
+  "evidence": {
+    "executors_missing": [
+      "apex-grip",
+      "apex-startup"
+    ],
+    "configs_dead": [
+      ".mcp.json",
+      "AGENT_BOOT.json",
+      "BLINK_ACCESS.json",
+      "BOOT_ACTIVATION.json",
+      "COLOSSUS_REPO_INDEX.json",
+      "CONNECTOR_MESH.json",
+      "INTAKE_BATCH_20260619.json",
+      "LINUX_DEVICE_IDENTITY.json",
+      "MEMORY_MESH.json",
+      "NOTION_SURFACE.json",
+      "NOTION_WORKERS_MESH.json",
+      "OPERATING_SURFACE.json",
+      "POINTER_INDEX.json",
+      "SOVEREIGN_GRIP.json",
+      "STARTUP_STATE.json",
+      "TERMUX_OPTIMIZE_AUDIT.json",
+      "WORKFLOW_ROUTER.json",
+      "agentic_maximize_status.json",
+      "aspen_grove_constellation.json",
+      "dropbox_video_index_summary.json",
+      "file_sources_access_report.json",
+      "helix_elevation_status.json",
+      "helix_fs_status.json",
+      "helix_maximize_status.json",
+      "memory_layer_status.json",
+      "notion_workers_status.json"
+    ],
+    "configs_termux": [
+      "AGENT_BOOT.json",
+      "CONNECTOR_MESH.json",
+      "INTAKE_BATCH_20260619.json",
+      "MEMORY_MESH.json",
+      "NOTION_SURFACE.json",
+      "OPERATING_SURFACE.json",
+      "agentic_maximize_status.json",
+      "dropbox_video_index_summary.json",
+      "file_sources_access_report.json",
+      "helix_elevation_status.json",
+      "helix_maximize_status.json",
+      "memory_layer_status.json",
+      "notion_workers_status.json"
+    ],
+    "continuity": "VALID"
+  },
+  "chain": {
+    "algorithm": "SHA-256",
+    "payload_sha256": "34bfc6a049c77f22bcfc07f2c78d6105d3d07d13f86f3f17cb9c5530e1f58694"
+  }
+}

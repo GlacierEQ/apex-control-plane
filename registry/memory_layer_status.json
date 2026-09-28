@@ -1,0 +1,62 @@
+{
+  "layers": {
+    "mem0_key": true,
+    "supermemory_key": true,
+    "apex_cache": true,
+    "live_context": true
+  },
+  "prime": {
+    "ok": true,
+    "tokens": 150,
+    "path": "${HOME}/.supermemory/ops/live-context.md"
+  },
+  "token_stats": {
+    "config": {
+      "max_context_tokens": 1000
+    },
+    "totals": {
+      "prime_calls": 25,
+      "save_calls": 29,
+      "tokens_saved_est": 188734
+    },
+    "recent_ops": [
+      {
+        "op": "prime",
+        "used": 0,
+        "budget": 1000,
+        "items": 0,
+        "at": "2026-06-22T03:56:12.612077+00:00"
+      },
+      {
+        "op": "prime",
+        "used": 0,
+        "budget": 900,
+        "items": 0,
+        "at": "2026-06-22T03:56:36.207486+00:00"
+      },
+      {
+        "op": "save",
+        "used": 36,
+        "budget": 0,
+        "items": 1,
+        "at": "2026-06-22T07:21:59.197097+00:00"
+      },
+      {
+        "op": "save",
+        "used": 30,
+        "budget": 0,
+        "items": 1,
+        "at": "2026-06-22T07:54:54.276012+00:00"
+      },
+      {
+        "op": "prime",
+        "used": 150,
+        "budget": 1000,
+        "items": 6,
+        "at": "2026-06-22T08:14:03.670218+00:00"
+      }
+    ],
+    "cache_entries": 9
+  },
+  "at": "2026-06-22T08:14:04.277712+00:00"
+}

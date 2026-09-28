@@ -1,0 +1,43 @@
+{
+  "at": "2026-06-21T12:55:28.110267+00:00",
+  "layers": {
+    "mem0": {
+      "key_present": true,
+      "live": true,
+      "detail": "ok"
+    },
+    "supermemory": {
+      "key_present": true,
+      "live": true,
+      "detail": "ok"
+    },
+    "memory_plugin": {
+      "key_present": true,
+      "live": false,
+      "detail": "endpoint_unreachable",
+      "optional": true
+    },
+    "pinecone": {
+      "key_present": true,
+      "live": false,
+      "detail": "status_400",
+      "optional": true
+    },
+    "qdrant": {
+      "key_present": true,
+      "live": false,
+      "detail": "unreachable",
+      "optional": true
+    },
+    "context7": {
+      "key_present": true,
+      "live": true,
+      "detail": "ok"
+    }
+  },
+  "summary": {
+    "layers_total": 6,
+    "layers_live": 3,
+    "cache_entries": 8
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "saved_at": "2026-06-21T12:35:00+00:00",
+  "label": "APEX CoreMaximized Token-Savings Startup",
+  "status": "ACTIVE",
+  "case": "1FDV-23-0001009",
+  "profile": "coremaximized",
+  "protocol": "ASPEN-CHK-001 + TRUTH-VERIFY",
+  "boot_order": [
+    "source ~/.apex/session_boot.env",
+    "read ~/.apex/STARTUP_STATE.json (this file)",
+    "read ~/.apex/AGENT_BOOT.md",
+    "read ~/.supermemory/ops/live-context.md",
+    "sm-prime \"current task\" --max-tokens 1000"
+  ],
+  "token_savings": {
+    "prime_budget": 1000,
+    "last_prime_tokens": 613,
+    "live_context": "~/.supermemory/ops/live-context.md",
+    "pointer_index": "~/.apex/POINTER_INDEX.json",
+    "rules": [
+      "POINTER_INDEX before directory scans",
+      "line ranges on file reads",
+      "parallel independent probes",
+      "tables over prose",
+      "prime once per task",
+      "verify carryover after writes"
+    ]
+  },
+  "skills": {
+    "count": 308,
+    "router": "~/.apex/SKILLS_ROUTER.json",
+    "active": [
+      "helix-pro-code",
+      "token-savings",
+      "supermemory-cli",
+      "hyper-efficiency-flow",
+      "apex-aspen-grove-bootup",
+      "verification"
+    ],
+    "load_alpha": "Pro_Code/CODER-SKILL.md",
+    "load_omega": "pro-code/KNOWLEDGE.md"
+  },
+  "connectors": {
+    "router": "~/.apex/CONNECTOR_MESH.json",
+    "verified_at_save": {
+      "notion_api": "LIVE",
+      "notion_workers": "api_live true",
+      "dropbox_rclone": "LIVE",
+      "github_mcp_grok": "LIVE GlacierEQ",
+      "github_env_token": "STALE — use grok_com_github MCP",
+      "supermemory_cli": "LIVE — unset SUPERMEMORY_API_KEY before sm-ops",
+      "colossus_gatekeeper_mcp": "LIVE — wired in grok config.toml",
+      "apex_filesystem_mcp": "LIVE — wired in grok config.toml",
+      "unified_memory_mcp": "LIVE — wired in grok config.toml",
+      "nexus_colossus": "http_200",
+      "fs_commander_alpha": "500 obs OK",
+      "fs_commander_omega": "12/12 pistons"
+    },
+    "mcp_routing": {
+      "filesystem": "apex-filesystem | colossus-gatekeeper safe_read",
+      "memory": "sm-ops prime | colossus-gatekeeper memory_route",
+      "github": "grok_com_github MCP",
+      "notion": "API + notion_workers_daemon",
+      "dropbox": "rclone + sm-ops dropbox-refresh --from-rclone",
+      "keys": "gatekeeper.env via colossus-gatekeeper key_power_status"
+    }
+  },
+  "helix": {
+    "alpha": "MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha",
+    "omega": "MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega",
+    "status": "~/.apex/helix_fs_status.json"
+  },
+  "workflow": {
+    "router": "~/.apex/WORKFLOW_ROUTER.json",
+    "phases": ["boot", "plan", "execute", "verify", "save"]
+  },
+  "commands": {
+    "startup": "apex-startup",
+    "prime": "sm-prime \"<task>\" --max-tokens 1000",
+    "save": "sm-ops save \"<outcome>\" --durable",
+    "maximize": "sm-ops maximize --quick",
+    "helix": "sm-ops fs-commander --activate",
+    "dropbox": "sm-ops dropbox-refresh --from-rclone"
+  },
+  "device_identity": {
+    "class": "linux",
+    "kernel": "Linux",
+    "host_alias": "apex-termux",
+    "manifest": "~/.apex/LINUX_DEVICE_IDENTITY.json",
+    "env": "~/.apex/linux_identity.env",
+    "verify": "apex-linux-identity",
+    "policy": "linux_first — Termux is Linux kernel; Android runtime tags are not reported identity"
+  },
+  "blink_access": {
+    "status": "CONFIGURED",
+    "canonical": "~/.apex/BLINK_ACCESS.json",
+    "host": "apex-termux",
+    "connect": "Blink → Hosts → tap apex-termux (not local session)",
+    "verify": "uname=Linux pwd=${HOME} whoami=u0_a317",
+    "key": "id_rsa_iphone",
+    "lan": "192.168.68.103:8022"
+  },
+  "known_gaps": [
+    "GITHUB_TOKEN in gatekeeper stale — GitHub MCP works",
+    "SUPERMEMORY_API_KEY in gatekeeper overrides OAuth — unset before sm-ops",
+    "Memory Plugin host unreachable from Termux — keys present, endpoint offline",
+    "Pinecone/Qdrant need valid embed key — OpenAI 401; refresh OPENAI_API_KEY",
+    "Blink remote verify: user must tap host apex-termux — uname must show Linux"
+  ],
+  "memory_mesh": {
+    "config": "~/.apex/MEMORY_MESH.json",
+    "core": "scripts/memory_connect_core.py",
+    "mcp": "scripts/unified_memory_mcp.py",
+    "verify": "sm-ops memory-mesh",
+    "live_layers": ["mem0", "supermemory", "context7"]
+  }
+}

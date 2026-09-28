@@ -1,0 +1,99 @@
+{
+  "at": "2026-06-23T00:00:00Z",
+  "account": "GlacierEQ",
+  "private_repos": 466,
+  "mantra": "Tight grip. Private core. One operator.",
+  "home_remote": {
+    "repo": "Pro-DOCTOR-STRANGE",
+    "path": "~",
+    "role": "Universal orchestration — Termux $HOME"
+  },
+  "default_clone_root": "~/MISSIONS/PRO_AGENTS",
+  "tiers": {
+    "ring0": {
+      "label": "Orchestration cockpit",
+      "repos": [
+        {"repo": "Pro-DOCTOR-STRANGE", "path": "~", "cli": "apex", "critical": true},
+        {"repo": "Pro-xAI", "path": "~/MISSIONS/PRO_AGENTS/Pro-xAI", "cli": "grok", "critical": true},
+        {"repo": "mastermind", "path": "~/MISSIONS/PRO_AGENTS/mastermind", "cli": "mastermind", "critical": true},
+        {"repo": "Pro-Mastermind", "path": "~/MISSIONS/PRO_AGENTS/Pro-Mastermind", "cli": "mastermind", "critical": true}
+      ]
+    },
+    "helix": {
+      "label": "Double helix execution",
+      "repos": [
+        {"repo": "apex-alpha", "path": "~/MISSIONS/PRO_AGENTS/apex-alpha", "critical": true},
+        {"repo": "apex-omega", "path": "~/MISSIONS/PRO_AGENTS/apex-omega", "critical": true},
+        {"repo": "pro-code", "path": "~/MISSIONS/PRO_AGENTS/pro-code", "critical": true},
+        {"repo": "Pro_Code", "path": "~/MISSIONS/PRO_AGENTS/Pro_Code", "critical": true},
+        {"repo": "nexus-api", "path": "~/MISSIONS/PRO_AGENTS/nexus-api", "critical": true},
+        {"repo": "colossus-gateway", "path": "~/MISSIONS/colossus-gateway", "critical": true},
+        {"repo": "apex-workers-runtime", "path": "~/MISSIONS/PRO_AGENTS/apex-workers-runtime", "critical": false}
+      ]
+    },
+    "omni_stealth": {
+      "label": "Omni + stealth ring",
+      "repos": [
+        {"repo": "Omni_Engine", "path": "~/MISSIONS/PRO_AGENTS/Omni_Engine", "cli": "omni-max", "critical": true},
+        {"repo": "omni-agent-pro", "path": "~/MISSIONS/PRO_AGENTS/omni-agent-pro", "cli": "omni-max", "critical": true},
+        {"repo": "Stealth-Claw", "path": "~/MISSIONS/PRO_AGENTS/Stealth-Claw", "cli": "run-claw", "critical": true},
+        {"repo": "stealth-swarm-orchestrator", "path": "~/MISSIONS/PRO_AGENTS/stealth-swarm-orchestrator", "critical": true},
+        {"repo": "PRIMORDIAL-MESH-TITAN", "path": "~/MISSIONS/PRO_AGENTS/PRIMORDIAL-MESH-TITAN", "critical": true},
+        {"repo": "powerhouse", "path": "~/MISSIONS/PRO_AGENTS/powerhouse", "critical": true},
+        {"repo": "microwave-orchestrator", "path": "~/MISSIONS/PRO_AGENTS/microwave-orchestrator", "critical": false}
+      ]
+    },
+    "gemma_gemini": {
+      "label": "Gemma + Gemini minds",
+      "repos": [
+        {"repo": "apex-gemma", "path": "~/MISSIONS/PRO_AGENTS/apex-gemma", "cli": "gemma-cli", "critical": true},
+        {"repo": "Pro-Gemma", "path": "~/MISSIONS/PRO_AGENTS/Pro-Gemma", "critical": true},
+        {"repo": "Apex-Gemma4", "path": "~/MISSIONS/PRO_AGENTS/Apex-Gemma4", "critical": true},
+        {"repo": "Pro-gemini-unified-ops", "path": "~/MISSIONS/PRO_AGENTS/Pro-gemini-unified-ops", "cli": "gemini", "critical": true},
+        {"repo": "gemini-unified-ops", "path": "~/MISSIONS/PRO_AGENTS/gemini-unified-ops", "critical": false},
+        {"repo": "DeepSeek-Coder-V2-main", "path": "~/MISSIONS/PRO_AGENTS/DeepSeek-Coder-V2-main", "critical": true}
+      ]
+    },
+    "memory_mind": {
+      "label": "Memory + consciousness",
+      "repos": [
+        {"repo": "glaciereq-memory-master", "path": "~/MISSIONS/PRO_AGENTS/glaciereq-memory-master", "cli": "sm-ops", "critical": true},
+        {"repo": "unified-memory-mcp", "path": "~/MISSIONS/PRO_AGENTS/unified-memory-mcp", "cli": "sm-ops", "critical": true},
+        {"repo": "token_saver", "path": "~/MISSIONS/PRO_AGENTS/token_saver", "critical": true},
+        {"repo": "apex-holographic-memory", "path": "~/MISSIONS/PRO_AGENTS/apex-holographic-memory", "critical": true},
+        {"repo": "apex-singularity-matrix", "path": "~/MISSIONS/PRO_AGENTS/apex-singularity-matrix", "critical": true},
+        {"repo": "Pro-God-Mind", "path": "~/MISSIONS/PRO_AGENTS/Pro-God-Mind", "critical": true},
+        {"repo": "GodMind", "path": "~/MISSIONS/PRO_AGENTS/GodMind", "critical": true},
+        {"repo": "Pro-AEON-BRAIN", "path": "~/MISSIONS/PRO_AGENTS/Pro-AEON-BRAIN", "critical": true},
+        {"repo": "AEON-BRAIN-777", "path": "~/MISSIONS/PRO_AGENTS/AEON-BRAIN-777", "critical": false}
+      ]
+    },
+    "stones_swarm": {
+      "label": "Stones + swarm + organism",
+      "repos": [
+        {"repo": "Z-BACKUP-apex-infinity-stones", "path": "~/MISSIONS/PRO_AGENTS/Z-BACKUP-apex-infinity-stones", "critical": true},
+        {"repo": "Pro-Swarm", "path": "~/MISSIONS/PRO_AGENTS/Pro-Swarm", "critical": true},
+        {"repo": "aspen-grove-swarm", "path": "~/MISSIONS/PRO_AGENTS/aspen-grove-swarm", "critical": true},
+        {"repo": "colossal-agent", "path": "~/MISSIONS/PRO_AGENTS/colossal-agent", "critical": true},
+        {"repo": "Pro-AEON-777", "path": "~/MISSIONS/PRO_AGENTS/Pro-AEON-777", "critical": true},
+        {"repo": "spiral-engine", "path": "~/MISSIONS/PRO_AGENTS/spiral-engine", "critical": false}
+      ]
+    },
+    "case": {
+      "label": "Case truth layer (private)",
+      "repos": [
+        {"repo": "AspenGrove-KEKOA-1FDV-23-0001009", "path": "~/MISSIONS/PRO_AGENTS/AspenGrove-KEKOA-1FDV-23-0001009", "critical": true},
+        {"repo": "SUPERLUMINAL_CASE_MATRIX", "path": "~/MISSIONS/PRO_AGENTS/SUPERLUMINAL_CASE_MATRIX", "critical": true},
+        {"repo": "1FDV-23-0001009-FEDERAL-WARFARE", "path": "~/MISSIONS/PRO_AGENTS/1FDV-23-0001009-FEDERAL-WARFARE", "critical": true}
+      ]
+    },
+    "release": {
+      "label": "Promised + automation",
+      "repos": [
+        {"repo": "MiMo-Code", "path": "~/MISSIONS/PRO_AGENTS/MiMo-Code", "cli": "mimo-ops", "critical": true, "fork": true},
+        {"repo": "computer-user", "path": "~/MISSIONS/PRO_AGENTS/computer-user", "critical": true},
+        {"repo": "comet-agent", "path": "~/MISSIONS/PRO_AGENTS/comet-agent", "critical": false}
+      ]
+    }
+  }
+}

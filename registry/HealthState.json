@@ -1,0 +1,48 @@
+{
+  "contract_version": "1.0.0",
+  "state": "RECOVERY_REQUIRED",
+  "checked_at": "2026-09-28T02:02:51.496364+00:00",
+  "checks": [
+    {
+      "id": "executors_resolve",
+      "passed": false,
+      "detail": "missing: apex-grip, apex-startup"
+    },
+    {
+      "id": "paths_resolve",
+      "passed": false,
+      "detail": "13 file(s) point at missing paths"
+    },
+    {
+      "id": "platform_consistent",
+      "passed": false,
+      "detail": "13 file(s) carry foreign-platform paths"
+    },
+    {
+      "id": "continuity_head_hash",
+      "passed": true,
+      "detail": "continuity=VALID"
+    }
+  ],
+  "reasons": [
+    {
+      "code": "EXECUTOR_MISSING",
+      "severity": "BLOCKING",
+      "detail": "apex-grip, apex-startup"
+    },
+    {
+      "code": "CONFIG_DEAD_PATH",
+      "severity": "RECOVERABLE",
+      "detail": ".mcp.json, BLINK_ACCESS.json, BOOT_ACTIVATION.json, COLOSSUS_REPO_INDEX.json, LINUX_DEVICE_IDENTITY.json"
+    },
+    {
+      "code": "CONFIG_FOREIGN_PLATFORM",
+      "severity": "RECOVERABLE",
+      "detail": "AGENT_BOOT.json, CONNECTOR_MESH.json, INTAKE_BATCH_20260619.json, MEMORY_MESH.json, NOTION_SURFACE.json"
+    }
+  ],
+  "chain": {
+    "algorithm": "SHA-256",
+    "payload_sha256": "e5d737dfa6b240ef74272b09891119d6c0d0a50e161d7712e1437aac435eb1d1"
+  }
+}

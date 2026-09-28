@@ -1,0 +1,55 @@
+{
+  "at": "2026-06-22T08:45:00Z",
+  "disk_before": "94% (14G free)",
+  "disk_after": "91% (23G free)",
+  "reclaimed_estimate_gb": 9,
+  "android_sdk": {
+    "path": "~/android-sdk",
+    "total_after": "~3.5GB",
+    "kept": {
+      "ndk": "28.1.13356709 (2.2GB) — required by apex-files-android",
+      "build_tools": "37.0.0",
+      "platforms": ["android-34", "android-36"],
+      "platform_tools": true,
+      "cmake": true,
+      "cmdline_tools": "latest"
+    },
+    "removed": {
+      "cmdline-tools.zip": "147MB",
+      "build-tools/34.0.0": "151MB"
+    },
+    "required_by": "MISSIONS/APEX_INFRASTRUCTURE/APPS/apex-files-android/app/build.gradle"
+  },
+  "neo4j": {
+    "path": "~/bin/neo4j",
+    "before_mb": 649,
+    "after_mb": 136,
+    "pruned": "transaction logs (515MB) + log truncate",
+    "backup": "~/.apex/backups/neo4j_20260622/databases",
+    "note": "neo4j-admin broken on Termux (JNA/libc); manual WAL prune when stopped"
+  },
+  "git": {
+    "before_pack": "5.45 GiB (12 packs, 52268 objects)",
+    "after_pack": "34.71 MiB (1 pack, 1302 objects)",
+    "actions": [
+      "filter-repo: invert .cpan + Pro-God-Mind-Bridge/target",
+      "repack -adf --depth=1 --window=1",
+      "gc --prune=now --aggressive"
+    ],
+    "gitignore_hardened": [".cpan/", "**/target/", "android-sdk/", "bin/neo4j/data/transactions/"],
+    "origin": "re-added https://github.com/GlacierEQ/Pro-DOCTOR-STRANGE.git"
+  },
+  "stay_optimized": {
+    "weekly": [
+      "sm-ops fs-commander --purge",
+      "sm-ops trim-procs",
+      "git gc --prune=now"
+    ],
+    "monthly": [
+      "sm-ops maximize",
+      "neo4j tx log prune if >100MB and stopped",
+      "android-sdk: drop stale build-tools/platforms only"
+    ],
+    "never_commit": ["target/", ".cpan/", "android-sdk/", "neo4j transaction logs"]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "device": "macbook",
+  "host": "darwin",
+  "note": "Desktop/laptop. DEVICE_STORAGE is deliberately unset: there is no shared-storage equivalent of /sdcard. Downloads resolves under $HOME.",
+  "vars": {
+    "DEVICE_DOWNLOADS": "/Users/kcbflux/Downloads"
+  }
+}

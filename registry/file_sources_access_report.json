@@ -1,0 +1,234 @@
+{
+  "at": "2026-06-20T23:46:28.162238+00:00",
+  "hot_paths": {
+    "total": 10,
+    "ok": 10,
+    "results": [
+      {
+        "name": "alpha",
+        "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha",
+        "type": "dir",
+        "ok": true,
+        "entries_count": 59,
+        "readable": true,
+        "sample": [
+          ".agent",
+          ".agent-mem",
+          ".apex",
+          ".brainsync",
+          ".git"
+        ]
+      },
+      {
+        "name": "omega",
+        "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega",
+        "type": "dir",
+        "ok": true,
+        "entries_count": 7,
+        "readable": true,
+        "sample": [
+          ".git",
+          "HYDRA_SHIELD_ENGINE",
+          "ORBIT_ALPHA_CONNECTIONS",
+          "README.md",
+          "orchestrator_daemon.py"
+        ]
+      },
+      {
+        "name": "case_root",
+        "path": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE",
+        "type": "dir",
+        "ok": true,
+        "entries_count": 29,
+        "readable": true,
+        "sample": [
+          "EVIDENCE",
+          "FORENSICS",
+          "INDEX.md",
+          "LITIGATION_KNOWLEDGE_GRAPH.json",
+          "litigation_graph.proto"
+        ]
+      },
+      {
+        "name": "journal",
+        "path": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/CHATGPT_LIFE_RECORD",
+        "type": "dir",
+        "ok": true,
+        "entries_count": 5,
+        "readable": true,
+        "sample": [
+          "ADMISSIBILITY_FRAME.md",
+          "MASTER_INDEX.md",
+          "MONTHLY",
+          "NOTION_AI_TOOLKIT.md",
+          "stats.json"
+        ]
+      },
+      {
+        "name": "by_actor",
+        "path": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/EVIDENCE/BY_ACTOR",
+        "type": "dir",
+        "ok": true,
+        "entries_count": 29,
+        "readable": true,
+        "sample": [
+          "Brower",
+          "CSEA",
+          "Le",
+          "Teresa",
+          "Yamatani"
+        ]
+      },
+      {
+        "name": "keep_registry",
+        "path": "${HOME}/MISSIONS/SUPPORTING_DATA/SECRETS_AUDIT/keep",
+        "type": "file",
+        "ok": true,
+        "size_bytes": 41347,
+        "readable": true
+      },
+      {
+        "name": "gatekeeper_env",
+        "path": "${HOME}/.operator_key_vault/gatekeeper.env",
+        "type": "file",
+        "ok": true,
+        "size_bytes": 21895,
+        "readable": true
+      },
+      {
+        "name": "app_catalog",
+        "path": "${HOME}/MISSIONS/APP_CATALOG/MANIFEST.md",
+        "type": "file",
+        "ok": true,
+        "size_bytes": 3436,
+        "readable": true
+      },
+      {
+        "name": "apex_gateway",
+        "path": "${HOME}/apex-gateway",
+        "type": "dir",
+        "ok": true,
+        "entries_count": 26,
+        "readable": true,
+        "sample": [
+          ".git",
+          "ENV_TEMPLATE.md",
+          "GATEWAY_CHARTER.md",
+          "codex_weaver.py",
+          "nexus_dispatch.py"
+        ]
+      },
+      {
+        "name": "agent_boot",
+        "path": "${HOME}/.apex/AGENT_BOOT.md",
+        "type": "file",
+        "ok": true,
+        "size_bytes": 223,
+        "readable": true
+      }
+    ]
+  },
+  "filesystem_mcp": {
+    "total": 5,
+    "ok": 5,
+    "results": [
+      {
+        "tool": "list_allowed_roots",
+        "ok": true,
+        "preview": "Allowed roots:\n${HOME}"
+      },
+      {
+        "tool": "list_directory",
+        "ok": true,
+        "preview": "[FILE] .env (729 bytes)\n[FILE] .env.supabase.template (427 bytes)\n[DIR ] .git\n[FILE] CODING-DNA.md ("
+      },
+      {
+        "tool": "hash_file",
+        "ok": true,
+        "preview": "SHA256(AGENT_BOOT.md): f92c0f0db7b418a1a49ade87ad19c95aa2e976aec3c3889fc336bb0c70c08125"
+      },
+      {
+        "tool": "read_file",
+        "ok": true,
+        "preview": "{\n  \"at\": \"2026-06-20T23:43:50.867748+00:00\",\n  \"mantra\": \"Two strands. One sovereign DNA.\",\n  \"boot"
+      },
+      {
+        "tool": "search_files",
+        "ok": true,
+        "preview": "Found 34 matches:\n${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/FORENSICS/E"
+      }
+    ]
+  },
+  "gatekeeper": [
+    {
+      "tool": "gatekeeper_safe_read",
+      "ok": true
+    },
+    {
+      "tool": "gatekeeper_safe_hash",
+      "ok": true
+    },
+    {
+      "tool": "gatekeeper_case_roots",
+      "ok": true
+    },
+    {
+      "tool": "gatekeeper_sandbox_deny",
+      "ok": true
+    }
+  ],
+  "master_mcp": [
+    {
+      "tool": "master_list_alpha",
+      "ok": true,
+      "detail": 59
+    },
+    {
+      "tool": "master_list_case",
+      "ok": true,
+      "detail": 29
+    },
+    {
+      "tool": "master_read_boot",
+      "ok": true,
+      "detail": 223
+    }
+  ],
+  "connector_sources": {
+    "total": 5,
+    "ok": 5,
+    "results": [
+      {
+        "source": "dropbox_watcher",
+        "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/integrations/dropbox_watcher.py",
+        "ok": true,
+        "type": "file"
+      },
+      {
+        "source": "dropbox_consolidator",
+        "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/services/apex_dropbox_consolidator.py",
+        "ok": true,
+        "type": "file"
+      },
+      {
+        "source": "dropbox_recovery",
+        "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/dropbox",
+        "ok": true,
+        "type": "dir"
+      },
+      {
+        "source": "onedrive_intel",
+        "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/services/apex_onedrive_intelligence.py",
+        "ok": true,
+        "type": "file"
+      },
+      {
+        "source": "observe_script",
+        "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/scripts/apex_observe_files.py",
+        "ok": true,
+        "type": "file"
+      }
+    ]
+  },
+  "all_ok": true
+}

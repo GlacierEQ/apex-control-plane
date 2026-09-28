@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "at": "2026-06-21T12:59:12.092943+00:00",
+  "profile": "coremaximized",
+  "layers": [
+    "mem0",
+    "supermemory",
+    "memory_plugin",
+    "pinecone",
+    "qdrant",
+    "context7"
+  ],
+  "routing": {
+    "default": [
+      "mem0",
+      "supermemory",
+      "memory_plugin"
+    ],
+    "legal_evidence": [
+      "pinecone",
+      "mem0"
+    ],
+    "documentation": [
+      "context7",
+      "supermemory"
+    ],
+    "local_vector": [
+      "qdrant",
+      "pinecone"
+    ],
+    "cross_session": [
+      "memory_plugin",
+      "mem0"
+    ]
+  },
+  "token_rules": {
+    "max_fact_length": 1000,
+    "similarity_threshold": 0.75,
+    "cache_file": "${HOME}/.apex_cache/memory_hits.json",
+    "default_top_k": 4
+  },
+  "health": {
+    "at": "2026-08-14T18:29:13-1000",
+    "layers": {
+      "mem0": {
+        "key_present": true,
+        "live": true,
+        "detail": "ok"
+      },
+      "supermemory": {
+        "key_present": true,
+        "live": true,
+        "detail": "ok"
+      },
+      "memory_plugin": {
+        "key_present": true,
+        "live": false,
+        "detail": "endpoint_unreachable",
+        "optional": true
+      },
+      "pinecone": {
+        "key_present": true,
+        "live": false,
+        "detail": "status_400",
+        "optional": true
+      },
+      "qdrant": {
+        "key_present": true,
+        "live": false,
+        "detail": "unreachable",
+        "optional": true
+      },
+      "context7": {
+        "key_present": true,
+        "live": true,
+        "detail": "ok"
+      }
+    },
+    "summary": {
+      "layers_total": 6,
+      "layers_live": 3,
+      "cache_entries": 8
+    },
+    "primordial_titan_activation": {
+      "make_it_heavy": true,
+      "token_savers": "coremaximized",
+      "aspen_groves": "ACTIVE",
+      "cache_optimization": "ACTIVE"
+    }
+  },
+  "mcp": {
+    "server": "unified-memory",
+    "script": "${HOME}/scripts/unified_memory_mcp.py",
+    "gatekeeper_route": "colossus-gatekeeper \u2192 memory_route"
+  },
+  "activated_at": "2026-08-14T18:29:13-1000",
+  "primordial_mesh_titan": {
+    "state": "ACTIVE",
+    "mode": "make-it-heavy",
+    "token_savings": "coremaximized",
+    "aspen_groves": "/Users/kcbflux/.apex/aspen_grove_constellation.json"
+  }
+}

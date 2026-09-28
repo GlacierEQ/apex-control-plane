@@ -1,0 +1,107 @@
+{
+  "at": "2026-06-22T08:13:56.032909+00:00",
+  "profile": "coremaximized",
+  "phases": [
+    {
+      "id": "boot",
+      "actions": [
+        "read AGENT_BOOT.md",
+        "sm-ops prime",
+        "gatekeeper agent_boot"
+      ],
+      "parallel": false
+    },
+    {
+      "id": "plan",
+      "actions": [
+        "gap analysis",
+        "read POINTER_INDEX",
+        "skills_router for task type"
+      ],
+      "parallel": true
+    },
+    {
+      "id": "execute",
+      "actions": [
+        "batch tool calls",
+        "colossus gate before risky writes",
+        "helix one-big-push"
+      ],
+      "parallel": true
+    },
+    {
+      "id": "verify",
+      "actions": [
+        "read back changes",
+        "guard_signal9 if spawning procs",
+        "token_stats"
+      ],
+      "parallel": true
+    },
+    {
+      "id": "save",
+      "actions": [
+        "sm-ops save --durable",
+        "memory_layer_status"
+      ],
+      "parallel": false
+    }
+  ],
+  "task_routing": {
+    "coding": [
+      "helix-pro-code",
+      "token-savings",
+      "hyper-efficiency-flow"
+    ],
+    "memory": [
+      "memory-connect",
+      "unified-memory-connect",
+      "supermemory-cli"
+    ],
+    "storage": [
+      "apex-fs-commander",
+      "fs-commander via sm-ops"
+    ],
+    "connectors": [
+      "mcp",
+      "universal-connector",
+      "colossus-gatekeeper"
+    ],
+    "legal": [
+      "digital-law-library-master"
+    ],
+    "infra": [
+      "apex-pillars",
+      "sovereign-operator",
+      "deployments-cicd"
+    ]
+  },
+  "mcp_combo": {
+    "supreme": "colossus-gatekeeper",
+    "direct": [
+      "apex-filesystem",
+      "unified-memory"
+    ],
+    "gemini_cloud": [
+      "gdrive",
+      "dropbox",
+      "onedrive",
+      "github"
+    ],
+    "route_before_spawn": "check phantom limit \u226440 raised"
+  },
+  "logic_rules": [
+    "Prime once per task; never reload full chat history",
+    "Read before write; POINTER_INDEX before directory scans",
+    "Parallelize independent reads/searches",
+    "gate_action before delete/move/share/publish",
+    "Mem0 episodic + Supermemory knowledge; durable_save both",
+    "Tables over prose; no acknowledgment theater",
+    "Single coherent commit per logical chunk"
+  ],
+  "hooks": {
+    "session_start": "~/.grok/hooks/memory-prime.json \u2192 memory_prime_hook.sh",
+    "session_end": "memory_save_hook.sh",
+    "grok_config": "${HOME}/.grok/config.toml"
+  }
+}

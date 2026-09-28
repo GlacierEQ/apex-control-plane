@@ -1,0 +1,238 @@
+{
+  "at": "2026-06-22T07:56:08.581028+00:00",
+  "case": "1FDV-23-0001009",
+  "role": "Control plane OS \u2014 actors registry + interactions log + journal import surface",
+  "status": {
+    "token_present": true,
+    "api_live": true,
+    "module": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/integrations/notion_sync.py",
+    "nexus": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/apex_nexus_coordinator.py"
+  },
+  "databases": {
+    "actors_registry": {
+      "id": "71bc7918de324a5dbaf29e2a5f7c1e13",
+      "data_source_id": "94d05d07-79c3-4cab-bc4c-c6358d55ff7e",
+      "purpose": "Upsert actors by name (idempotent)",
+      "probe": {
+        "ok": true,
+        "title": "APEX \u2014 Actors Registry",
+        "properties": [
+          "Threat Level",
+          "Interaction Count",
+          "Last Seen",
+          "Created",
+          "Shadow Faultline",
+          "First Seen",
+          "Organization",
+          "\u00a71983 Exposure",
+          "RICO Nexus",
+          "Source Verified",
+          "Email",
+          "Archetype",
+          "Last Edited",
+          "Role / Title",
+          "Phone",
+          "Interactions",
+          "Interaction Total",
+          "Status",
+          "Notes",
+          "Related Files",
+          "Actor Name"
+        ],
+        "property_count": 21
+      }
+    },
+    "interactions_log": {
+      "id": "e4f961a16ad340b09b99bacee8a3f134",
+      "data_source_id": "30493940-496a-4521-aabb-9e3384bf6574",
+      "purpose": "Append-only predicate acts / events",
+      "probe": {
+        "ok": true,
+        "title": "APEX \u2014 Interactions Log",
+        "properties": [
+          "Event Type",
+          "Delivery ID",
+          "Actor(s) Involved",
+          "Statute Cited",
+          "Actionable",
+          "Linked Actor",
+          "Linked Actor ID",
+          "Constitutional Hook",
+          "Priority",
+          "Confidence Score",
+          "Notes",
+          "Event Date",
+          "Verified",
+          "Created",
+          "Line Number",
+          "Raw Excerpt",
+          "Shadow Faultline",
+          "SHA-256",
+          "File Name",
+          "Source",
+          "Last Edited",
+          "Event Summary"
+        ],
+        "property_count": 22
+      }
+    }
+  },
+  "api_surface": {
+    "push_actor": "integrations.notion_sync.push_actor",
+    "push_interaction": "integrations.notion_sync.push_interaction",
+    "push_batch": "integrations.notion_sync.push_extraction_result",
+    "nexus_ingest": "apex_nexus_coordinator.py ingest --file <path>",
+    "nexus_execute": "apex_nexus_coordinator.py execute --protocol CATACLYSM"
+  },
+  "actor_fields": [
+    "name",
+    "archetype",
+    "role",
+    "organization",
+    "threat_level",
+    "section_1983",
+    "rico_nexus",
+    "shadow_faultline",
+    "status"
+  ],
+  "interaction_fields": [
+    "summary",
+    "event_date",
+    "event_type",
+    "constitutional_hook",
+    "priority",
+    "confidence_score",
+    "verified",
+    "actionable",
+    "file_name",
+    "linked_actor",
+    "actors_involved",
+    "source",
+    "delivery_id",
+    "sha256",
+    "statute_cited"
+  ],
+  "routing": {
+    "legal_ingest": "nexus ingest \u2192 notion_sync push",
+    "dropbox_watch": "dropbox_watcher \u2192 extract \u2192 notion push",
+    "journal": "CHATGPT_LIFE_RECORD/MONTHLY \u2192 manual Notion import (not API zip)",
+    "case_os": "Notion = control plane; local CASE_STRUCTURE = canon"
+  },
+  "paths": {
+    "sync_module": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/integrations/notion_sync.py",
+    "nexus": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/apex_nexus_coordinator.py",
+    "journal_toolkit": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/CHATGPT_LIFE_RECORD/NOTION_AI_TOOLKIT.md",
+    "monthly_index": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/CHATGPT_LIFE_RECORD/MONTHLY",
+    "legal_docs": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/legal_documents",
+    "keys_alpha_env": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/.env",
+    "keys_gatekeeper": "${HOME}/.operator_key_vault/gatekeeper.env"
+  },
+  "workers": {
+    "daemon": "${HOME}/scripts/notion_workers_daemon.py",
+    "status": "${HOME}/.apex/notion_workers_status.json",
+    "queue": "${HOME}/.apex/notion_push_queue.jsonl",
+    "local_mesh": [
+      "dropbox",
+      "queue",
+      "legal",
+      "actors"
+    ],
+    "cloud_waves": [
+      {
+        "wave": 1,
+        "name": "apex-github-worker",
+        "workerId": "019eb9e7-792b-76a2-89c5-cd52e3a1d4f9",
+        "tools": [
+          "logGitHubEvent",
+          "memoryRecall"
+        ],
+        "webhooks": [
+          "onGitHubEvent"
+        ],
+        "chain": "GitHub \u2192 Memory \u2192 Evidence",
+        "ok": true
+      },
+      {
+        "wave": 2,
+        "name": "memory-specialist",
+        "workerId": "019eae19-18e2-72b8-b15a-ab16561c5d9c",
+        "tools": [
+          "memoryRecall",
+          "memoryStore",
+          "memoryPrime"
+        ],
+        "chain": "Janus dual recall/write",
+        "ok": true
+      },
+      {
+        "wave": 3,
+        "name": "case-analyzer",
+        "workerId": "019eae1c-5f18-756f-b9a9-b28005636a01",
+        "tools": [
+          "pushLegalExtraction",
+          "pushActor",
+          "pushInteraction"
+        ],
+        "chain": "CATACLYSM \u2192 Actors + Interactions",
+        "ok": true
+      },
+      {
+        "wave": 4,
+        "name": "pro-code-integration",
+        "workerId": "019eae2b-1ca3-735b-8d7d-c853e55aac0f",
+        "tools": [
+          "colossusMeshStatus",
+          "colossusMemoryRoute",
+          "proCodePing"
+        ],
+        "chain": "Colossus gatekeeper mesh",
+        "ok": true
+      },
+      {
+        "wave": 5,
+        "name": "database-crawler",
+        "workerId": "019eae18-6e33-7444-b1d5-958f4b05f583",
+        "tools": [
+          "notionDbHealth",
+          "countUnlinked",
+          "queueFlushPing"
+        ],
+        "chain": "DB health + queue flush signal",
+        "ok": true
+      }
+    ],
+    "cloud_deploy": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/notion-workers-mesh/scripts/deploy_waves.py",
+    "github_webhook": "https://www.notion.so/webhooks/worker/506d0b07-3284-4b63-a6c9-c5583176045c/019eb9e7-792b-76a2-89c5-cd52e3a1d4f9/aA6tTDpGkZxjXUim/onGitHubEvent",
+    "consolidate": {
+      "steps": {
+        "link": {
+          "scanned": 4970,
+          "skipped_already_linked": 1324,
+          "linked": 592,
+          "enriched": 592
+        }
+      },
+      "inventory": {
+        "actors": 108,
+        "interactions": 8633,
+        "repos_indexed": 18
+      }
+    }
+  },
+  "commands": {
+    "status": "cd ${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha && python3 apex_nexus_coordinator.py status",
+    "ingest": "cd ${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha && python3 apex_nexus_coordinator.py ingest --file <doc>",
+    "cataclysm": "cd ${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha && python3 apex_nexus_coordinator.py execute --protocol CATACLYSM",
+    "watch": "cd ${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha && python3 apex_nexus_coordinator.py watch",
+    "distill": "sm-ops notion-distill",
+    "workers": "sm-ops notion-workers --daemon",
+    "smoke": "cd ${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha && python3 integrations/notion_sync.py"
+  },
+  "fix_if_401": [
+    "Regenerate integration token at https://www.notion.so/my-integrations",
+    "Share Actors + Interactions DBs with the integration",
+    "Update NOTION_TOKEN in apex-fs-commander-alpha/.env",
+    "Mirror to gatekeeper.env as NOTION_API_KEY",
+    "Re-run: sm-ops notion-distill"
+  ]
+}

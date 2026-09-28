@@ -1,0 +1,146 @@
+{
+  "at": "2026-06-21T12:45:59.564664+00:00",
+  "profile": "coremaximized",
+  "case": "1FDV-23-0001009",
+  "identity": "Double Helix \u2014 Alpha observation + Omega shield",
+  "status": {
+    "keys": 200,
+    "observations": 11505,
+    "pistons": 12,
+    "tokens_saved": 164884,
+    "file_sources": "10/10",
+    "processes": "31/40 raised",
+    "notion": true
+  },
+  "workflow": "boot \u2192 plan \u2192 execute \u2192 verify \u2192 save",
+  "mcp": {
+    "supreme": "colossus-gatekeeper",
+    "direct": [
+      "apex-filesystem",
+      "colossus-gatekeeper",
+      "unified-memory"
+    ],
+    "gemini_cloud": "gemini:gdrive|dropbox|onedrive"
+  },
+  "routing": {
+    "filesystem": "gatekeeper safe_read/hash OR apex-filesystem",
+    "memory": "sm-ops prime OR unified-memory",
+    "storage": "sm-ops fs-commander / helix-elevate",
+    "risky_writes": "gatekeeper gate_action \u2192 Colossus",
+    "legal": "nexus_ingest / digital-law-library-master",
+    "notion": "${HOME}/.apex/NOTION_SURFACE.md"
+  },
+  "paths": {
+    "surface": "${HOME}/.apex/OPERATING_SURFACE.md",
+    "boot": "${HOME}/.apex/AGENT_BOOT.md",
+    "live_context": "${HOME}/.supermemory/ops/live-context.md",
+    "alpha": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha",
+    "omega": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega",
+    "case": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE",
+    "evidence": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/EVIDENCE",
+    "journal": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/CHATGPT_LIFE_RECORD",
+    "by_actor": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/EVIDENCE/BY_ACTOR",
+    "keys": "${HOME}/.operator_key_vault/gatekeeper.env",
+    "grok": "${HOME}/.grok/config.toml"
+  },
+  "commands": {
+    "prime": "sm-ops prime \"task\" --max-tokens 1000",
+    "save": "sm-ops save \"outcome\" --durable",
+    "maximize": "sm-ops maximize",
+    "elevate": "sm-ops helix-elevate",
+    "health": "cd ${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha && ./run_apex.sh health",
+    "file_test": "python3 ~/scripts/test_file_sources_access.py",
+    "surface": "python3 ~/scripts/apex_distill_surface.py",
+    "guard": "bash ~/MISSIONS/SUPPORTING_DATA/UNSORTED/scripts/guard_signal9.sh"
+  },
+  "task_skills": {
+    "coding": [
+      "helix-pro-code",
+      "token-savings",
+      "hyper-efficiency-flow"
+    ],
+    "memory": [
+      "memory-connect",
+      "unified-memory-connect",
+      "supermemory-cli"
+    ],
+    "storage": [
+      "apex-fs-commander",
+      "fs-commander via sm-ops"
+    ],
+    "connectors": [
+      "mcp",
+      "universal-connector",
+      "colossus-gatekeeper"
+    ],
+    "legal": [
+      "digital-law-library-master"
+    ],
+    "infra": [
+      "apex-pillars",
+      "sovereign-operator",
+      "deployments-cicd"
+    ]
+  },
+  "rules": [
+    "Prime once per task; never reload full chat history",
+    "Read before write; POINTER_INDEX before directory scans",
+    "Parallelize independent reads/searches",
+    "gate_action before delete/move/share/publish",
+    "Mem0 episodic + Supermemory knowledge; durable_save both",
+    "Tables over prose; no acknowledgment theater",
+    "Single coherent commit per logical chunk"
+  ],
+  "hot_file_sources": [
+    {
+      "name": "alpha",
+      "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha",
+      "ok": true
+    },
+    {
+      "name": "omega",
+      "path": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega",
+      "ok": true
+    },
+    {
+      "name": "case_root",
+      "path": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE",
+      "ok": true
+    },
+    {
+      "name": "journal",
+      "path": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/CHATGPT_LIFE_RECORD",
+      "ok": true
+    },
+    {
+      "name": "by_actor",
+      "path": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/EVIDENCE/BY_ACTOR",
+      "ok": true
+    },
+    {
+      "name": "keep_registry",
+      "path": "${HOME}/MISSIONS/SUPPORTING_DATA/SECRETS_AUDIT/keep",
+      "ok": true
+    },
+    {
+      "name": "gatekeeper_env",
+      "path": "${HOME}/.operator_key_vault/gatekeeper.env",
+      "ok": true
+    },
+    {
+      "name": "app_catalog",
+      "path": "${HOME}/MISSIONS/APP_CATALOG/MANIFEST.md",
+      "ok": true
+    },
+    {
+      "name": "apex_gateway",
+      "path": "${HOME}/apex-gateway",
+      "ok": true
+    },
+    {
+      "name": "agent_boot",
+      "path": "${HOME}/.apex/AGENT_BOOT.md",
+      "ok": true
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "at": "2026-06-22T20:30:00Z",
+  "bootstrap": "OK",
+  "http_status": 200,
+  "endpoint": "https://mimo-free-relay.vercel.app/api/free-ai/bootstrap",
+  "upstream": "https://api.xiaomimimo.com/api/free-ai/bootstrap",
+  "device_class": "linux",
+  "host_alias": "apex-termux",
+  "direct_egress": {
+    "ip": "72.235.173.97",
+    "status": 403,
+    "error": "illegal_access"
+  },
+  "relay": {
+    "url": "https://mimo-free-relay.vercel.app",
+    "deploy": "MISSIONS/SUPPORTING_DATA/mimo-free-relay",
+    "vercel_project": "mimo-free-relay",
+    "status": "JWT_OK"
+  },
+  "env": "MIMO_FREE_BASE_URL=https://mimo-free-relay.vercel.app",
+  "profile": "mimo-auto",
+  "model": "mimo/mimo-auto",
+  "note": "Termux IP blocked by Xiaomi; Vercel edge relay restores MiMo Auto free."
+}

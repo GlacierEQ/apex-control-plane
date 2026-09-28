@@ -1,0 +1,17 @@
+{
+  "github": {
+    "connection_id": "github",
+    "credential_path": "glaciereq.connections.github",
+    "tools": ["repo_read", "repo_write", "pr_create", "pr_merge", "issue_create"]
+  },
+  "google_drive": {
+    "connection_id": "google-drive",
+    "credential_path": "glaciereq.connections.google_drive",
+    "tools": ["file_list", "file_sync", "file_delete"]
+  },
+  "mouseless": {
+    "connection_id": "mouseless",
+    "credential_path": "glaciereq.connections.mouseless",
+    "tools": ["screenshot", "cursor_position", "clipboard_read"]
+  }
+}

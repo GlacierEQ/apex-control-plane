@@ -1,0 +1,27 @@
+{
+  "at": "2026-08-14T18:28:59-1000",
+  "sovereign_dna": "Two strands. One sovereign DNA.",
+  "boot_order": [
+    "~/.apex/AGENT_BOOT.md",
+    "~/.supermemory/ops/live-context.md",
+    "Pro_Code/CODER-SKILL.md"
+  ],
+  "mcp_routing": {
+    "filesystem": "colossus-gatekeeper -> safe_read/safe_hash OR apex-filesystem",
+    "memory": "colossus-gatekeeper -> memory_route OR unified-memory",
+    "keys": "colossus-gatekeeper -> key_power_status (names only)"
+  },
+  "paths": {
+    "alpha": "/Users/kcbflux/.apex/helix_fs_status.json",
+    "omega": "/Users/kcbflux/.apex/helix_maximize_status.json",
+    "case_root": "/Users/kcbflux/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE"
+  },
+  "skills_router": "/Users/kcbflux/.apex/SKILLS_ROUTER.json",
+  "token_discipline": [
+    "Read POINTER_INDEX before directory scans",
+    "Use line ranges on file reads",
+    "Batch parallel tool calls",
+    "Tables over prose; no acknowledgment theater",
+    "Prime once per task; cache TTL 300s"
+  ]
+}

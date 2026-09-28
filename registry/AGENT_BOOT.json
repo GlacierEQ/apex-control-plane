@@ -1,0 +1,110 @@
+{
+  "at": "2026-06-22T08:14:04.278307+00:00",
+  "profile": "coremaximized",
+  "case": "1FDV-23-0001009",
+  "vault_keys": 200,
+  "helix": {
+    "loaded": true,
+    "at": "2026-06-22T08:13:55",
+    "alpha_ok": "3/3",
+    "omega_pistons": 9,
+    "mcp_ready": 7
+  },
+  "mcp_mesh": [
+    "colossus-gatekeeper",
+    "apex-filesystem",
+    "unified-memory"
+  ],
+  "prime_budget": {
+    "default": 1000,
+    "last_used": 150
+  },
+  "routing": {
+    "filesystem": "colossus-gatekeeper \u2192 safe_read/safe_hash OR apex-filesystem",
+    "memory": "colossus-gatekeeper \u2192 memory_route OR unified-memory",
+    "keys": "colossus-gatekeeper \u2192 key_power_status (names only)",
+    "case_ingest": "colossus-gatekeeper \u2192 nexus_ingest",
+    "helix": "colossus-gatekeeper \u2192 helix_activate",
+    "risky_writes": "colossus-gatekeeper \u2192 gate_action first"
+  },
+  "hot_paths": {
+    "grok_config": "/Users/kcbflux/.grok/config.toml"
+  },
+  "token_rules": [
+    "Read POINTER_INDEX before directory scans",
+    "Use line ranges on file reads",
+    "Batch parallel tool calls",
+    "Tables over prose; no acknowledgment theater",
+    "Prime once per task; cache TTL 300s"
+  ],
+  "platform": {
+    "host": "KcBs-MacBook-Air.local",
+    "os": "darwin",
+    "os_version": "14.8.7",
+    "arch": "x86_64",
+    "home": "/Users/kcbflux",
+    "scoped_at": "2026-09-26T09:51:38Z",
+    "note": "Termux paths are preserved under hot_paths_termux for cross-device use. They are NOT valid on this host \u2014 verify os.path.exists() before following any path."
+  },
+  "hot_paths_termux": {
+    "alpha": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha",
+    "omega": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega",
+    "case_root": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE",
+    "journal": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/CHATGPT_LIFE_RECORD",
+    "by_actor": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/EVIDENCE/BY_ACTOR",
+    "keep_registry": "${HOME}/MISSIONS/SUPPORTING_DATA/SECRETS_AUDIT/keep",
+    "gatekeeper_env": "${HOME}/.operator_key_vault/gatekeeper.env",
+    "ag_cli_index": "${HOME}/MISSIONS/SUPPORTING_DATA/SECRETS_AUDIT/ag_cli_environment/AG_CLI_ENVIRONMENT_INDEX.md",
+    "app_catalog": "${HOME}/MISSIONS/APP_CATALOG/MANIFEST.md",
+    "grok_config": "${HOME}/.grok/config.toml"
+  },
+  "memory_servers": {
+    "verified_at": "2026-09-25",
+    "root": "/Users/kcbflux/.local/share/apex-mcp",
+    "unified-memory": {
+      "wrapper": "~/bin/run-unified-memory-mcp",
+      "tools": 10,
+      "status": "HEALTHY",
+      "note": "durable store was EMPTY pre-2026-09-25; cortex DB is a SEPARATE store"
+    },
+    "apex-filesystem": {
+      "wrapper": "~/bin/run-apex-filesystem-mcp",
+      "tools": 6,
+      "status": "HEALTHY"
+    },
+    "colossus-gatekeeper": {
+      "wrapper": "~/bin/run-colossus-gatekeeper-mcp",
+      "tools": 6,
+      "status": "HEALTHY"
+    },
+    "framing": "Content-Length (LSP-style). Shim READS ndjson + CL; WRITES CL only."
+  },
+  "unresolved_on_this_host": {
+    "host": "KcBs-MacBook-Air.local",
+    "count": 9,
+    "note": "Keys absent on this host. Deliberately NOT under hot_paths: a boot that preloads a non-path teaches the agent that a missing location exists. Omit it; resolve it at call time.",
+    "keys": [
+      "ag_cli_index",
+      "alpha",
+      "app_catalog",
+      "by_actor",
+      "case_root",
+      "gatekeeper_env",
+      "journal",
+      "keep_registry",
+      "omega"
+    ],
+    "termux_surface": [
+      "ag_cli_index",
+      "alpha",
+      "app_catalog",
+      "by_actor",
+      "case_root",
+      "gatekeeper_env",
+      "journal",
+      "keep_registry",
+      "omega"
+    ]
+  },
+  "schema_note": "hot_paths contains only verified-existing absolute paths on this host. Anything absent lives in unresolved_on_this_host, by key, not as a fake path."
+}

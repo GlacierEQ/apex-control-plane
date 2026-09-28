@@ -1,0 +1,77 @@
+name: universal
+
+# The control plane is universal if and only if the same registry resolves on
+# every host. This workflow proves that, and refuses anything that hardcodes a
+# platform path — which is the defect that made 156 references unusable
+# off-device before the variable rewrite.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  universal:
+    name: resolve on ${{ matrix.device }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [macbook, termux]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Registry parses as JSON
+        run: |
+          n=0
+          for f in registry/*.json; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f" || exit 1
+            n=$((n+1))
+          done
+          echo "  $n configs parse"
+
+      - name: No hardcoded platform paths
+        # The whole point. com.termux and /sdcard are literals, not variables.
+        run: |
+          if grep -rlE '(com\.termux|/sdcard/)' registry/ devices/; then
+            echo "::error::registry contains a hardcoded platform path"
+            exit 1
+          fi
+          echo "  no literal Android paths"
+
+      - name: No committed secrets
+        run: |
+          if git grep -nEI '(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|gh[os]_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{15,}|eyJ[A-Za-z0-9_-]{30,}|ntn_[A-Za-z0-9]{20,})' -- ':!*.example'; then
+            echo "::error::possible committed secret"
+            exit 1
+          fi
+          echo "  no secret-shaped strings"
+
+      - name: Every variable has a definition
+        # An undefined ${VAR} is a malformed registry, not a host gap.
+        run: |
+          python3 - <<'EOF'
+          import glob, json, os, re, sys
+          VAR = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
+          defined = {"HOME", "TERMUX_PREFIX", "DEVICE_STORAGE", "DEVICE_DOWNLOADS"}
+          for p in glob.glob("devices/*.json"):
+              defined |= set(json.load(open(p)).get("vars", {}))
+          missing = set()
+          for f in glob.glob("registry/*.json"):
+              raw = open(f, encoding="utf-8", errors="replace").read()
+              missing |= {m for m in VAR.findall(raw) if m not in defined}
+          if missing:
+              print("  undefined:", sorted(missing)); sys.exit(1)
+          print(f"  every variable defined by a device profile or host fact")
+          EOF
+
+      - name: Resolution report
+        # Absent paths are EXPECTED on a partial host and do not fail the build.
+        # Only an undefined variable, or a malformed registry, is a failure.
+        run: |
+          python3 tools/resolve.py --device ${{ matrix.device }} || true

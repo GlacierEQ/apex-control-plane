@@ -1,0 +1,43 @@
+{
+  "at": "2026-06-22T03:58:25.365552+00:00",
+  "cycle": 2357,
+  "api_live": true,
+  "api_detail": "APEX \u2014 Actors Registry",
+  "queue_depth": 0,
+  "workers": [
+    "dropbox",
+    "queue",
+    "legal",
+    "actors"
+  ],
+  "intervals_sec": {
+    "dropbox": 30,
+    "queue": 60,
+    "legal": 21600,
+    "actors": 86400
+  },
+  "last": {
+    "dropbox": {
+      "worker": "dropbox",
+      "ok": true
+    },
+    "queue": {
+      "flushed": 0,
+      "remaining": 0,
+      "errors": [],
+      "worker": "queue",
+      "before": 0
+    },
+    "legal": {
+      "worker": "legal",
+      "ok": true
+    },
+    "actors": {
+      "worker": "actors",
+      "pushed": 25,
+      "queued": 0,
+      "api_live": true
+    }
+  },
+  "alpha": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha"
+}

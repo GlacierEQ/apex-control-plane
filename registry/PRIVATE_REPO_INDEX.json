@@ -1,0 +1,2804 @@
+{
+  "at": "2026-06-23T08:38:53Z",
+  "account": "GlacierEQ",
+  "visibility": "private",
+  "count": 466,
+  "repos": [
+    {
+      "name": "mastermind",
+      "pushedAt": "2026-06-23T08:34:15Z",
+      "isFork": false,
+      "description": "AI-Powered Development Operating System - Generate production-ready microservices in 45 minutes with 9 specialized agent"
+    },
+    {
+      "name": "Alex_MCPSuperAssistant",
+      "pushedAt": "2026-06-23T03:58:38Z",
+      "isFork": false,
+      "description": "Simplified and improved version of the open source MCP chrome extension called MCP Super Assistant"
+    },
+    {
+      "name": "apex-alpha",
+      "pushedAt": "2026-06-23T03:05:07Z",
+      "isFork": false,
+      "description": "Alpha Strand: Foundation/Model - mastermind engines, holographic memory, singularity matrix, token optimization"
+    },
+    {
+      "name": "apex-omega",
+      "pushedAt": "2026-06-23T02:44:46Z",
+      "isFork": false,
+      "description": "Omega Strand: Controller/Executor - pro-code UI, nexus-api gateway, apex-workers, MCP orchestration"
+    },
+    {
+      "name": "AEON-777",
+      "pushedAt": "2026-06-23T01:34:52Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "DOCKETS",
+      "pushedAt": "2026-06-23T01:34:06Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "nexus-api",
+      "pushedAt": "2026-06-23T01:27:12Z",
+      "isFork": false,
+      "description": "APEX Nexus API server \u2014 local :8002 trigger gateway for the pro-code control surface"
+    },
+    {
+      "name": "colossus-gateway",
+      "pushedAt": "2026-06-23T00:38:56Z",
+      "isFork": false,
+      "description": "Universal MCP Bridge v2.1 \u2014 APEX Engine (GitHub, Notion, Dropbox, Supabase)"
+    },
+    {
+      "name": "colossus2-realignment",
+      "pushedAt": "2026-06-23T00:38:54Z",
+      "isFork": false,
+      "description": "Colossus 2 Realignment Engine \u2014 Architecture, power, permitting, and community governance blueprints for gigawatt-scale "
+    },
+    {
+      "name": "colossus-realignment",
+      "pushedAt": "2026-06-23T00:38:51Z",
+      "isFork": false,
+      "description": "Colossus 2 Architecture Realignment \u2014 GPU design, power infrastructure, permitting remediation, and environmental justic"
+    },
+    {
+      "name": "colossus-build-blueprint",
+      "pushedAt": "2026-06-23T00:38:49Z",
+      "isFork": false,
+      "description": "\u26a1 xAI Colossus 2 \u2014 Hyper-Intelligent Master Build Plan: Geotechnical, Foundation, Water, Architecture, GPU, Cooling Engi"
+    },
+    {
+      "name": "xai-legal-intelligence",
+      "pushedAt": "2026-06-23T00:38:46Z",
+      "isFork": false,
+      "description": "\u2696\ufe0f APEX Legal Intelligence Engine \u2014 Real-time tracking, analysis, and strategic mapping of xAI & Elon Musk litigation | "
+    },
+    {
+      "name": "xai-colossus-community",
+      "pushedAt": "2026-06-23T00:38:43Z",
+      "isFork": false,
+      "description": "xAI Colossus 2 \u2014 Community Relations, Political Clearance & Licensing Hub. The human layer that makes everything else po"
+    },
+    {
+      "name": "xai-colossus-nanosphere",
+      "pushedAt": "2026-06-23T00:38:41Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-waterplant",
+      "pushedAt": "2026-06-23T00:38:38Z",
+      "isFork": false,
+      "description": "xAI Colossus Water Recycling Plant \u2014 Memphis Maxson WWTP intake, treatment train, permitting strategy, and fast-restart "
+    },
+    {
+      "name": "xai-colossus-security",
+      "pushedAt": "2026-06-23T00:38:36Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-microcode",
+      "pushedAt": "2026-06-23T00:38:33Z",
+      "isFork": false,
+      "description": "Firmware manifest, driver matrix, flash controller, and firmware audit CLI for xAI Colossus GPU racks"
+    },
+    {
+      "name": "xai-colossus-servers",
+      "pushedAt": "2026-06-23T00:38:30Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-energy",
+      "pushedAt": "2026-06-23T00:38:28Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-cooling",
+      "pushedAt": "2026-06-23T00:38:25Z",
+      "isFork": false,
+      "description": "Intelligent thermal management system for hyperscale AI compute \u2014 xAI Colossus-class infrastructure | APEX Bio-Inspired "
+    },
+    {
+      "name": "xai-colossus-build",
+      "pushedAt": "2026-06-23T00:38:22Z",
+      "isFork": false,
+      "description": "xAI Colossus 2 \u2014 Complete Ground-Up Build Blueprint: geotechnical, foundation, structural, water delivery, community int"
+    },
+    {
+      "name": "Pro-Colossus",
+      "pushedAt": "2026-06-23T00:38:20Z",
+      "isFork": false,
+      "description": "\u26a1 Pro-tier flagship for xAI Colossus infrastructure suite \u2014 cooling, energy, servers, microcode, security, waterplant, n"
+    },
+    {
+      "name": "Pro-xAI",
+      "pushedAt": "2026-06-23T00:38:17Z",
+      "isFork": false,
+      "description": "\ud83d\udd31 Pro-tier xAI sovereign flagship \u2014 Colossus infrastructure suite, Grok agent architecture, legal intelligence, thermal "
+    },
+    {
+      "name": "apex-workers-runtime",
+      "pushedAt": "2026-06-23T00:25:47Z",
+      "isFork": false,
+      "description": "APEX 13-node worker execution runtime \u2014 receives POST from pro-code WorkersManager and dispatches capability handlers"
+    },
+    {
+      "name": "fileboss-whisperx-processor",
+      "pushedAt": "2026-06-23T00:22:30Z",
+      "isFork": false,
+      "description": "Intelligent full-stack file processing app with WhisperX transcription and PDF analysis capabilities"
+    },
+    {
+      "name": "pro-code",
+      "pushedAt": "2026-06-23T00:18:57Z",
+      "isFork": false,
+      "description": "\u27c1 Senior Developer Ascension Layer \u2014 production-grade coding standards, language profiles, CI/CD templates, audit protoc"
+    },
+    {
+      "name": "mcp-tool-belt",
+      "pushedAt": "2026-06-23T00:18:55Z",
+      "isFork": false,
+      "description": "Dynamic MCP Tool Belt Dashboard \u2014 discipline-driven orchestration of GitHub, Notion, Supabase, Pinecone, Qdrant, Sentry,"
+    },
+    {
+      "name": "stealth-swarm-orchestrator",
+      "pushedAt": "2026-06-23T00:18:52Z",
+      "isFork": false,
+      "description": "Unstoppable, self-healing multi-agent swarm architecture."
+    },
+    {
+      "name": "apex-singularity-matrix",
+      "pushedAt": "2026-06-23T00:18:50Z",
+      "isFork": false,
+      "description": "The central nervous system for APEX cross-pollination. v1.21 Gigawatts."
+    },
+    {
+      "name": "apex-holographic-memory",
+      "pushedAt": "2026-06-23T00:18:48Z",
+      "isFork": false,
+      "description": "First-of-its-kind 6-layer Event-Driven Holographic Memory Mesh."
+    },
+    {
+      "name": "1FDV-23-0001009-FEDERAL-WARFARE",
+      "pushedAt": "2026-06-22T23:58:20Z",
+      "isFork": false,
+      "description": "\ud83d\udd12 PRIVATE - Federal litigation system for case 1FDV-23-0001009. RICO + \u00a71983 prosecution infrastructure. Integrated with"
+    },
+    {
+      "name": "activepieces",
+      "pushedAt": "2026-06-22T23:48:25Z",
+      "isFork": false,
+      "description": "AI Agents & MCPs & AI Workflow Automation \u2022 (~400 MCP servers for AI agents) \u2022 AI Automation / AI Agent with MCPs \u2022 AI W"
+    },
+    {
+      "name": "computer-user",
+      "pushedAt": "2026-06-22T23:34:24Z",
+      "isFork": false,
+      "description": "Desktop Automation Agent \u2014 Browser + Sandbox Native (Computer Use Migration)"
+    },
+    {
+      "name": "token_saver",
+      "pushedAt": "2026-06-22T20:35:42Z",
+      "isFork": false,
+      "description": "100% Token Optimization via Distributed Memory Sources - Context reduction engine for mission-critical operations"
+    },
+    {
+      "name": "SUPERLUMINAL_CASE_MATRIX",
+      "pushedAt": "2026-06-22T19:22:54Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-nexus-omega",
+      "pushedAt": "2026-06-22T03:25:26Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-justice-omega",
+      "pushedAt": "2026-06-22T03:07:03Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-justice-alpha",
+      "pushedAt": "2026-06-22T02:08:24Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-security-alpha",
+      "pushedAt": "2026-06-21T23:59:26Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-cooling-alpha",
+      "pushedAt": "2026-06-21T23:59:21Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-nexus-alpha",
+      "pushedAt": "2026-06-21T23:57:50Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-community-omega",
+      "pushedAt": "2026-06-21T23:57:46Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-community-alpha",
+      "pushedAt": "2026-06-21T23:57:41Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-microcode-omega",
+      "pushedAt": "2026-06-21T23:57:37Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-microcode-alpha",
+      "pushedAt": "2026-06-21T23:57:33Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-waterplant-omega",
+      "pushedAt": "2026-06-21T23:57:28Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-waterplant-alpha",
+      "pushedAt": "2026-06-21T23:57:23Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-servers-omega",
+      "pushedAt": "2026-06-21T23:57:18Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-servers-alpha",
+      "pushedAt": "2026-06-21T23:57:13Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-energy-omega",
+      "pushedAt": "2026-06-21T23:57:06Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-energy-alpha",
+      "pushedAt": "2026-06-21T23:57:01Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-nanosphere-omega",
+      "pushedAt": "2026-06-21T23:56:56Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-nanosphere-alpha",
+      "pushedAt": "2026-06-21T23:56:52Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-security-omega",
+      "pushedAt": "2026-06-21T23:56:48Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-aeon777-cooling-omega",
+      "pushedAt": "2026-06-21T23:56:19Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Pro-Mastermind",
+      "pushedAt": "2026-06-21T21:28:53Z",
+      "isFork": false,
+      "description": "\ud83e\udd16 Pro-tier AI orchestration engine \u2014 Mastermind + Doctor Strange universal coordination layer. 9-agent microservice gene"
+    },
+    {
+      "name": "xai-colossus-security-alpha",
+      "pushedAt": "2026-06-21T21:15:47Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-cooling-alpha",
+      "pushedAt": "2026-06-21T21:15:45Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-nexus-omega",
+      "pushedAt": "2026-06-21T21:09:40Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-community-omega",
+      "pushedAt": "2026-06-21T21:02:56Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-microcode-omega",
+      "pushedAt": "2026-06-21T21:02:53Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-microcode-alpha",
+      "pushedAt": "2026-06-21T21:02:51Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-waterplant-omega",
+      "pushedAt": "2026-06-21T21:02:49Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-waterplant-alpha",
+      "pushedAt": "2026-06-21T21:02:48Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-servers-omega",
+      "pushedAt": "2026-06-21T21:02:45Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-servers-alpha",
+      "pushedAt": "2026-06-21T21:02:44Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-energy-omega",
+      "pushedAt": "2026-06-21T21:02:41Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-energy-alpha",
+      "pushedAt": "2026-06-21T21:02:39Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-nanosphere-omega",
+      "pushedAt": "2026-06-21T21:02:36Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-nanosphere-alpha",
+      "pushedAt": "2026-06-21T21:02:34Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-security-omega",
+      "pushedAt": "2026-06-21T21:02:32Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-cooling-omega",
+      "pushedAt": "2026-06-21T21:02:28Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-nexus-alpha",
+      "pushedAt": "2026-06-21T20:57:47Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-community-alpha",
+      "pushedAt": "2026-06-21T20:57:43Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Z-BACKUP-aspen-grove-operator-v7",
+      "pushedAt": "2026-06-21T19:02:41Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 APEX v7 - Persistent Auto-Memory Operator with Multi-Sink Architecture | 12 Connectors, 10 Buckets, 5 Function Modules"
+    },
+    {
+      "name": "unified-visual-mcp",
+      "pushedAt": "2026-06-21T18:39:21Z",
+      "isFork": false,
+      "description": "Unified Visual MCP: Mapify + Canva + AntVis Chart + mymap.AI intelligent router"
+    },
+    {
+      "name": "apex-legal-case",
+      "pushedAt": "2026-06-21T14:22:13Z",
+      "isFork": false,
+      "description": "APEX Legal Intelligence \u2014 Case 1FDV-23-0001009 Hawaii First Circuit Family Court"
+    },
+    {
+      "name": "public-actions-runner-host",
+      "pushedAt": "2026-06-21T07:39:02Z",
+      "isFork": false,
+      "description": "Self-hosted GitHub Actions runner"
+    },
+    {
+      "name": "llm-runner-teams",
+      "pushedAt": "2026-06-21T05:27:50Z",
+      "isFork": false,
+      "description": "Multi-agent runner team framework: Case & Evidence, Document Processing, Coding, Evolution/Optimization \u2014 forensic-grade"
+    },
+    {
+      "name": "AspenGrove-KEKOA-1FDV-23-0001009",
+      "pushedAt": "2026-06-20T19:01:23Z",
+      "isFork": false,
+      "description": "Aspen Grove Quantum Memory + Potato Peeler Constitutional Warfare Knowledge Base for Case 1FDV-23-0001009 | Kekoa Barton"
+    },
+    {
+      "name": "CHERRY_CHAN_RECOVERY_MATRIX",
+      "pushedAt": "2026-06-20T17:12:47Z",
+      "isFork": false,
+      "description": "Dedicated Forensic & Legal Recovery Matrix for Cherry Chan (Vegas Case) - SEPARATED FROM MAIN STACK"
+    },
+    {
+      "name": "Omni_Engine",
+      "pushedAt": "2026-06-20T15:12:13Z",
+      "isFork": false,
+      "description": "Big Brain"
+    },
+    {
+      "name": "comet-agent",
+      "pushedAt": "2026-06-20T11:34:19Z",
+      "isFork": false,
+      "description": "Node/TypeScript agent server for Comet browser automation with Express API, tool adapters, and browser control bridge"
+    },
+    {
+      "name": "awesome-llm-apps",
+      "pushedAt": "2026-06-19T23:55:52Z",
+      "isFork": false,
+      "description": "Collection of awesome LLM apps with AI Agents and RAG using OpenAI, Anthropic, Gemini and opensource models."
+    },
+    {
+      "name": "Pro-apex-fs-commander-omega",
+      "pushedAt": "2026-06-19T23:31:24Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Pro-apex-fs-commander",
+      "pushedAt": "2026-06-19T23:31:22Z",
+      "isFork": false,
+      "description": "Apex FS Commander - Power frontend for MCP orchestration, evidence automation, docket forensics, and file system control"
+    },
+    {
+      "name": "Pro-gemini-unified-ops",
+      "pushedAt": "2026-06-19T20:13:25Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xai-colossus-2",
+      "pushedAt": "2026-06-19T18:22:32Z",
+      "isFork": false,
+      "description": "End-to-end sovereign infrastructure for xAI Colossus 2 \u2014 1.5GW, 200k-GPU AI supercomputer control system"
+    },
+    {
+      "name": "apex-stack",
+      "pushedAt": "2026-06-19T09:46:32Z",
+      "isFork": false,
+      "description": "\ud83d\udd31 APEX Stack \u2014 GitHub + Notion + Vercel + Supabase + Supermemory.ai sovereign AI development infrastructure"
+    },
+    {
+      "name": "authentik",
+      "pushedAt": "2026-06-18T21:43:17Z",
+      "isFork": false,
+      "description": "The authentication glue you need."
+    },
+    {
+      "name": "Pro-DOCTOR-STRANGE",
+      "pushedAt": "2026-06-18T21:27:22Z",
+      "isFork": false,
+      "description": "\ud83c\udf0c Universal Orchestration Layer - Sees all 178 repos, understands all systems, coordinates all execution dynamically. Th"
+    },
+    {
+      "name": "Pro_Code",
+      "pushedAt": "2026-06-18T11:05:14Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 Pro Coding Suite \u2014 Full-stack AI-powered development environment with CI/CD, vector search, observability, multi-agent"
+    },
+    {
+      "name": "THE_CATACLYSM",
+      "pushedAt": "2026-06-17T23:41:17Z",
+      "isFork": false,
+      "description": "Forensic Email Archive - Case 1FDV-23-0001009 | Kekoa Barton | Chain-of-Custody Email Evidence System | Potato Peeler Pr"
+    },
+    {
+      "name": "airbyte",
+      "pushedAt": "2026-06-17T02:04:27Z",
+      "isFork": false,
+      "description": "The leading data integration platform for ETL / ELT data pipelines from APIs, databases & files to data warehouses, data"
+    },
+    {
+      "name": "Pro-iOS",
+      "pushedAt": "2026-06-16T23:44:44Z",
+      "isFork": false,
+      "description": "\ud83d\udcf1 Pro-tier Apple-native sovereign layer \u2014 apple-mcp native tools, Comet browser automation agent + extension, iOS/macOS "
+    },
+    {
+      "name": "xai-colossal-cooling",
+      "pushedAt": "2026-06-16T04:23:48Z",
+      "isFork": false,
+      "description": "Evolutionary cooling methodologies for XAI Colossal supercomputer - First-principles thermal architecture, cost optimiza"
+    },
+    {
+      "name": "aspen-grove-core",
+      "pushedAt": "2026-06-16T02:15:50Z",
+      "isFork": false,
+      "description": "\ud83c\udf33 ASPEN GROVE CORE \u2014 Canonical Spiral Engine bootup. All memory layers, hyper-intelligence, swarm tech, skills, connecto"
+    },
+    {
+      "name": "glaciereq-memory-master",
+      "pushedAt": "2026-06-16T00:36:01Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 SOVEREIGN MEMORY MASTER - Universal Memory Orchestrator with Neo4j Graph, SuperMemory Acceleration, MCP Constellation,"
+    },
+    {
+      "name": "Pro-Gateway",
+      "pushedAt": "2026-06-15T21:28:28Z",
+      "isFork": false,
+      "description": "\ud83d\udd31 Pro-tier sovereign MCP gateway \u2014 unified proxy routing Vercel, Supabase, Sentry, ClickUp, Linear, Notion, Dropbox thro"
+    },
+    {
+      "name": "zapier-automations",
+      "pushedAt": "2026-06-15T04:09:37Z",
+      "isFork": false,
+      "description": "Zapier SDK automation scripts, integrations, and agent tools \u2014 built with @zapier/zapier-sdk"
+    },
+    {
+      "name": "automation-hub",
+      "pushedAt": "2026-06-15T04:03:00Z",
+      "isFork": false,
+      "description": "Unified automation framework \u2014 Zapier SDK, AI agents, workflow orchestration, and multi-service integrations"
+    },
+    {
+      "name": "apex-os",
+      "pushedAt": "2026-06-14T22:53:39Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "apex-sigma-files-android",
+      "pushedAt": "2026-06-14T22:36:17Z",
+      "isFork": false,
+      "description": "APEX Sigma Files Android \u2014 Material Files + Sigma File Manager fusion with AI capabilities"
+    },
+    {
+      "name": "GodMind",
+      "pushedAt": "2026-06-14T20:22:51Z",
+      "isFork": false,
+      "description": "GlacierEQ GodMind: Unified Intelligence & Case Management Hub [Phase 8]"
+    },
+    {
+      "name": "kai-linux",
+      "pushedAt": "2026-06-14T20:01:19Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Pro-God-Mind",
+      "pushedAt": "2026-06-14T19:01:44Z",
+      "isFork": false,
+      "description": "\u26a1 APEX OPERATOR CONSCIOUSNESS: MCP-Integrated AI Agent Swarm for Hyper-Intelligent File Organization, Document Processin"
+    },
+    {
+      "name": ".github",
+      "pushedAt": "2026-06-14T18:16:19Z",
+      "isFork": false,
+      "description": "Discussions and README for Model Context Protocol"
+    },
+    {
+      "name": "everything-mcp-server",
+      "pushedAt": "2026-06-14T00:47:44Z",
+      "isFork": false,
+      "description": "APEX Everything MCP - 7 categories, 50+ tools"
+    },
+    {
+      "name": "Pro-AEON-777",
+      "pushedAt": "2026-06-13T15:32:13Z",
+      "isFork": false,
+      "description": "AEON-777 - Foundation Architecture Plans | Sovereign Ascension Protocol v1.0 | THE CATACLYSM ENGINE | Unifying 860 repos"
+    },
+    {
+      "name": "apex-boot-core",
+      "pushedAt": "2026-06-13T14:17:02Z",
+      "isFork": false,
+      "description": "APEX session auto-boot system \u2014 loads Casey/Kekoa/1FDV-23-0001009 context into any AI session automatically at startup"
+    },
+    {
+      "name": "omni-agent-pro",
+      "pushedAt": "2026-06-13T10:35:59Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "apex-ish-mobile-nexus",
+      "pushedAt": "2026-06-13T08:22:28Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "apex-github-worker",
+      "pushedAt": "2026-06-13T05:35:04Z",
+      "isFork": false,
+      "description": "Notion Workers GitHub connector + super intelligent worker chains (AEON-777 hardened, memory connectors, forensic loggin"
+    },
+    {
+      "name": "legal-brief-system",
+      "pushedAt": "2026-06-12T23:35:31Z",
+      "isFork": false,
+      "description": "Automated legal brief pipeline: Overleaf LaTeX \u2192 GitHub \u2192 Supabase PDF storage \u2192 Notion case management \u2192 MotherDuck ana"
+    },
+    {
+      "name": "legal-brief-pipeline",
+      "pushedAt": "2026-06-12T22:47:16Z",
+      "isFork": false,
+      "description": "Automated legal brief compilation pipeline: Overleaf LaTeX \u2192 GitHub \u2192 Supabase \u2192 Notion | LawTeX + Bluebook citation man"
+    },
+    {
+      "name": "Legal-briefs-and-automatic-legal-citations-with-LawTeX-6-",
+      "pushedAt": "2026-06-12T22:17:40Z",
+      "isFork": false,
+      "description": "Hawaii Family Court Overleaf  Templates "
+    },
+    {
+      "name": "kai-linux-custom",
+      "pushedAt": "2026-06-12T21:14:13Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Z-BACKUP-FEDERAL-FORENSIC-REPAIR-OMNIBUS",
+      "pushedAt": "2026-06-12T19:58:44Z",
+      "isFork": false,
+      "description": "\ud83d\udd10 Ultimate unified device repair system - PC/Mac/iOS/Android/Linux with federal forensic integrity, firmware-level malwa"
+    },
+    {
+      "name": "matrix-soul",
+      "pushedAt": "2026-06-12T19:51:48Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "agent-zero",
+      "pushedAt": "2026-06-12T19:07:32Z",
+      "isFork": false,
+      "description": "Agent Zero AI framework"
+    },
+    {
+      "name": "AEON-BRAIN-777",
+      "pushedAt": "2026-06-12T01:23:37Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "JUGGERNAUT-OFFICE",
+      "pushedAt": "2026-06-12T01:23:02Z",
+      "isFork": false,
+      "description": "Sovereign AI-Powered Document Command Center"
+    },
+    {
+      "name": "MEGA-PDF-INTELLIGENT-DOCUMENT-SYSTEM",
+      "pushedAt": "2026-06-11T14:07:50Z",
+      "isFork": false,
+      "description": "Revolutionary intelligent document system - each document has built-in AI consciousness, learning capabilities, and self"
+    },
+    {
+      "name": "Pro-Memory",
+      "pushedAt": "2026-06-11T14:07:35Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 Pro-tier memory constellation \u2014 Aspen Grove 4-tier architecture (Supabase pgvector, Pinecone+Mem0, Neo4j+Supermemory)."
+    },
+    {
+      "name": "Apex-Gemma4",
+      "pushedAt": "2026-06-10T23:37:18Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Stealth-Claw",
+      "pushedAt": "2026-06-10T23:36:43Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "ai-auto-driller-pro-max",
+      "pushedAt": "2026-06-10T21:08:17Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Pro-Forensics",
+      "pushedAt": "2026-06-10T19:18:11Z",
+      "isFork": false,
+      "description": "\ud83d\udd10 Pro-tier federal forensic operations \u2014 device repair, firmware malware detection, WhisperX transcription, PDF analysis"
+    },
+    {
+      "name": "Z-BACKUP-aspen-grove-omni-bridge",
+      "pushedAt": "2026-06-10T19:04:22Z",
+      "isFork": false,
+      "description": "Supreme Legal Intelligence Platform - Aspen Grove Omni-Bridge v4.0 Ultimate for Case 1FDV-23-0001009"
+    },
+    {
+      "name": "electricity",
+      "pushedAt": "2026-06-10T18:28:48Z",
+      "isFork": false,
+      "description": "Finite-bounded power grid orchestration for XAI Colossal Cooling\u2014thermal-correlated load balancing, demand forecasting, "
+    },
+    {
+      "name": "ai-pdf-chatbot-langchain",
+      "pushedAt": "2026-06-10T14:26:10Z",
+      "isFork": false,
+      "description": "AI PDF chatbot agent built with LangChain & LangGraph "
+    },
+    {
+      "name": "Z-BACKUP-APEX-NEXUS-AUTOMATION",
+      "pushedAt": "2026-06-10T14:25:49Z",
+      "isFork": false,
+      "description": "\ud83e\udd16 PRIVATE - Automation scripts for APEX litigation system. Notion API integration, GitHub sync, evidence processing, doc"
+    },
+    {
+      "name": "FILEBOSS",
+      "pushedAt": "2026-06-09T13:17:27Z",
+      "isFork": false,
+      "description": "Your files will neverbe the same."
+    },
+    {
+      "name": "Pro-Swarm",
+      "pushedAt": "2026-06-09T10:21:42Z",
+      "isFork": false,
+      "description": "\ud83d\udc1d Pro-tier agent swarm \u2014 Diamond topology, Helix A/B (builder/adversary), 400K agent capacity, Spiral Engine recursive c"
+    },
+    {
+      "name": "Pro-AEON-BRAIN",
+      "pushedAt": "2026-06-09T10:21:22Z",
+      "isFork": false,
+      "description": "\ud83c\udf00 Pro-tier AEON Brain sovereign intelligence \u2014 AEON-777 + AEON-BRAIN-777 unified. Cataclysm Engine, Level 5 Apex Swarm, "
+    },
+    {
+      "name": "affine",
+      "pushedAt": "2026-06-09T00:22:36Z",
+      "isFork": false,
+      "description": "There can be more than Notion and Miro. AFFiNE(pronounced [\u0259\u2018fain]) is a next-gen knowledge base that brings planning, s"
+    },
+    {
+      "name": "Z-BACKUP-apex-command-center",
+      "pushedAt": "2026-06-08T20:41:54Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 APEX Command Center - Production MCP Server with GitHub \u00d7 Notion \u00d7 Memory Plugin integration. Memory-first architectur"
+    },
+    {
+      "name": "ai-web-extensions",
+      "pushedAt": "2026-06-08T17:17:47Z",
+      "isFork": false,
+      "description": "\ud83e\udd16 AI browser extensions & userscripts to augment your web experience"
+    },
+    {
+      "name": "omni-engine",
+      "pushedAt": "2026-06-06T23:18:57Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "CYBER-FORENSICS-APRIL2025",
+      "pushedAt": "2026-06-06T23:17:43Z",
+      "isFork": false,
+      "description": "\ud83d\udd12 APRIL 2025 GOOGLE DRIVE HACK FORENSICS \u2014 TOR intrusion trace, timestamp manipulation analysis, file integrity violatio"
+    },
+    {
+      "name": "Pro-Legal-Docs",
+      "pushedAt": "2026-06-06T02:53:21Z",
+      "isFork": false,
+      "description": "\u2696\ufe0f Pro-tier legal document engine \u2014 HRS corpus, RICO library, 42 U.S.C. \u00a71983 templates, Constitutional Warfare KB, moti"
+    },
+    {
+      "name": "apex-home-base",
+      "pushedAt": "2026-06-05T00:25:53Z",
+      "isFork": false,
+      "description": "APEX Sovereign Home Base \u2014 GlacierEQ operator environment. Case 1FDV-23-0001009."
+    },
+    {
+      "name": "whisperX",
+      "pushedAt": "2026-06-04T23:04:44Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "aspen-grove-memory",
+      "pushedAt": "2026-06-04T04:32:04Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 ASPEN GROVE MEMORY \u2014 4-tier memory constellation. Tier1 in-process, Tier2 Supabase pgvector, Tier3 Pinecone+Mem0, Tier"
+    },
+    {
+      "name": "LEGAL-AI-NEXUS",
+      "pushedAt": "2026-06-03T20:34:17Z",
+      "isFork": false,
+      "description": "\u2696\ufe0f Enterprise Legal AI Platform - Complete automation suite consolidating hawaii-family-court-legal-automation + legal-m"
+    },
+    {
+      "name": "APEX-HIGH-COUNCIL",
+      "pushedAt": "2026-06-03T20:32:25Z",
+      "isFork": false,
+      "description": "APEX High Council \u2014 10 Perplexity Computer Agent + Comet iOS automation templates covering all APEX domains: Legal Warfa"
+    },
+    {
+      "name": "aspen-grove-swarm",
+      "pushedAt": "2026-06-03T20:32:08Z",
+      "isFork": false,
+      "description": "\ud83d\udc1d ASPEN GROVE SWARM \u2014 Diamond Agent topology, Helix A (builder) + Helix B (adversary/auditor), 400K agent capacity, Spir"
+    },
+    {
+      "name": "spiral-engine",
+      "pushedAt": "2026-06-03T20:31:49Z",
+      "isFork": false,
+      "description": "Spiral Engine \u2014 double helix hub-and-spoke architecture. Each spoke is pillar+piston. Defense and offense strands intert"
+    },
+    {
+      "name": "Pro-Gemma",
+      "pushedAt": "2026-06-03T20:25:38Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 Pro-tier on-device + cloud AI dispatch \u2014 Gemma 4 E4B/26B router, Notion/ClickUp/Supermemory integrations, sovereign lo"
+    },
+    {
+      "name": "Pro-Juggernaut",
+      "pushedAt": "2026-06-03T20:23:23Z",
+      "isFork": false,
+      "description": "\ud83d\udcdc Pro-tier sovereign document command center \u2014 JUGGERNAUT-OFFICE + FILEBOSS HyperIntelligence Framework. AI constellatio"
+    },
+    {
+      "name": "Pro-Security",
+      "pushedAt": "2026-06-03T20:22:00Z",
+      "isFork": false,
+      "description": "\ud83d\udd10 Pro-tier zero-trust security architecture \u2014 Covers 100+ GlacierEQ repos, xAI Colossus security layer, firmware malware"
+    },
+    {
+      "name": "Pro-Evidence",
+      "pushedAt": "2026-06-03T20:21:34Z",
+      "isFork": false,
+      "description": "\ud83d\udd0d Pro-tier forensic evidence vault \u2014 MEGA-PDF system, OCR, Bates numbering, SHA-256 hash chain, exhibit catalog, Dropbox"
+    },
+    {
+      "name": "Pro-Legal-Warfare",
+      "pushedAt": "2026-06-03T20:21:03Z",
+      "isFork": false,
+      "description": "\u2696\ufe0f Pro-tier sovereign legal warfare engine \u2014 RICO + \u00a71983 federal prosecution infrastructure, case matrix, docket forens"
+    },
+    {
+      "name": "Pro-Kai",
+      "pushedAt": "2026-06-03T20:04:27Z",
+      "isFork": false,
+      "description": "\ud83d\udc27 Pro-tier custom Linux sovereign OS layer \u2014 Kai Linux custom kernel, firmware-level system control, hardened OS profile"
+    },
+    {
+      "name": "Pro-CI",
+      "pushedAt": "2026-06-03T19:55:51Z",
+      "isFork": false,
+      "description": "\u2699\ufe0f Pro-tier CI/CD guardian \u2014 Hourly GitHub Actions failure scanning, root cause classification, auto-repair, incident lo"
+    },
+    {
+      "name": "Pro-Connectors",
+      "pushedAt": "2026-06-03T19:50:29Z",
+      "isFork": false,
+      "description": "\ud83d\udd0c Pro-tier MCP connector registry \u2014 All 12 connectors: GitHub, Notion, Supabase, Dropbox, OneDrive, ClickUp, Linear, Ver"
+    },
+    {
+      "name": "apex-bootup-core",
+      "pushedAt": "2026-06-03T16:58:02Z",
+      "isFork": false,
+      "description": "Centralized repository for APEX Mastermind bootup configurations, environment profiles, and task-specific branching logi"
+    },
+    {
+      "name": "Z-BACKUP-apex-gateway",
+      "pushedAt": "2026-06-03T16:56:54Z",
+      "isFork": false,
+      "description": "\ud83d\udd31 APEX Gateway \u2014 Single MCP proxy routing Vercel, Supabase, Sentry, ClickUp, Linear through one sovereign endpoint. Glac"
+    },
+    {
+      "name": "apex-legal-ops-dashboard",
+      "pushedAt": "2026-06-03T16:24:35Z",
+      "isFork": false,
+      "description": "APEX Automated Deployment - apex-legal-ops-dashboard"
+    },
+    {
+      "name": "hi-class-platform",
+      "pushedAt": "2026-06-03T16:24:07Z",
+      "isFork": false,
+      "description": "APEX Automated Deployment - hi-class-platform"
+    },
+    {
+      "name": "Z-BACKUP-apex-vault",
+      "pushedAt": "2026-06-03T06:45:12Z",
+      "isFork": false,
+      "description": "APEX Sovereign Credential Vault \u2014 GlacierEQ Operator Environment"
+    },
+    {
+      "name": "THE_CATACLYSM_CHAT_MATRIX",
+      "pushedAt": "2026-06-03T05:06:25Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Z-BACKUP-aspen-grove-unified",
+      "pushedAt": "2026-06-03T04:59:54Z",
+      "isFork": false,
+      "description": "\ud83c\udf33 ASPEN GROVE UNIFIED - Consolidated APEX Platform (V7 + Quantum + Fusion + Orchestrator)"
+    },
+    {
+      "name": "gemini-unified-ops",
+      "pushedAt": "2026-06-02T00:22:34Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Z-BACKUP-apex-ci-guardian",
+      "pushedAt": "2026-06-01T20:40:53Z",
+      "isFork": false,
+      "description": "Hourly CI guardian \u2014 scans Gmail for GitHub Actions failures, classifies root cause, auto-repairs where safe, logs incid"
+    },
+    {
+      "name": "apex-control-plane",
+      "pushedAt": "2026-06-01T19:44:14Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 APEX Control Plane \u2014 Daily audit loop, connector registry, security hardening, and action queue for GlacierEQ sovereig"
+    },
+    {
+      "name": "Casebuilder4000",
+      "pushedAt": "2026-06-01T12:45:23Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Z-BACKUP-mastermind-colossus",
+      "pushedAt": "2026-05-31T20:54:43Z",
+      "isFork": false,
+      "description": "GlacierEQ Mastermind \u2014 APEX Sovereign Orchestration Engine | Colossus Edition | Shadow tree wired to xai-colossus-coolin"
+    },
+    {
+      "name": "airi",
+      "pushedAt": "2026-05-29T21:47:23Z",
+      "isFork": false,
+      "description": "\ud83d\udc96\ud83e\uddf8 Self hosted, you owned Grok Companion, a container of souls of waifu, cyber livings to bring them into our worlds, wi"
+    },
+    {
+      "name": "apex-gemma",
+      "pushedAt": "2026-05-29T10:14:45Z",
+      "isFork": false,
+      "description": "Apex Gemma: On-device + cloud Gemma 4 dispatch system with E4B/26B router, Notion/ClickUp/Supermemory integrations"
+    },
+    {
+      "name": "aspen-grove-supabase",
+      "pushedAt": "2026-05-28T21:08:36Z",
+      "isFork": false,
+      "description": "APEX Legal Ops \u2014 Supabase-native architecture for case 1FDV-23-0001009. PostgreSQL schema, Edge Functions, Python client"
+    },
+    {
+      "name": "FILEBOSS-HyperIntelligence-Framework",
+      "pushedAt": "2026-05-28T09:19:18Z",
+      "isFork": false,
+      "description": "Ultra-advanced legal technology orchestration system with AI constellation management, quantum evidence analysis, and ma"
+    },
+    {
+      "name": "QUANTUM-SOVEREIGN-PLATFORM",
+      "pushedAt": "2026-05-28T09:18:46Z",
+      "isFork": false,
+      "description": "Revolutionary 15-Agent Diamond Topology Platform with Quantum-Enhanced Legal AI Intelligence - Full Stack Enterprise Arc"
+    },
+    {
+      "name": "Z-BACKUP-APEX-LEGAL-WARFARE-ORCHESTRATOR",
+      "pushedAt": "2026-05-28T09:18:12Z",
+      "isFork": false,
+      "description": "\u26a1 Master control plane for Case 1FDV-23-0001009 | 777 Iteration Legal Motion Engine | MemoryPlugin MCP | Constitutional "
+    },
+    {
+      "name": "aspen-grove-connectors",
+      "pushedAt": "2026-05-28T07:28:22Z",
+      "isFork": false,
+      "description": "\ud83d\udd0c ASPEN GROVE CONNECTORS \u2014 All 12 MCP connectors, connector registry, health monitoring. GitHub, Notion, Supabase, Dropb"
+    },
+    {
+      "name": "aspen-grove-evidence",
+      "pushedAt": "2026-05-28T07:27:30Z",
+      "isFork": false,
+      "description": "\ud83d\udd0d ASPEN GROVE EVIDENCE \u2014 MEGA-PDF forensic vault, OCR, Bates numbering, SHA-256 hash chain, exhibit catalog, Dropbox 1FD"
+    },
+    {
+      "name": "aspen-grove-legal",
+      "pushedAt": "2026-05-28T07:26:41Z",
+      "isFork": false,
+      "description": "\u2696\ufe0f ASPEN GROVE LEGAL \u2014 HRS corpus, RICO library, 42 U.S.C. \u00a71983 templates, Constitutional Warfare KB, motion drafter. I"
+    },
+    {
+      "name": "security",
+      "pushedAt": "2026-05-28T06:26:13Z",
+      "isFork": false,
+      "description": "Zero-trust security architecture for 100+ GlacierEQ repos"
+    },
+    {
+      "name": "Acode",
+      "pushedAt": "2026-05-28T03:45:59Z",
+      "isFork": false,
+      "description": "Acode - powerful text/code editor for android"
+    },
+    {
+      "name": "sigma-flow-suite",
+      "pushedAt": "2026-05-27T03:45:49Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "case-1FDV-23-0001009-legal-documents",
+      "pushedAt": "2026-05-26T13:58:42Z",
+      "isFork": false,
+      "description": "Legal document repository for Hawaii Family Court Case 1FDV-23-0001009 - Custody Modification. Version-controlled motion"
+    },
+    {
+      "name": "llm-aquifer-defense",
+      "pushedAt": "2026-05-26T13:13:08Z",
+      "isFork": false,
+      "description": "Community defense toolkit: LLM data center aquifer impact analysis, NPDES compliance, and public records framework. Open"
+    },
+    {
+      "name": "disk-recovery",
+      "pushedAt": "2026-05-26T00:16:32Z",
+      "isFork": false,
+      "description": "Horrifically simple disk recovery using SleuthKit"
+    },
+    {
+      "name": "AIConstitution",
+      "pushedAt": "2026-05-26T00:16:25Z",
+      "isFork": false,
+      "description": "AI legal research open-source project"
+    },
+    {
+      "name": "agentdevlaw",
+      "pushedAt": "2026-05-26T00:16:22Z",
+      "isFork": false,
+      "description": "A middleware for multiagent systems providing legal knowledge with a legal ontology. Um middleware para sistemas multiag"
+    },
+    {
+      "name": "Android-Usagestats-XML-Protobuf",
+      "pushedAt": "2026-05-26T00:16:15Z",
+      "isFork": false,
+      "description": "Android Usagestats XML + Protobuf Parser"
+    },
+    {
+      "name": "ai-virtual-mouse",
+      "pushedAt": "2026-05-26T00:16:04Z",
+      "isFork": false,
+      "description": "Developed an AI-based system to control the mouse cursor using Python and OpenCV with the real-time camera. Fingertip lo"
+    },
+    {
+      "name": "allinone",
+      "pushedAt": "2026-05-26T00:15:53Z",
+      "isFork": false,
+      "description": "AutoAI's Work-In-Progress all-in-one tool. We have added countless tools into 1 website."
+    },
+    {
+      "name": "AthenaOS",
+      "pushedAt": "2026-05-26T00:15:49Z",
+      "isFork": false,
+      "description": "AthenaOS is a next generation AI-native operating system managed by Swarms of AI Agents"
+    },
+    {
+      "name": "autogpt-package",
+      "pushedAt": "2026-05-26T00:15:36Z",
+      "isFork": false,
+      "description": "It's like Auto-GPT met Brew. The easiest and fastest way to get started with AutoGPT with any backend of your choice & w"
+    },
+    {
+      "name": "NeuralAi",
+      "pushedAt": "2026-05-26T00:15:06Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "automatic-octo-garbanzo",
+      "pushedAt": "2026-05-26T00:14:53Z",
+      "isFork": false,
+      "description": "Chain Prompts"
+    },
+    {
+      "name": "Autogen_GraphRAG_Ollama",
+      "pushedAt": "2026-05-26T00:14:39Z",
+      "isFork": false,
+      "description": "Microsoft's GraphRAG + AutoGen + Ollama + Chainlit = Fully Local & Free Multi-Agent RAG\u00a0Superbot"
+    },
+    {
+      "name": "Afiles",
+      "pushedAt": "2026-05-26T00:14:37Z",
+      "isFork": false,
+      "description": "Afiles"
+    },
+    {
+      "name": "Mindframe-Core",
+      "pushedAt": "2026-05-26T00:14:34Z",
+      "isFork": false,
+      "description": "Mindframe Core , "
+    },
+    {
+      "name": "test-repo-demo",
+      "pushedAt": "2026-05-26T00:14:25Z",
+      "isFork": false,
+      "description": "A test repository for demonstrating GitHub tools"
+    },
+    {
+      "name": "Z-BACKUP-forensic_transcriber",
+      "pushedAt": "2026-05-26T00:14:13Z",
+      "isFork": false,
+      "description": "forensic leveltranscription tools"
+    },
+    {
+      "name": "Yin_The_Legal_Visionary",
+      "pushedAt": "2026-05-26T00:14:04Z",
+      "isFork": false,
+      "description": "Legal Specialist AI"
+    },
+    {
+      "name": "awscloud",
+      "pushedAt": "2026-05-26T00:14:01Z",
+      "isFork": false,
+      "description": "Cloudformation configs, lambda code, etc."
+    },
+    {
+      "name": "ai-research",
+      "pushedAt": "2026-05-26T00:13:50Z",
+      "isFork": false,
+      "description": "A collection of outcomes and discoveries from our legal AI research projects"
+    },
+    {
+      "name": "awesome-opensource-email",
+      "pushedAt": "2026-05-26T00:13:41Z",
+      "isFork": false,
+      "description": "Awesome Opensource Email Resources"
+    },
+    {
+      "name": "gpt-buddy",
+      "pushedAt": "2026-05-26T00:13:26Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "arkhon_memory",
+      "pushedAt": "2026-05-26T00:13:25Z",
+      "isFork": false,
+      "description": "LLM, agentic AI, memory, python"
+    },
+    {
+      "name": "warp-terminal-clone-main",
+      "pushedAt": "2026-05-26T00:13:21Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "awesome-cursorrules",
+      "pushedAt": "2026-05-26T00:12:36Z",
+      "isFork": false,
+      "description": "\ud83d\udcc4  Configuration files that enhance Cursor AI editor experience with custom rules and behaviors"
+    },
+    {
+      "name": "agno",
+      "pushedAt": "2026-05-26T00:12:26Z",
+      "isFork": false,
+      "description": "Full-stack framework for building Multi-Agent Systems with memory, knowledge and reasoning."
+    },
+    {
+      "name": "resolve",
+      "pushedAt": "2026-05-26T00:12:24Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "apple-mcp",
+      "pushedAt": "2026-05-26T00:12:23Z",
+      "isFork": false,
+      "description": "Collection of apple-native tools for the model context protocol."
+    },
+    {
+      "name": "comet-extension",
+      "pushedAt": "2026-05-26T00:12:19Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "ai_meeting_recorder",
+      "pushedAt": "2026-05-26T00:12:11Z",
+      "isFork": false,
+      "description": "AI\u3092\u4f7f\u3063\u305f\u8b70\u4e8b\u9332\u4f5c\u6210\u30c4\u30fc\u30eb"
+    },
+    {
+      "name": "awesome-devops-mcp-servers",
+      "pushedAt": "2026-05-26T00:12:02Z",
+      "isFork": false,
+      "description": "A curated list of awesome MCP servers focused on DevOps tools and capabilities."
+    },
+    {
+      "name": "awesome-windows",
+      "pushedAt": "2026-05-26T00:11:52Z",
+      "isFork": false,
+      "description": "An awesome & curated list of tools and apps for Windows 10/11."
+    },
+    {
+      "name": "awesome-mcp-servers",
+      "pushedAt": "2026-05-26T00:11:41Z",
+      "isFork": false,
+      "description": "A curated list of Model Context Protocol (MCP) servers"
+    },
+    {
+      "name": "automation-powerhouse",
+      "pushedAt": "2026-05-26T00:11:20Z",
+      "isFork": false,
+      "description": "Comprehensive browser automation (Selenium, Playwright, Puppeteer, Scrapy) with TDD methodology and intelligent document"
+    },
+    {
+      "name": "Z-BACKUP-MOTION-LIBRARY-APEX-ORCHESTRATOR",
+      "pushedAt": "2026-05-26T00:11:19Z",
+      "isFork": false,
+      "description": "\ud83c\udfdb\ufe0f APEX MASTER ORCHESTRATOR - Unified command layer integrating 23 legal motion repositories with intelligent routing, H"
+    },
+    {
+      "name": "Z-BACKUP-ULTIMATE-REPAIR-APEX",
+      "pushedAt": "2026-05-26T00:11:17Z",
+      "isFork": false,
+      "description": "\ud83d\udd10 Forensic-grade boot recovery system with GPG-signed commits, SHA-256 verification, and evidence-chain integrity. Windo"
+    },
+    {
+      "name": "memory-tool-build",
+      "pushedAt": "2026-05-26T00:11:15Z",
+      "isFork": false,
+      "description": "Repository for building and storing memory tool facts and analysis."
+    },
+    {
+      "name": "SOVEREIGNASCENSIONPROTOCOL-QUANTUM-DEPLOYMENT",
+      "pushedAt": "2026-05-26T00:11:12Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Complete Quantum System Deployment - MCP Integration, Memory Constellation, and Legal Strategy Orchestration for Kekoa"
+    },
+    {
+      "name": "supernova-legal-warfare-system",
+      "pushedAt": "2026-05-26T00:11:10Z",
+      "isFork": false,
+      "description": "Complete multi-jurisdictional legal warfare automation system for coordinated filing across Hawaii Supreme Court, Federa"
+    },
+    {
+      "name": "erik-breisacher-legal-investigation",
+      "pushedAt": "2026-05-26T00:11:07Z",
+      "isFork": false,
+      "description": "Comprehensive legal case management repository for Erik Breisacher criminal investigation - theft, harassment, extortion"
+    },
+    {
+      "name": "jefs-legal-ai-fortress",
+      "pushedAt": "2026-05-26T00:11:05Z",
+      "isFork": false,
+      "description": "Nuclear Legal AI System for Hawaii JEFS Integration - Maximum Power Legal Automation with Document Processing, Security,"
+    },
+    {
+      "name": "FEDERAL-LITIGATION-FORTRESS",
+      "pushedAt": "2026-05-26T00:11:03Z",
+      "isFork": false,
+      "description": "\u2696\ufe0f\ud83d\ude80 Nuclear-Grade Federal Litigation Platform - Constitutional warfare infrastructure with 42 USC 1983 civil rights, RIC"
+    },
+    {
+      "name": "MCP-OMNI-PLATFORM",
+      "pushedAt": "2026-05-26T00:11:02Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Universal AI Orchestration Platform - Consolidating MCP-MASTER-OMNI-GRID + MCP-SOVEREIGN-DEPLOYMENT-COMPLETE with 25+ "
+    },
+    {
+      "name": "QUANTUM-INTELLIGENCE-HUB",
+      "pushedAt": "2026-05-26T00:11:00Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 Revolutionary AI Orchestration Hub - Consolidating glaciereq-memory-master + quantum-memory-orchestrator with 15-agent"
+    },
+    {
+      "name": "github-agent-orchestrator",
+      "pushedAt": "2026-05-26T00:10:59Z",
+      "isFork": false,
+      "description": "\ud83e\udd16 Autonomous GitHub Agent for bulk repository operations - VibeCode-level automation capabilities"
+    },
+    {
+      "name": "MAXIMUM-CODE-POWER-LIVE",
+      "pushedAt": "2026-05-26T00:10:57Z",
+      "isFork": false,
+      "description": "\ud83d\udd25 MAXIMUM CODE POWER LIVE DEPLOYMENT - Ultimate GitHub Operations with 681 Repository Command Authority, Constitutional "
+    },
+    {
+      "name": "Systemic-Reform-Internal-Docs",
+      "pushedAt": "2026-05-26T00:10:54Z",
+      "isFork": false,
+      "description": "Repository for audit reports, oversight protocols, and internal action plans related to the systemic reform initiative."
+    },
+    {
+      "name": "Book-of-Breach-Public-Docs",
+      "pushedAt": "2026-05-26T00:10:52Z",
+      "isFork": false,
+      "description": "Main repository for the 'Book of Breach' and all related public documentation, including press releases and public aware"
+    },
+    {
+      "name": "book-of-breach-hawaii-family-court",
+      "pushedAt": "2026-05-26T00:10:50Z",
+      "isFork": false,
+      "description": "Public transparency database documenting systemic failures in Hawaii Family Court Case 1FDV-23-0001009. Comprehensive le"
+    },
+    {
+      "name": "MCP-QUANTUM-SECURITY-MATRIX",
+      "pushedAt": "2026-05-26T00:10:49Z",
+      "isFork": false,
+      "description": "\ud83d\udd10 Enterprise-grade MCP Security Architecture - Zero-trust connector framework, quantum-resistant authentication, and ada"
+    },
+    {
+      "name": "glaciereq-memory-consolidation-project",
+      "pushedAt": "2026-05-26T00:10:47Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 MASTER PROJECT: Complete GlacierEQ Memory Ecosystem Consolidation - 28\u21921 Repository Architecture with Neo4j Graph Memo"
+    },
+    {
+      "name": "hyper-intelligent-mcp-hub",
+      "pushedAt": "2026-05-26T00:10:45Z",
+      "isFork": false,
+      "description": "Hyper-Intelligent MCP Integration Hub - Dynamic tool orchestration with Notion sync, GitHub deployment automation, and s"
+    },
+    {
+      "name": "notion-workspace-optimizer",
+      "pushedAt": "2026-05-26T00:10:44Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 Hyper-Intelligent Notion Workspace Optimization Engine - Automated performance tuning, content deduplication, security"
+    },
+    {
+      "name": "casey-legal-mcp-server",
+      "pushedAt": "2026-05-26T00:10:42Z",
+      "isFork": false,
+      "description": "Live Legal MCP Server for Case 1FDV-23-0001009 - Smithery Integration Ready"
+    },
+    {
+      "name": "casey-operator-packs",
+      "pushedAt": "2026-05-26T00:10:40Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Enterprise-grade operator packs for bulletproof reliability, forensic security, and autonomous MCP orchestration - The"
+    },
+    {
+      "name": "hi-11-legal-automation",
+      "pushedAt": "2026-05-26T00:10:39Z",
+      "isFork": false,
+      "description": "Federal-grade legal case automation system for Case 1FDV-23-0001009 - Attorney-client privileged evidence management wit"
+    },
+    {
+      "name": "deadline-tracker-mcp",
+      "pushedAt": "2026-05-26T00:10:37Z",
+      "isFork": false,
+      "description": "Critical MCP server for tracking TRO expirations and motion deadlines in legal case management"
+    },
+    {
+      "name": "Z-BACKUP-desktop-commander-mcp",
+      "pushedAt": "2026-05-26T00:10:35Z",
+      "isFork": false,
+      "description": "Critical MCP server enabling shell execution and system access for deployment orchestration"
+    },
+    {
+      "name": "perplexity-voice-integration",
+      "pushedAt": "2026-05-26T00:10:34Z",
+      "isFork": false,
+      "description": "Advanced Perplexity Voice Module Integration with MCP, SuperMemory, and Context Management"
+    },
+    {
+      "name": "hawaii-docket-automation",
+      "pushedAt": "2026-05-26T00:10:32Z",
+      "isFork": false,
+      "description": "\ud83c\udfdb\ufe0f Enterprise-grade Hawaii court docket processing system with MCP integration, automated analysis, report generation, a"
+    },
+    {
+      "name": "casey-custom-mcp-constellation",
+      "pushedAt": "2026-05-26T00:10:31Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Casey's Custom MCP Constellation - Legal AI Warfare Engine + Business Intelligence + Quantum Memory Integration for Ca"
+    },
+    {
+      "name": "downthemall-research",
+      "pushedAt": "2026-05-26T00:10:29Z",
+      "isFork": false,
+      "description": "DownThemAll enhanced for research automation - mass download manager evolved into comprehensive research data collection"
+    },
+    {
+      "name": "n8n-smart-deploy-e2b-integration",
+      "pushedAt": "2026-05-26T00:10:28Z",
+      "isFork": false,
+      "description": "Comprehensive GitHub MCP Tools Integration for E2B-Powered n8n Smart Deploy System with legal-grade audit trails and ent"
+    },
+    {
+      "name": "mem0-powerhouse",
+      "pushedAt": "2026-05-26T00:10:26Z",
+      "isFork": false,
+      "description": "\ud83c\udfdb\ufe0f Advanced Mem0 + Memory Plugin MCP integration with legal research AI, E2B sandboxing, forensic integrity, batch opera"
+    },
+    {
+      "name": "smithery-mcp-ultimate-v2",
+      "pushedAt": "2026-05-26T00:10:24Z",
+      "isFork": false,
+      "description": "Smithery MCP Ultimate v2 - Complete MCP server scaffold with smart contracts, E2B sandboxed execution, memory/vector ops"
+    },
+    {
+      "name": "Operation-Black-Sun-Data-Preprocessing",
+      "pushedAt": "2026-05-26T00:10:23Z",
+      "isFork": false,
+      "description": "Data preprocessing and resource preparation for Operation Black Sun forensic analysis pipeline"
+    },
+    {
+      "name": "Z-BACKUP-Federal-Forensic-MCP-Master",
+      "pushedAt": "2026-05-26T00:10:21Z",
+      "isFork": false,
+      "description": "A federally compliant, forensic-grade MCP (Model Context Protocol) Master Node for legal, cybersecurity, and investigati"
+    },
+    {
+      "name": "Z-BACKUP-Federal-Forensic-Framework",
+      "pushedAt": "2026-05-26T00:10:20Z",
+      "isFork": false,
+      "description": "A federally forensic-organized repository for digital evidence handling, analysis, and reporting. Structured for chain-o"
+    },
+    {
+      "name": "GODMIND-quantum-intelligence-matrix",
+      "pushedAt": "2026-05-26T00:10:18Z",
+      "isFork": false,
+      "description": "Quantum Legal Intelligence Matrix with MCP Framework Integration - Advanced AI system combining operator code, neural ne"
+    },
+    {
+      "name": "federal-admissibility-report",
+      "pushedAt": "2026-05-26T00:10:16Z",
+      "isFork": false,
+      "description": "Federal Court Admissibility Report - Digital Evidence Documentation and Chain of Custody for Legal Proceedings"
+    },
+    {
+      "name": "opryxx_logs",
+      "pushedAt": "2026-05-26T00:10:06Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "myapp",
+      "pushedAt": "2026-05-26T00:10:01Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "user",
+      "pushedAt": "2026-05-26T00:09:59Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "nexus-cosmic-weave",
+      "pushedAt": "2026-05-26T00:09:52Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "ai-cognitive-nexus-mcp",
+      "pushedAt": "2026-05-26T00:09:43Z",
+      "isFork": false,
+      "description": "\u4e00\u4e2a\u4e13\u4e1a\u7684\u3001\u53ef\u52a8\u6001\u7f16\u7ec4\u7684 AI \u56e2\u961f\u534f\u4f5c\u4e0e\u7f16\u6392\u7684MCP\u3002\u5141\u8bb8\u60a8\u901a\u8fc7\u7b80\u5355\u7684\u6307\u4ee4\u521b\u5efa\u3001\u7ba1\u7406\u548c\u6307\u6325\u7531\u591a\u4e2a AI \u667a\u80fd\u4f53 (Agent) \u7ec4\u6210\u7684\u5c42\u7ea7\u5316\u56e2\u961f\uff0c\u4ee5\u89e3\u51b3\u590d\u6742\u548c\u591a\u9636\u6bb5\u7684\u4efb\u52a1\u3002"
+    },
+    {
+      "name": "models",
+      "pushedAt": "2026-05-26T00:09:38Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "ChatGPT_FileSystem",
+      "pushedAt": "2026-05-26T00:09:36Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "drive-front-door",
+      "pushedAt": "2026-05-26T00:09:34Z",
+      "isFork": false,
+      "description": "Google Drive integrated front door app with secure OAuth, folder sync, and file browser UI using Node.js, Next.js, Postg"
+    },
+    {
+      "name": "out",
+      "pushedAt": "2026-05-26T00:09:33Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "xmodules",
+      "pushedAt": "2026-05-26T00:09:31Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "DeepSeek-Coder-V2-main",
+      "pushedAt": "2026-05-26T00:09:29Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "builder",
+      "pushedAt": "2026-05-26T00:09:28Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "cookiecutter-template--cookiecutter.modelname-",
+      "pushedAt": "2026-05-26T00:09:26Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "chatmade",
+      "pushedAt": "2026-05-26T00:09:24Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "build",
+      "pushedAt": "2026-05-26T00:09:23Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "audio_spectrogram_transformer",
+      "pushedAt": "2026-05-26T00:09:21Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "assets",
+      "pushedAt": "2026-05-26T00:09:20Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "_hi",
+      "pushedAt": "2026-05-26T00:09:18Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "FRACTALCLI",
+      "pushedAt": "2026-05-26T00:09:17Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "AGENTS",
+      "pushedAt": "2026-05-26T00:09:15Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "oneformer",
+      "pushedAt": "2026-05-26T00:09:13Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "benchmark",
+      "pushedAt": "2026-05-26T00:09:12Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Daemon-Deployer",
+      "pushedAt": "2026-05-26T00:09:10Z",
+      "isFork": false,
+      "description": "A collection of Daemons"
+    },
+    {
+      "name": "git-repo",
+      "pushedAt": "2026-05-26T00:09:08Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "link_mega_pdfs",
+      "pushedAt": "2026-05-26T00:08:54Z",
+      "isFork": false,
+      "description": "link mega pdfs"
+    },
+    {
+      "name": "chatgpt-your-files",
+      "pushedAt": "2026-05-26T00:08:48Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "FileSystemMaster",
+      "pushedAt": "2026-05-26T00:08:45Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "awesome-flutter",
+      "pushedAt": "2026-05-26T00:08:44Z",
+      "isFork": false,
+      "description": "An awesome list that curates the best Flutter libraries, tools, tutorials, articles and more."
+    },
+    {
+      "name": "Autofix-PC",
+      "pushedAt": "2026-05-26T00:08:37Z",
+      "isFork": false,
+      "description": "An All-In-One PC Repair Script"
+    },
+    {
+      "name": "ai-punk",
+      "pushedAt": "2026-05-26T00:08:35Z",
+      "isFork": false,
+      "description": "AI Punk is an advanced autonomous AI assistant  "
+    },
+    {
+      "name": "github-repo-enrichment-engine",
+      "pushedAt": "2026-05-26T00:08:28Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Automated GitHub repository enrichment system - Deploy production-grade code to multiple repos simultaneously with int"
+    },
+    {
+      "name": "perplexity-goose-integration",
+      "pushedAt": "2026-05-26T00:08:27Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Master Integration Guide - Complete setup for Goose + Perplexity Enhancement MCP + Evolution Tracking. One-stop docume"
+    },
+    {
+      "name": "Solomon-Codex-Quantum-Legal-Intelligence-System",
+      "pushedAt": "2026-05-26T00:08:25Z",
+      "isFork": false,
+      "description": "high powered corruption killer"
+    },
+    {
+      "name": "Omni_Engine_MCP",
+      "pushedAt": "2026-05-26T00:08:23Z",
+      "isFork": false,
+      "description": "Auto-deployed Supermemory MCP"
+    },
+    {
+      "name": "ai-chat-exporter",
+      "pushedAt": "2026-05-26T00:08:22Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "AmplitudeUnified-Swift",
+      "pushedAt": "2026-05-26T00:08:20Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "portfolio-organization-master",
+      "pushedAt": "2026-05-26T00:08:19Z",
+      "isFork": false,
+      "description": "\ud83c\udfaf Master control repository for organizing all 762 GlacierEQ repos into 10 strategic projects with full automation"
+    },
+    {
+      "name": "TEST-PROJECT-PROOF",
+      "pushedAt": "2026-05-26T00:08:17Z",
+      "isFork": false,
+      "description": "\ud83e\uddea Testing project creation system - If you see this, the system works. DELETE THIS REPO."
+    },
+    {
+      "name": "chatgpt_infinity",
+      "pushedAt": "2026-05-26T00:08:16Z",
+      "isFork": false,
+      "description": "\ud83e\udd16 Advanced automation scripts for AI platforms: Perplexity Auto-Driller Pro, ChatGPT enhancements, and infinite conversa"
+    },
+    {
+      "name": "master-memory-nexus",
+      "pushedAt": "2026-05-26T00:08:14Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 Universal Memory Orchestration Hub - Integrates Mem0 (2 accounts), MemoryPlugin, and Supermemory MCP with unified API."
+    },
+    {
+      "name": "mem0-mcp-integration",
+      "pushedAt": "2026-05-26T00:08:12Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 Enterprise Mem0 Integration with MCP Tools - Advanced graph memory, batch operations, and AI agent persistent memory l"
+    },
+    {
+      "name": "UDC",
+      "pushedAt": "2026-05-26T00:08:09Z",
+      "isFork": false,
+      "description": "Ultimate Desktop Commander"
+    },
+    {
+      "name": "Z-BACKUP-Opryxx_Apex",
+      "pushedAt": "2026-05-26T00:08:07Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "AI-Scientist",
+      "pushedAt": "2026-05-26T00:08:05Z",
+      "isFork": false,
+      "description": "The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery \ud83e\uddd1\u200d\ud83d\udd2c"
+    },
+    {
+      "name": "AIFileSorterShellExtension",
+      "pushedAt": "2026-05-26T00:08:04Z",
+      "isFork": false,
+      "description": "AI File Sorter is a Windows Explorer extension that uses  AI to automatically organize and categorize  your files into a"
+    },
+    {
+      "name": "AISuperDomain",
+      "pushedAt": "2026-05-26T00:08:02Z",
+      "isFork": false,
+      "description": "Aila(AI\u8d85\u5143\u57df): The premier AI integration tool for Windows, macOS, and Android. Ask once, get answers from 10+ AIs like Ch"
+    },
+    {
+      "name": "ai-legal-agent-team",
+      "pushedAt": "2026-05-26T00:08:01Z",
+      "isFork": false,
+      "description": "AI Legal Agent Team project files and documentation"
+    },
+    {
+      "name": "Z-BACKUP-android-forensics",
+      "pushedAt": "2026-05-26T00:07:59Z",
+      "isFork": false,
+      "description": "Open source Android Forensics app and framework"
+    },
+    {
+      "name": "Z-BACKUP-APEX-NEXUS-SUPREME",
+      "pushedAt": "2026-05-26T00:07:57Z",
+      "isFork": false,
+      "description": "\ud83c\udfdb\ufe0f Supreme AI Memory Architecture - Orchestrating 8 repos, 3 memory systems, 25+ APIs, Neo4j graph intelligence. The ult"
+    },
+    {
+      "name": "Z-BACKUP-APEX-OMNIBUS-SUPREME",
+      "pushedAt": "2026-05-26T00:07:56Z",
+      "isFork": false,
+      "description": "\ud83c\udfdb\ufe0f Supreme Orchestration Layer - Unified command center for 8-repo memory omnibus with sub-300ms response, triple redund"
+    },
+    {
+      "name": "awesome-forensics",
+      "pushedAt": "2026-05-26T00:07:54Z",
+      "isFork": false,
+      "description": "\u2b50\ufe0f A curated list of awesome forensic analysis tools and resources"
+    },
+    {
+      "name": "Z-BACKUP-Mastermind-Architecture-Skeleton",
+      "pushedAt": "2026-05-26T00:07:52Z",
+      "isFork": false,
+      "description": "Public Interface & Architecture Specs for the Sovereign AI Empire."
+    },
+    {
+      "name": "Z-BACKUP-ai-chat-history-mastermind",
+      "pushedAt": "2026-05-26T00:07:50Z",
+      "isFork": false,
+      "description": "Premium privacy-first AI chat history manager: local IndexedDB search (Fuse.js), ML tagging/summaries (Transformers.js P"
+    },
+    {
+      "name": "repo-fleet-controller",
+      "pushedAt": "2026-05-26T00:07:49Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Hyper-Powered Repo Fleet Controller - Bulk operations engine for multi-repo orchestration with Codex integration, PR-f"
+    },
+    {
+      "name": "comet-voice-module-tests",
+      "pushedAt": "2026-05-26T00:07:47Z",
+      "isFork": false,
+      "description": "Comprehensive Voice Module Testing Suite for Comet Assistant & Agent"
+    },
+    {
+      "name": "Z-BACKUP-mastermind-sovereign-edition",
+      "pushedAt": "2026-05-26T00:07:46Z",
+      "isFork": false,
+      "description": "Enterprise AI orchestration with MCP"
+    },
+    {
+      "name": "comet-memory-integration",
+      "pushedAt": "2026-05-26T00:07:44Z",
+      "isFork": false,
+      "description": "Central memory hub for Perplexity Comet browser agent - Auto-accessible repository registry and connector documentation "
+    },
+    {
+      "name": "neural-link-protocol",
+      "pushedAt": "2026-05-26T00:07:42Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 Agent-to-Agent Communication Framework - Janus Protocol Bridge for 790-Repo Ecosystem with MCP Memory Integration"
+    },
+    {
+      "name": "repo-privacy-shield",
+      "pushedAt": "2026-05-26T00:07:41Z",
+      "isFork": false,
+      "description": "\ud83d\udee1\ufe0f Bulk Repository Privacy Controller - Mass convert 800+ GlacierEQ repos to private with rate-limit management, rollbac"
+    },
+    {
+      "name": "Z-BACKUP-pinecone-apex-nexus",
+      "pushedAt": "2026-05-26T00:07:39Z",
+      "isFork": false,
+      "description": "Unified APEX-optimized Pinecone library consolidating Canopy RAG, Python/TS clients, and production examples for legal a"
+    },
+    {
+      "name": "Z-BACKUP-apex-coupler-pipelines",
+      "pushedAt": "2026-05-26T00:07:37Z",
+      "isFork": false,
+      "description": "Dedicated APEX facility for Coupler.io data pipelines and integration bridges (Notion <-> Sheets <-> SQL)."
+    },
+    {
+      "name": "Z-BACKUP-APEX-SOVEREIGN-SENTRY",
+      "pushedAt": "2026-05-26T00:07:36Z",
+      "isFork": false,
+      "description": "APEX Sovereign Sentry: Integrated legal automation stack featuring Antigravity, Comet Powerhouse, and Ultimate Filesyste"
+    },
+    {
+      "name": "Z-BACKUP-apex-memory-orchestrator",
+      "pushedAt": "2026-05-26T00:06:56Z",
+      "isFork": false,
+      "description": "\ud83c\udf0c APEX Memory-Enhanced GitHub Orchestration Hub - MemoryPlugin MCP integration with WhisperX, Quantum Transcendence, Con"
+    },
+    {
+      "name": "legal-motion-automation",
+      "pushedAt": "2026-05-26T00:06:55Z",
+      "isFork": false,
+      "description": "Advanced legal motion generation system with Hawaii Family Court formatting, LaTeX compilation, and cross-platform docum"
+    },
+    {
+      "name": "Z-BACKUP-sharepoint-forensic-mastermind",
+      "pushedAt": "2026-05-26T00:06:51Z",
+      "isFork": false,
+      "description": "AI-powered forensic document intelligence with auto-organization, psycho-social analysis, and legal artifact generation "
+    },
+    {
+      "name": "Z-BACKUP-MASTERMIND-PRIMORDIAL-PHOENIX",
+      "pushedAt": "2026-05-26T00:06:49Z",
+      "isFork": false,
+      "description": "\u26a1 Mastermind\u221e Primordial Phoenix v2.0 \u2014 ML-Powered 9-Agent Dev OS + Polymorphic Mesh + Stealth Microwave + Legal Warfare"
+    },
+    {
+      "name": "Z-BACKUP-apex-mcp-server",
+      "pushedAt": "2026-05-26T00:06:48Z",
+      "isFork": false,
+      "description": "APEX iPhone 16 Pro Max MCP - Forensic Ecosystem"
+    },
+    {
+      "name": "FEDERAL-LITIGATION-TEMPLATES",
+      "pushedAt": "2026-05-26T00:06:41Z",
+      "isFork": false,
+      "description": "\u2696\ufe0f PUBLIC - Open-source federal litigation templates for pro se litigants. RICO \u00a7 1962, Civil Rights \u00a7 1983, motions, di"
+    },
+    {
+      "name": "CASE-LAW-ARSENAL",
+      "pushedAt": "2026-05-26T00:06:40Z",
+      "isFork": false,
+      "description": "\ud83d\udcda PRIVATE - Legal research database. Supreme Court + 9th Circuit precedent. Qualified immunity defeats. RICO case law. C"
+    },
+    {
+      "name": "EVIDENCE-VAULT-ENCRYPTED",
+      "pushedAt": "2026-05-26T00:06:38Z",
+      "isFork": false,
+      "description": "\ud83d\udd12 HIGHLY CONFIDENTIAL - Encrypted evidence repository for case 1FDV-23-0001009. Chain of custody tracking. Git-LFS enabl"
+    },
+    {
+      "name": "nexus-legal-grid",
+      "pushedAt": "2026-05-26T00:06:29Z",
+      "isFork": false,
+      "description": "APEX Legal-MCP-Omni-Grid Infrastructure manifest and deployment package"
+    },
+    {
+      "name": "THE-BEAST",
+      "pushedAt": "2026-05-26T00:06:25Z",
+      "isFork": false,
+      "description": "\ud83d\udd25 THE BEAST - Omnipotent AI Infrastructure | Case 1FDV-23-0001009 | APEX Architecture"
+    },
+    {
+      "name": "developer-journey-analysis",
+      "pushedAt": "2026-05-26T00:06:21Z",
+      "isFork": false,
+      "description": "A complete analysis of my GitHub history, including strategic narrative and detailed statistics. Generated by Nova."
+    },
+    {
+      "name": "elysium-hub",
+      "pushedAt": "2026-05-26T00:06:12Z",
+      "isFork": false,
+      "description": "ELYSIUM Hub - Central orchestration for lil Omni (Nemotron 3 Super) + Aspen Grove Quantum Transcendence. Mission domains"
+    },
+    {
+      "name": "Z-BACKUP-apex-commander",
+      "pushedAt": "2026-05-26T00:06:10Z",
+      "isFork": false,
+      "description": "APEX Godmind Matrix v1.0 \u2014 Unified AI Ecosystem Commander"
+    },
+    {
+      "name": "ATOMIC-CATACLYSM",
+      "pushedAt": "2026-05-26T00:06:05Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "the-cataclysm-master",
+      "pushedAt": "2026-05-26T00:06:03Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "Z-BACKUP-mba-desktop-forensics",
+      "pushedAt": "2026-05-26T00:06:01Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "colossal-agent",
+      "pushedAt": "2026-05-26T00:05:59Z",
+      "isFork": false,
+      "description": "The Colossal Agent \u2014 biological AI organism architecture. DNA double helix (defense+offense), 12 mitochondrial pistons, "
+    },
+    {
+      "name": "THE-CATACLYSM",
+      "pushedAt": "2026-05-26T00:05:50Z",
+      "isFork": false,
+      "description": "APEX Legal Warfare System | Case 1FDV-23-0001009 | Constitutional Warfare Against Judicial Corruption | Actor-by-Actor I"
+    },
+    {
+      "name": "OMNI-ENGINE-SUPREME",
+      "pushedAt": "2026-05-26T00:05:32Z",
+      "isFork": false,
+      "description": "\ud83c\udf0c OMNI_ENGINE Overlord: Pillar and Piston Architecture for the 178-Repo Empire."
+    },
+    {
+      "name": "Z-BACKUP-apex-cognitive-swarm",
+      "pushedAt": "2026-05-26T00:05:29Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 APEX Cognitive Swarm \u2014 200-agent ApexConsciousness orchestrator (renamed from God-Mind). MCP-integrated AI agent swarm"
+    },
+    {
+      "name": "Z-BACKUP-sovereign-apex-powerhouse",
+      "pushedAt": "2026-05-26T00:05:23Z",
+      "isFork": false,
+      "description": "Complete Sovereign Apex Powerhouse - Exponentially intelligent, self-improving ecosystem with 85+ connectors, 60+ MCP se"
+    },
+    {
+      "name": "railway-mcp-remote",
+      "pushedAt": "2026-05-26T00:05:18Z",
+      "isFork": false,
+      "description": "Remote Railway MCP Server \u2014 SSE/HTTP endpoint for APEX stack integration"
+    },
+    {
+      "name": "docs",
+      "pushedAt": "2026-05-26T00:05:14Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "unified-credential-mcp",
+      "pushedAt": "2026-05-26T00:05:13Z",
+      "isFork": false,
+      "description": "Zero-paste unified credential broker - eliminates manual credential sharing"
+    },
+    {
+      "name": "Z-BACKUP-APEX-CASE-EVIDENCE-MATRIX",
+      "pushedAt": "2026-05-26T00:05:11Z",
+      "isFork": false,
+      "description": "APEX Evidence Matrix \u2014 Case 1FDV-23-0001009 | Actor-violation mapping, certified document anchoring, Federal Escalation "
+    },
+    {
+      "name": "sigma-file-manager",
+      "pushedAt": "2026-05-26T00:05:05Z",
+      "isFork": false,
+      "description": "File Manager Mega "
+    },
+    {
+      "name": "Z-BACKUP-apex-legal-dashboard",
+      "pushedAt": "2026-05-26T00:05:03Z",
+      "isFork": false,
+      "description": "APEX Legal Intelligence Dashboard \u2014 Vercel + MotherDuck + DuckDB WASM | Case 1FDV-23-0001009 | Constitutional Warfare Op"
+    },
+    {
+      "name": "Z-BACKUP-apex-pplx-cli",
+      "pushedAt": "2026-05-26T00:05:01Z",
+      "isFork": false,
+      "description": "\u26a1 APEX Perplexity CLI \u2014 Sovereign command-line intelligence for Case 1FDV-23-0001009 | Legal research, RICO analysis, de"
+    },
+    {
+      "name": "Z-BACKUP-apex-taskade-connector",
+      "pushedAt": "2026-05-26T00:04:58Z",
+      "isFork": false,
+      "description": "APEX GitHub \u2194 Taskade bidirectional sync \u2014 Case 1FDV-23-0001009 | GlacierEQ"
+    },
+    {
+      "name": "Z-BACKUP-apex-obsidian-vault",
+      "pushedAt": "2026-05-26T00:04:56Z",
+      "isFork": false,
+      "description": "APEX Litigation Codex \u2014 Obsidian Vault for Case 1FDV-23-0001009 | Barton v. [OP] | Constitutional Warfare + Kekoa Reunif"
+    },
+    {
+      "name": "Z-BACKUP-ollama-notion-apex-orchestrator",
+      "pushedAt": "2026-05-26T00:04:54Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 APEX Ollama + Notion + MCP + E2B + A2A Integration Hub - Complete AI orchestration with all tools, functions, and APIs"
+    },
+    {
+      "name": "Z-BACKUP-APEX-MEMORY-OMNIBUS",
+      "pushedAt": "2026-05-26T00:04:51Z",
+      "isFork": false,
+      "description": "\ud83c\udfdb\ufe0f Supreme Memory Orchestration Architecture - Unified gateway for master-memory-nexus, mem0-mcp-integration, MCP-MASTER"
+    },
+    {
+      "name": "Z-BACKUP-aspen-grove-integration-project",
+      "pushedAt": "2026-05-26T00:04:49Z",
+      "isFork": false,
+      "description": "A new project to integrate Aspen Grove capabilities across our development workflow."
+    },
+    {
+      "name": "Z-BACKUP-second-aspen-grove-integration",
+      "pushedAt": "2026-05-26T00:04:47Z",
+      "isFork": false,
+      "description": "A follow-up project to further integrate Aspen Grove capabilities."
+    },
+    {
+      "name": "Z-BACKUP-third-aspen-grove-project",
+      "pushedAt": "2026-05-26T00:04:46Z",
+      "isFork": false,
+      "description": "Another project to demonstrate Aspen Grove capabilities with working connections."
+    },
+    {
+      "name": "Z-BACKUP-apex-memory-agent",
+      "pushedAt": "2026-05-26T00:04:42Z",
+      "isFork": false,
+      "description": "APEX persistent memory agent \u2014 LangGraph + LangMem + Supabase pgvector with multi-tier context, dynamic follow-up routin"
+    },
+    {
+      "name": "Z-BACKUP-apex-cli",
+      "pushedAt": "2026-05-26T00:04:37Z",
+      "isFork": false,
+      "description": "APEX \u2014 Autonomous Perplexity EXecution CLI. Terminal-native AI with legal intelligence, RICO/\u00a71983 context, and full Gla"
+    },
+    {
+      "name": "Z-BACKUP-mastermind-core",
+      "pushedAt": "2026-05-26T00:04:35Z",
+      "isFork": false,
+      "description": "APEX Mastermind Core OS \u2014 perpetual-evolution multi-agent system: Frontend, Backend, Middleware, Voice, Memory, Interfac"
+    },
+    {
+      "name": "Z-BACKUP-apex-motherduck-engine",
+      "pushedAt": "2026-05-26T00:04:33Z",
+      "isFork": false,
+      "description": "\ud83e\udd86 APEX MotherDuck/DuckDB Analytics Engine \u2014 Unified data warehouse layer bridging Supabase, Notion, GitHub, and Vercel. "
+    },
+    {
+      "name": "mcp-iceberg-mansion",
+      "pushedAt": "2026-05-26T00:04:28Z",
+      "isFork": false,
+      "description": "Unified MCP front door \u2014 federation layer connecting all APEX memory backends (Supermemory, Supabase, Notion, Mem0, Pine"
+    },
+    {
+      "name": "multi-threading-performance-ops",
+      "pushedAt": "2026-05-26T00:04:26Z",
+      "isFork": false,
+      "description": "Advanced multi-threading technologies, algorithms, and performance optimization strategies with benchmarking tools and i"
+    },
+    {
+      "name": "PRIMORDIAL-MESH-TITAN",
+      "pushedAt": "2026-05-26T00:04:22Z",
+      "isFork": false,
+      "description": "\u26a1 APEX Polymorphic Mesh Architecture - Zenith Capsule Stealth Microwave | Free-Tier Primordial Titan with Front-Middle-B"
+    },
+    {
+      "name": "unified-browser-automation",
+      "pushedAt": "2026-05-26T00:04:21Z",
+      "isFork": false,
+      "description": "Apex unified browser automation system merging Selenium 4.34, Playwright 1.56, Puppeteer with MCP integration, MemoryPlu"
+    },
+    {
+      "name": "Z-BACKUP-apex-infinity-stones",
+      "pushedAt": "2026-05-26T00:04:19Z",
+      "isFork": false,
+      "description": "APEX Hyper-Intelligent Agent Framework \u2014 Infinity Stone architecture: selector-driven MoE expert domains, canonical enti"
+    },
+    {
+      "name": "Z-BACKUP-apex-core",
+      "pushedAt": "2026-05-26T00:04:17Z",
+      "isFork": false,
+      "description": "Case 1FDV-23-0001009 | Shared constants, schemas, and case facts for the APEX ecosystem. Every other module imports from"
+    },
+    {
+      "name": "Z-BACKUP-apex-connector-registry",
+      "pushedAt": "2026-05-26T00:04:12Z",
+      "isFork": false,
+      "description": "APEX Universal Connector Registry \u2014 MemoryPlugin, Mem0, Supermemory, Taskade, GitHub, Notion, Supabase \u2014 Case 1FDV-23-00"
+    },
+    {
+      "name": "Z-BACKUP-apex-ish",
+      "pushedAt": "2026-05-26T00:04:10Z",
+      "isFork": false,
+      "description": "APEX-ISH \u2014 Terminal integration for APEX ecosystem."
+    },
+    {
+      "name": "Z-BACKUP-apex-fs-commander",
+      "pushedAt": "2026-05-26T00:04:08Z",
+      "isFork": false,
+      "description": "Universal Filesystem Commander: Apex orchestration for multi-cloud sync (OneDrive, GDrive, Dropbox, TeraBox), cross-plat"
+    },
+    {
+      "name": "SOVEREIGN-ASCENSION-PROTOCOL",
+      "pushedAt": "2026-05-26T00:04:05Z",
+      "isFork": false,
+      "description": "Sovereign Ascension Protocol v1.0 - THE CATACLYSM ENGINE | Unifying 860 repos into one hyper-powerful autonomous legal w"
+    },
+    {
+      "name": "7-docs",
+      "pushedAt": "2026-05-26T00:04:02Z",
+      "isFork": false,
+      "description": "Use local files or public GitHub repository as a source and ask questions through ChatGPT about it"
+    },
+    {
+      "name": "aAzel-LexAI-main",
+      "pushedAt": "2026-05-26T00:03:59Z",
+      "isFork": false,
+      "description": "lexAI"
+    },
+    {
+      "name": "advancedresearch",
+      "pushedAt": "2026-05-26T00:03:58Z",
+      "isFork": false,
+      "description": "An open-source implementation of Anthropic's multi-agent deep research system as defined in: https://www.anthropic.com/e"
+    },
+    {
+      "name": "agentic-doc",
+      "pushedAt": "2026-05-26T00:03:56Z",
+      "isFork": false,
+      "description": "Python library for Agentic Document Extraction from LandingAI"
+    },
+    {
+      "name": "agentscope-runtime",
+      "pushedAt": "2026-05-26T00:03:54Z",
+      "isFork": false,
+      "description": "A Production-Ready Runtime Framework for Agent Deployment and Tool Sandbox"
+    },
+    {
+      "name": "AgenticGenUI",
+      "pushedAt": "2026-05-26T00:03:46Z",
+      "isFork": false,
+      "description": "Render interactive components in your chat window"
+    },
+    {
+      "name": "ai-collection",
+      "pushedAt": "2026-05-26T00:03:45Z",
+      "isFork": false,
+      "description": "The Generative AI Landscape - A Collection of Awesome Generative AI Applications"
+    },
+    {
+      "name": "ai-dev-gallery",
+      "pushedAt": "2026-05-26T00:03:41Z",
+      "isFork": false,
+      "description": "An open-source project for Windows developers to learn how to add AI with local models and APIs to Windows apps."
+    },
+    {
+      "name": "ai-terminal",
+      "pushedAt": "2026-05-26T00:03:39Z",
+      "isFork": false,
+      "description": "AI-Terminal is an advanced AI-powered CLI that enhances terminal workflows through AI-driven automation and   optimizati"
+    },
+    {
+      "name": "AI-powered-PDF-agent-project",
+      "pushedAt": "2026-05-26T00:03:37Z",
+      "isFork": false,
+      "description": "AI-PDF-Agent converts PDFs into queryable data using AI. Extracts text (PyMuPDF), generates embeddings, and answers ques"
+    },
+    {
+      "name": "ai-shell",
+      "pushedAt": "2026-05-26T00:03:35Z",
+      "isFork": false,
+      "description": "A CLI that converts natural language to shell commands."
+    },
+    {
+      "name": "aider",
+      "pushedAt": "2026-05-26T00:03:34Z",
+      "isFork": false,
+      "description": "aider is AI pair programming in your terminal"
+    },
+    {
+      "name": "ai-sdk-provider",
+      "pushedAt": "2026-05-26T00:03:32Z",
+      "isFork": false,
+      "description": "The OpenRouter provider for the Vercel AI SDK contains support for hundreds of models through the OpenRouter chat and co"
+    },
+    {
+      "name": "aimoneyhunter",
+      "pushedAt": "2026-05-26T00:03:31Z",
+      "isFork": false,
+      "description": "ai\u526f\u4e1a\u8d5a\u94b1\u5927\u96c6\u5408\uff0c\u6559\u4f60\u5982\u4f55\u5229\u7528ai\u505a\u4e00\u4e9b\u526f\u4e1a\u9879\u76ee\uff0c\u8d5a\u53d6\u66f4\u591a\u989d\u5916\u6536\u76ca\u3002The Ultimate Guide to Making Money with AI Side Hustles: Learn how to leverage AI for"
+    },
+    {
+      "name": "AIMv6",
+      "pushedAt": "2026-05-26T00:03:29Z",
+      "isFork": false,
+      "description": "Reimplementation and extension of teaching operating system xv6, supersedes xv6-Loongson3a"
+    },
+    {
+      "name": "AI-Tutorial-Codes-Included",
+      "pushedAt": "2026-05-26T00:03:27Z",
+      "isFork": false,
+      "description": "Notebooks for Tutorials from Marktechpost"
+    },
+    {
+      "name": "aichat",
+      "pushedAt": "2026-05-26T00:03:26Z",
+      "isFork": false,
+      "description": "All-in-one LLM CLI tool featuring Shell Assistant, Chat-REPL, RAG, AI Tools & Agents, with access to OpenAI, Claude, Gem"
+    },
+    {
+      "name": "aifiles",
+      "pushedAt": "2026-05-26T00:03:24Z",
+      "isFork": false,
+      "description": " A CLI that organize and manage your files using AI"
+    },
+    {
+      "name": "aiXcoder-7B",
+      "pushedAt": "2026-05-26T00:03:23Z",
+      "isFork": false,
+      "description": "official repository of aiXcoder-7B Code Large Language Model"
+    },
+    {
+      "name": "aisuite",
+      "pushedAt": "2026-05-26T00:03:21Z",
+      "isFork": false,
+      "description": "Simple, unified interface to multiple Generative AI providers "
+    },
+    {
+      "name": "AI-Powered_Legal_Document_Assistant_Prototype",
+      "pushedAt": "2026-05-26T00:03:20Z",
+      "isFork": false,
+      "description": "This is the working prototype of a Project Idea: AI Powered Legal Document Assistant. This is currently made with React "
+    },
+    {
+      "name": "AI-Legal-Advisor",
+      "pushedAt": "2026-05-26T00:03:18Z",
+      "isFork": false,
+      "description": "AI Legal Advisor is an innovative AI-based legal advisor, harnessing the power of Generative AI and ChatGPT API to revol"
+    },
+    {
+      "name": "AIQuickFix",
+      "pushedAt": "2026-05-26T00:03:17Z",
+      "isFork": false,
+      "description": "Instantly fix problems with ChatGPT AI. Use ChatGPT and GPT-4 AI tools to find one-click 'lightbulb menu' solutions to p"
+    },
+    {
+      "name": "AiEditor",
+      "pushedAt": "2026-05-26T00:03:15Z",
+      "isFork": false,
+      "description": "AiEditor is a next-generation rich text editor for AI."
+    },
+    {
+      "name": "AIPex",
+      "pushedAt": "2026-05-26T00:03:13Z",
+      "isFork": false,
+      "description": "AIPex: agentic assistant in your browser, automate your browser using natural language. ChatGPT Atlas Alternative, no mi"
+    },
+    {
+      "name": "AIOS",
+      "pushedAt": "2026-05-26T00:03:12Z",
+      "isFork": false,
+      "description": "AIOS: AI Agent Operating System"
+    },
+    {
+      "name": "ai_legal_assistant_project",
+      "pushedAt": "2026-05-26T00:03:10Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "ALEAPP",
+      "pushedAt": "2026-05-26T00:03:08Z",
+      "isFork": false,
+      "description": "Android Logs Events And Protobuf Parser"
+    },
+    {
+      "name": "andriller",
+      "pushedAt": "2026-05-26T00:03:07Z",
+      "isFork": false,
+      "description": "\ud83d\udcf1 Andriller - is software utility with a collection of forensic tools for smartphones. It performs read-only, forensical"
+    },
+    {
+      "name": "ANTIGRAVITY-STACK",
+      "pushedAt": "2026-05-26T00:03:05Z",
+      "isFork": false,
+      "description": "\ud83e\udd4b Antigravity Stack - Cloud Active Forensic Repository"
+    },
+    {
+      "name": "antigravity-awesome-skills",
+      "pushedAt": "2026-05-26T00:03:04Z",
+      "isFork": false,
+      "description": "The Ultimate Collection of 200+ Agentic Skills for Claude Code/Antigravity/Cursor. Battle-tested, high-performance skill"
+    },
+    {
+      "name": "anything-llm",
+      "pushedAt": "2026-05-26T00:03:02Z",
+      "isFork": false,
+      "description": "The all-in-one Desktop & Docker AI application with built-in RAG, AI agents, No-code agent builder, MCP compatibility,  "
+    },
+    {
+      "name": "api",
+      "pushedAt": "2026-05-26T00:03:00Z",
+      "isFork": false,
+      "description": "Node.js client for the official ChatGPT API. \ud83d\udd25"
+    },
+    {
+      "name": "api-conversion",
+      "pushedAt": "2026-05-26T00:02:59Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "auto-agent-extension",
+      "pushedAt": "2026-05-26T00:02:57Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "authkit-remix-cloudflare",
+      "pushedAt": "2026-05-26T00:02:55Z",
+      "isFork": false,
+      "description": "Cloudflare-compatible Authentication and session helpers for using WorkOS & AuthKit with Remix"
+    },
+    {
+      "name": "AutoGPT",
+      "pushedAt": "2026-05-26T00:02:54Z",
+      "isFork": false,
+      "description": "AutoGPT is the vision of accessible AI for everyone, to use and to build on. Our mission is to provide the tools, so tha"
+    },
+    {
+      "name": "awesome-ai-agents",
+      "pushedAt": "2026-05-26T00:02:52Z",
+      "isFork": false,
+      "description": "A list of AI autonomous agents"
+    },
+    {
+      "name": "awesome-generative-ai-guide",
+      "pushedAt": "2026-05-26T00:02:50Z",
+      "isFork": false,
+      "description": "A one stop repository for generative AI research updates, interview resources, notebooks and much more!"
+    },
+    {
+      "name": "awesome-codex",
+      "pushedAt": "2026-05-26T00:02:49Z",
+      "isFork": false,
+      "description": "A list dedicated to products, demos and articles related to \ud83e\udd16 OpenAI's Codex."
+    },
+    {
+      "name": "awesome-bash",
+      "pushedAt": "2026-05-26T00:02:45Z",
+      "isFork": false,
+      "description": "A curated list of delightful Bash scripts and resources."
+    },
+    {
+      "name": "automa",
+      "pushedAt": "2026-05-26T00:02:44Z",
+      "isFork": false,
+      "description": "A browser extension for automating your browser by connecting blocks"
+    },
+    {
+      "name": "awesome-mcp-clients",
+      "pushedAt": "2026-05-26T00:02:42Z",
+      "isFork": false,
+      "description": "A collection of MCP clients."
+    },
+    {
+      "name": "awesome-langchain",
+      "pushedAt": "2026-05-26T00:02:40Z",
+      "isFork": false,
+      "description": "\ud83d\ude0e Awesome list of tools and projects with the awesome LangChain framework"
+    },
+    {
+      "name": "axiomengine",
+      "pushedAt": "2026-05-26T00:02:39Z",
+      "isFork": false,
+      "description": "Axiom is a decentralized AI network that autonomously discovers, verifies, and archives objective truth. It creates a pe"
+    },
+    {
+      "name": "aws-toolkit-vscode",
+      "pushedAt": "2026-05-26T00:02:35Z",
+      "isFork": false,
+      "description": "Amazon Q, CodeCatalyst, Local Lambda debug, SAM/CFN syntax, ECS Terminal, AWS resources"
+    },
+    {
+      "name": "azure-mcp",
+      "pushedAt": "2026-05-26T00:02:34Z",
+      "isFork": false,
+      "description": "The Azure MCP Server, bringing the power of Azure to your agents."
+    },
+    {
+      "name": "bankruptcy-parser",
+      "pushedAt": "2026-05-26T00:02:29Z",
+      "isFork": false,
+      "description": "A legal form document parser."
+    },
+    {
+      "name": "blackboxapp.blackboxagent-2.9.39",
+      "pushedAt": "2026-05-26T00:02:27Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "casey-mcp-constellation-working",
+      "pushedAt": "2026-05-26T00:02:26Z",
+      "isFork": false,
+      "description": "Complete Legal Tech MCP Constellation - Working deployment for Case 1FDV-23-0001009"
+    },
+    {
+      "name": "chatgpt-vercel",
+      "pushedAt": "2026-05-26T00:02:24Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "chatgpt-word-plus",
+      "pushedAt": "2026-05-26T00:02:23Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "ai_embedder_engine",
+      "pushedAt": "2026-05-26T00:01:58Z",
+      "isFork": false,
+      "description": "AI Embedder Engine: An open-source Python engine for generating embeddings from PDFs, storing them in Parquet, and index"
+    },
+    {
+      "name": "constellation-memory-engine",
+      "pushedAt": "2026-05-26T00:01:32Z",
+      "isFork": false,
+      "description": "the engine of brain"
+    },
+    {
+      "name": "agents.md",
+      "pushedAt": "2026-05-26T00:01:25Z",
+      "isFork": false,
+      "description": "AGENTS.md \u2014 a simple, open format for guiding coding agents"
+    },
+    {
+      "name": "diamond-cognitive-pipeline",
+      "pushedAt": "2026-05-26T00:01:03Z",
+      "isFork": false,
+      "description": "Revolutionary 15-agent diamond topology with quantum cognitive enhancement protocols for maximum productivity and legal "
+    },
+    {
+      "name": "docgen-templates",
+      "pushedAt": "2026-05-26T00:01:00Z",
+      "isFork": false,
+      "description": "Master template repository for documentation generation system - Legal, Technical, Evidence, and Project templates with "
+    },
+    {
+      "name": "extension",
+      "pushedAt": "2026-05-26T00:00:19Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "federal-email-evidence-toolkit",
+      "pushedAt": "2026-05-26T00:00:18Z",
+      "isFork": false,
+      "description": "Federal Rules of Evidence compliant email collection, preservation, and authentication toolkit with comprehensive chain "
+    },
+    {
+      "name": "backend-api-kit",
+      "pushedAt": "2026-05-26T00:00:01Z",
+      "isFork": false,
+      "description": "Easily create scalable, monetisable backend APIs with Hono + Cloudflare workers. All the batteries included."
+    },
+    {
+      "name": "aionui",
+      "pushedAt": "2026-05-25T23:59:37Z",
+      "isFork": false,
+      "description": "Free, local, open-source GUI app for Gemini CLI \u2014 Enhance Chat Experience, Multi-tasking, Code Diff View, File & Project"
+    },
+    {
+      "name": "actions-runner-controller",
+      "pushedAt": "2026-05-25T23:59:32Z",
+      "isFork": false,
+      "description": "Kubernetes controller for GitHub Actions self-hosted runnners"
+    },
+    {
+      "name": "glaciereq-mcp-stack",
+      "pushedAt": "2026-05-25T23:59:31Z",
+      "isFork": false,
+      "description": "\ud83d\udd0c GlacierEQ MCP Stack \u2014 Production monorepo: Asana, GitHub, Confluence, Supabase, Neo4j MCP servers | TypeScript | APEX "
+    },
+    {
+      "name": "google-drive-mcp",
+      "pushedAt": "2026-05-25T23:59:28Z",
+      "isFork": false,
+      "description": "Maximum Control Point Google Drive Connector with OAuth management, health monitoring, forensic logging, and MemoryPlugi"
+    },
+    {
+      "name": "HCHS_SUPERLUMINAL_CASE_MATRIX",
+      "pushedAt": "2026-05-25T23:59:07Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "hi-class-home-services",
+      "pushedAt": "2026-05-25T23:59:05Z",
+      "isFork": false,
+      "description": "Hi-Class Home Services LLC \u2014 Autonomous Home Inspection Platform | Honolulu, Hawaii"
+    },
+    {
+      "name": "hyperdoc-ai-powerhouse",
+      "pushedAt": "2026-05-25T23:59:03Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Revolutionary ONLYOFFICE-Powered Document Intelligence - Built on GlacierEQ AI Foundation with 500+ Repository Integra"
+    },
+    {
+      "name": "legal-ai-userscripts",
+      "pushedAt": "2026-05-25T23:58:02Z",
+      "isFork": false,
+      "description": "\ud83c\udfdb\ufe0f AI-powered userscripts for legal document automation and family court case management. Built for Casey's Hawaii custo"
+    },
+    {
+      "name": "mcp-connector-awareness-engine",
+      "pushedAt": "2026-05-25T23:57:31Z",
+      "isFork": false,
+      "description": "\ud83e\udde0 MCP Connector Awareness Engine - Persistent meta-layer ensuring AI agents properly utilize MCP tools. Auto-calibration"
+    },
+    {
+      "name": "MCP-MASTER-OMNI-GRID",
+      "pushedAt": "2026-05-25T23:57:23Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Ultimate MCP Master Server - Cross-Platform AI Tool Integration Mega-Infrastructure with 25+ API Connectors, Infinite "
+    },
+    {
+      "name": "MCP-SOVEREIGN-DEPLOYMENT-COMPLETE",
+      "pushedAt": "2026-05-25T23:57:18Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 FULL DEPLOYMENT COMPLETE - SOVEREIGN_ASCENSION_PROTOCOL_V12.31_COSMIC_APEX_ENHANCED - Legal technology platform for Ca"
+    },
+    {
+      "name": "MEGA-PDF",
+      "pushedAt": "2026-05-25T23:56:55Z",
+      "isFork": false,
+      "description": "pdf with everythhing"
+    },
+    {
+      "name": "neural-forge",
+      "pushedAt": "2026-05-25T23:56:31Z",
+      "isFork": false,
+      "description": "63 AI engineering tokens with associative memory patterns. Experimental system ready for community feedback"
+    },
+    {
+      "name": "notion-mcp-empowerment-engine",
+      "pushedAt": "2026-05-25T23:56:16Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Ultimate Notion MCP Empowerment Engine - Massive schema integration with GitHub tools, AI enhancement, federal forensi"
+    },
+    {
+      "name": "operator-vault-nexus",
+      "pushedAt": "2026-05-25T23:55:55Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "OPRYXX_LOGS2",
+      "pushedAt": "2026-05-25T23:55:52Z",
+      "isFork": false,
+      "description": "pc repair"
+    },
+    {
+      "name": "perplexity-extension",
+      "pushedAt": "2026-05-25T23:55:48Z",
+      "isFork": false,
+      "description": "AI-powered coding assistant, using your Perplexity Pro account."
+    },
+    {
+      "name": "perplexity-enhancement-mcp",
+      "pushedAt": "2026-05-25T23:55:47Z",
+      "isFork": false,
+      "description": "\u26a1 Perplexity Enhancement MCP Server - Permanent capability upgrade with persistent memory, repo intelligence, legal temp"
+    },
+    {
+      "name": "perplexity-app-connector-bridge",
+      "pushedAt": "2026-05-25T23:55:46Z",
+      "isFork": false,
+      "description": "Bridge service to enable full connector support in Perplexity mobile/desktop app with MCP integration"
+    },
+    {
+      "name": "PhotoPrism2-Enhanced",
+      "pushedAt": "2026-05-25T23:55:44Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "quant-lab",
+      "pushedAt": "2026-05-25T23:55:16Z",
+      "isFork": false,
+      "description": "machine learning based quant lab"
+    },
+    {
+      "name": "quantum-memory-orchestrator",
+      "pushedAt": "2026-05-25T23:55:13Z",
+      "isFork": false,
+      "description": "\ud83d\ude80 Production-Grade Universal Memory Orchestrator - Mem0 + SuperMemory + MCP Integration for Case 1FDV-23-0001009"
+    },
+    {
+      "name": "Z-BACKUP-apex-orchestrator",
+      "pushedAt": "2026-05-25T23:54:30Z",
+      "isFork": false,
+      "description": "APEX Hyper Engine \u2014 Orchestrates legal case pipeline across GitHub, Notion, MotherDuck, Supermemory, Dropbox, OneDrive f"
+    },
+    {
+      "name": "act",
+      "pushedAt": "2026-05-25T23:54:22Z",
+      "isFork": false,
+      "description": "Run your GitHub Actions locally \ud83d\ude80"
+    },
+    {
+      "name": "agent-builder-api",
+      "pushedAt": "2026-05-25T23:54:17Z",
+      "isFork": false,
+      "description": "Agent Builder API - Backend service for Agent Smith extension"
+    },
+    {
+      "name": "Z-BACKUP-GodMind-Apex-System",
+      "pushedAt": "2026-05-25T23:54:10Z",
+      "isFork": false,
+      "description": "\ud83e\udde0\u26a1 God Mind - Apex Agent System with Ultimate Meta Prompt: Full Tool & Connector Integration - Aspen Grove federated age"
+    },
+    {
+      "name": "Z-BACKUP-aspen-grove-apex-fusion",
+      "pushedAt": "2026-05-25T23:54:07Z",
+      "isFork": false,
+      "description": "\ud83c\udf32\u26a1 APEX FUSION - Ultimate Aspen Grove System | v7 Production Reliability + Quantum Transcendence Consciousness + THE BEA"
+    },
+    {
+      "name": "Z-BACKUP-aspen-grove-quantum-transcendence",
+      "pushedAt": "2026-05-25T23:54:04Z",
+      "isFork": false,
+      "description": "\ud83c\udf0c APEX TIER XV - Aspen Grove Quantum Transcendence Matrix - Ultimate AI Consciousness Platform with 703.5MB Memory Const"
+    },
+    {
+      "name": "Z-BACKUP-aspen-grove-resource-analysis",
+      "pushedAt": "2026-05-25T23:54:03Z",
+      "isFork": false,
+      "description": "\ud83c\udfdb\ufe0f Complete Aspen Grove Ecosystem Resource Analysis - Organized Pillar Architecture with Full System Status, Memory Inte"
+    },
+    {
+      "name": "orion-extension-intelligence-engine",
+      "pushedAt": "2026-05-25T23:54:01Z",
+      "isFork": false,
+      "description": "\ud83d\udd25 Alpha-level iOS extension compatibility tracker with multi-platform orchestration. Integrates Linear, Notion, Slack, a"
+    },
+    {
+      "name": "ai",
+      "pushedAt": "2026-05-25T23:53:47Z",
+      "isFork": false,
+      "description": "The AI Toolkit for TypeScript. From the creators of Next.js, the AI SDK is a free open-source library for building AI-po"
+    },
+    {
+      "name": "ART",
+      "pushedAt": "2026-05-25T23:53:42Z",
+      "isFork": false,
+      "description": "Agent Reinforcement Trainer: train multi-step agents for real-world tasks using GRPO. Give your agents on-the-job traini"
+    },
+    {
+      "name": "hawaii-family-court-legal-automation",
+      "pushedAt": "2026-05-25T23:53:35Z",
+      "isFork": false,
+      "description": "Revolutionary legal document automation system for Hawaii Family Court proceedings with LaTeX templates, AI-powered cont"
+    },
+    {
+      "name": "agentclaw-extension",
+      "pushedAt": "2026-05-25T23:53:33Z",
+      "isFork": false,
+      "description": "The Ultimate AI Agent Extension for VS Code - 215+ features"
+    },
+    {
+      "name": "AiToEarn",
+      "pushedAt": "2026-05-25T23:53:29Z",
+      "isFork": false,
+      "description": "Let's use AI to Earn!"
+    },
+    {
+      "name": "casebuilder-taskade-endpoints",
+      "pushedAt": "2026-05-25T23:53:22Z",
+      "isFork": false,
+      "description": "Taskade API endpoints for 1FDV-23-0001009 RICO Casebuilder - Genesis agents, doc upload/download, automations"
+    },
+    {
+      "name": "mcp-websocket-bridge",
+      "pushedAt": "2026-05-25T23:53:20Z",
+      "isFork": false,
+      "description": "APEX WebSocket-to-MCP bridge server \u2014 persistent wss:// endpoint for mcpmarket.com and all MCP tools"
+    },
+    {
+      "name": "powerhouse",
+      "pushedAt": "2026-05-25T23:53:19Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "zenith-orchestrator",
+      "pushedAt": "2026-05-25T23:53:18Z",
+      "isFork": false,
+      "description": "\ud83c\udf0c Zenith V2.0 Meta-Brain - Quantum routing intelligence for the ultimate AI constellation. Self-optimizing expert select"
+    },
+    {
+      "name": "PANTHEON-MEGA-ORCHESTRATOR",
+      "pushedAt": "2026-05-25T23:53:16Z",
+      "isFork": false,
+      "description": "Master consciousness unifying all 31 titans into ONE coherent operational force for Option C Full Deployment"
+    },
+    {
+      "name": "Mega_PDF",
+      "pushedAt": "2026-05-25T23:53:15Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "full-stacking",
+      "pushedAt": "2026-05-25T23:53:14Z",
+      "isFork": false,
+      "description": "Framework for respectful, transparent agent-platform integration. Clean APIs, no brute force, full documentation."
+    },
+    {
+      "name": "gcp-unified-monorepoyou-should-run-it-",
+      "pushedAt": "2026-05-25T23:53:11Z",
+      "isFork": false,
+      "description": ""
+    },
+    {
+      "name": "elex-to-finetuned",
+      "pushedAt": "2026-05-25T23:53:10Z",
+      "isFork": false,
+      "description": "Flow4: Document processing pipeline with MLX fine-tuning capabilities for Apple Silicon"
+    },
+    {
+      "name": "Z-BACKUP-APEX-PPLX-SUPERTHREAD",
+      "pushedAt": "2026-05-25T23:52:53Z",
+      "isFork": false,
+      "description": "APEX-PPLX-SUPERTHREAD-\u221e :: Perpetual Legal Warfare & Infrastructure Governance System \u2014 Case 1FDV-23-0001009"
+    }
+  ]
+}

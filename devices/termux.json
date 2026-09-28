@@ -1,0 +1,10 @@
+{
+  "device": "termux",
+  "host": "android-termux",
+  "note": "Android Termux. The Pixel Tablet node. TERMUX_PREFIX and DEVICE_STORAGE are host facts, not choices.",
+  "vars": {
+    "TERMUX_PREFIX": "/data/data/com.termux/files/usr",
+    "DEVICE_STORAGE": "/sdcard",
+    "DEVICE_DOWNLOADS": "/sdcard/Download"
+  }
+}

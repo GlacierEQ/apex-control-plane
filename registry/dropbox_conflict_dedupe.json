@@ -1,0 +1,56 @@
+{
+  "at": "2026-06-19T19:17:04.285035+00:00",
+  "dry_run": false,
+  "removed": 7,
+  "results": [
+    {
+      "remote": "dropbox:000_START_HERE (view-only conflicts 2026-06-16)",
+      "count": 0,
+      "bytes": 0,
+      "action": "purged",
+      "ok": true
+    },
+    {
+      "remote": "dropbox:01_APEX_CASE_MATRIX_MIRROR (view-only conflicts 2026-06-10 1)",
+      "count": 0,
+      "bytes": 0,
+      "action": "purged",
+      "ok": true
+    },
+    {
+      "remote": "dropbox:01_APEX_CASE_MATRIX_MIRROR (view-only conflicts 2026-06-10)",
+      "count": 1,
+      "bytes": 0,
+      "action": "purged",
+      "ok": true
+    },
+    {
+      "remote": "dropbox:01_APEX_CASE_MATRIX_MIRROR (view-only conflicts 2026-06-11 1)",
+      "count": 0,
+      "bytes": 0,
+      "action": "purged",
+      "ok": true
+    },
+    {
+      "remote": "dropbox:01_APEX_CASE_MATRIX_MIRROR (view-only conflicts 2026-06-11 2)",
+      "count": 0,
+      "bytes": 0,
+      "action": "purged",
+      "ok": true
+    },
+    {
+      "remote": "dropbox:01_APEX_CASE_MATRIX_MIRROR (view-only conflicts 2026-06-11)",
+      "count": 0,
+      "bytes": 0,
+      "action": "purged",
+      "ok": true
+    },
+    {
+      "remote": "dropbox:02_TEAM_ADMIN_RESOURCES (view-only conflicts 2026-06-01)",
+      "count": 0,
+      "bytes": 0,
+      "action": "purged",
+      "ok": true
+    }
+  ]
+}

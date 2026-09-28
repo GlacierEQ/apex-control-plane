@@ -1,0 +1,60 @@
+{
+  "at": "2026-06-19T13:59:48.747469+00:00",
+  "profile": "highest_form",
+  "alpha": {
+    "strand": "alpha",
+    "steps": [
+      {
+        "step": "control_plane_strict",
+        "ok": true
+      },
+      {
+        "step": "readiness_tests",
+        "ok": true,
+        "detail": "..                                                                       [100%]\n2 passed in 1.13s"
+      },
+      {
+        "step": "observation_corpus",
+        "ok": true,
+        "count": 11505
+      },
+      {
+        "step": "nexus_status",
+        "ok": true,
+        "notion_online": true
+      },
+      {
+        "step": "filesystem_mcp_smoke",
+        "ok": true
+      }
+    ],
+    "observations": 11505,
+    "notion_online": true
+  },
+  "omega": {
+    "strand": "omega",
+    "steps": [
+      {
+        "step": "alpha_orbit_link",
+        "ok": true
+      },
+      {
+        "step": "hydra_shield_link",
+        "ok": true
+      },
+      {
+        "step": "daemon_already_running",
+        "ok": true
+      },
+      {
+        "step": "piston_status",
+        "ok": true,
+        "online": 12
+      }
+    ],
+    "pistons_online": 12,
+    "daemon": true
+  },
+  "capabilities": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/FS_COMMANDER_CAPABILITIES.md",
+  "all_ok": true
+}

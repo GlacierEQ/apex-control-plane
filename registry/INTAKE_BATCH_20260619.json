@@ -1,0 +1,30 @@
+{
+  "at": "2026-06-19",
+  "intake_file": "${HOME}/.operator_key_vault/intake_batch_20260619.env",
+  "vault": "${HOME}/.operator_key_vault/gatekeeper.env",
+  "total_keys_after_merge": 199,
+  "credentials_dir": "${HOME}/.operator_key_vault/credentials",
+  "services_ingested": [
+    "shade", "cloudflare", "r2", "mimo", "mimo_glass", "parsehub",
+    "supermemory_codex", "supabase", "taskade", "harpa", "dropbox",
+    "onedrive", "google_gdrive_glacier", "google_firebase", "google_casey",
+    "e2b", "gemini_api_key_2"
+  ],
+  "json_credentials": [
+    "glacier-gdrive-service.json",
+    "firebase-adminsdk-gem-studio.json",
+    "casey_service_account.json",
+    "gem-studio-oauth-client.json",
+    "dropbox_token.json",
+    "onedrive_token.json"
+  ],
+  "verify_report": "${HOME}/.apex/INTAKE_VERIFY.json",
+  "mcp_wired": {
+    "taskade": "grok config.toml — disabled by default, enable when needed"
+  },
+  "action_required": [
+    "Dropbox access token expired (401) — refresh via DROPBOX_REFRESH_TOKEN",
+    "OneDrive token likely expired (expiry 2026-05-31) — re-auth rclone",
+    "Rotate any secrets pasted in chat — they are now in chat history"
+  ]
+}

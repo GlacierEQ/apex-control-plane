@@ -1,0 +1,25 @@
+{
+  "webhook": {
+    "url": "https://www.notion.so/webhooks/worker/506d0b07-3284-4b63-a6c9-c5583176045c/019eb9e7-792b-76a2-89c5-cd52e3a1d4f9/aA6tTDpGkZxjXUim/onGitHubEvent",
+    "worker_id": "019eb9e7-792b-76a2-89c5-cd52e3a1d4f9",
+    "mode": "private",
+    "signature_verification": {
+      "enabled": true,
+      "algorithm": "HMAC-SHA256",
+      "secret_env": "NOTION_WEBHOOK_SECRET",
+      "header": "x-notion-signature",
+      "tolerance_seconds": 300,
+      "on_failure": "reject"
+    },
+    "events": ["push", "pull_request", "issues", "workflow_run"],
+    "repos": [
+      {"repo": "GlacierEQ/1FDV-23-0001009-FEDERAL-WARFARE", "hook_id": 644080837},
+      {"repo": "GlacierEQ/FILEBOSS", "hook_id": 644081239},
+      {"repo": "GlacierEQ/AEON-777", "hook_id": 644080848}
+    ],
+    "rate_limit": {
+      "max_requests_per_minute": 60,
+      "burst_limit": 10
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "at": "2026-06-22T08:13:56.032102+00:00",
+  "grok_mcp": [
+    "apex-filesystem",
+    "colossus-gatekeeper",
+    "unified-memory"
+  ],
+  "grok_config": [
+    "apex-filesystem",
+    "colossus-gatekeeper",
+    "unified-memory"
+  ],
+  "grok_cli": [
+    "apex-filesystem",
+    "colossus-gatekeeper",
+    "unified-memory"
+  ],
+  "gemini_mcp": [
+    "github",
+    "gdrive",
+    "filesystem",
+    "dropbox",
+    "onedrive",
+    "taskade",
+    "web_search",
+    "memory_systems",
+    "quantum_code_synthesis",
+    "iceberg_files",
+    "iceberg_docgen",
+    "iceberg_skills",
+    "iceberg_legal",
+    "sequential_thinking",
+    "humanizer"
+  ],
+  "routing": {
+    "supreme": "colossus-gatekeeper",
+    "filesystem": "apex-filesystem",
+    "memory": "unified-memory",
+    "cloud_files": "gemini:gdrive|dropbox|onedrive",
+    "dev": "gemini:github"
+  },
+  "env_source": "${HOME}/.operator_key_vault/gatekeeper.env",
+  "primordial_mesh_titan": {
+    "activated_at": "2026-08-14T18:29:05-1000",
+    "state": "ACTIVE",
+    "layers": {
+      "grok_mcp": [
+        "apex-filesystem",
+        "colossus-gatekeeper",
+        "unified-memory"
+      ],
+      "gemini_mcp": [
+        "github",
+        "gdrive",
+        "filesystem",
+        "dropbox",
+        "onedrive",
+        "taskade",
+        "web_search",
+        "memory_systems",
+        "quantum_code_synthesis",
+        "iceberg_files",
+        "iceberg_docgen",
+        "iceberg_skills",
+        "iceberg_legal",
+        "sequential_thinking",
+        "humanizer"
+      ],
+      "routing": {
+        "supreme": "colossus-gatekeeper",
+        "filesystem": "apex-filesystem",
+        "memory": "unified-memory",
+        "cloud_files": "gemini:gdrive|dropbox|onedrive",
+        "dev": "gemini:github"
+      }
+    },
+    "token_discipline": {
+      "pointer_index_first": true,
+      "cache_hit_before_recompute": true,
+      "parallel_task_optimization": true,
+      "diamond_facet_routing": true
+    },
+    "status": "OPERATIONAL"
+  }
+}

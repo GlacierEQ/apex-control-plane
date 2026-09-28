@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "saved_at": "2026-06-20T03:30:00+00:00",
+  "status": "CONFIGURED",
+  "verified_local_ssh": true,
+  "verified_blink_remote": "pending_uname_check",
+  "host": {
+    "alias": "apex-termux",
+    "hostname": "192.168.68.103",
+    "port": 8022,
+    "user": "u0_a317",
+    "key": "id_rsa_iphone",
+    "password": null,
+    "proxy_cmd": null,
+    "proxy_jump": null,
+    "ssh_config_extra": null,
+    "mosh": {
+      "enabled": true,
+      "server": "192.168.68.103",
+      "port": "",
+      "command": "${HOME}/bin/mosh-server",
+      "advanced": {
+        "local_echo_slower_links": true,
+        "overwrite_prediction_overrides": false,
+        "experimental_ip_resolution": true
+      }
+    },
+    "agent_forwarding": false
+  },
+  "android_termux": {
+    "sshd_port": 8022,
+    "sshd_autostart": "~/.termux/boot/01-sshd",
+    "home": "${HOME}",
+    "authorized_key_line": 5,
+    "authorized_key_comment": "user@iphone"
+  },
+  "blink_connect": {
+    "step1_keys": "SKIP — existing keys in Blink (use id_rsa_iphone)",
+    "step2_hosts": "Hosts → + → fill SSH fields per host block",
+    "step3_connect": "Tap apex-termux in Hosts list (not blank/local session)"
+  },
+  "verify_remote": {
+    "warning": "echo IT_WORKED works on iPhone local shell too — not proof of SSH",
+    "must_pass": [
+      "uname -a → contains Linux",
+      "pwd → ${HOME}",
+      "whoami → u0_a317",
+      "test -f ~/.apex/STARTUP_STATE.json && echo APEX_OK"
+    ],
+    "local_trap": {
+      "pwd": "/private/var/mobile/containers/shared/appgroup/.../Home",
+      "uname": "Darwin"
+    }
+  },
+  "on_connect_run": [
+    "uname -a",
+    "pwd",
+    "whoami",
+    "apex-startup",
+    "sm-prime \"blink session\""
+  ],
+  "wrong_for_11_months": {
+    "port": "2222 or 22 — use 8022",
+    "user": "root — use u0_a317",
+    "ip": "192.168.68.100 — use 192.168.68.103",
+    "trap": "echo IT_WORKED without tapping host apex-termux"
+  },
+  "artifacts": {
+    "setup_dir": "~/blink-setup",
+    "setup_page": "http://192.168.68.103:18080/",
+    "full_doc": "~/.apex/blink_termux_setup.md",
+    "downloads_zip": "${DEVICE_DOWNLOADS}/BLINK-SETUP.zip"
+  }
+}

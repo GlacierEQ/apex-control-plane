@@ -1,0 +1,89 @@
+{
+  "results": [
+    {
+      "service": "cloudflare",
+      "ok": true,
+      "detail": "This API Token is valid and active"
+    },
+    {
+      "service": "supabase",
+      "ok": true,
+      "detail": "http_200"
+    },
+    {
+      "service": "dropbox",
+      "ok": false,
+      "detail": "http_401_expired?"
+    },
+    {
+      "service": "credential:glacier-gdrive-service.json",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "service": "credential:firebase-adminsdk-gem-studio.json",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "service": "credential:casey_service_account.json",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "service": "credential:gem-studio-oauth-client.json",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "service": "credential:dropbox_token.json",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "service": "credential:onedrive_token.json",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "service": "shade",
+      "ok": true,
+      "detail": "loaded"
+    },
+    {
+      "service": "taskade",
+      "ok": true,
+      "detail": "loaded"
+    },
+    {
+      "service": "r2",
+      "ok": true,
+      "detail": "s3_creds_loaded"
+    },
+    {
+      "service": "e2b",
+      "ok": true,
+      "detail": "loaded"
+    },
+    {
+      "service": "mimo",
+      "ok": true,
+      "detail": "loaded"
+    },
+    {
+      "service": "parsehub",
+      "ok": true,
+      "detail": "loaded"
+    },
+    {
+      "service": "harpa",
+      "ok": true,
+      "detail": "loaded"
+    },
+    {
+      "service": "supermemory_codex",
+      "ok": true,
+      "detail": "loaded"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": "2.0",
+  "engine": "JULES_DEPLOYMENT_ORCHESTRATOR",
+  "api_key": "AQ.Ab8RN6IkRE-jJgGgLrR42H3h8C3eNyPpy9Ro0gp-WtVbyawW0w",
+  "daily_deploy_limit": 100,
+  "quota_type": "DEPLOYS_FULL_BUILD",
+  "status": "ACTIVE",
+  "last_updated": "2026-07-24T15:22:38Z"
+}

@@ -1,0 +1,51 @@
+{
+  "at": "2026-06-22T07:55:00Z",
+  "workspaceId": "506d0b07-3284-4b63-a6c9-c5583176045c",
+  "status": "5/5 waves LIVE",
+  "deploy": "python3 ~/MISSIONS/APEX_INFRASTRUCTURE/notion-workers-mesh/scripts/deploy_waves.py",
+  "waves": [
+    {
+      "wave": 1,
+      "name": "apex-github-worker",
+      "workerId": "019eb9e7-792b-76a2-89c5-cd52e3a1d4f9",
+      "tools": ["logGitHubEvent", "memoryRecall"],
+      "webhooks": ["onGitHubEvent"],
+      "chain": "GitHub → Memory → Evidence",
+      "ok": true
+    },
+    {
+      "wave": 2,
+      "name": "memory-specialist",
+      "workerId": "019eae19-18e2-72b8-b15a-ab16561c5d9c",
+      "tools": ["memoryRecall", "memoryStore", "memoryPrime"],
+      "chain": "Janus dual recall/write",
+      "ok": true
+    },
+    {
+      "wave": 3,
+      "name": "case-analyzer",
+      "workerId": "019eae1c-5f18-756f-b9a9-b28005636a01",
+      "tools": ["pushLegalExtraction", "pushActor", "pushInteraction"],
+      "chain": "CATACLYSM → Actors + Interactions",
+      "ok": true
+    },
+    {
+      "wave": 4,
+      "name": "pro-code-integration",
+      "workerId": "019eae2b-1ca3-735b-8d7d-c853e55aac0f",
+      "tools": ["colossusMeshStatus", "colossusMemoryRoute", "proCodePing"],
+      "chain": "Colossus gatekeeper mesh",
+      "ok": true
+    },
+    {
+      "wave": 5,
+      "name": "database-crawler",
+      "workerId": "019eae18-6e33-7444-b1d5-958f4b05f583",
+      "tools": ["notionDbHealth", "countUnlinked", "queueFlushPing"],
+      "chain": "DB health + queue flush signal",
+      "ok": true
+    }
+  ],
+  "github_webhook": "https://www.notion.so/webhooks/worker/506d0b07-3284-4b63-a6c9-c5583176045c/019eb9e7-792b-76a2-89c5-cd52e3a1d4f9/aA6tTDpGkZxjXUim/onGitHubEvent",
+  "mesh_root": "~/MISSIONS/APEX_INFRASTRUCTURE/notion-workers-mesh"
+}

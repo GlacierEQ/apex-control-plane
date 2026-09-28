@@ -1,0 +1,147 @@
+{
+  "at": "2026-06-22T08:17:20.169297+00:00",
+  "case": "1FDV-23-0001009",
+  "disk": {
+    "at": "2026-06-22T08:17:08.666097+00:00",
+    "partition": "/dev/block/dm-60 230G 213G   16G  93% /data/user/0",
+    "heavy_dirs": [
+      {
+        "path": "${HOME}/.cache",
+        "size": "13.3MB"
+      },
+      {
+        "path": "${HOME}/.git",
+        "size": "5.5GB"
+      },
+      {
+        "path": "${HOME}/.grok",
+        "size": "703.7MB"
+      },
+      {
+        "path": "${HOME}/.local/share/mimocode",
+        "size": "562.4MB"
+      },
+      {
+        "path": "${HOME}/.npm",
+        "size": "12.3MB"
+      },
+      {
+        "path": "${HOME}/.nvm",
+        "size": "1.5MB"
+      },
+      {
+        "path": "${HOME}/MISSIONS",
+        "size": "31.4GB"
+      },
+      {
+        "path": "${HOME}/android-sdk",
+        "size": "3.8GB"
+      }
+    ],
+    "large_files": [
+      "${HOME}/bin/neo4j/data/transactions/system/neostore.transaction.db.0",
+      "${HOME}/bin/neo4j/data/transactions/neo4j/neostore.transaction.db.0",
+      "${HOME}/.local/share/mimocode/mimocode.db",
+      "${HOME}/.local/share/mimocode/snapshot/b952375a-9bd3-40ff-afb1-5fa662f3f332/72a6c7a03fff2352154d55b891990f04ce632970/objects/pack/pack-39ea293ef0af3b1d49893bf1311592b2e6476b13.pack",
+      "${HOME}/.git/objects/pack/pack-1ad94312696ee6d514d34d2bac3f43b3326d6892.pack",
+      "${HOME}/.git/objects/pack/pack-ed773bd8cbdb077d28621b3faff87e622baab18f.pack",
+      "${HOME}/.git/objects/pack/pack-713ccd95e79aae568f3817828f1cadf9b6a9227e.pack",
+      "${HOME}/.git/objects/pack/pack-e4aa6c4b66f5eb9dcbd9f77d32968e498ef9bad1.pack",
+      "${HOME}/.git/objects/pack/pack-e0fe05210d2cbf0a6536919dc1db639949142d62.pack",
+      "${HOME}/.git/objects/pack/pack-c8fde45a2b9492a9d524a7ef9abf99179ae033ac.pack",
+      "${HOME}/.git/objects/pack/pack-49c5700f92c68036a3ab5e69f6076d3a902a1636.pack",
+      "${HOME}/.git/objects/pack/pack-7359db152cb3bd2403a33222012935e7c4d46923.pack",
+      "${HOME}/.git/objects/pack/pack-1acb75a7710a98d6b0231a1d49ad0d4b6101117f.pack",
+      "${HOME}/.git/objects/pack/pack-214a2c66cdae768ab59493ded054417b4a1f1344.pack",
+      "${HOME}/.git/objects/pack/pack-5442b5f789a91cd6eddbc234459fc28cb476478a.pack"
+    ],
+    "reclaimable": [
+      {
+        "name": "Grok upload queue",
+        "path": "${HOME}/.grok/upload_queue",
+        "size": "0B"
+      },
+      {
+        "name": "Playwright cache",
+        "path": "${HOME}/.cache/ms-playwright-go",
+        "size": "0B"
+      },
+      {
+        "name": "Prisma cache",
+        "path": "${HOME}/.cache/prisma",
+        "size": "0B"
+      },
+      {
+        "name": "Mimocode logs",
+        "path": "${HOME}/.local/share/mimocode/log",
+        "size": "0B"
+      },
+      {
+        "name": "ccache",
+        "path": "${HOME}/.cache/ccache",
+        "size": "0B"
+      }
+    ]
+  },
+  "alpha": {
+    "strand": "alpha",
+    "steps": [
+      {
+        "control_plane_validate": "ok",
+        "detail": "APEX control-plane validation passed"
+      },
+      {
+        "observe_missions": "ok",
+        "output": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/.apex/control-plane/reports/termux_missions_observations.jsonl",
+        "detail": "APEX observe complete: 500 file observation(s)\nOutput: ${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha/.apex/control-plane/reports/termux_missions_observations.jsonl"
+      }
+    ],
+    "canonical": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha",
+    "fs_commander_link": "${HOME}/APEX_COMMAND_CENTER/FS_COMMANDER"
+  },
+  "omega": {
+    "strand": "omega",
+    "steps": [
+      {
+        "orchestrator_daemon": "ok",
+        "detail": "==================================================\nASPEN GROVE V8: ORCHESTRATOR BOOTUP\n==================================================\n[+] Memory bridge: degraded\n[+] All 12 pistons engaged.\n[+] Status: ${HOME}/.apex/omega_orchestrator_status.json\n=================================================="
+      }
+    ],
+    "piston_status": {
+      "at": "2026-06-22T08:17:19.918586+00:00",
+      "strand": "omega",
+      "profile": "highest_form",
+      "cycle": 0,
+      "memory_bridge": "degraded",
+      "memory_detail": "401: {\"error\":\"Unauthorized\"}",
+      "pistons": {
+        "piston_1": "online",
+        "piston_2": "online",
+        "piston_3": "online",
+        "piston_4": "online",
+        "piston_5": "online",
+        "piston_6": "online",
+        "piston_7": "online",
+        "piston_8": "online",
+        "piston_9": "online",
+        "piston_10": "online",
+        "piston_11": "online",
+        "piston_12": "online"
+      },
+      "pistons_online": 12,
+      "links": {
+        "alpha": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega/ORBIT_ALPHA_CONNECTIONS",
+        "hydra": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega/HYDRA_SHIELD_ENGINE"
+      }
+    },
+    "alpha_link": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega/ORBIT_ALPHA_CONNECTIONS",
+    "hydra_link": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega/HYDRA_SHIELD_ENGINE",
+    "canonical": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega"
+  },
+  "purge": null,
+  "paths": {
+    "alpha": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha",
+    "omega": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega",
+    "command_center": "${HOME}/APEX_COMMAND_CENTER/FS_COMMANDER"
+  }
+}

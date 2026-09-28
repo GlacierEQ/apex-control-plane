@@ -1,0 +1,52 @@
+{
+  "at": "2026-06-22T08:13:56.033628+00:00",
+  "mantra": "Two strands. One sovereign DNA.",
+  "boot_order": [
+    "~/.apex/AGENT_BOOT.md",
+    "~/.supermemory/ops/live-context.md",
+    "Pro_Code/CODER-SKILL.md"
+  ],
+  "mcp_routing": {
+    "filesystem": "colossus-gatekeeper \u2192 safe_read/safe_hash OR apex-filesystem",
+    "memory": "colossus-gatekeeper \u2192 memory_route OR unified-memory",
+    "keys": "colossus-gatekeeper \u2192 key_power_status (names only)",
+    "case_ingest": "colossus-gatekeeper \u2192 nexus_ingest",
+    "helix": "colossus-gatekeeper \u2192 helix_activate",
+    "risky_writes": "colossus-gatekeeper \u2192 gate_action first"
+  },
+  "paths": {
+    "alpha": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-alpha",
+    "omega": "${HOME}/MISSIONS/APEX_INFRASTRUCTURE/INFRASTRUCTURE/apex-fs-commander-omega",
+    "case_root": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE",
+    "journal": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/CHATGPT_LIFE_RECORD",
+    "by_actor": "${HOME}/MISSIONS/THE_CATACLYSM/CASE_STRUCTURE/EVIDENCE/BY_ACTOR",
+    "keep_registry": "${HOME}/MISSIONS/SUPPORTING_DATA/SECRETS_AUDIT/keep",
+    "gatekeeper_env": "${HOME}/.operator_key_vault/gatekeeper.env",
+    "ag_cli_index": "${HOME}/MISSIONS/SUPPORTING_DATA/SECRETS_AUDIT/ag_cli_environment/AG_CLI_ENVIRONMENT_INDEX.md",
+    "app_catalog": "${HOME}/MISSIONS/APP_CATALOG/MANIFEST.md",
+    "grok_config": "${HOME}/.grok/config.toml"
+  },
+  "skills_router": "${HOME}/.apex/SKILLS_ROUTER.json",
+  "connector_mesh": "${HOME}/.apex/CONNECTOR_MESH.json",
+  "workflow_router": "${HOME}/.apex/WORKFLOW_ROUTER.json",
+  "commands": {
+    "grip": "apex-grip status | apex-grip sync | apex-grip index",
+    "prime": "sm-ops prime \"task\" --max-tokens 1000",
+    "save": "sm-ops save \"outcome\" --durable",
+    "maximize": "sm-ops maximize --quick",
+    "helix": "sm-ops helix-maximize",
+    "keys": "sm-ops prime-keys",
+    "skills": "gatekeeper \u2192 skills_router",
+    "connectors": "gatekeeper \u2192 connector_mesh",
+    "workflow": "gatekeeper \u2192 workflow_router"
+  },
+  "sovereign_grip": "${HOME}/.apex/SOVEREIGN_GRIP.json",
+  "private_repo_index": "${HOME}/.apex/PRIVATE_REPO_INDEX.json",
+  "token_discipline": [
+    "Read POINTER_INDEX before directory scans",
+    "Use line ranges on file reads",
+    "Batch parallel tool calls",
+    "Tables over prose; no acknowledgment theater",
+    "Prime once per task; cache TTL 300s"
+  ]
+}

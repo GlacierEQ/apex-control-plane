@@ -1,0 +1,72 @@
+{
+  "at": "2026-06-20T01:20:00+00:00",
+  "startup_state": "~/.apex/STARTUP_STATE.json",
+  "startup_cmd": "apex-startup",
+  "status": "ACTIVE",
+  "protocol": "ASPEN-CHK-001 + TRUTH-VERIFY",
+  "case": "1FDV-23-0001009",
+  "profile": "coremaximized",
+  "token_savings": {
+    "prime_budget": "800-1200t",
+    "live_context": "~/.supermemory/ops/live-context.md",
+    "pointer_first": "~/.apex/POINTER_INDEX.json",
+    "discipline": "tables > prose | line ranges | parallel ops | cache-hit"
+  },
+  "skills_active": {
+    "helix-pro-code": "CODER-SKILL laws",
+    "token-savings": "CoreMaximized V2",
+    "supermemory-cli": "sm-ops prime/save",
+    "hyper-efficiency-flow": "Diamond routing",
+    "apex-aspen-grove-bootup": "session restore",
+    "verification": "evidence before assertions"
+  },
+  "connectors_verified": {
+    "notion_api": "LIVE (Actors Registry)",
+    "notion_workers": "api_live true",
+    "dropbox_rclone": "LIVE kahalainspector@gmail.com",
+    "dropbox_api_direct": "REFRESH via sm-ops dropbox-refresh",
+    "github_mcp": "LIVE GlacierEQ",
+    "github_token_env": "STALE \u2014 use grok_com_github MCP or re-auth gh",
+    "supermemory_cli": "LIVE (unset SUPERMEMORY_API_KEY override)",
+    "colossus_gatekeeper_mcp": "LIVE 200 keys",
+    "apex_filesystem_mcp": "LIVE",
+    "unified_memory_mcp": "PARTIAL \u2014 needs user_id filter",
+    "nexus_colossus": "http_200",
+    "fs_commander_alpha": "500 obs OK",
+    "fs_commander_omega": "12/12 pistons",
+    "grok_mcp_cloud": "github, notion, supabase, vercel, supermemory (auth on some)"
+  },
+  "distilled_routers": {
+    "skills": "~/.apex/SKILLS_ROUTER.json (308 skills)",
+    "connectors": "~/.apex/CONNECTOR_MESH.json",
+    "workflow": "~/.apex/WORKFLOW_ROUTER.json",
+    "pointers": "~/.apex/POINTER_INDEX.json"
+  },
+  "commands": {
+    "boot": "source ~/.apex/session_boot.env",
+    "prime": "unset SUPERMEMORY_API_KEY; sm-ops prime \"<task>\" --max-tokens 1000",
+    "save": "sm-ops save \"<outcome>\" --durable",
+    "helix": "sm-ops fs-commander --activate",
+    "dropbox": "sm-ops dropbox-refresh --from-rclone",
+    "truth": "verify carryover after every write"
+  },
+  "platform": {
+    "host": "KcBs-MacBook-Air.local",
+    "os": "darwin",
+    "os_version": "14.8.7",
+    "arch": "x86_64",
+    "home": "/Users/kcbflux",
+    "scoped_at": "2026-09-26T09:51:38Z",
+    "note": "hot_paths.termux below are NOT valid on this host. Verify os.path.exists() before use."
+  },
+  "boot_doc_status": {
+    "scoped_at": "2026-09-26T09:51:38Z",
+    "commands_verified": {
+      "source ~/.apex/session_boot.env": "FILE DOES NOT EXIST \u2014 do not source",
+      "apex-startup": "NOT ON PATH",
+      "sm-ops": "NOT ON PATH",
+      "cortex": "NOT ON PATH (module importable from ~/.apex_memory instead)"
+    },
+    "verified_working": "PYTHONPATH=~/.local/share/apex-mcp python3 ~/.local/share/apex-mcp/unified_memory_mcp.py"
+  }
+}

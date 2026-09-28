@@ -1,0 +1,42 @@
+{
+  "continuity_id": "cnt_genesis_000000000001",
+  "sequence": 1,
+  "created_at": "2026-09-27T11:41:45.233034+00:00",
+  "operator_authority": {
+    "root_operator": "OPERATOR",
+    "authority_hash": "634668ee48fc769a4a2ffa42a08a21e1c1f9e3cb3dd805e9750f95e249825959",
+    "override_state": "ACTIVE"
+  },
+  "active_missions": [],
+  "active_agents": [],
+  "open_loops": [
+    "Reconcile the two control-plane schema lineages; decide which is canonical",
+    "Close the FK and SpiceDB authority-graph loops once the lineage is settled"
+  ],
+  "evidence_heads": [],
+  "provider_state_heads": [],
+  "memory_head": null,
+  "genome_heads": [],
+  "environment_state": {
+    "active_mounts": [
+      "/Users/kcbflux/APEX_SYSTEM"
+    ],
+    "node_id": "KcBs-MacBook-Air.local",
+    "platform": "Darwin x86_64"
+  },
+  "last_verified_event": {
+    "event_id": "evt_genesis_0001",
+    "event_hash": "8be61bde3ba7388619aad48f431818f7d42655d9934b6534c11047ef211d4ce3"
+  },
+  "recovery_instructions": [
+    "Validate integrity.payload_hash against the canonical body before trusting this head.",
+    "On mismatch treat the estate as RECOVERY_REQUIRED; never proceed on an unvalidated head.",
+    "Extend by incrementing sequence and setting previous_head_hash to the prior payload_hash.",
+    "A head is never rewritten and never deleted. Correction is a new head."
+  ],
+  "integrity": {
+    "payload_hash": "84aebb926e69f6effbc620a4fed37a8df13896e308a9454540a209ee4e7ffe58",
+    "previous_head_hash": null,
+    "signature": null
+  }
+}

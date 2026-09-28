@@ -1,0 +1,386 @@
+{
+  "at": "2026-06-22T08:13:55.766692+00:00",
+  "total": 52,
+  "primary_gemini": 18,
+  "routing": {
+    "token_savings": "token-savings",
+    "memory_ops": "memory-connect | unified-memory-connect | sm-ops",
+    "coding": "helix-pro-code | apex-pillars",
+    "connectors": "mcp | universal-connector",
+    "legal": "digital-law-library-master"
+  },
+  "skills": [
+    {
+      "name": "amplify-workflow",
+      "path": "/Users/kcbflux/.agents/skills/amplify-workflow/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Build and deploy full-stack web and mobile apps with AWS Amplify Gen2"
+    },
+    {
+      "name": "apex-always-on-core",
+      "path": "/Users/kcbflux/.agents/skills/apex-always-on-core/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Apply the GlacierEQ always-on session hierarchy: durable mission state, source integrity, compact context, guarded execution, and evidence-backed handoff."
+    },
+    {
+      "name": "apex-sovereign-runtime",
+      "path": "/Users/kcbflux/.agents/skills/apex-sovereign-runtime/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Route GlacierEQ Mac operations through the sovereign runtime hierarchy, selecting only the needed compounds and atomic skills."
+    },
+    {
+      "name": "attorney-assist",
+      "path": "/Users/kcbflux/.agents/skills/attorney-assist/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Connects the user with a LegalZoom attorney for legal consultation. Use when a user asks about attorneys, lawyers, or legal help, or when contract review reveals high risks or low-confidence findings."
+    },
+    {
+      "name": "automate",
+      "path": "/Users/kcbflux/.agents/skills/automate/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Use this skill to create Codex Automations."
+    },
+    {
+      "name": "babysit",
+      "path": "/Users/kcbflux/.agents/skills/babysit/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "building-pydantic-ai-agents",
+      "path": "/Users/kcbflux/.agents/skills/building-pydantic-ai-agents/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Build AI agents with Pydantic AI \u2014 tools, capabilities (including on-demand loading), structured output, streaming, testing, and multi-agent patterns. Use when the user mentions Pydantic AI, imports p"
+    },
+    {
+      "name": "canvas",
+      "path": "/Users/kcbflux/.agents/skills/canvas/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "casey-operator-execution-kernel",
+      "path": "/Users/kcbflux/.agents/skills/casey-operator-execution-kernel/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Apply Casey's user-specific operating logic before planning or mutation: operator authority, sticky corrections, semantic command locks, holographic-mesh architecture, cumulative merge-first state gro"
+    },
+    {
+      "name": "cline-sdk",
+      "path": "/Users/kcbflux/.agents/skills/cline-sdk/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Comprehensive Cline SDK skill for building AI agents. Covers the direct Agent runtime, ClineCore sessions, custom tools, plugins, events, LLM providers, scheduling, multi-agent teams, and production d"
+    },
+    {
+      "name": "computer-user-core",
+      "path": "/Users/kcbflux/.agents/skills/computer-user-core/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Native macOS desktop and runtime orchestration via AppleScript, screencapture, GUI event simulation, window state inspection, and process lifecycle supervision."
+    },
+    {
+      "name": "create-hook",
+      "path": "/Users/kcbflux/.agents/skills/create-hook/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "create-rule",
+      "path": "/Users/kcbflux/.agents/skills/create-rule/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "create-skill",
+      "path": "/Users/kcbflux/.agents/skills/create-skill/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-",
+      "rebased_from_termux": true
+    },
+    {
+      "name": "create-subagent",
+      "path": "/Users/kcbflux/.agents/skills/create-subagent/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "data-analyst",
+      "path": "/Users/kcbflux/.agents/skills/data-analyst/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Act as an interactive data analyst for ClickHouse-backed analytics. Use when the user asks questions about internal data, metrics, dashboards, telemetry, active users, revenue, funnels, trends, distri"
+    },
+    {
+      "name": "exa-search",
+      "path": "/Users/kcbflux/.agents/skills/exa-search/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Deep research powered by Exa. Use for lead generation, literature reviews, deep dives, competitive analysis, or any query where one search falls short, including phrases like 'research this', 'find ev"
+    },
+    {
+      "name": "figma-code-connect",
+      "path": "/Users/kcbflux/.agents/skills/figma-code-connect/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Creates and maintains Figma Code Connect template files that map Figma components to code snippets. Use when the user mentions Code Connect, Figma component mapping, design-to-code translation, or ask"
+    },
+    {
+      "name": "figma-generate-design",
+      "path": "/Users/kcbflux/.agents/skills/figma-generate-design/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Use this skill alongside figma-use when the task involves translating an application page, view, or multi-section layout into Figma. Triggers: 'write to Figma', 'create in Figma from code', 'push page"
+    },
+    {
+      "name": "figma-use",
+      "path": "/Users/kcbflux/.agents/skills/figma-use/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "**MANDATORY prerequisite** \u2014 you MUST invoke this skill BEFORE every `use_figma` tool call. NEVER call `use_figma` directly without loading this skill first. Skipping it causes common, hard-to-debug f"
+    },
+    {
+      "name": "firecrawl-scrape",
+      "path": "/Users/kcbflux/.agents/skills/firecrawl-scrape/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "|"
+    },
+    {
+      "name": "frontend-design",
+      "path": "/Users/kcbflux/.agents/skills/frontend-design/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code "
+    },
+    {
+      "name": "knowledge-catalog-discovery",
+      "path": "/Users/kcbflux/.agents/skills/knowledge-catalog-discovery/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Use these skills when you need to discover and explore data assets in the Knowledge Catalog. It allows you to search for entries, lookup specific metadata, and explore aspect types to understand your "
+    },
+    {
+      "name": "linear-sdk-scripting",
+      "path": "/Users/kcbflux/.agents/skills/linear-sdk-scripting/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Perform actions in Linear (read, create, update, search issues, projects, comments, teams, cycles, labels, etc.) by writing and running small Node scripts against the official @linear/sdk TypeScript S"
+    },
+    {
+      "name": "loop",
+      "path": "/Users/kcbflux/.agents/skills/loop/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "max-token-saver",
+      "path": "/Users/kcbflux/.agents/skills/max-token-saver/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Autonomous skill for max token saver within the APEX Estate."
+    },
+    {
+      "name": "migrate-to-skills",
+      "path": "/Users/kcbflux/.agents/skills/migrate-to-skills/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "notion-find",
+      "path": "/Users/kcbflux/.agents/skills/notion-find/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Quickly find pages or databases in Notion by title keywords. Returns precise matches rather than comprehensive results."
+    },
+    {
+      "name": "notion-knowledge-capture",
+      "path": "/Users/kcbflux/.agents/skills/notion-knowledge-capture/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Transform conversations and discussions into structured documentation pages in Notion. Captures insights, decisions, and knowledge from chat context with proper organization and linking."
+    },
+    {
+      "name": "notion-search",
+      "path": "/Users/kcbflux/.agents/skills/notion-search/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Search the user's Notion workspace using the Notion MCP server. Use for finding pages, databases, and content by keywords or natural-language queries."
+    },
+    {
+      "name": "onboard",
+      "path": "/Users/kcbflux/.agents/skills/onboard/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "oracledb",
+      "path": "/Users/kcbflux/.agents/skills/oracledb/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Use these skills to manage and monitor Oracle databases by executing SQL statements, exploring schema metadata, analyzing query performance, monitoring active sessions and resource consumption, and ma"
+    },
+    {
+      "name": "resource-preflight",
+      "path": "/Users/kcbflux/.agents/skills/resource-preflight/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Verify the environment, dependencies, access, data, approvals, and validation resources required by a capability before it is selected. Use when a route names tools, scripts, models, datasets, credent"
+    },
+    {
+      "name": "review",
+      "path": "/Users/kcbflux/.agents/skills/review/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Review code changes with the Bugbot or Security Review subagent."
+    },
+    {
+      "name": "review-bugbot",
+      "path": "/Users/kcbflux/.agents/skills/review-bugbot/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Review code changes with Bugbot subagent."
+    },
+    {
+      "name": "review-security",
+      "path": "/Users/kcbflux/.agents/skills/review-security/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Review code changes with Security Review subagent."
+    },
+    {
+      "name": "sdk",
+      "path": "/Users/kcbflux/.agents/skills/sdk/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "searching-sourcegraph",
+      "path": "/Users/kcbflux/.agents/skills/searching-sourcegraph/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Use when the user needs to search or navigate code with Sourcegraph MCP tools. Provides disciplined search workflows for finding implementations, understanding systems, debugging issues, fixing bugs, "
+    },
+    {
+      "name": "sentry-cli",
+      "path": "/Users/kcbflux/.agents/skills/sentry-cli/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Guide for using the Sentry CLI to interact with Sentry from the command line. Use when the user asks about viewing issues, events, projects, organizations, making API calls, or authenticating with Sen"
+    },
+    {
+      "name": "shell",
+      "path": "/Users/kcbflux/.agents/skills/shell/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "site-specification",
+      "path": "/Users/kcbflux/.agents/skills/site-specification/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Extract comprehensive site specifications from simple descriptions. Use when analyzing a user's theme request to determine site type, audience, tone, layout requirements, and typography."
+    },
+    {
+      "name": "skill-creator",
+      "path": "/Users/kcbflux/.agents/skills/skill-creator/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill"
+    },
+    {
+      "name": "split-to-prs",
+      "path": "/Users/kcbflux/.agents/skills/split-to-prs/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "statusline",
+      "path": "/Users/kcbflux/.agents/skills/statusline/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "update-cli-config",
+      "path": "/Users/kcbflux/.agents/skills/update-cli-config/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "update-cursor-settings",
+      "path": "/Users/kcbflux/.agents/skills/update-cursor-settings/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">-"
+    },
+    {
+      "name": "use-railway",
+      "path": "/Users/kcbflux/.agents/skills/use-railway/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ">"
+    },
+    {
+      "name": "vercel-nextjs",
+      "path": "/Users/kcbflux/.agents/skills/vercel-nextjs/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": ""
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "path": "/Users/kcbflux/.agents/skills/vercel-react-best-practices/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "React best-practices reviewer for TSX files. Triggers after editing multiple TSX components to run a condensed quality checklist covering component structure, hooks usage, accessibility, performance, "
+    },
+    {
+      "name": "vercel-shadcn",
+      "path": "/Users/kcbflux/.agents/skills/vercel-shadcn/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "shadcn/ui expert guidance \u2014 CLI, component installation, composition patterns, custom registries, theming, Tailwind CSS integration, and high-quality interface design. Use when initializing shadcn, ad"
+    },
+    {
+      "name": "vercel-vercel-cli",
+      "path": "/Users/kcbflux/.agents/skills/vercel-vercel-cli/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Vercel CLI expert guidance. Use when deploying, managing environment variables, linking projects, viewing logs, managing domains, or interacting with the Vercel platform from the command line."
+    },
+    {
+      "name": "web-design-guidelines",
+      "path": "/Users/kcbflux/.agents/skills/web-design-guidelines/SKILL.md",
+      "source": "agents",
+      "present": true,
+      "description": "Review UI code for Web Interface Guidelines compliance. Use when asked to \"review my UI\", \"check accessibility\", \"audit design\", \"review UX\", or \"check my site against best practices\"."
+    }
+  ],
+  "declared_total_was": 308,
+  "rebased_on": "KcBs-MacBook-Air.local",
+  "resolver": {
+    "skill_root": "/Users/kcbflux/.agents/skills",
+    "pattern": "<root>/<name>/SKILL.md",
+    "note": "Resolved against this host at write time. Entries are omitted rather than pointed at a non-existent path; a boot that preloads a false path injects rot."
+  }
+}

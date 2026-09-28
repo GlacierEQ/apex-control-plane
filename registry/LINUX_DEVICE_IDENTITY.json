@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "policy": "linux_first",
+  "statement": "This host is Linux. Termux runs on the Linux kernel (uname=Linux). Android is the userspace/container — not the device class we report to operators or providers.",
+  "canonical": {
+    "host_alias": "apex-termux",
+    "platform": "linux",
+    "kernel": "Linux",
+    "arch": "arm64",
+    "cpu_model": "unknown-cpu",
+    "posix_user": "u0_a317",
+    "operator_user": "operator"
+  },
+  "verify": {
+    "must_pass": [
+      "uname -s → Linux",
+      "test -f ~/.apex/LINUX_DEVICE_IDENTITY.json",
+      "mimo fingerprint seed uses linux|arm64 (never android)"
+    ],
+    "blink_host": "apex-termux",
+    "blink_doc": "~/.apex/BLINK_ACCESS.json"
+  },
+  "fingerprint": {
+    "algorithm": "sha256(hostname|linux|arm64|cpu_model|username)",
+    "persist_path": "~/.local/share/mimocode/mimo-free-client",
+    "seed_template": "apex-termux|linux|arm64|unknown-cpu|operator",
+    "note": "MiMo CLI hardcodes linux+arm64; probe must match. Host alias persisted when sethostname unavailable."
+  },
+  "runtime_leaks": {
+    "python_platform_system": "Android",
+    "node_process_platform": "android",
+    "mitigation": "Never use platform.system() or process.platform for provider fingerprints; use LINUX_DEVICE_IDENTITY + persisted mimo-free-client"
+  },
+  "saved_at": "2026-06-22T19:15:00Z"
+}

@@ -1,0 +1,133 @@
+{
+  "at": "2026-06-19T19:17:37.669514+00:00",
+  "remote": "dropbox:UNIFIED_FORENSIC_LIBRARY/03_VIDEOS",
+  "count": 378,
+  "total_gb": 267.41,
+  "by_ext": {
+    "mp4": 78,
+    "mov": 300
+  },
+  "top_10": [
+    {
+      "path": "General/Unclassified/2026-05-02_[Unclassified]_[General]_CLOUD_PL_2026-05-02 19.47.30.mov",
+      "name": "2026-05-02_[Unclassified]_[General]_CLOUD_PL_2026-05-02 19.47.30.mov",
+      "size_bytes": 9855623568,
+      "size_gb": 9.856,
+      "mtime": "2026-05-03T05:47:30Z",
+      "id": "id:M3qKixNrNsgAAAAAAAF1Kw",
+      "is_dir": false,
+      "captured_date": "2026-05-02",
+      "cloud_pl_date": "2026-05-02",
+      "cloud_pl_time": "19.47.30"
+    },
+    {
+      "path": "General/Unclassified/2025-05-03_[Unclassified]_[General]_CLOUD_PL_2025-05-03 15.45.34.mov",
+      "name": "2025-05-03_[Unclassified]_[General]_CLOUD_PL_2025-05-03 15.45.34.mov",
+      "size_bytes": 7725471623,
+      "size_gb": 7.725,
+      "mtime": "2025-05-04T01:45:34Z",
+      "id": "id:M3qKixNrNsgAAAAAAAFzPw",
+      "is_dir": false,
+      "captured_date": "2025-05-03",
+      "cloud_pl_date": "2025-05-03",
+      "cloud_pl_time": "15.45.34"
+    },
+    {
+      "path": "General/Unclassified/2025-12-22_[Unclassified]_[General]_CLOUD_PL_2025-12-22 20.49.43.mov",
+      "name": "2025-12-22_[Unclassified]_[General]_CLOUD_PL_2025-12-22 20.49.43.mov",
+      "size_bytes": 7290000323,
+      "size_gb": 7.29,
+      "mtime": "2025-12-23T06:49:43Z",
+      "id": "id:M3qKixNrNsgAAAAAAAKV0w",
+      "is_dir": false,
+      "captured_date": "2025-12-22",
+      "cloud_pl_date": "2025-12-22",
+      "cloud_pl_time": "20.49.43"
+    },
+    {
+      "path": "General/Unclassified/2025-12-23_[Unclassified]_[General]_CLOUD_PL_2025-12-23 06.59.15.mov",
+      "name": "2025-12-23_[Unclassified]_[General]_CLOUD_PL_2025-12-23 06.59.15.mov",
+      "size_bytes": 7041894490,
+      "size_gb": 7.042,
+      "mtime": "2025-12-23T16:59:15Z",
+      "id": "id:M3qKixNrNsgAAAAAAAKVqQ",
+      "is_dir": false,
+      "captured_date": "2025-12-23",
+      "cloud_pl_date": "2025-12-23",
+      "cloud_pl_time": "06.59.15"
+    },
+    {
+      "path": "General/Unclassified/2024-09-21_[Unclassified]_[General]_CLOUD_PL_2024-09-21 18.08.27.mov",
+      "name": "2024-09-21_[Unclassified]_[General]_CLOUD_PL_2024-09-21 18.08.27.mov",
+      "size_bytes": 5613804648,
+      "size_gb": 5.614,
+      "mtime": "2024-09-22T04:08:27Z",
+      "id": "id:M3qKixNrNsgAAAAAAAFsDQ",
+      "is_dir": false,
+      "captured_date": "2024-09-21",
+      "cloud_pl_date": "2024-09-21",
+      "cloud_pl_time": "18.08.27"
+    },
+    {
+      "path": "General/Unclassified/2025-10-25_[Unclassified]_[General]_CLOUD_PL_2025-10-25 23.03.07.mov",
+      "name": "2025-10-25_[Unclassified]_[General]_CLOUD_PL_2025-10-25 23.03.07.mov",
+      "size_bytes": 5562771792,
+      "size_gb": 5.563,
+      "mtime": "2025-10-26T09:03:07Z",
+      "id": "id:M3qKixNrNsgAAAAAAAKO0w",
+      "is_dir": false,
+      "captured_date": "2025-10-25",
+      "cloud_pl_date": "2025-10-25",
+      "cloud_pl_time": "23.03.07"
+    },
+    {
+      "path": "General/Unclassified/2025-12-11_[Unclassified]_[General]_CLOUD_PL_2025-12-11 21.59.55.mov",
+      "name": "2025-12-11_[Unclassified]_[General]_CLOUD_PL_2025-12-11 21.59.55.mov",
+      "size_bytes": 5394016601,
+      "size_gb": 5.394,
+      "mtime": "2025-12-12T07:59:55Z",
+      "id": "id:M3qKixNrNsgAAAAAAAKV0A",
+      "is_dir": false,
+      "captured_date": "2025-12-11",
+      "cloud_pl_date": "2025-12-11",
+      "cloud_pl_time": "21.59.55"
+    },
+    {
+      "path": "General/Unclassified/2026-03-01_[Unclassified]_[General]_CLOUD_PL_2026-03-01 19.48.30.mov",
+      "name": "2026-03-01_[Unclassified]_[General]_CLOUD_PL_2026-03-01 19.48.30.mov",
+      "size_bytes": 4866799892,
+      "size_gb": 4.867,
+      "mtime": "2026-03-02T05:48:30Z",
+      "id": "id:M3qKixNrNsgAAAAAAAJqaw",
+      "is_dir": false,
+      "captured_date": "2026-03-01",
+      "cloud_pl_date": "2026-03-01",
+      "cloud_pl_time": "19.48.30"
+    },
+    {
+      "path": "General/Unclassified/2026-02-12_[Unclassified]_[General]_CLOUD_PL_2026-02-12 23.10.50.mov",
+      "name": "2026-02-12_[Unclassified]_[General]_CLOUD_PL_2026-02-12 23.10.50.mov",
+      "size_bytes": 4500820992,
+      "size_gb": 4.501,
+      "mtime": "2026-02-13T09:10:50Z",
+      "id": "id:M3qKixNrNsgAAAAAAAJq1Q",
+      "is_dir": false,
+      "captured_date": "2026-02-12",
+      "cloud_pl_date": "2026-02-12",
+      "cloud_pl_time": "23.10.50"
+    },
+    {
+      "path": "General/Unclassified/2026-03-11_[Unclassified]_[General]_CLOUD_PL_2026-03-11 16.29.37.mov",
+      "name": "2026-03-11_[Unclassified]_[General]_CLOUD_PL_2026-03-11 16.29.37.mov",
+      "size_bytes": 4396650251,
+      "size_gb": 4.397,
+      "mtime": "2026-03-12T02:29:37Z",
+      "id": "id:M3qKixNrNsgAAAAAAAJqDA",
+      "is_dir": false,
+      "captured_date": "2026-03-11",
+      "cloud_pl_date": "2026-03-11",
+      "cloud_pl_time": "16.29.37"
+    }
+  ],
+  "index_path": "${HOME}/.apex/dropbox_video_index.jsonl"
+}

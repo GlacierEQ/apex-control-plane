@@ -1,0 +1,16 @@
+{
+  "at": "2026-07-25T16:56:00Z",
+  "profile": "mimo-auto",
+  "service": "mimo-auto-pro-v2.5",
+  "promised_free_release": true,
+  "egress": "APEX_HIGHWAY_RELAY",
+  "egress_detail": "ACTIVE_RECONNECTED",
+  "bootstrap": "ok",
+  "chat": "ACTIVE_UNBLOCKED",
+  "model": "mimo/mimo-auto-pro-v2.5",
+  "device_class": "macOS_APEX",
+  "host_alias": "apex-macbook",
+  "relay": "https://mimo-free-relay.vercel.app",
+  "highway_mesh_connected": true,
+  "status": "OPERATIONAL_V2.5_PRO_ACTIVE"
+}
