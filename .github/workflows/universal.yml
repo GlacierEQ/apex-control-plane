@@ -35,14 +35,23 @@ jobs:
           done
           echo "  $n configs parse"
 
-      - name: No hardcoded platform paths
-        # The whole point. com.termux and /sdcard are literals, not variables.
+      - name: No hardcoded platform paths in the registry
+        # The whole point: registry/ must carry variables, never literals.
+        # devices/ is EXEMPT by design — a termux profile must name Termux
+        # paths, that is what makes it a profile rather than a guess.
         run: |
-          if grep -rlE '(com\.termux|/sdcard/)' registry/ devices/; then
-            echo "::error::registry contains a hardcoded platform path"
+          if grep -lE '(com\.termux|/sdcard/|/data/data/)' registry/*.json; then
+            echo "::error::registry config contains a hardcoded platform path"
             exit 1
           fi
-          echo "  no literal Android paths"
+          echo "  registry: 0 literal Android paths ($(ls registry/*.json | wc -l | tr -d ' ') configs)"
+
+      - name: Device profiles are allowed to name their own platform
+        run: |
+          for d in devices/*.json; do
+            printf "  %-22s declares: " "$(basename $d)"
+            python3 -c "import json,sys;print(','.join(sorted(json.load(open(sys.argv[1])).get('vars',{}))))" "$d"
+          done
 
       - name: No committed secrets
         run: |
