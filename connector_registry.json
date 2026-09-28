@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "last_updated": "auto",
+  "connectors": [
+    {
+      "name": "GitHub",
+      "env_var": "GITHUB_TOKEN",
+      "endpoint": "https://api.github.com/user",
+      "required": true
+    },
+    {
+      "name": "Notion",
+      "env_var": "NOTION_TOKEN",
+      "endpoint": "https://api.notion.com/v1/users/me",
+      "required": false
+    },
+    {
+      "name": "Supabase",
+      "env_vars": ["SUPABASE_URL", "SUPABASE_KEY"],
+      "required": false
+    },
+    {
+      "name": "OpenAI",
+      "env_var": "OPENAI_API_KEY",
+      "endpoint": "https://api.openai.com/v1/models",
+      "required": false
+    }
+  ]
+}

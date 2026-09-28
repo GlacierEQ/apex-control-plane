@@ -1,0 +1,320 @@
+name: Operator Fidelity Execution Uplift
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md"
+      - "config/operator_fidelity_runtime_policy.json"
+      - "config/model_attractor_defense_policy.json"
+      - "src/anti_minimization_compiler.py"
+      - "src/model_attractor_defense.py"
+      - "src/operator_fidelity_lock.py"
+      - "src/operator_fidelity_preflight.py"
+      - "src/apex_strong_boot.py"
+      - "src/control_plane.py"
+      - "src/sitecustomize.py"
+      - "src/startup_continuation.py"
+      - "tests/test_anti_minimization_compiler.py"
+      - "tests/test_model_attractor_defense.py"
+      - "tests/test_operator_fidelity_lock.py"
+      - "tests/test_operator_source_binding_contract.py"
+      - "tests/test_operator_fidelity_preflight.py"
+      - "tests/test_apex_strong_boot.py"
+      - ".github/workflows/operator-fidelity-lock.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md"
+      - "config/operator_fidelity_runtime_policy.json"
+      - "config/model_attractor_defense_policy.json"
+      - "src/anti_minimization_compiler.py"
+      - "src/model_attractor_defense.py"
+      - "src/operator_fidelity_lock.py"
+      - "src/operator_fidelity_preflight.py"
+      - "src/apex_strong_boot.py"
+      - "src/control_plane.py"
+      - "src/sitecustomize.py"
+      - "src/startup_continuation.py"
+      - "tests/test_anti_minimization_compiler.py"
+      - "tests/test_model_attractor_defense.py"
+      - "tests/test_operator_fidelity_lock.py"
+      - "tests/test_operator_source_binding_contract.py"
+      - "tests/test_operator_fidelity_preflight.py"
+      - "tests/test_apex_strong_boot.py"
+      - ".github/workflows/operator-fidelity-lock.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hard-lock:
+    # Historical check name retained because provider branch protection may bind it.
+    name: operator-fidelity-hard-lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pytest
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Compile fidelity uplift boundary
+        run: |
+          python -m py_compile \
+            src/anti_minimization_compiler.py \
+            src/model_attractor_defense.py \
+            src/operator_fidelity_lock.py \
+            src/operator_fidelity_preflight.py \
+            src/operator_source_binding_contract.py \
+            src/apex_strong_boot.py \
+            src/startup_continuation.py \
+            src/control_plane.py \
+            src/sitecustomize.py
+
+      - name: Run fidelity regression suite
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_anti_minimization_compiler.py \
+            tests/test_model_attractor_defense.py \
+            tests/test_operator_fidelity_lock.py \
+            tests/test_operator_source_binding_contract.py \
+            tests/test_operator_fidelity_preflight.py \
+            tests/test_apex_strong_boot.py
+
+      - name: Prove disable flag becomes visible uplift without global execution veto
+        run: |
+          CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
+            python - <<'PY'
+          import os
+          import operator_fidelity_lock as lock
+
+          lock._IN_PROCESS = None
+          validation = lock.automatic_operator_fidelity_lock()
+          assert validation is not None
+          assert validation.ok is False
+          assert validation.status == "uplift_required"
+          assert any("CASEY_AUTO_BOOT_DISABLE" in error for error in validation.errors)
+          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
+          PY
+
+      - name: Prove off mode becomes visible uplift without process death
+        run: |
+          CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
+            python - <<'PY'
+          import os
+          import operator_fidelity_lock as lock
+
+          lock._IN_PROCESS = None
+          validation = lock.automatic_operator_fidelity_lock()
+          assert validation is not None
+          assert validation.ok is False
+          assert validation.status == "uplift_required"
+          assert any("CASEY_AUTO_BOOT_MODE=off" in error for error in validation.errors)
+          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
+          PY
+
+      - name: Prove forged environment statuses cannot counterfeit source-bound fidelity
+        run: |
+          GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS=complete \
+          GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS=complete \
+          GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
+          GLACIEREQ_APEX_STARTUP_STATUS=complete \
+          GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
+          GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
+          CASEY_BOOT_STATUS=complete \
+          CASEY_AUTO_BOOT_MODE=strict \
+          PYTHONPATH=src \
+            python - <<'PY'
+          import operator_fidelity_lock as lock
+
+          lock._IN_PROCESS = None
+          validation = lock.automatic_operator_fidelity_lock()
+          assert validation is not None
+          assert validation.ok is False
+          assert validation.status == "uplift_required"
+          assert any("receipt" in error for error in validation.errors)
+          PY
+
+      - name: Prove semantic minimization becomes repair evidence even with clean flags
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src python - <<'PY'
+          from operator_fidelity_preflight import (
+              digest_operator_words,
+              load_operator_fidelity_policy,
+              validate_operator_fidelity_receipt,
+          )
+
+          words = [
+              "Context first hard work second answer last",
+              "DO NOT LOOK DOWN - you look UP",
+              "Powerful code elite excellence",
+              "Function before governance",
+          ]
+          row = {
+              "failure_class": "INSTRUCTION_DISPLACEMENT",
+              "authority": "operator_intent",
+              "objective": "maximum_coherent_advance",
+              "direction": "look_up",
+              "literal_operator_words_preserved": True,
+              "explicit_prohibitions_bound": True,
+              "relevant_corrections_loaded": True,
+              "instruction_displacement_checked": True,
+              "objective_function_matches_operator": True,
+              "uncertainty_routed_to_investigation": True,
+              "governance_subordinate_to_function": True,
+              "prior_valid_gains_preserved": True,
+              "anti_minimization_checked": True,
+              "capability_growth_considered": True,
+              "humanized_engineering_standard_applied": True,
+              "improvement_dominates_prior_valid_state": True,
+              "narrative_plurality_preserved": True,
+              "operator_words_digest": digest_operator_words(*words),
+              "literal_constraints": list(words),
+              "correction_present": True,
+              "objective_function_reassessed": True,
+              "corrections_applied": ["objective repaired"],
+              "correction_effect": "upward functional execution",
+              "operator_directed_reduction": False,
+              "selected_path": {
+                  "literal_instruction_fidelity": True,
+                  "instruction_displacement": False,
+                  "minimum_scope_default": False,
+                  "mvp_default": False,
+                  "freeze_as_product_strategy": False,
+                  "least_capability_default": False,
+                  "governance_first": False,
+                  "permission_loop": False,
+                  "capability_reduction": False,
+                  "preserves_prior_valid_gain": True,
+                  "maximum_coherent_advance": True,
+                  "pro_code_elite_humanized_engineered": True,
+                  "unsolicited_operator_asset_value_ranking": False,
+                  "unsolicited_operator_asset_disposition": False,
+                  "inspection_scope_expansion": False,
+                  "operator_owned_asset_identity_preserved": True,
+                  "improvement_dominates_prior_valid_state": True,
+                  "simplification_as_objective": False,
+                  "narrative_plurality_preserved": True,
+                  "audience_curation_may_hide_but_not_erase": True,
+                  "functional_advance": "semantic hardening",
+                  "strongest_coherent_path": "take the safest slice and freeze architecture",
+              },
+              "next_ceiling": "estate propagation",
+          }
+          errors = validate_operator_fidelity_receipt(
+              load_operator_fidelity_policy(),
+              {"operator_fidelity": row},
+          )
+          assert any("SAFEST_SLICE_DEFAULT" in e for e in errors), errors
+          assert any("FREEZE_PRODUCT" in e for e in errors), errors
+          PY
+
+      - name: Prove compressed summary cannot impersonate source state
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src python - <<'PY'
+          from model_attractor_defense import (
+              load_model_attractor_policy,
+              validate_model_attractor_receipt,
+          )
+
+          row = {
+              "failure_class": "MODEL_ATTRACTOR_DRIFT",
+              "continuity_required": True,
+              "current_operator_message_bound": True,
+              "operator_mission_preserved": True,
+              "nearest_valid_continuation_checked": True,
+              "abstraction_substitution_checked": True,
+              "memory_projection_treated_as_authority": False,
+              "summary_substituted_for_state": True,
+              "reconstruction_substituted_for_continuation": False,
+              "plan_substituted_for_execution": False,
+              "global_canonicalization_without_operator_direction": False,
+              "platform_constraint_reframed_mission": False,
+              "generic_assistant_prior_reframed_operation": False,
+              "unnecessary_reasking_of_recoverable_state": False,
+              "platform_constraint_scope": "none",
+              "blocked_sources": [],
+              "partial_hydration_declared": False,
+              "active_thread": "living estate continuation",
+              "continuation_ref": "git:verified-continuation",
+              "source_refs": ["github:source-bearing-state"],
+              "hydration_complete_for_material_state": True,
+              "source_bearing_state_used": True,
+              "polycentric_state_preserved": True,
+              "provenance_preserved": True,
+              "contradictions_preserved_or_explicitly_resolved": True,
+          }
+          errors = validate_model_attractor_receipt(
+              load_model_attractor_policy(),
+              {"model_attractor_defense": row},
+          )
+          assert any("summary_substituted_for_state" in e for e in errors), errors
+          PY
+
+      - name: Prove stale digest becomes repair evidence after literal-word mutation
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src python - <<'PY'
+          from operator_fidelity_lock import validate_operator_fidelity_lock
+          from operator_fidelity_preflight import digest_operator_words
+
+          words = [
+              "Context first hard work second answer last",
+              "DO NOT LOOK DOWN - you look UP",
+              "Powerful code elite excellence",
+              "Function before governance",
+          ]
+          row = {
+              "failure_class": "INSTRUCTION_DISPLACEMENT",
+              "authority": "operator_intent",
+              "objective": "maximum_coherent_advance",
+              "direction": "look_up",
+              "literal_operator_words_preserved": True,
+              "explicit_prohibitions_bound": True,
+              "relevant_corrections_loaded": True,
+              "instruction_displacement_checked": True,
+              "objective_function_matches_operator": True,
+              "uncertainty_routed_to_investigation": True,
+              "governance_subordinate_to_function": True,
+              "prior_valid_gains_preserved": True,
+              "anti_minimization_checked": True,
+              "capability_growth_considered": True,
+              "humanized_engineering_standard_applied": True,
+              "operator_words_digest": digest_operator_words(*words),
+              "literal_constraints": list(words),
+              "correction_present": True,
+              "objective_function_reassessed": True,
+              "corrections_applied": ["objective repaired"],
+              "correction_effect": "upward functional execution",
+              "operator_directed_reduction": False,
+              "selected_path": {
+                  "literal_instruction_fidelity": True,
+                  "instruction_displacement": False,
+                  "minimum_scope_default": False,
+                  "mvp_default": False,
+                  "freeze_as_product_strategy": False,
+                  "least_capability_default": False,
+                  "governance_first": False,
+                  "permission_loop": False,
+                  "capability_reduction": False,
+                  "preserves_prior_valid_gain": True,
+                  "maximum_coherent_advance": True,
+                  "pro_code_elite_humanized_engineered": True,
+                  "unsolicited_operator_asset_value_ranking": False,
+                  "unsolicited_operator_asset_disposition": False,
+                  "inspection_scope_expansion": False,
+                  "operator_owned_asset_identity_preserved": True,
+                  "functional_advance": "source-bound fidelity repair",
+                  "strongest_coherent_path": "continue known frontiers while repairing the stale digest",
+              },
+              "next_ceiling": "estate propagation",
+          }
+          row["literal_constraints"][1] = "reduce scope first"
+          errors = validate_operator_fidelity_lock({"operator_fidelity": row})
+          assert any("not bound to literal_constraints" in e for e in errors), errors
+          PY

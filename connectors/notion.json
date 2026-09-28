@@ -1,0 +1,21 @@
+{
+  "id": "notion",
+  "name": "Notion",
+  "version": "2022-06-28",
+  "base_url": "https://api.notion.com/v1",
+  "auth": {
+    "type": "bearer",
+    "secret_ref": "NOTION_TOKEN",
+    "note": "Set NOTION_TOKEN in GitHub Secrets — never hardcode"
+  },
+  "endpoints": [
+    {"id": "me", "path": "/users/me", "method": "GET", "test": true},
+    {"id": "search", "path": "/search", "method": "POST"},
+    {"id": "create_page", "path": "/pages", "method": "POST"},
+    {"id": "update_page", "path": "/pages/{page_id}", "method": "PATCH"},
+    {"id": "query_database", "path": "/databases/{database_id}/query", "method": "POST"},
+    {"id": "create_database", "path": "/databases", "method": "POST"}
+  ],
+  "state": "declared",
+  "last_validated": null
+}

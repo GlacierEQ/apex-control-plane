@@ -1,0 +1,14 @@
+name: APEX Control Plane Non-Regression
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  apex-non-regression:
+    uses: ./.github/workflows/estate-non-regression.yml

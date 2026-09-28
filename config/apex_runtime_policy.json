@@ -1,0 +1,106 @@
+{
+  "schema_version": "2.1.0",
+  "name": "APEX Execution Uplift Runtime Kernel",
+  "objective": "maximum_coherent_advance",
+  "execution_semantics": "execute_harden_verify_repair_complete_receipt",
+  "legacy_fail_closed_field_semantics": "deprecated_non_authorizing_compatibility_only",
+  "fail_closed": false,
+  "startup_observers": [
+    "notion_continuity",
+    "prime_directive",
+    "operator_fidelity_lock",
+    "operator_fidelity",
+    "apex_startup"
+  ],
+  "required_startup_gates": [
+    "notion_continuity",
+    "prime_directive",
+    "operator_fidelity_lock",
+    "operator_fidelity",
+    "apex_startup"
+  ],
+  "startup_observer_failure": "record_uplift_and_continue_known_executable_frontiers",
+  "action_scopes": [
+    "none",
+    "internal",
+    "external"
+  ],
+  "authority": {
+    "routine_reversible_mutation": "active_mission_authority",
+    "external_consequence": "active_mission_authority_or_scoped_authority_when_not_already_explicit",
+    "destructive_irreversible": "scoped_operator_authority",
+    "provider_constraint": "provider_native_requirement"
+  },
+  "receipt_requirements": {
+    "observation": [
+      "context_recovery",
+      "observation",
+      "verification",
+      "readback"
+    ],
+    "mutation": [
+      "context_recovery",
+      "execution",
+      "test",
+      "adversarial_test",
+      "verification",
+      "persistence",
+      "readback"
+    ]
+  },
+  "mutation_lifecycle": [
+    "context_recovering",
+    "ready",
+    "executing",
+    "testing",
+    "adversarial_testing",
+    "repairing_when_needed",
+    "verifying",
+    "verified",
+    "persisting",
+    "readback",
+    "complete"
+  ],
+  "observation_lifecycle": [
+    "context_recovering",
+    "ready",
+    "observing",
+    "verifying",
+    "repairing_when_needed",
+    "readback",
+    "complete"
+  ],
+  "uplift_invariants": {
+    "context_recovery_must_precede_work": true,
+    "context_recovery_requires_source_reference": true,
+    "test_failure_routes_to_repair": true,
+    "adversarial_test_failure_routes_to_repair": true,
+    "verification_failure_routes_to_repair": true,
+    "readback_mismatch_routes_to_repair": true,
+    "missing_quality_receipt_routes_to_repair": true,
+    "missing_verified_gain_routes_to_repair": true,
+    "unresolved_startup_observer_does_not_veto_kernel_creation": true,
+    "risk_increases_hardening_not_permission": true
+  },
+  "completion_truth": {
+    "complete_claim_requires_successful_receipt_chain": true,
+    "complete_claim_requires_verified_gain_for_mutation": true,
+    "readback_must_match_expected_state_for_complete_claim": true,
+    "target_must_be_reached_for_complete_claim": true,
+    "incomplete_truth_never_erases_executed_work": true
+  },
+  "fidelity": {
+    "literal_instruction_bound_in_memory": true,
+    "instruction_drift_is_repair_signal": true,
+    "operation_class_bound_before_action": true,
+    "target_state_bound_before_action": true,
+    "routine_mutation_does_not_require_separate_authorization_reference": true,
+    "destructive_irreversible_requires_scoped_authority_reference": true
+  },
+  "privacy": {
+    "audit_literal_instruction": false,
+    "audit_tool_payloads": false,
+    "public_snapshot_uses_instruction_sha256": true,
+    "receipt_details_are_digest_only": true
+  }
+}

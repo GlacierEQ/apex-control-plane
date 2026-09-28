@@ -1,0 +1,188 @@
+name: APEX Strongest Boot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/apex_strong_boot.py"
+      - "src/strict_frontier_preflight.py"
+      - "src/strict_executable_frontier_authority.py"
+      - "src/execution_dependency_enumerator_authority.py"
+      - "src/executable_frontier_authority.py"
+      - "src/apex_runtime_kernel.py"
+      - "src/verified_runtime_entrypoint.py"
+      - "src/runtime_execution_guard.py"
+      - "src/epistemic_risk_gate.py"
+      - "src/control_plane.py"
+      - "src/control_plane_runtime.py"
+      - "src/sitecustomize.py"
+      - "src/apex_enforced_startup.py"
+      - "src/operator_fidelity_lock.py"
+      - "src/operator_fidelity_preflight.py"
+      - "src/notion_continuity_gate.py"
+      - "src/prime_directive_boot.py"
+      - "tests/test_apex_strong_boot.py"
+      - "tests/test_strict_frontier_runtime_cutover.py"
+      - "tests/test_strict_executable_frontier_authority.py"
+      - "tests/test_execution_dependency_enumerator_authority.py"
+      - "tests/test_apex_runtime_kernel.py"
+      - "tests/test_verified_runtime_entrypoint.py"
+      - "tests/test_runtime_execution_guard.py"
+      - "tests/test_control_plane.py"
+      - ".github/workflows/apex-strongest-boot.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/apex_strong_boot.py"
+      - "src/strict_frontier_preflight.py"
+      - "src/strict_executable_frontier_authority.py"
+      - "src/execution_dependency_enumerator_authority.py"
+      - "src/executable_frontier_authority.py"
+      - "src/apex_runtime_kernel.py"
+      - "src/verified_runtime_entrypoint.py"
+      - "src/runtime_execution_guard.py"
+      - "src/epistemic_risk_gate.py"
+      - "src/control_plane.py"
+      - "src/control_plane_runtime.py"
+      - "src/sitecustomize.py"
+      - "src/apex_enforced_startup.py"
+      - "src/operator_fidelity_lock.py"
+      - "src/operator_fidelity_preflight.py"
+      - "src/notion_continuity_gate.py"
+      - "src/prime_directive_boot.py"
+      - "tests/test_apex_strong_boot.py"
+      - "tests/test_strict_frontier_runtime_cutover.py"
+      - "tests/test_strict_executable_frontier_authority.py"
+      - "tests/test_execution_dependency_enumerator_authority.py"
+      - "tests/test_apex_runtime_kernel.py"
+      - "tests/test_verified_runtime_entrypoint.py"
+      - "tests/test_runtime_execution_guard.py"
+      - "tests/test_control_plane.py"
+      - ".github/workflows/apex-strongest-boot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    name: prove strongest boot (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test runner
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Compile complete boot, strict frontier, and runtime spine
+        run: |
+          python -m py_compile \
+            src/apex_strong_boot.py \
+            src/strict_frontier_preflight.py \
+            src/strict_executable_frontier_authority.py \
+            src/execution_dependency_enumerator_authority.py \
+            src/executable_frontier_authority.py \
+            src/apex_runtime_kernel.py \
+            src/verified_runtime_entrypoint.py \
+            src/runtime_execution_guard.py \
+            src/epistemic_risk_gate.py \
+            src/apex_enforced_startup.py \
+            src/notion_continuity_gate.py \
+            src/prime_directive_boot.py \
+            src/operator_fidelity_lock.py \
+            src/operator_fidelity_preflight.py \
+            src/control_plane.py \
+            src/control_plane_runtime.py \
+            src/sitecustomize.py
+
+      - name: Prove strong-boot, strict frontier, and runtime invariants
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_apex_strong_boot.py \
+            tests/test_strict_frontier_runtime_cutover.py \
+            tests/test_strict_executable_frontier_authority.py \
+            tests/test_execution_dependency_enumerator_authority.py \
+            tests/test_apex_runtime_kernel.py \
+            tests/test_verified_runtime_entrypoint.py \
+            tests/test_runtime_execution_guard.py \
+            tests/test_control_plane.py
+
+      - name: Prove frontier uncertainty accumulates diagnostics instead of suppressing later observers
+        shell: bash
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python - <<'PY'
+          from apex_strong_boot import _run_model_attractor_preflight
+
+          findings = []
+          _run_model_attractor_preflight(findings)
+          assert findings == [
+              "strict_executable_frontier_authority: strict frontier preflight requires a boot receipt",
+              "model_attractor_defense: no in-process validation published",
+          ], findings
+          PY
+
+      - name: Prove runtime entrypoint continues with startup uplift without receipts
+        shell: bash
+        run: |
+          CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/strong.out 2>/tmp/strong.err
+          test -s /tmp/strong.out
+          grep -q '"phase":"complete"' /tmp/strong.out
+          grep -q '"status": "uplift_required"' /tmp/strong.err
+          if grep -q '"external_action_authorized": true' /tmp/strong.err; then
+            echo "startup uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi
+
+      - name: Prove strict Python auto-boot preserves execution with visible uplift
+        shell: bash
+        run: |
+          PYTHONPATH=src \
+          CASEY_AUTO_BOOT=1 \
+          CASEY_AUTO_BOOT_MODE=strict \
+          python -c 'print("RAN")' >/tmp/site.out 2>/tmp/site.err
+          grep -q '^RAN$' /tmp/site.out
+          grep -q '"status": "uplift_required"' /tmp/site.err
+          if grep -q '"external_action_authorized": true' /tmp/site.err; then
+            echo "startup uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi
+
+      - name: Prove legacy runtime stays local and cannot authorize external action
+        shell: bash
+        run: |
+          CASEY_AUTO_BOOT_MODE=strict python src/control_plane_runtime.py >/tmp/legacy.out 2>/tmp/legacy.err
+          test -s /tmp/legacy.out
+          grep -q '"status":"completed"' /tmp/legacy.out
+          grep -q '"human_review_required":true' /tmp/legacy.out
+          grep -q '"external_action_authorized":false' /tmp/legacy.out
+
+      - name: Prove request-mode auto-boot is diagnostic uplift without blanket authority
+        shell: bash
+        run: |
+          PYTHONPATH=src \
+          CASEY_AUTO_BOOT=1 \
+          CASEY_AUTO_BOOT_MODE=request \
+          python - <<'PY'
+          import os
+          import sitecustomize
+
+          session = sitecustomize.APEX_STRONG_BOOT_SESSION
+          kernel = sitecustomize.APEX_RUNTIME_KERNEL
+          assert session is not None
+          assert kernel is session.runtime_kernel
+          assert session.uplift_required is True
+          assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete_with_uplift"
+          assert os.environ.get("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED") not in {"1", "true", "True"}
+          PY

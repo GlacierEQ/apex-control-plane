@@ -1,0 +1,58 @@
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SNAPSHOT = ROOT / "db/migrations/20260902193955_control_plane_route_runtime_health_v4.sql"
+RUNTIME = ROOT / "db/migrations/20260902194020_control_plane_route_runtime_health_v4.sql"
+NOTION_SUPERSESSION = ROOT / "db/migrations/20260902193841_notion_route_supersession_v1.sql"
+CALL_E_REGISTRATION = ROOT / "db/migrations/20260903094000_register_call_e_continuity_connector_v1_1.sql"
+
+
+def test_live_operational_snapshot_source_is_service_role_only_and_prioritized():
+    source = SNAPSHOT.read_text().lower()
+    assert "control_plane_operational_snapshot_v2" in source
+    assert "operational_core" in source
+    assert "integration_working_set" in source
+    assert "estate_backlog" in source
+    assert "revoke all on function public.control_plane_operational_snapshot_v2() from public,anon,authenticated" in source
+    assert "grant execute on function public.control_plane_operational_snapshot_v2() to service_role" in source
+
+
+def test_live_runtime_health_requires_executable_healthy_routes():
+    source = RUNTIME.read_text().lower()
+    assert "and enabled_route_count>0" in source
+    assert "authority_tier<=2" not in source
+    assert "enabled_routes_with_runtime" in source
+    assert "enabled_healthy_runtime_routes" in source
+    assert "enabled_unhealthy_runtime_routes" in source
+    assert "rt.circuit_state='closed'" in source
+    assert "coalesce(rt.consecutive_failures,0)=0" in source
+
+
+def test_runtime_health_preserves_backlog_and_current_failure_evidence():
+    source = RUNTIME.read_text().lower()
+    assert "estate_backlog" in source
+    assert "effective_health_status" in source
+    assert "batch_failed_recent_15m" in source
+    assert "webhook_failed_recent_15m" in source
+    assert "stale_online_worker_count" in source
+
+
+def test_snapshot_preserves_next_human_gate_and_effective_health():
+    source = SNAPSHOT.read_text().lower()
+    assert "effective_health_status" in source
+    assert "next_human_gate" in source
+
+
+def test_notion_v1_is_disabled_only_when_v2_is_healthy():
+    source = NOTION_SUPERSESSION.read_text().lower()
+    assert "notion:search:workspace_search:v1" in source
+    assert "notion:search:workspace_search:v2" in source
+    assert "r2.health_status='healthy'" in source
+    assert "r2.circuit_state='closed'" in source
+    assert "r2.consecutive_failures=0" in source
+    assert "set enabled=false" in source
+
+
+def test_call_e_replay_preserves_verified_authorization_health():
+    source = CALL_E_REGISTRATION.read_text().lower()
+    assert "('healthy','verified','verified_authorization')" in source

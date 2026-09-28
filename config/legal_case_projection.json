@@ -1,0 +1,23 @@
+{
+  "schema_version": "2.0.0",
+  "name": "GlacierEQ Legal Case Projection",
+  "mode": "read_only_fail_closed",
+  "authority": {
+    "role": "mission_projection_only",
+    "source_bound_case_records_retain_authority": true,
+    "projection_may_not_overwrite_operator_firsthand_or_provider_native_evidence": true
+  },
+  "environment": {
+    "url_priority": ["GLACIEREQ_SUPABASE_URL", "SUPABASE_URL"],
+    "key_priority": ["GLACIEREQ_SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY"]
+  },
+  "table_contract": {
+    "case": "apex_legal_cases",
+    "actors": "apex_legal_case_actors",
+    "propositions": "apex_legal_case_propositions",
+    "contradictions": "apex_legal_case_contradictions",
+    "evidence_targets": "apex_legal_case_evidence_targets",
+    "receipts": "apex_legal_projection_receipts"
+  },
+  "mutation_policy": "No mutation methods. Writes require separately authorized execution surfaces and receipts."
+}

@@ -1,0 +1,115 @@
+{
+  "schema_version": "1.1",
+  "status": "ACTIVE",
+  "authority": "OPERATOR_CONTROLLED",
+  "source_ref": "operator_current_message_2026-09-20_glaciereq_operator_kernel_enforced_hourly_case_advancement_engine",
+  "purpose": "Plant the Operator execution kernel across GlacierEQ reach as a shared behavioral contract without flattening peer authority or duplicating sensitive case evidence.",
+  "laws": [
+    "DEFAULT_IS_MAXIMUM_COHERENT_PROGRESS",
+    "RECOVER_BEFORE_RECREATING",
+    "CONTINUE_BEFORE_RECONSTRUCTING",
+    "COMPOUND_BEFORE_REPLACING",
+    "MERGE_BEFORE_FLATTENING",
+    "BLOCKED_TOOL_CHANGES_ROUTE_NOT_OBJECTIVE",
+    "ONLY_EXPLICIT_OPERATOR_INSTRUCTION_CHANGES_MISSION",
+    "NO_TOOL_EVIDENCE_NO_EXECUTION_CLAIM",
+    "NO_READBACK_NO_VERIFIED_COMPLETION"
+  ],
+  "mandatory_loop": [
+    "RECOVER",
+    "APPLY_CURRENT_OPERATOR_AUTHORITY",
+    "BUILD_LIVE_CASE_GRAPH",
+    "DEFINE_DESIRED_OBJECTIVE_STATE",
+    "IDENTIFY_HIGHEST_LEVERAGE_STATE_TRANSITIONS",
+    "GENERATE_MATERIALLY_DISTINCT_SOLUTION_ROUTES",
+    "SELECT_STRONGEST_COHERENT_ROUTE",
+    "EXECUTE",
+    "TEST_FALSIFY",
+    "REPAIR",
+    "PROVIDER_READBACK",
+    "PERSIST_SOURCE_BOUND_DELTA",
+    "RERANK",
+    "CONTINUE_WHILE_USEFUL_CAPACITY_REMAINS",
+    "AUDIT_EXECUTION_CLAIMS",
+    "REPORT_LAST"
+  ],
+  "propagation": {
+    "github": {
+      "role": "versioned_authority",
+      "root_repo": "GlacierEQ/apex-control-plane",
+      "mode": "reference_and_compose_not_copy"
+    },
+    "supabase_backend_ops": {
+      "role": "live_control_projection",
+      "project_ref": "dyhprklicgewmrimecey",
+      "mode": "pointer_plus_runtime_receipts"
+    },
+    "supabase_glaciereq": {
+      "role": "mission_projection",
+      "project_ref": "kjebemdgvjvuutzvhbtp",
+      "mode": "case_scoped_projection_only"
+    },
+    "notion": {
+      "role": "operator_ui_projection",
+      "mode": "reference_authority_and_show_live_state"
+    },
+    "mem": {
+      "role": "continuity_recall_projection",
+      "mode": "pointer_not_authority"
+    },
+    "memory_federation": {
+      "role": "context_compilation",
+      "mode": "route_not_centralize_reference_not_duplicate"
+    },
+    "critical_repositories": {
+      "mode": "inherit_by_contract_pointer",
+      "repos": [
+        "GlacierEQ/aspen-grove-core",
+        "GlacierEQ/Genius-Mastery",
+        "GlacierEQ/mega-skills",
+        "GlacierEQ/AKOS",
+        "GlacierEQ/mastermind"
+      ]
+    },
+    "connectors_mcp": {
+      "role": "execution_capability_fabric",
+      "mode": "apply_kernel_at_route_selection_receipt_and_readback_boundaries"
+    },
+    "codex": {
+      "role": "native_global_instruction_surface",
+      "native_entrypoint": "~/.codex/AGENTS.md",
+      "managed_block": "adapters/codex/GLOBAL_AGENTS_MANAGED_BLOCK.md",
+      "installer": "scripts/install_codex_operator_kernel.py",
+      "local_kernel_mirror": "~/.codex/GLACIEREQ_OPERATOR_KERNEL.md"
+    },
+    "chatgpt": {
+      "role": "native_project_and_custom_instruction_projection",
+      "project_instructions": "adapters/chatgpt/PROJECT_INSTRUCTIONS.md",
+      "custom_instructions": "adapters/chatgpt/CUSTOM_INSTRUCTIONS.md",
+      "full_kernel_source": "GLACIEREQ_OPERATOR_KERNEL.md",
+      "deterministic_project_bootstrap_requires_native_project_instructions": true,
+      "repo_cannot_mutate_account_settings": true
+    }
+  },
+  "non_flattening": [
+    "Operator firsthand records retain authority for Operator reality intent corrections and positions.",
+    "Provider-native systems retain authority for provider execution state and native receipts.",
+    "Case repositories retain source-bound proposition authority.",
+    "Native evidence remains read-only and is never replaced by projections.",
+    "Sensitive case payloads are not copied into broad control surfaces; use controlled pointers."
+  ],
+  "case_engine": {
+    "scope": "all_materially_active_cases",
+    "advancement": "objective_state_transition_required_when_executable",
+    "passive_waiting": false,
+    "outbound_boundary": "build execution-ready objects; do not send/call/file/publish/change permissions without exact current authorization"
+  },
+  "anti_rediscovery": true,
+  "readback_required": true,
+  "shared_kernel": {
+    "path": "GLACIEREQ_OPERATOR_KERNEL.md",
+    "version": "1.0.0",
+    "role": "highest_user_controlled_shared_operator_contract",
+    "adapters": "reference_and_project_not_competing_authority"
+  }
+}

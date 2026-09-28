@@ -1,0 +1,35 @@
+{
+  "run_id": "32009482211",
+  "timestamp": "2026-08-17T08:28:15.196490+00:00",
+  "auto_approved": true,
+  "p0_count": 0,
+  "p1_count": 0,
+  "connectors": [
+    {
+      "name": "GitHub",
+      "declared": true,
+      "authenticated": true,
+      "reachable": true,
+      "action_capable": true,
+      "notes": "repository=GlacierEQ/apex-control-plane"
+    },
+    {
+      "name": "Notion",
+      "declared": true,
+      "authenticated": false,
+      "reachable": false,
+      "action_capable": false,
+      "notes": "NOTION_TOKEN missing"
+    },
+    {
+      "name": "Supabase",
+      "declared": true,
+      "authenticated": false,
+      "reachable": false,
+      "action_capable": false,
+      "notes": "SUPABASE_URL or SUPABASE_KEY missing"
+    }
+  ],
+  "findings": [],
+  "actions_executed": []
+}

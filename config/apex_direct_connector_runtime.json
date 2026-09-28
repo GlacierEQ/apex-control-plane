@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "runtime_id": "apex-direct-connector-runtime",
+  "version": 2,
+  "provenance": {
+    "donor_branch": "apex/reconcile-direct-connector-runtime-v3",
+    "donor_pr": 77,
+    "donor_head": "8ade3291cd2c10388f7bccf294adc7d72ec7d867",
+    "compatibility_rewrite": true
+  },
+  "transport": {
+    "name": "authenticated_chatgpt_connectors",
+    "credential_material_in_repository": false,
+    "scheduled_execution": false,
+    "persistent_worker_claimed": false
+  },
+  "authority_semantics": {
+    "source_bound_authorization_required": true,
+    "blanket_per_write_approval_required": false,
+    "routine_recoverable_write_authority_mode": "active_mission_authority",
+    "consequence_sensitive_write_authority_mode": "scoped_consequence_authority",
+    "verification_is_permission": false,
+    "terminal_readback_required_for_write_completion_claim": true,
+    "ambiguous_external_outcome_can_never_promote_to_verified": true
+  },
+  "transport_resolution": {
+    "permission_union_allowed": false,
+    "transport_must_be_selected_before_capability_resolution": true,
+    "bridge_catalog_cannot_disable_a_verified_direct_runtime_route": true,
+    "direct_runtime_cannot_enable_a_bridge_host_mapping": true
+  },
+  "harvested_mechanisms": [
+    "transport_identity_before_capability_resolution",
+    "cross_transport_permission_union_rejection",
+    "route_mutation_class_validation",
+    "same_connector_same_target_terminal_readback",
+    "pipeline_definition_hash_binding",
+    "acyclic_dependency_validation",
+    "receipt_identity_and_stage_count_validation",
+    "explicit_nonclaims_for_undeployed_capabilities"
+  ],
+  "superseded_donor_predicates": [
+    "every_write_route_requires_approval_true",
+    "every_verified_write_requires_per_step_OPERATOR_approval_record",
+    "writes_require_transport_local_approval_and_terminal_readback"
+  ],
+  "known_boundaries": {
+    "github_main_direct_write": "blocked_by_required_status_checks",
+    "github_branch_protection_bypassed": false,
+    "cloudflare_queue_consumer_deployed": false,
+    "smithery_scoped_executor_deployed": false,
+    "automatic_supabase_to_notion_publisher_deployed": false
+  }
+}

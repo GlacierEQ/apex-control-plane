@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "registry_id": "apex-connector-contract-registry",
+  "version": 2,
+  "provenance": {
+    "donor_branch": "apex/reconcile-direct-connector-runtime-v3",
+    "donor_pr": 77,
+    "donor_head": "8ade3291cd2c10388f7bccf294adc7d72ec7d867",
+    "harvest_mode": "compatibility_rewrite",
+    "reason": "preserve transport isolation and capability-resolution boundaries without restoring superseded blanket exact-write approval semantics"
+  },
+  "contracts": {
+    "authenticated_session_provider_bridge": {
+      "path": "config/apex_connector_catalog.json",
+      "source_version": 3,
+      "transport": "authenticated_session_provider_bridge",
+      "authority": "repository_contract",
+      "purpose": "Repository-side provider bridge contract under current source-bound authority semantics."
+    },
+    "authenticated_chatgpt_direct_runtime": {
+      "path": "config/apex_direct_connector_runtime.json",
+      "source_version": 2,
+      "transport": "authenticated_chatgpt_connectors",
+      "authority": "supabase_route_policy_projection",
+      "purpose": "Direct connector runtime projection; route authority is source-bound and consequence-scoped rather than blanket per-write approval."
+    }
+  },
+  "resolution": {
+    "permission_union_allowed": false,
+    "transport_must_be_selected_before_capability_resolution": true,
+    "bridge_catalog_cannot_disable_a_verified_direct_runtime_route": true,
+    "direct_runtime_cannot_enable_a_bridge_host_mapping": true,
+    "authorization_is_source_bound_and_route_scoped": true,
+    "routine_recoverable_writes_may_inherit_active_mission_authority": true,
+    "consequence_sensitive_writes_require_scoped_consequence_authority": true,
+    "verification_and_readback_do_not_manufacture_permission": true,
+    "writes_require_terminal_readback": true,
+    "ambiguous_external_outcome_can_never_promote_to_verified": true
+  }
+}

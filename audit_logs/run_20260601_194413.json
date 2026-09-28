@@ -1,0 +1,2513 @@
+{
+  "run": {
+    "run_id": "20260601_194413",
+    "started_at": "2026-06-01T19:44:13.616650+00:00",
+    "completed_at": "2026-06-01T19:44:13.621040+00:00",
+    "findings": [
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_control_plane.json:13",
+        "evidence": "Pattern 'token' found: \"env_key\": \"APEX_GITHUB_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617228+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_control_plane.json:18",
+        "evidence": "Pattern 'token' found: \"auth_method\": \"INTEGRATION_TOKEN_ENV\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617244+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_control_plane.json:19",
+        "evidence": "Pattern 'token' found: \"env_key\": \"APEX_NOTION_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617251+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_control_plane.json:26",
+        "evidence": "Pattern 'secret' found: \"no secrets in source files \u2014 env vars only\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617267+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:52",
+        "evidence": "Pattern 'token' found: if not GITHUB_TOKEN:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617373+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:54",
+        "evidence": "Pattern 'token' found: \"error\": \"APEX_GITHUB_TOKEN env var not set\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617382+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:57",
+        "evidence": "Pattern 'token' found: headers={\"Authorization\": f\"token {GITHUB_TOKEN}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617389+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:73",
+        "evidence": "Pattern 'token' found: if not NOTION_TOKEN:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617405+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:75",
+        "evidence": "Pattern 'token' found: \"error\": \"APEX_NOTION_TOKEN env var not set\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617410+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:78",
+        "evidence": "Pattern 'bearer ' found: headers={\"Authorization\": f\"Bearer {NOTION_TOKEN}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617416+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:95",
+        "evidence": "Pattern 'token' found: if not GITHUB_TOKEN:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617432+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:100",
+        "evidence": "Pattern 'token' found: headers={\"Authorization\": f\"token {GITHUB_TOKEN}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617439+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:128",
+        "evidence": "Pattern 'token' found: action=\"Check GITHUB_TOKEN scopes include repo read\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617466+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:141",
+        "evidence": "Pattern 'token' found: title=f\"{c['connector']} token missing\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617480+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:143",
+        "evidence": "Pattern 'secret' found: action=f\"Add {c['connector'].upper()} secret to GitHub repo secrets\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617486+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:150",
+        "evidence": "Pattern 'token' found: action=f\"Rotate token and verify network for {c['connector']}\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617495+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:3",
+        "evidence": "Pattern 'secret' found: ## \u26a0\ufe0f ZERO HARDCODED SECRETS",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617652+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:5",
+        "evidence": "Pattern 'secret' found: This repository and ALL repos under GlacierEQ operate under a strict zero-hardco",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617662+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:9",
+        "evidence": "Pattern 'token' found: 1. **Never** commit API keys, tokens, passwords, or connection strings to source",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617669+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:10",
+        "evidence": "Pattern 'secret' found: 2. **Never** include secrets in README files, comments, or documentation",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617674+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:11",
+        "evidence": "Pattern 'secret' found: 3. **Never** store secrets in JSON config files tracked by git",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617678+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:12",
+        "evidence": "Pattern 'secret' found: 4. All secrets live in **GitHub Secrets** (for CI/CD) or **.env files** (gitigno",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617683+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:13",
+        "evidence": "Pattern 'secret' found: 5. Any exposed secret must be **revoked immediately** before any other action",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617687+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:15",
+        "evidence": "Pattern 'secret' found: ### Secret Storage Hierarchy",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617696+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:18",
+        "evidence": "Pattern 'token' found: Production:  GitHub Repository Secrets \u2192 GITHUB_TOKEN, NOTION_TOKEN, etc.",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617703+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:20",
+        "evidence": "Pattern 'secret' found: CI/CD:       ${{ secrets.SECRET_NAME }} in workflow YAML only",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617709+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:29",
+        "evidence": "Pattern 'secret' found: secrets.json",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617717+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:32",
+        "evidence": "Pattern 'secret' found: *_secrets.*",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617723+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:35",
+        "evidence": "Pattern 'secret' found: ### If a Secret Is Exposed",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617728+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:39",
+        "evidence": "Pattern 'secret' found: 3. Add to GitHub Secrets only",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617734+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:54",
+        "evidence": "Pattern 'token' found: \"github\": bool(GITHUB_TOKEN),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617829+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:55",
+        "evidence": "Pattern 'token' found: \"notion\": bool(NOTION_TOKEN),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617834+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:66",
+        "evidence": "Pattern 'token' found: log(f\"Connector [{name}]: {'GREEN' if auth_ok else 'RED \u2014 NO TOKEN'}\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617848+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:72",
+        "evidence": "Pattern 'secret' found: # LAYER 2: Secret Leakage Scan",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617856+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:74",
+        "evidence": "Pattern 'secret' found: SECRET_PATTERNS = [",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617862+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:75",
+        "evidence": "Pattern 'sk-' found: \"sk-\", \"ghp_\", \"ghs_\", \"xai-\", \"ntn_\", \"AKIA\", \"bearer \",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617865+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:76",
+        "evidence": "Pattern 'api_key' found: \"api_key\", \"apikey\", \"token\", \"password\", \"secret\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617870+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:83",
+        "evidence": "Pattern 'secret' found: def scan_secrets(root: str = \".\") -> List[Finding]:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617877+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:95",
+        "evidence": "Pattern 'secret' found: for pat in SECRET_PATTERNS:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617891+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:100",
+        "evidence": "Pattern 'secret' found: title=f\"Potential secret in {fname}:{i}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617899+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:108",
+        "evidence": "Pattern 'secret' found: log(f\"Secret scan: {len(findings)} potential leaks found\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617909+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:124",
+        "evidence": "Pattern 'token' found: if \"GITHUB_TOKEN\" in content and \"secrets.\" not in content:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617928+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:128",
+        "evidence": "Pattern 'token' found: title=f\"Workflow {fname} may use default token insecurely\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617934+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:129",
+        "evidence": "Pattern 'token' found: evidence=\"GITHUB_TOKEN referenced without secrets.GITHUB_TOKEN pattern\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617939+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:180",
+        "evidence": "Pattern 'secret' found: secret_findings = scan_secrets(\".\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617991+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:181",
+        "evidence": "Pattern 'secret' found: run.findings.extend(secret_findings)",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617995+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:84",
+        "evidence": "Pattern 'token' found: if token:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618527+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:90",
+        "evidence": "Pattern 'bearer ' found: headers={\"Authorization\": f\"Bearer {token}\"},",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618541+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:105",
+        "evidence": "Pattern 'token' found: if ntoken:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618558+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:112",
+        "evidence": "Pattern 'bearer ' found: \"Authorization\": f\"Bearer {ntoken}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618566+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:135",
+        "evidence": "Pattern 'apikey' found: headers={\"apikey\": sb_key},",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618586+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:147",
+        "evidence": "Pattern 'secret' found: # \u2500\u2500\u2500 Secret Scan \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618601+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:149",
+        "evidence": "Pattern 'secret' found: SECRET_PATTERNS = [",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618606+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:150",
+        "evidence": "Pattern 'token' found: (\"Notion Token\", \"secret_\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618610+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:151",
+        "evidence": "Pattern 'sk-' found: (\"OpenAI Key\", \"sk-\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618614+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:152",
+        "evidence": "Pattern 'ghp_' found: (\"GitHub PAT\", \"ghp_\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618621+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:159",
+        "evidence": "Pattern 'secret' found: def scan_for_secrets(root: str = \".\") -> List[Finding]:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618666+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:173",
+        "evidence": "Pattern 'secret' found: for name, pattern in SECRET_PATTERNS:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618692+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:209",
+        "evidence": "Pattern 'secret' found: evidence=\"No .gitignore \u2014 .env and secrets may be committed\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618731+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:259",
+        "evidence": "Pattern 'secret' found: \"# APEX Control Plane \u2014 Required Secrets\\n\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618795+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:261",
+        "evidence": "Pattern 'token' found: \"GITHUB_TOKEN=\\n\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618802+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:262",
+        "evidence": "Pattern 'token' found: \"NOTION_TOKEN=\\n\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618806+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:265",
+        "evidence": "Pattern 'api_key' found: \"OPENAI_API_KEY=\\n\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618811+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:339",
+        "evidence": "Pattern 'secret' found: # Step 2: Secret scan",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618881+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:340",
+        "evidence": "Pattern 'secret' found: console.print(\"\\n[bold]Step 2: Secret Leakage Scan[/bold]\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618886+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:341",
+        "evidence": "Pattern 'secret' found: secret_findings = scan_for_secrets(\".\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618890+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:342",
+        "evidence": "Pattern 'secret' found: for f in secret_findings:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618894+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:345",
+        "evidence": "Pattern 'secret' found: run.findings.extend(secret_findings)",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618902+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:10",
+        "evidence": "Pattern 'secret' found: 2. **Secret Leakage Scan** \u2014 scans all source files for exposed credentials",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619003+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:23",
+        "evidence": "Pattern 'secret' found: Add these repository secrets (Settings \u2192 Secrets \u2192 Actions):",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619031+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:26",
+        "evidence": "Pattern 'token' found: NOTION_TOKEN       # Optional",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619039+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:29",
+        "evidence": "Pattern 'api_key' found: OPENAI_API_KEY     # Optional",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619044+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:32",
+        "evidence": "Pattern 'token' found: `GITHUB_TOKEN` is automatically provided by GitHub Actions.",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619050+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:36",
+        "evidence": "Pattern 'secret' found: This system is designed to **never ask for confirmation**. Every P0 is logged an",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619058+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in connector_registry.json:7",
+        "evidence": "Pattern 'token' found: \"env_var\": \"GITHUB_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619104+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in connector_registry.json:13",
+        "evidence": "Pattern 'token' found: \"env_var\": \"NOTION_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619113+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in connector_registry.json:24",
+        "evidence": "Pattern 'api_key' found: \"env_var\": \"OPENAI_API_KEY\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619123+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:20",
+        "evidence": "Pattern 'token' found: def create_issue(token: str, repo: str, title: str, body: str, labels: list):",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619177+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:24",
+        "evidence": "Pattern 'bearer ' found: \"Authorization\": f\"Bearer {token}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619186+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:39",
+        "evidence": "Pattern 'token' found: if not token:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619204+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:40",
+        "evidence": "Pattern 'token' found: print(\"No GITHUB_TOKEN \u2014 skipping issue creation\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619210+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:64",
+        "evidence": "Pattern 'token' found: status, resp = create_issue(token, repo, title, body, labels)",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619234+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion_validator.py:4",
+        "evidence": "Pattern 'token' found: def validate(token: str = None) -> dict:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619373+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion_validator.py:6",
+        "evidence": "Pattern 'token' found: if not token:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619384+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion_validator.py:7",
+        "evidence": "Pattern 'token' found: return {\"connector\": \"notion\", \"state\": \"declared\", \"error\": \"token missing\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619388+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion_validator.py:10",
+        "evidence": "Pattern 'bearer ' found: headers={\"Authorization\": f\"Bearer {token}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619394+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion.json:8",
+        "evidence": "Pattern 'token' found: \"secret_ref\": \"NOTION_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619448+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion.json:9",
+        "evidence": "Pattern 'token' found: \"note\": \"Set NOTION_TOKEN in GitHub Secrets \u2014 never hardcode\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619456+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in supabase_validator.py:11",
+        "evidence": "Pattern 'bearer ' found: headers={\"apikey\": key, \"Authorization\": f\"Bearer {key}\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619511+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github_validator.py:4",
+        "evidence": "Pattern 'token' found: def validate(token: str = None, owner: str = \"GlacierEQ\") -> dict:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619556+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github_validator.py:6",
+        "evidence": "Pattern 'token' found: if not token:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619563+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github_validator.py:7",
+        "evidence": "Pattern 'token' found: return {\"connector\": \"github\", \"state\": \"declared\", \"error\": \"token missing\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619567+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github_validator.py:10",
+        "evidence": "Pattern 'token' found: headers={\"Authorization\": f\"token {token}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619573+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github.json:8",
+        "evidence": "Pattern 'token' found: \"secret_ref\": \"GITHUB_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619621+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github.json:9",
+        "evidence": "Pattern 'token' found: \"note\": \"Set GITHUB_TOKEN in GitHub Secrets \u2014 never hardcode\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619650+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:39",
+        "evidence": "Pattern 'token' found: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619830+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:40",
+        "evidence": "Pattern 'token' found: NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619837+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:41",
+        "evidence": "Pattern 'secret' found: SUPABASE_URL: ${{ secrets.SUPABASE_URL }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619842+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:42",
+        "evidence": "Pattern 'secret' found: SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619847+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:43",
+        "evidence": "Pattern 'api_key' found: PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619851+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily-audit.yml:28",
+        "evidence": "Pattern 'token' found: APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619923+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily-audit.yml:29",
+        "evidence": "Pattern 'token' found: APEX_NOTION_TOKEN: ${{ secrets.APEX_NOTION_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619928+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily-audit.yml:40",
+        "evidence": "Pattern 'token' found: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619944+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:1",
+        "evidence": "Pattern 'secret' found: name: Secret Leakage Scanner",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620007+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:10",
+        "evidence": "Pattern 'secret' found: secret-scan:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620017+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:22",
+        "evidence": "Pattern 'token' found: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620028+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:26",
+        "evidence": "Pattern 'secret' found: - name: Python secret pattern scan",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620037+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:31",
+        "evidence": "Pattern 'token' found: (\"github_token\", r\"gh[pousr]_[A-Za-z0-9]{36,}\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620044+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:32",
+        "evidence": "Pattern 'token' found: (\"notion_token\", r\"secret_[A-Za-z0-9]{43}\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620048+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:33",
+        "evidence": "Pattern 'sk-' found: (\"openai_key\", r\"sk-[A-Za-z0-9]{48}\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620052+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:34",
+        "evidence": "Pattern 'api_key' found: (\"generic_secret\", r\"(?i)(api_key|api-key|apikey|auth_token|secret)[\\s=:\\\"']+[A-",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620056+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:51",
+        "evidence": "Pattern 'secret' found: print(\"SECRET LEAKAGE DETECTED:\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620072+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:56",
+        "evidence": "Pattern 'secret' found: print(\"Clean: no secrets detected\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620079+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:26",
+        "evidence": "Pattern 'token' found: token: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620130+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:41",
+        "evidence": "Pattern 'token' found: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620143+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:44",
+        "evidence": "Pattern 'token' found: NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620148+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:45",
+        "evidence": "Pattern 'secret' found: SUPABASE_URL: ${{ secrets.SUPABASE_URL }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620152+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:46",
+        "evidence": "Pattern 'secret' found: SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620156+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:47",
+        "evidence": "Pattern 'api_key' found: OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620160+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:62",
+        "evidence": "Pattern 'token' found: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620175+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in scan_repos.py:19",
+        "evidence": "Pattern 'token' found: headers={\"Authorization\": f\"token {TOKEN}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620313+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in scan_repos.py:49",
+        "evidence": "Pattern 'token' found: if not TOKEN:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620343+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in scan_repos.py:50",
+        "evidence": "Pattern 'token' found: print(\"ERROR: APEX_GITHUB_TOKEN not set\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620347+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:21",
+        "evidence": "Pattern 'secret' found: 3. `blocked_by_auth` items need secrets added to GitHub Secrets first",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620433+00:00"
+      }
+    ],
+    "actions_executed": [],
+    "connectors_validated": {
+      "github": {
+        "declared": true,
+        "authenticated": false,
+        "reachable": false,
+        "action_capable": false,
+        "status": "RED"
+      },
+      "notion": {
+        "declared": true,
+        "authenticated": false,
+        "reachable": false,
+        "action_capable": false,
+        "status": "RED"
+      }
+    },
+    "status": "completed"
+  },
+  "action_queue": {
+    "immediate": [
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_control_plane.json:13",
+        "evidence": "Pattern 'token' found: \"env_key\": \"APEX_GITHUB_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617228+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_control_plane.json:18",
+        "evidence": "Pattern 'token' found: \"auth_method\": \"INTEGRATION_TOKEN_ENV\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617244+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_control_plane.json:19",
+        "evidence": "Pattern 'token' found: \"env_key\": \"APEX_NOTION_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617251+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_control_plane.json:26",
+        "evidence": "Pattern 'secret' found: \"no secrets in source files \u2014 env vars only\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617267+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:52",
+        "evidence": "Pattern 'token' found: if not GITHUB_TOKEN:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617373+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:54",
+        "evidence": "Pattern 'token' found: \"error\": \"APEX_GITHUB_TOKEN env var not set\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617382+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:57",
+        "evidence": "Pattern 'token' found: headers={\"Authorization\": f\"token {GITHUB_TOKEN}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617389+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:73",
+        "evidence": "Pattern 'token' found: if not NOTION_TOKEN:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617405+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:75",
+        "evidence": "Pattern 'token' found: \"error\": \"APEX_NOTION_TOKEN env var not set\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617410+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:78",
+        "evidence": "Pattern 'bearer ' found: headers={\"Authorization\": f\"Bearer {NOTION_TOKEN}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617416+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:95",
+        "evidence": "Pattern 'token' found: if not GITHUB_TOKEN:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617432+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:100",
+        "evidence": "Pattern 'token' found: headers={\"Authorization\": f\"token {GITHUB_TOKEN}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617439+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:128",
+        "evidence": "Pattern 'token' found: action=\"Check GITHUB_TOKEN scopes include repo read\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617466+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:141",
+        "evidence": "Pattern 'token' found: title=f\"{c['connector']} token missing\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617480+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:143",
+        "evidence": "Pattern 'secret' found: action=f\"Add {c['connector'].upper()} secret to GitHub repo secrets\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617486+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_daily.py:150",
+        "evidence": "Pattern 'token' found: action=f\"Rotate token and verify network for {c['connector']}\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617495+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:3",
+        "evidence": "Pattern 'secret' found: ## \u26a0\ufe0f ZERO HARDCODED SECRETS",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617652+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:5",
+        "evidence": "Pattern 'secret' found: This repository and ALL repos under GlacierEQ operate under a strict zero-hardco",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617662+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:9",
+        "evidence": "Pattern 'token' found: 1. **Never** commit API keys, tokens, passwords, or connection strings to source",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617669+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:10",
+        "evidence": "Pattern 'secret' found: 2. **Never** include secrets in README files, comments, or documentation",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617674+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:11",
+        "evidence": "Pattern 'secret' found: 3. **Never** store secrets in JSON config files tracked by git",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617678+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:12",
+        "evidence": "Pattern 'secret' found: 4. All secrets live in **GitHub Secrets** (for CI/CD) or **.env files** (gitigno",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617683+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:13",
+        "evidence": "Pattern 'secret' found: 5. Any exposed secret must be **revoked immediately** before any other action",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617687+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:15",
+        "evidence": "Pattern 'secret' found: ### Secret Storage Hierarchy",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617696+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:18",
+        "evidence": "Pattern 'token' found: Production:  GitHub Repository Secrets \u2192 GITHUB_TOKEN, NOTION_TOKEN, etc.",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617703+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:20",
+        "evidence": "Pattern 'secret' found: CI/CD:       ${{ secrets.SECRET_NAME }} in workflow YAML only",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617709+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:29",
+        "evidence": "Pattern 'secret' found: secrets.json",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617717+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:32",
+        "evidence": "Pattern 'secret' found: *_secrets.*",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617723+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:35",
+        "evidence": "Pattern 'secret' found: ### If a Secret Is Exposed",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617728+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in SECURITY.md:39",
+        "evidence": "Pattern 'secret' found: 3. Add to GitHub Secrets only",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617734+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:54",
+        "evidence": "Pattern 'token' found: \"github\": bool(GITHUB_TOKEN),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617829+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:55",
+        "evidence": "Pattern 'token' found: \"notion\": bool(NOTION_TOKEN),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617834+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:66",
+        "evidence": "Pattern 'token' found: log(f\"Connector [{name}]: {'GREEN' if auth_ok else 'RED \u2014 NO TOKEN'}\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617848+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:72",
+        "evidence": "Pattern 'secret' found: # LAYER 2: Secret Leakage Scan",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617856+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:74",
+        "evidence": "Pattern 'secret' found: SECRET_PATTERNS = [",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617862+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:75",
+        "evidence": "Pattern 'sk-' found: \"sk-\", \"ghp_\", \"ghs_\", \"xai-\", \"ntn_\", \"AKIA\", \"bearer \",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617865+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:76",
+        "evidence": "Pattern 'api_key' found: \"api_key\", \"apikey\", \"token\", \"password\", \"secret\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617870+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:83",
+        "evidence": "Pattern 'secret' found: def scan_secrets(root: str = \".\") -> List[Finding]:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617877+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:95",
+        "evidence": "Pattern 'secret' found: for pat in SECRET_PATTERNS:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617891+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:100",
+        "evidence": "Pattern 'secret' found: title=f\"Potential secret in {fname}:{i}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617899+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:108",
+        "evidence": "Pattern 'secret' found: log(f\"Secret scan: {len(findings)} potential leaks found\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617909+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:124",
+        "evidence": "Pattern 'token' found: if \"GITHUB_TOKEN\" in content and \"secrets.\" not in content:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617928+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:128",
+        "evidence": "Pattern 'token' found: title=f\"Workflow {fname} may use default token insecurely\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617934+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:129",
+        "evidence": "Pattern 'token' found: evidence=\"GITHUB_TOKEN referenced without secrets.GITHUB_TOKEN pattern\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617939+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:180",
+        "evidence": "Pattern 'secret' found: secret_findings = scan_secrets(\".\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617991+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.py:181",
+        "evidence": "Pattern 'secret' found: run.findings.extend(secret_findings)",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.617995+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:84",
+        "evidence": "Pattern 'token' found: if token:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618527+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:90",
+        "evidence": "Pattern 'bearer ' found: headers={\"Authorization\": f\"Bearer {token}\"},",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618541+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:105",
+        "evidence": "Pattern 'token' found: if ntoken:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618558+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:112",
+        "evidence": "Pattern 'bearer ' found: \"Authorization\": f\"Bearer {ntoken}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618566+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:135",
+        "evidence": "Pattern 'apikey' found: headers={\"apikey\": sb_key},",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618586+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:147",
+        "evidence": "Pattern 'secret' found: # \u2500\u2500\u2500 Secret Scan \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618601+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:149",
+        "evidence": "Pattern 'secret' found: SECRET_PATTERNS = [",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618606+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:150",
+        "evidence": "Pattern 'token' found: (\"Notion Token\", \"secret_\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618610+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:151",
+        "evidence": "Pattern 'sk-' found: (\"OpenAI Key\", \"sk-\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618614+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:152",
+        "evidence": "Pattern 'ghp_' found: (\"GitHub PAT\", \"ghp_\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618621+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:159",
+        "evidence": "Pattern 'secret' found: def scan_for_secrets(root: str = \".\") -> List[Finding]:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618666+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:173",
+        "evidence": "Pattern 'secret' found: for name, pattern in SECRET_PATTERNS:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618692+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:209",
+        "evidence": "Pattern 'secret' found: evidence=\"No .gitignore \u2014 .env and secrets may be committed\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618731+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:259",
+        "evidence": "Pattern 'secret' found: \"# APEX Control Plane \u2014 Required Secrets\\n\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618795+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:261",
+        "evidence": "Pattern 'token' found: \"GITHUB_TOKEN=\\n\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618802+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:262",
+        "evidence": "Pattern 'token' found: \"NOTION_TOKEN=\\n\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618806+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:265",
+        "evidence": "Pattern 'api_key' found: \"OPENAI_API_KEY=\\n\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618811+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:339",
+        "evidence": "Pattern 'secret' found: # Step 2: Secret scan",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618881+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:340",
+        "evidence": "Pattern 'secret' found: console.print(\"\\n[bold]Step 2: Secret Leakage Scan[/bold]\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618886+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:341",
+        "evidence": "Pattern 'secret' found: secret_findings = scan_for_secrets(\".\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618890+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:342",
+        "evidence": "Pattern 'secret' found: for f in secret_findings:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618894+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_runner.py:345",
+        "evidence": "Pattern 'secret' found: run.findings.extend(secret_findings)",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.618902+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:10",
+        "evidence": "Pattern 'secret' found: 2. **Secret Leakage Scan** \u2014 scans all source files for exposed credentials",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619003+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:23",
+        "evidence": "Pattern 'secret' found: Add these repository secrets (Settings \u2192 Secrets \u2192 Actions):",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619031+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:26",
+        "evidence": "Pattern 'token' found: NOTION_TOKEN       # Optional",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619039+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:29",
+        "evidence": "Pattern 'api_key' found: OPENAI_API_KEY     # Optional",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619044+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:32",
+        "evidence": "Pattern 'token' found: `GITHUB_TOKEN` is automatically provided by GitHub Actions.",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619050+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:36",
+        "evidence": "Pattern 'secret' found: This system is designed to **never ask for confirmation**. Every P0 is logged an",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619058+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in connector_registry.json:7",
+        "evidence": "Pattern 'token' found: \"env_var\": \"GITHUB_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619104+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in connector_registry.json:13",
+        "evidence": "Pattern 'token' found: \"env_var\": \"NOTION_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619113+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in connector_registry.json:24",
+        "evidence": "Pattern 'api_key' found: \"env_var\": \"OPENAI_API_KEY\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619123+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:20",
+        "evidence": "Pattern 'token' found: def create_issue(token: str, repo: str, title: str, body: str, labels: list):",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619177+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:24",
+        "evidence": "Pattern 'bearer ' found: \"Authorization\": f\"Bearer {token}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619186+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:39",
+        "evidence": "Pattern 'token' found: if not token:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619204+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:40",
+        "evidence": "Pattern 'token' found: print(\"No GITHUB_TOKEN \u2014 skipping issue creation\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619210+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex_issue_writer.py:64",
+        "evidence": "Pattern 'token' found: status, resp = create_issue(token, repo, title, body, labels)",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619234+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion_validator.py:4",
+        "evidence": "Pattern 'token' found: def validate(token: str = None) -> dict:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619373+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion_validator.py:6",
+        "evidence": "Pattern 'token' found: if not token:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619384+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion_validator.py:7",
+        "evidence": "Pattern 'token' found: return {\"connector\": \"notion\", \"state\": \"declared\", \"error\": \"token missing\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619388+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion_validator.py:10",
+        "evidence": "Pattern 'bearer ' found: headers={\"Authorization\": f\"Bearer {token}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619394+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion.json:8",
+        "evidence": "Pattern 'token' found: \"secret_ref\": \"NOTION_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619448+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in notion.json:9",
+        "evidence": "Pattern 'token' found: \"note\": \"Set NOTION_TOKEN in GitHub Secrets \u2014 never hardcode\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619456+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in supabase_validator.py:11",
+        "evidence": "Pattern 'bearer ' found: headers={\"apikey\": key, \"Authorization\": f\"Bearer {key}\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619511+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github_validator.py:4",
+        "evidence": "Pattern 'token' found: def validate(token: str = None, owner: str = \"GlacierEQ\") -> dict:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619556+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github_validator.py:6",
+        "evidence": "Pattern 'token' found: if not token:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619563+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github_validator.py:7",
+        "evidence": "Pattern 'token' found: return {\"connector\": \"github\", \"state\": \"declared\", \"error\": \"token missing\"}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619567+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github_validator.py:10",
+        "evidence": "Pattern 'token' found: headers={\"Authorization\": f\"token {token}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619573+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github.json:8",
+        "evidence": "Pattern 'token' found: \"secret_ref\": \"GITHUB_TOKEN\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619621+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in github.json:9",
+        "evidence": "Pattern 'token' found: \"note\": \"Set GITHUB_TOKEN in GitHub Secrets \u2014 never hardcode\"",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619650+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:39",
+        "evidence": "Pattern 'token' found: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619830+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:40",
+        "evidence": "Pattern 'token' found: NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619837+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:41",
+        "evidence": "Pattern 'secret' found: SUPABASE_URL: ${{ secrets.SUPABASE_URL }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619842+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:42",
+        "evidence": "Pattern 'secret' found: SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619847+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily_audit.yml:43",
+        "evidence": "Pattern 'api_key' found: PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619851+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily-audit.yml:28",
+        "evidence": "Pattern 'token' found: APEX_GITHUB_TOKEN: ${{ secrets.APEX_GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619923+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily-audit.yml:29",
+        "evidence": "Pattern 'token' found: APEX_NOTION_TOKEN: ${{ secrets.APEX_NOTION_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619928+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in daily-audit.yml:40",
+        "evidence": "Pattern 'token' found: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.619944+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:1",
+        "evidence": "Pattern 'secret' found: name: Secret Leakage Scanner",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620007+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:10",
+        "evidence": "Pattern 'secret' found: secret-scan:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620017+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:22",
+        "evidence": "Pattern 'token' found: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620028+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:26",
+        "evidence": "Pattern 'secret' found: - name: Python secret pattern scan",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620037+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:31",
+        "evidence": "Pattern 'token' found: (\"github_token\", r\"gh[pousr]_[A-Za-z0-9]{36,}\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620044+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:32",
+        "evidence": "Pattern 'token' found: (\"notion_token\", r\"secret_[A-Za-z0-9]{43}\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620048+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:33",
+        "evidence": "Pattern 'sk-' found: (\"openai_key\", r\"sk-[A-Za-z0-9]{48}\"),",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620052+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:34",
+        "evidence": "Pattern 'api_key' found: (\"generic_secret\", r\"(?i)(api_key|api-key|apikey|auth_token|secret)[\\s=:\\\"']+[A-",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620056+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:51",
+        "evidence": "Pattern 'secret' found: print(\"SECRET LEAKAGE DETECTED:\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620072+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in secret_scan.yml:56",
+        "evidence": "Pattern 'secret' found: print(\"Clean: no secrets detected\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620079+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:26",
+        "evidence": "Pattern 'token' found: token: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620130+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:41",
+        "evidence": "Pattern 'token' found: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620143+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:44",
+        "evidence": "Pattern 'token' found: NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620148+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:45",
+        "evidence": "Pattern 'secret' found: SUPABASE_URL: ${{ secrets.SUPABASE_URL }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620152+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:46",
+        "evidence": "Pattern 'secret' found: SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620156+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:47",
+        "evidence": "Pattern 'api_key' found: OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620160+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in apex-daily.yml:62",
+        "evidence": "Pattern 'token' found: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620175+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in scan_repos.py:19",
+        "evidence": "Pattern 'token' found: headers={\"Authorization\": f\"token {TOKEN}\",",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620313+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in scan_repos.py:49",
+        "evidence": "Pattern 'token' found: if not TOKEN:",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620343+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in scan_repos.py:50",
+        "evidence": "Pattern 'token' found: print(\"ERROR: APEX_GITHUB_TOKEN not set\")",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620347+00:00"
+      },
+      {
+        "severity": "P0",
+        "domain": "security",
+        "title": "Potential secret in README.md:21",
+        "evidence": "Pattern 'secret' found: 3. `blocked_by_auth` items need secrets added to GitHub Secrets first",
+        "action": "Rotate credential, remove from source, inject via env",
+        "auto_execute": false,
+        "status": "open",
+        "timestamp": "2026-06-01T19:44:13.620433+00:00"
+      }
+    ],
+    "strategic": [],
+    "backlog": []
+  }
+}

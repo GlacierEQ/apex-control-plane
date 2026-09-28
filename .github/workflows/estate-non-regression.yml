@@ -1,0 +1,49 @@
+name: APEX Estate Non-Regression
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  non-regression:
+    name: apex-estate-non-regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve exact compare refs
+        id: refs
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.event.after }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" || "$EVENT_NAME" == "pull_request_target" ]]; then
+            base="$PR_BASE"
+            head="$PR_HEAD"
+          else
+            base="$PUSH_BEFORE"
+            head="${PUSH_AFTER:-$GITHUB_SHA_VALUE}"
+          fi
+          if [[ -z "$head" ]]; then head="$GITHUB_SHA_VALUE"; fi
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            base="$(git rev-parse "${head}^" 2>/dev/null || git rev-list --max-parents=0 "$head" | tail -1)"
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+
+      - name: Enforce capability conservation
+        uses: GlacierEQ/apex-control-plane/.github/actions/apex-non-regression@main
+        with:
+          base: ${{ steps.refs.outputs.base }}
+          head: ${{ steps.refs.outputs.head }}

@@ -1,0 +1,75 @@
+{
+  "case_id": "NEX-JBPHH-2026-08-14",
+  "title": "Cherry Chan — NEX Pearl Harbor / JBPHH Retail Detention, Search, Processing & Exclusion",
+  "status": "ACTIVE",
+  "durable_build": "MAX_IMPACT_DURABLE_V12",
+  "source_of_truth": {
+    "case_repo": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+    "case_repo_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT",
+    "case_control_plane_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/CONTROL_PLANE",
+    "jack_casebuilder_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER",
+    "execution_contract": "GlacierEQ/DOCKETS/CASE_EXECUTION_ENGINE",
+    "external_execution_state": "supabase://dyhprklicgewmrimecey/public/legal_execution_state_v1",
+    "forensic_project_id": "kjebemdgvjvuutzvhbtp",
+    "dropbox_master": "/Cherry Chan/02_CHERRY_CHAN_RECOVERY_PORTFOLIO/CHERRY_NEX_JBPHH_MASTER_CASE/"
+  },
+  "identifiers": {
+    "police_report": "26-286438",
+    "notices": [
+      "E1295883",
+      "E1295884"
+    ],
+    "dd2708": "2026-08-14 21:40",
+    "ticket": "100859",
+    "paid_total": 165.15
+  },
+  "state": {
+    "actors": 46,
+    "propositions": 81,
+    "contradictions": 26,
+    "evidence_targets": 55
+  },
+  "execution_rule": "EVENT -> ALLEGATION -> INSTITUTION -> RECORDS -> ACTOR ALLOCATION",
+  "hard_controls": [
+    "Carry E1295883 and E1295884 as separate objects.",
+    "Second handcuffing is a separate force/seizure event.",
+    "Knife-and-baton phrase transfer is an active interception/use/disclosure allegation branch.",
+    "Do not make claimant identify institution-controlled personnel before advancing witnessed events.",
+    "Use proof classes and preserve lineage when a theory is corrected or retired."
+  ],
+  "jack_casebuilder": {
+    "status": "LIVE",
+    "machine_path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER",
+    "pinned_commit": "9413e6403654b30cd630330bf5eb5d3450bbccbd",
+    "object_counts": {
+      "facts": 28,
+      "actors": 21,
+      "allegations": 12,
+      "contradictions": 6,
+      "discovery_targets": 16
+    },
+    "execution_rule": "EVENT -> FACT -> ACTOR -> ALLEGATION -> ELEMENT -> SOURCE -> CONTRADICTION -> DEFENSE -> DISCOVERY -> DAMAGE -> REMEDY",
+    "controls": [
+      "Unknown actors remain first-class discovery nodes.",
+      "No pleading/referral/motion reconstructs the case from scratch; consume Jack objects and underlying sources."
+    ]
+  },
+  "continuous_control_plane": {
+    "mode": "CONTINUOUS_FEDERATED_LIVE",
+    "case_control_plane_commit": "9f46b6767a4a4e41e646428c11af3c95320bc70b",
+    "dockets_live_execution": "GlacierEQ/DOCKETS/CASE_EXECUTION_ENGINE/LIVE_EXECUTIONS/NEX-JBPHH-2026-08-14.json",
+    "dockets_binding_commit": "480527206283b141bbe7efa12f0b6138fab2acf9",
+    "external_execution_state": "supabase://dyhprklicgewmrimecey/public/legal_execution_state_v1",
+    "forensic_project_id": "kjebemdgvjvuutzvhbtp",
+    "apex_core_bridge": {
+      "status": "MERGED",
+      "pull_request": 117,
+      "commit": "e3ccbf0410816d514f6c9fe1fbe9a4c59905c1eb"
+    },
+    "supplemental_registry_pr": 111,
+    "monolith_registry_commit": "5d75cd5c41598be15ebdb4c1be6b1727b34f8eb0",
+    "connector_degradation_is_nonfatal": true,
+    "projection_rule": "read authority -> reconcile -> append idempotent event -> apply Jack delta -> queue approved action -> capture provider receipt -> project -> reconcile health"
+  },
+  "updated_at": "2026-09-02"
+}

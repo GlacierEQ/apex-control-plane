@@ -1,0 +1,37 @@
+name: Juggernaut Jack Portability Integrity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "APEX_ENFORCED_STARTUP.md"
+      - "jack/config/jack_relentless_contract.yaml"
+      - "jack/portable/**"
+      - ".github/workflows/juggernaut-jack-portability.yml"
+  pull_request:
+    paths:
+      - "APEX_ENFORCED_STARTUP.md"
+      - "jack/config/jack_relentless_contract.yaml"
+      - "jack/portable/**"
+      - ".github/workflows/juggernaut-jack-portability.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-portability:
+    name: Validate portable APEX Jack contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate portability invariants
+        run: python jack/portable/validate_portability.py

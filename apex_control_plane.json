@@ -1,0 +1,33 @@
+{
+  "version": "3.0.0",
+  "owner": "GlacierEQ",
+  "created": "2026-05-27T21:33:00Z",
+  "run_count": 0,
+  "last_run": null,
+  "last_summary": null,
+  "connector_catalog": {
+    "path": "config/apex_connector_catalog.json",
+    "schema_version": 1,
+    "version": 1
+  },
+  "integration_profiles": {
+    "repository_integrity": "declared",
+    "evidence_intake": "declared",
+    "current_source_review": "declared",
+    "knowledge_continuity": "declared",
+    "structured_state_review": "declared",
+    "api_verification": "declared"
+  },
+  "reality_firewall": {
+    "rules": [
+      "connector presence is not runtime proof",
+      "a bridge receipt is required before a connector result is admitted",
+      "no secrets in source files — session credentials remain outside the repository",
+      "all findings require evidence and a stated action",
+      "a successful health check or read receipt does not authorize an external write",
+      "every external write requires an active catalog operation and attributable source-bound Operator authorization covering the action",
+      "scheduled connector writes are disabled"
+    ]
+  },
+  "audit_log": []
+}

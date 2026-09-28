@@ -1,0 +1,198 @@
+{
+  "schema": "apex.legal-case-control-plane.v1",
+  "status": "ACTIVE_CONTINUOUS_BINDING",
+  "updated_hst": "2026-09-03",
+  "source_of_case_truth": {
+    "repository": "GlacierEQ/Casebuilder4000",
+    "case_truth_boundary": "Casebuilder analytical state plus CASEBRAIN provenance acceptance",
+    "lifecycle_does_not_promote_truth_class": true
+  },
+  "estate_registry": {
+    "repository": "GlacierEQ/apex-legal-case",
+    "path": "case-estate/CASE_REGISTRY.json",
+    "build_standard": "case-estate/CASE_BUILD_STANDARD.md",
+    "control_plane_matrix": "case-estate/CONTROL_PLANE_BUILD_MATRIX.md",
+    "cross_case_relationships": "case-estate/CROSS_CASE_RELATIONSHIPS.json",
+    "cross_case_actor_index": "case-estate/CROSS_CASE_ACTOR_INDEX.json",
+    "preserves_matter_identity": true,
+    "registered_matter_count": 23,
+    "active_matter_ids": [
+      "1FDV-23-0001009",
+      "CWS-DHS-KEKOA",
+      "CSEA-1FDV-23-0001009",
+      "MICKY-YAMATANI",
+      "KYLE-DOWD",
+      "NATASHA-SHAW",
+      "COURTNEY-NASO",
+      "PACT-1FDV",
+      "CHERRY-NEX-JBPHH",
+      "QUEENS-HOSPITAL-2026",
+      "DHHI-EMPLOYMENT-SEPARATION",
+      "DAMON-KEY-SUBPOENA-EMPLOYMENT-RECORDS",
+      "KAHALA-HOME-INSPECTION",
+      "CHERRY-NEVADA-UI-MEUC",
+      "CHERRY-NAVY-FEDERAL",
+      "CAMARO-HPD-TOW-CUSTODY",
+      "LAS-VEGAS-DIVORCE",
+      "USAA",
+      "KAPIOLANI-2024",
+      "ERIK-BREISACHER",
+      "MYLES-BREINER",
+      "GREG-RYANN",
+      "NAINOA-EVENT-BOUNDARY"
+    ],
+    "required_build_surfaces": [
+      "CASE_SPINE",
+      "TIMELINE",
+      "ACTION_LEDGER",
+      "ACTOR_LEDGER",
+      "EVIDENCE_MANIFEST",
+      "SOURCE_PROVENANCE_MAP",
+      "CONTRADICTION_LEDGER",
+      "ALLEGATION_CLAIM_LEDGER",
+      "AUTHORITY_BANK",
+      "DEFENSE_REBUTTAL_MATRIX",
+      "DAMAGES_PREJUDICE_LEDGER",
+      "RELIEF_REMEDY_MATRIX",
+      "RECORDS_DISCOVERY_PRESERVATION_QUEUE",
+      "FILING_COMMUNICATION_OUTPUTS",
+      "APPELLATE_REVIEW_ESCALATION_MAP",
+      "STATUS_EXECUTION_QUEUE"
+    ]
+  },
+  "host_execution": {
+    "repository": "GlacierEQ/computer-user",
+    "binding": "00_CONTROL_PLANE/JACK_CASEBUILDER_EXECUTION_BINDING.md",
+    "role": "connector/device/browser/filesystem acquisition and readback"
+  },
+  "dispatch": {
+    "repository": "GlacierEQ/mastermind",
+    "role": "mission decomposition and dispatch"
+  },
+  "knowledge_state": {
+    "repository": "GlacierEQ/AKOS",
+    "role": "identity, provenance, receipt and knowledge-state discipline"
+  },
+  "local_casebuilder_runtime": {
+    "health_schema": "casebuilder4000.control-plane-health.v1",
+    "topology_path": "config/continuous_control_plane.json",
+    "store": "control_plane.sqlite3",
+    "worker_command": "casebuilder-control serve",
+    "event_journal": "control_events",
+    "work_queue": "control_work",
+    "run_ledger": "control_runs",
+    "heartbeat_registry": "control_heartbeats",
+    "checkpoint_ledger": "control_checkpoints",
+    "receipt_ledger": "control_receipts",
+    "mirror_target": "apex.supabase",
+    "outbox_table": "control_deliveries"
+  },
+  "mirrored_health_inputs": [
+    "case_id",
+    "observed_at",
+    "status",
+    "work.backlog",
+    "work.inflight",
+    "work.failed",
+    "workers",
+    "latest_checkpoint"
+  ],
+  "health_normalization": {
+    "healthy": [
+      "no terminal failed work",
+      "no stale active worker",
+      "no backlog without live worker",
+      "no inflight work without live lease owner"
+    ],
+    "degraded": [
+      "terminal failed work exists",
+      "stale worker exists",
+      "backlog exists with no live worker",
+      "inflight work exists without a live worker"
+    ],
+    "blocked": [
+      "case revision chain invalid",
+      "evidence manifest chain invalid",
+      "build receipt invalid",
+      "truth/provenance acceptance boundary rejects state"
+    ]
+  },
+  "execution_semantics": {
+    "reads_and_reversible_hardening": "eligible for standing execution policy when live route authorization permits",
+    "external_filing_service_publication_accusation": "requires action-specific authority",
+    "retries": "bounded exponential retry",
+    "lease_recovery": "stale work leases are recovered",
+    "replay": "replayed events preserve correlation and causation links",
+    "idempotency": "event and work idempotency keys suppress duplicate execution",
+    "checkpoints": "verified progress markers, not governance vetoes"
+  },
+  "anti_collapse": [
+    "APEX does not become case truth authority",
+    "host execution does not become case truth authority",
+    "AKOS does not become project-direction authority",
+    "case overlap creates links, not silent merges",
+    "actor overlap does not merge matters",
+    "institution overlap does not create shared liability",
+    "evidence reuse preserves original lineage and matter-specific relevance",
+    "ACTIVE_INTAKE does not imply a proven or pleading-ready claim",
+    "provider dashboards are projections, not source truth",
+    "historical failures remain evidence but do not poison current health after verified recovery"
+  ],
+  "event_bridge": {
+    "accepted_event_types": [
+      "evidence.ingested",
+      "evidence.derivative_registered",
+      "source.bridged",
+      "extraction.completed",
+      "law.verified",
+      "case.state.changed",
+      "case.build.completed",
+      "external.receipt",
+      "timer.tick"
+    ],
+    "required_envelope": [
+      "case_id",
+      "event_type",
+      "source",
+      "correlation_id",
+      "idempotency_key",
+      "payload"
+    ]
+  },
+  "supabase_mirror": {
+    "migration": "db/migrations/20260903093500_legal_case_continuous_control_plane_v1.sql",
+    "event_table": "public.legal_case_control_events_v1",
+    "health_table": "public.legal_case_runtime_health_v1",
+    "receipt_table": "public.legal_case_control_receipts_v1",
+    "health_view": "public.legal_case_control_plane_health_v1",
+    "event_ingest_rpc": "public.ingest_legal_case_control_event_v1(jsonb)",
+    "health_upsert_rpc": "public.upsert_legal_case_runtime_health_v1(text,jsonb)",
+    "access": "service_role_only",
+    "event_history": "append_only",
+    "receipt_history": "append_only",
+    "current_health": "recoverable_mutable_projection",
+    "delivery_semantics": "at_least_once_remote_idempotent",
+    "truth_class_mutation": false
+  },
+  "continuity_kernel": {
+    "source_system_for_casebuilder": "casebuilder4000",
+    "canonical_matter_rpc": "public.continuity_canonical_matter_v1(text,text)",
+    "ingest_rpc": "public.continuity_ingest_external_event_v1(text,text,text,text,timestamptz,jsonb,text)",
+    "ingest_queue": "public.continuity_ingest_queue_v1",
+    "unified_timeline": "public.continuity_events_v1",
+    "legal_event_mirror_trigger": "legal_control_mirror_continuity_event_v1_trg",
+    "legal_execution_reducer_trigger": "legal_reduce_continuity_event_v1_trg",
+    "legal_execution_state": "public.legal_execution_state_v1",
+    "calendar_bindings": "public.continuity_calendar_bindings_v1",
+    "commitments": "public.continuity_commitments_v1",
+    "outbound_actions": "public.continuity_outbound_actions_v1",
+    "action_receipts": "public.continuity_action_receipts_v1",
+    "health_tick": "public.legal_control_health_tick_v1()",
+    "health_cron": "legal-control-health-v1 */5 * * * *",
+    "casebuilder_bridge_trigger": "legal_case_control_to_continuity_v1_trg",
+    "execution_rule": "Casebuilder events enter continuity ingestion; only the existing legal reducer may transition legal execution state for recognized event types.",
+    "unresolved_matter_rule": "Unresolved Casebuilder case IDs remain unresolved continuity ingest items; no case merge or guessed binding.",
+    "source_rebuild_state": "PARTIAL_RUNTIME_GAP_OBSERVED_2026-09-03",
+    "runtime_note": "The continuity/legal-execution kernel is live in supabase-backend-ops and newer than portions currently represented by checked-in APEX migrations. This binding records the live contract until full migration-source reconstruction is completed."
+  }
+}

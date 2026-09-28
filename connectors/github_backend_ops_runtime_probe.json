@@ -1,0 +1,9 @@
+{
+  "connector_key": "github.backend_ops",
+  "status": "router_v2_compare_before_write_verified",
+  "branch": "feat/github-backend-ops-connector-v2",
+  "expected_before_sha": "b9c5a097a4c6f28f3a38ea45c9e20f49baef4b79",
+  "resource_lease": "required",
+  "destructive_action": false,
+  "verified_at": "2026-08-31T17:08:29.966Z"
+}

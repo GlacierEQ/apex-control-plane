@@ -1,0 +1,271 @@
+name: Daily Connector Audit
+
+on:
+  schedule:
+    # 06:00 UTC daily = 20:00 HST on the previous calendar day (Hawaii does not observe DST)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual run'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: estate-registry-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Refresh private Repo Atlas
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        shell: bash
+        env:
+          REPO_ATLAS_REFRESH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-github-oidc-estate-atlas-refresh
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          audience = "apex-repo-atlas-estate-refresh"
+          request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
+          request_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+          if not request_url or not request_token:
+              raise SystemExit("GitHub OIDC environment is unavailable")
+
+          separator = "&" if "?" in request_url else "?"
+          oidc_request = urllib.request.Request(
+              f"{request_url}{separator}audience={urllib.parse.quote(audience)}",
+              headers={"Authorization": f"Bearer {request_token}"},
+          )
+          with urllib.request.urlopen(oidc_request, timeout=20) as response:
+              oidc = json.loads(response.read()).get("value", "")
+          if not oidc:
+              raise SystemExit("GitHub OIDC token response was empty")
+          print(f"::add-mask::{oidc}")
+
+          refresh_request = urllib.request.Request(
+              os.environ["REPO_ATLAS_REFRESH_URL"],
+              data=b"{}",
+              method="POST",
+              headers={
+                  "Authorization": f"Bearer {oidc}",
+                  "Accept": "application/json",
+                  "Content-Type": "application/json",
+              },
+          )
+          try:
+              with urllib.request.urlopen(refresh_request, timeout=120) as response:
+                  result = json.loads(response.read())
+          except urllib.error.HTTPError as error:
+              raise SystemExit(f"Repo Atlas refresh failed with HTTP {error.code}") from None
+
+          allowed = {
+              "ok",
+              "status",
+              "snapshot_id",
+              "previous_snapshot_id",
+              "repository_count",
+              "original_count",
+              "fork_count",
+              "private_count",
+              "public_count",
+              "archived_count",
+              "family_counts",
+              "lifecycle_counts",
+              "delta",
+              "inventory_root_sha256",
+              "canonical_candidate_count",
+              "verified_canonical_count",
+              "ignition_queue_count",
+              "scan_mode",
+              "github_writes",
+              "token_persisted",
+          }
+          unexpected = sorted(set(result) - allowed)
+          if unexpected:
+              raise SystemExit(f"Repo Atlas refresh returned unexpected fields: {unexpected}")
+          if result.get("ok") is not True or result.get("status") != "refreshed":
+              raise SystemExit("Repo Atlas refresh did not report a successful refresh")
+          if result.get("scan_mode") != "metadata_only":
+              raise SystemExit("Repo Atlas refresh violated metadata-only mode")
+          if result.get("github_writes") != 0:
+              raise SystemExit("Repo Atlas refresh reported a GitHub write")
+          if result.get("token_persisted") is not False:
+              raise SystemExit("Repo Atlas refresh reported credential persistence")
+
+          repository_count = result.get("repository_count")
+          private_count = result.get("private_count")
+          public_count = result.get("public_count")
+          if not isinstance(repository_count, int) or isinstance(repository_count, bool) or repository_count <= 0:
+              raise SystemExit("Repo Atlas refresh returned an invalid repository count")
+          for label, value in (("private_count", private_count), ("public_count", public_count)):
+              if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                  raise SystemExit(f"Repo Atlas refresh returned invalid {label}")
+          if private_count + public_count != repository_count:
+              raise SystemExit("Repo Atlas refresh aggregate counts are inconsistent")
+
+          snapshot_id = result.get("snapshot_id")
+          inventory_root = result.get("inventory_root_sha256")
+          if not isinstance(snapshot_id, str) or not snapshot_id:
+              raise SystemExit("Repo Atlas refresh returned an invalid snapshot id")
+          if not isinstance(inventory_root, str) or re.fullmatch(r"[0-9a-f]{64}", inventory_root) is None:
+              raise SystemExit("Repo Atlas refresh returned an invalid inventory root")
+          if not isinstance(result.get("family_counts"), dict) or not isinstance(result.get("lifecycle_counts"), dict):
+              raise SystemExit("Repo Atlas refresh aggregate classifications are invalid")
+          delta = result.get("delta")
+          if not isinstance(delta, dict) or set(delta) != {
+              "new",
+              "removed_or_transferred",
+              "renamed_or_transferred",
+              "state_changes",
+          }:
+              raise SystemExit("Repo Atlas refresh returned an invalid delta shape")
+          if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in delta.values()):
+              raise SystemExit("Repo Atlas refresh returned invalid delta counts")
+
+          Path("repo_atlas_refresh_result.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(
+              "Repo Atlas refresh verified: "
+              f"repositories={repository_count} "
+              f"metadata_only={result.get('scan_mode') == 'metadata_only'} "
+              f"github_writes={result.get('github_writes')} "
+              f"token_persisted={result.get('token_persisted')}"
+          )
+          PY
+
+      - name: Enrich Repo Atlas heads and fork lineage
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        env:
+          REPO_ATLAS_ENRICH_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-github-oidc-estate-atlas-enrich
+        run: python scripts/repo_atlas_enrich.py
+
+      - name: Fetch redacted Repo Atlas receipt
+        shell: bash
+        env:
+          REPO_ATLAS_RECEIPT_URL: https://dyhprklicgewmrimecey.supabase.co/functions/v1/apex-repo-atlas-redacted-receipt
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          audience = "apex-repo-atlas-redacted-receipt"
+          request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
+          request_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+          if not request_url or not request_token:
+              raise SystemExit("GitHub OIDC environment is unavailable")
+
+          separator = "&" if "?" in request_url else "?"
+          oidc_request = urllib.request.Request(
+              f"{request_url}{separator}audience={urllib.parse.quote(audience)}",
+              headers={"Authorization": f"Bearer {request_token}"},
+          )
+          with urllib.request.urlopen(oidc_request, timeout=20) as response:
+              oidc = json.loads(response.read()).get("value", "")
+          if not oidc:
+              raise SystemExit("GitHub OIDC token response was empty")
+          print(f"::add-mask::{oidc}")
+
+          receipt_request = urllib.request.Request(
+              os.environ["REPO_ATLAS_RECEIPT_URL"],
+              headers={
+                  "Authorization": f"Bearer {oidc}",
+                  "Accept": "application/json",
+              },
+          )
+          with urllib.request.urlopen(receipt_request, timeout=30) as response:
+              receipt = json.loads(response.read())
+          if receipt.get("ok") is not True:
+              raise SystemExit("Private Repo Atlas health gate did not pass")
+
+          allowed = {
+              "schema_version",
+              "receipt_type",
+              "ok",
+              "source",
+              "snapshot_fingerprint",
+              "snapshot_created_at",
+              "snapshot_fresh",
+              "repository_inventory_present",
+              "scan_mode",
+              "installation_scope",
+              "github_content_fetch",
+              "inventory_token_persisted",
+              "audit_chain_present",
+              "latest_audit_outcome",
+              "caller_run_id",
+              "caller_run_attempt",
+              "generated_at",
+          }
+          unexpected = sorted(set(receipt) - allowed)
+          if unexpected:
+              raise SystemExit(f"Repo Atlas receipt contains unexpected fields: {unexpected}")
+          Path("repo_atlas_receipt.json").write_text(
+              json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(
+              "Repo Atlas receipt verified: "
+              f"fresh={receipt.get('snapshot_fresh')} "
+              f"metadata_only={receipt.get('scan_mode') == 'metadata_only'} "
+              f"content_fetch={receipt.get('github_content_fetch')} "
+              f"token_persisted={receipt.get('inventory_token_persisted')}"
+          )
+          PY
+
+      - name: Upload Repo Atlas refresh proof
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repo-atlas-refresh-proof-${{ github.run_id }}
+          path: repo_atlas_refresh_result.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Repo Atlas enrichment proof
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repo-atlas-enrichment-proof-${{ github.run_id }}
+          path: repo_atlas_enrichment_result.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload redacted Repo Atlas receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repo-atlas-receipt-${{ github.run_id }}
+          path: repo_atlas_receipt.json
+          retention-days: 7
+          if-no-files-found: error

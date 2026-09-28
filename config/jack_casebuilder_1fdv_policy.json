@@ -1,0 +1,80 @@
+{
+  "schema": "apex.jack-casebuilder-case-policy.v1",
+  "status": "ACTIVE",
+  "case_id": "1FDV-23-0001009",
+  "engine": "JACK_THE_RIPPER_CASEBUILDER",
+  "authority": {
+    "case_state_repository": "GlacierEQ/apex-legal-case",
+    "bootstrap_path": "legal-forge/intelligence/1FDV-23-0001009_JACK_BOOTSTRAP.json",
+    "engine_contract_path": "legal-forge/JACK_THE_RIPPER_CASEBUILDER.md",
+    "schema_path": "legal-forge/jack-casebuilder.schema.json",
+    "allegation_forge_path": "case-master/CASEBUILDER_ALLEGATION_FORGE.md",
+    "master_map_path": "case-master/MASTER_MAP.json",
+    "case_graph_path": "case-master/graph/CASE_GRAPH.json",
+    "external_fact_rule": "authenticated native / official records control external fact",
+    "lifecycle_does_not_promote_truth_class": true
+  },
+  "runtime_controls": {
+    "preserve_lossless_detail": true,
+    "event_date_law_required": true,
+    "adverse_evidence_required_before_promotion": true,
+    "gap_becomes_evidence_acquisition_target": true,
+    "unknown_actor_becomes_discovery_target": true,
+    "filing_state_requires_external_receipt": true,
+    "substantial_run_requires_write_and_readback": true,
+    "reconstruct_from_scratch": false,
+    "preserve_contradictions_and_supersession": true
+  },
+  "projection_targets": {
+    "github": {
+      "repository": "GlacierEQ/apex-legal-case",
+      "case_object_repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "dockets_root": "GlacierEQ/DOCKETS/1FDV-23-0001009/"
+    },
+    "supabase": {
+      "project_id": "kjebemdgvjvuutzvhbtp",
+      "role": "structured case/provenance state"
+    },
+    "notion": {
+      "casebrain_root": "3acb1e4f-3223-81bb-8c2f-d7bff5c74fa6",
+      "role": "CASEBRAIN projection"
+    },
+    "dropbox": {
+      "history_root": "/Cherry Chan/05_AI_CONVERSATION_EXPORTS/",
+      "evidence_root": "/Cherry Chan/01_LEGAL_EVIDENTIARY_VAULT/01_Case_1FDV-23-0001009_Master/",
+      "role": "source/history preservation"
+    },
+    "airtable": {
+      "base_id": "appmx0daaLJMhA4Km",
+      "status": "BLOCKED_429_MONTHLY_API_LIMIT",
+      "failure_is_nonfatal_to_independent_peers": true
+    }
+  },
+  "early_chain": {
+    "facts": {"first": "F-015", "last": "F-024"},
+    "allegations": {"first": "A013", "last": "A019"},
+    "discovery": {"first": "DISC-010", "last": "DISC-015"},
+    "attacks": {"first": "ATK-024", "last": "ATK-030"}
+  },
+  "quarantine": [
+    {
+      "id": "JACK-Q-001",
+      "subject": "SCPW-23-0000672",
+      "state": "QUARANTINED",
+      "reason": "authoritative record identifies Gonsalves v. Holma/Glauberman; not Barton/Naso"
+    },
+    {
+      "id": "JACK-Q-002",
+      "subject": "Naso as Oct. 8 CSEA/OCSH ALJ",
+      "state": "QUARANTINED",
+      "reason": "unsupported/contradicted actor attribution; dependent theories remain blocked absent authenticated primary proof"
+    }
+  ],
+  "peer_mesh": {
+    "master_controller": false,
+    "case_truth_authority_remains_with_case_state": true,
+    "cross_peer_mutations_preserve_provenance": true,
+    "failed_peer_blocks_only_dependent_work": true,
+    "provider_native_receipt_controls_external_execution_claim": true
+  }
+}

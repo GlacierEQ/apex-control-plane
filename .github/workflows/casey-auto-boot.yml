@@ -1,0 +1,245 @@
+name: APEX Enforced Startup
+
+on:
+  push:
+    branches:
+      - main
+      - casey-mem-auto-boot-2026-08-03
+      - prime-directive-enforcer-v2
+      - apex/enforced-startup-integration-20260815
+    paths:
+      - "APEX_ENFORCED_STARTUP.md"
+      - "AGENT_SYSTEM_PROMPT.md"
+      - "STATE.md"
+      - "OPERATOR_EXECUTION_LAW.md"
+      - "OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md"
+      - "AKOS_ADOPTION.yaml"
+      - "config/apex_enforced_startup_policy.json"
+      - "config/operator_fidelity_runtime_policy.json"
+      - "config/casey_auto_boot_manifest.json"
+      - "config/notion_continuity_policy.json"
+      - "config/prime_directive_policy.json"
+      - "src/apex_enforced_startup.py"
+      - "src/operator_fidelity_preflight.py"
+      - "src/auto_boot.py"
+      - "src/notion_continuity_gate.py"
+      - "src/prime_directive_boot.py"
+      - "src/prime_directive_enforcer.py"
+      - "src/control_plane.py"
+      - "src/control_plane_runtime.py"
+      - "src/sitecustomize.py"
+      - "scripts/scan_repos.py"
+      - "tests/test_apex_enforced_startup.py"
+      - "tests/test_operator_fidelity_preflight.py"
+      - "tests/test_auto_boot.py"
+      - "tests/test_notion_continuity_gate.py"
+      - "tests/test_prime_directive_boot.py"
+      - "tests/test_prime_directive_enforcer.py"
+      - "tests/test_scan_repos.py"
+      - "jack/config/jack_relentless_contract.yaml"
+      - "jack/config/jack_relentless_contract.compiled.json"
+      - "jack/src/jack_relentless_gate.py"
+      - "jack/tests/test_jack_relentless_gate.py"
+      - "jack/odin/jack_relentless_gate.odin"
+      - "glaciereq/jack/v1/jack_relentless_contract.proto"
+      - "docs/CASEY_AUTO_BOOT.md"
+      - "docs/PRIME_DIRECTIVE_ENFORCER.md"
+      - "README.md"
+      - ".github/workflows/casey-auto-boot.yml"
+  pull_request:
+    paths:
+      - "APEX_ENFORCED_STARTUP.md"
+      - "AGENT_SYSTEM_PROMPT.md"
+      - "STATE.md"
+      - "OPERATOR_EXECUTION_LAW.md"
+      - "OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md"
+      - "AKOS_ADOPTION.yaml"
+      - "config/apex_enforced_startup_policy.json"
+      - "config/operator_fidelity_runtime_policy.json"
+      - "config/casey_auto_boot_manifest.json"
+      - "config/notion_continuity_policy.json"
+      - "config/prime_directive_policy.json"
+      - "src/apex_enforced_startup.py"
+      - "src/operator_fidelity_preflight.py"
+      - "src/auto_boot.py"
+      - "src/notion_continuity_gate.py"
+      - "src/prime_directive_boot.py"
+      - "src/prime_directive_enforcer.py"
+      - "src/control_plane.py"
+      - "src/control_plane_runtime.py"
+      - "src/sitecustomize.py"
+      - "scripts/scan_repos.py"
+      - "tests/test_apex_enforced_startup.py"
+      - "tests/test_operator_fidelity_preflight.py"
+      - "tests/test_auto_boot.py"
+      - "tests/test_notion_continuity_gate.py"
+      - "tests/test_prime_directive_boot.py"
+      - "tests/test_prime_directive_enforcer.py"
+      - "tests/test_scan_repos.py"
+      - "jack/config/jack_relentless_contract.yaml"
+      - "jack/config/jack_relentless_contract.compiled.json"
+      - "jack/src/jack_relentless_gate.py"
+      - "jack/tests/test_jack_relentless_gate.py"
+      - "jack/odin/jack_relentless_gate.odin"
+      - "glaciereq/jack/v1/jack_relentless_contract.proto"
+      - "docs/CASEY_AUTO_BOOT.md"
+      - "docs/PRIME_DIRECTIVE_ENFORCER.md"
+      - "README.md"
+      - ".github/workflows/casey-auto-boot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Emit authority document hashes
+        run: |
+          sha256sum APEX_ENFORCED_STARTUP.md
+          sha256sum OPERATOR_EXECUTION_LAW.md
+          sha256sum OPERATOR_FIDELITY_AND_MAXIMUM_COHERENT_ADVANCE.md
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Compile startup modules
+        run: |
+          python -m py_compile \
+            src/apex_enforced_startup.py \
+            src/operator_fidelity_preflight.py \
+            src/auto_boot.py \
+            src/notion_continuity_gate.py \
+            src/prime_directive_boot.py \
+            src/prime_directive_enforcer.py \
+            src/control_plane.py \
+            src/sitecustomize.py \
+            scripts/scan_repos.py \
+            jack/src/jack_relentless_gate.py
+
+      - name: Validate startup policies and emit base request
+        run: |
+          python -m json.tool config/apex_enforced_startup_policy.json >/dev/null
+          python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
+          python -m json.tool config/casey_auto_boot_manifest.json >/dev/null
+          python -m json.tool config/notion_continuity_policy.json >/dev/null
+          python -m json.tool config/prime_directive_policy.json >/dev/null
+          python -m json.tool jack/config/jack_relentless_contract.compiled.json >/dev/null
+          python src/auto_boot.py --profile legal_case --task continue --emit-request > /tmp/casey-boot-request.json
+          python -m json.tool /tmp/casey-boot-request.json >/dev/null
+          grep -q '"required_notes"' /tmp/casey-boot-request.json
+
+      - name: Run startup and registry tests
+        run: |
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_apex_enforced_startup.py \
+            tests/test_apex_authority_enrichment.py \
+            tests/test_operator_fidelity_preflight.py \
+            tests/test_auto_boot.py \
+            tests/test_notion_continuity_gate.py \
+            tests/test_prime_directive_boot.py \
+            tests/test_prime_directive_enforcer.py \
+            tests/test_scan_repos.py \
+            jack/tests/test_jack_relentless_gate.py
+
+      - name: Prove strict mode preserves execution with visible uplift without receipt
+        shell: bash
+        run: |
+          CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/boot.out 2>/tmp/boot.err
+          test -s /tmp/boot.out
+          grep -q '"phase":"complete"' /tmp/boot.out
+          grep -q '"status": "uplift_required"' /tmp/boot.err
+          if grep -q '"external_action_authorized": true' /tmp/boot.err; then
+            echo "startup uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi
+
+      - name: Prove malformed receipt fails closed without traceback
+        shell: bash
+        run: |
+          set +e
+          CASEY_BOOT_RECEIPT_JSON='{' \
+          CASEY_AUTO_BOOT_MODE=strict \
+          python src/control_plane.py >/tmp/malformed.out 2>/tmp/malformed.err
+          status=$?
+          set -e
+          if [[ "$status" -ne 78 ]]; then
+            cat /tmp/malformed.out || true
+            cat /tmp/malformed.err || true
+            echo "malformed receipt returned $status instead of 78" >&2
+            exit 1
+          fi
+          grep -q '"boot_status": "blocked"' /tmp/malformed.err
+          grep -q 'CASEY_BOOT_RECEIPT_JSON is invalid' /tmp/malformed.err
+          ! grep -q 'Traceback' /tmp/malformed.err
+          test ! -s /tmp/malformed.out
+
+      - name: Prove forged status environment cannot manufacture external authority
+        shell: bash
+        run: |
+          GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
+          GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
+          GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
+          GLACIEREQ_APEX_STARTUP_STATUS=complete \
+          CASEY_BOOT_STATUS=complete \
+          GLACIEREQ_BOOT_RECEIPT_VERIFIED=1 \
+          CASEY_AUTO_BOOT_MODE=strict \
+          python src/control_plane.py >/tmp/forged.out 2>/tmp/forged.err
+          test -s /tmp/forged.out
+          grep -q '"phase":"complete"' /tmp/forged.out
+          grep -q '"status": "uplift_required"' /tmp/forged.err
+          if grep -q '"external_action_authorized": true' /tmp/forged.err; then
+            echo "forged status environment manufactured blanket external authorization" >&2
+            exit 1
+          fi
+
+      - name: Prove fidelity preflight emits uplift continuation without becoming a global stop
+        shell: bash
+        run: |
+          set +e
+          CASEY_BOOT_RECEIPT_JSON='{"operator_fidelity":{"failure_class":"INSTRUCTION_DISPLACEMENT"}}' \
+          CASEY_AUTO_BOOT_MODE=strict \
+          PYTHONPATH=src \
+          python -c 'from operator_fidelity_preflight import automatic_operator_fidelity_preflight; automatic_operator_fidelity_preflight()' \
+          >/tmp/fidelity.out 2>/tmp/fidelity.err
+          status=$?
+          set -e
+          if [[ "$status" -ne 0 ]]; then
+            cat /tmp/fidelity.out || true
+            cat /tmp/fidelity.err || true
+            echo "fidelity preflight returned $status instead of emitting an uplift continuation" >&2
+            exit 1
+          fi
+          grep -q '"gate": "operator_fidelity_preflight"' /tmp/fidelity.err
+          grep -q '"status": "uplift_required"' /tmp/fidelity.err
+          grep -q '"external_action_authorized": "route_local_only"' /tmp/fidelity.err
+          grep -q '"mission_execution": "continue_known_executable_frontiers"' /tmp/fidelity.err
+          grep -q 'literal_operator_words_preserved' /tmp/fidelity.err
+          test ! -s /tmp/fidelity.out
+
+      - name: Prove request mode preserves execution while exposing uplift
+        shell: bash
+        run: |
+          CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
+          test -s /tmp/control-plane.json
+          grep -q '"phase":"complete"' /tmp/control-plane.json
+          grep -q '"status": "uplift_required"' /tmp/boot-request.json
+          if grep -q '"external_action_authorized": true' /tmp/boot-request.json; then
+            echo "request-mode uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi
+          PYTHONPATH=src \
+          CASEY_AUTO_BOOT=1 \
+          CASEY_AUTO_BOOT_MODE=request \
+          python -c 'import os; assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete_with_uplift"; assert os.environ.get("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED") not in {"1", "true", "True"}'

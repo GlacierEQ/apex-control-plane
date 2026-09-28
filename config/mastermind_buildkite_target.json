@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "organization": "casey-1",
+  "donor_pipeline": "apex-control-plane",
+  "name": "Mastermind",
+  "slug": "mastermind",
+  "repository": "git@github.com:GlacierEQ/mastermind.git",
+  "github_repository": "GlacierEQ/mastermind",
+  "default_branch": "main",
+  "pipeline_file": ".buildkite/pipeline.yml",
+  "queue": "macos-self",
+  "status_context": "buildkite/mastermind",
+  "role": "crown-jewel-mission-control",
+  "provider_settings": {
+    "build_branches": true,
+    "build_pull_requests": true,
+    "build_pull_request_forks": false,
+    "build_tags": false,
+    "publish_commit_status": true,
+    "publish_commit_status_per_step": true
+  },
+  "superseded_build_policy": {
+    "cancel_running_branch_builds": true,
+    "skip_queued_branch_builds": true
+  },
+  "verification": {
+    "exact_commit_required": true,
+    "terminal_build_required": true,
+    "github_projection_required": true,
+    "receipt_artifact": "artifacts/buildkite/verified-mastermind-receipt.json"
+  },
+  "oracle": {
+    "queue": "oracle-arm64",
+    "state": "candidate_not_authoritative",
+    "promotion_gate": "live Buildkite Oracle receipt plus exact-SHA GitHub success projection"
+  }
+}

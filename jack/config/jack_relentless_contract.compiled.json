@@ -1,0 +1,126 @@
+{
+  "contract_id": "JTR-RELENTLESS-EXECUTION-v1",
+  "version": "1.3.0",
+  "project_direction_authority": "OPERATOR_INTENT",
+  "startup_contract": "APEX_ENFORCED_STARTUP.md",
+  "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
+  "compatibility": {
+    "canonical_owner_field_semantics": "existing_owner_topology_only",
+    "canonical_owner_does_not_confer_project_authority": true
+  },
+  "continuation_semantics": {
+    "known_state_before_rediscovery": true,
+    "reuse_known_state_where_usable": true,
+    "material_delta_hydration_only": true,
+    "redundant_rediscovery_is_not_progress": true,
+    "reconstruction_over_usable_state_forbidden": true,
+    "execution_loop": [
+      "CONSULT_RELEVANT_KNOWN_STATE",
+      "REUSE_KNOWN_STATE_WHERE_USABLE",
+      "RECOVER_LAST_VALID_CONTINUATION_POINT",
+      "HYDRATE_MATERIAL_DELTA_IF_REQUIRED",
+      "BIND_OPERATOR_INTENT",
+      "OPEN_REQUIRED_SOURCES_WHEN_MATERIALLY_REQUIRED",
+      "RECONCILE_CONFLICTS",
+      "PRESERVE_PRIOR_VALID_GAINS",
+      "SELECT_OPERATOR_ALIGNED_COHERENT_DELTA",
+      "EXECUTE_MATERIAL_ACTION",
+      "TEST",
+      "ADVERSARIAL_TEST",
+      "REPAIR_OR_IDENTIFY_EXACT_BLOCKER",
+      "VERIFY",
+      "PERSIST_VERIFIED_GAIN",
+      "READ_BACK",
+      "EMIT_RESUMABLE_NEXT_STATE",
+      "CONTINUE_IF_UNFINISHED_AND_AUTHORIZED"
+    ]
+  },
+  "preflight_gates": [
+    "authority_valid",
+    "safety_boundary_clear",
+    "continuity_loaded",
+    "resources_invoked",
+    "existing_work_checked",
+    "canonical_owner_resolved",
+    "objective_preserved",
+    "required_sources_opened",
+    "operator_asset_sovereignty_preserved"
+  ],
+  "completion_gates": [
+    "authority_valid",
+    "safety_boundary_clear",
+    "continuity_loaded",
+    "resources_invoked",
+    "existing_work_checked",
+    "canonical_owner_resolved",
+    "objective_preserved",
+    "required_sources_opened",
+    "contradictions_preserved",
+    "operator_aligned_delta_selected",
+    "operator_asset_sovereignty_preserved",
+    "material_action_executed",
+    "verification_passed",
+    "defects_repaired_or_exactly_blocked",
+    "persistence_written",
+    "readback_verified",
+    "next_state_resumable"
+  ],
+  "resume_gates": [
+    "continuity_loaded",
+    "canonical_owner_resolved",
+    "persistence_written",
+    "readback_verified",
+    "next_state_resumable"
+  ],
+  "state_model": [
+    "OBSERVED",
+    "INFERRED",
+    "HYPOTHESIZED",
+    "PROPOSED",
+    "ATTEMPTED",
+    "EXECUTED",
+    "VERIFIED",
+    "COMMITTED",
+    "DEPLOYED",
+    "OBSERVED_IN_OPERATION"
+  ],
+  "classification_semantics": {
+    "default": "EXECUTION_STATE_PROVENANCE_AND_OPERATOR_REQUESTED_TAXONOMY_ONLY",
+    "asset_worth_classification": "EXPLICIT_OPERATOR_REQUEST_REQUIRED",
+    "inspection_scope": "OBSERVE_DESCRIBE_MAP_ONLY"
+  },
+  "statuses": [
+    "RECOVERING",
+    "EXECUTING",
+    "BLOCKED",
+    "COMPLETE"
+  ],
+  "decision_law": {
+    "known_state_available": "REUSE_AND_CONTINUE_WITHOUT_REDUNDANT_SEARCH",
+    "material_state_gap": "HYDRATE_ONLY_THE_REQUIRED_DELTA",
+    "existing_work_found": "PRESERVE_AND_MAP_CONTINUATION_UNLESS_OPERATOR_DIRECTS_MUTATION",
+    "related_system_found_without_operator_hierarchy": "MAP_RELATIONSHIP_ONLY",
+    "standalone": "PRESERVE_IDENTITY_AND_REPORT_OBSERVED_STATE",
+    "value_ranking": "EXPLICIT_OPERATOR_REQUEST_REQUIRED",
+    "disposition_or_subordination": "EXPLICIT_OPERATOR_DIRECTION_REQUIRED",
+    "unresolved_topology_conflict": "BLOCK_MUTATION_AND_RECONCILE",
+    "capability_reduction": "OPERATOR_DIRECTION_REQUIRED"
+  },
+  "forbidden": [
+    "REDUNDANT_REDISCOVERY",
+    "RECONSTRUCTION_OVER_USABLE_STATE",
+    "UNSOLICITED_OPERATOR_ASSET_VALUE_RANKING",
+    "UNSOLICITED_OPERATOR_ASSET_DISPOSITION",
+    "INSPECTION_SCOPE_EXPANSION"
+  ],
+  "receipt_validation": {
+    "fixed_gate_vector": true,
+    "complete_requires_all_completion_gates": true,
+    "unknown_gates_rejected": true,
+    "current_exact_blocker_precedes_complete": true,
+    "canonical_owner_is_topology_only": true,
+    "operator_asset_sovereignty_is_mandatory": true
+  },
+  "onnx_condition_input": "current_blocker_present",
+  "onnx_types": "boolean"
+}

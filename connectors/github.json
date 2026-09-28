@@ -1,0 +1,24 @@
+{
+  "id": "github",
+  "name": "GitHub",
+  "version": "2022-11-28",
+  "base_url": "https://api.github.com",
+  "auth": {
+    "type": "bearer",
+    "secret_ref": "GITHUB_TOKEN",
+    "note": "Set GITHUB_TOKEN in GitHub Secrets — never hardcode"
+  },
+  "endpoints": [
+    {"id": "user", "path": "/user", "method": "GET", "test": true},
+    {"id": "repos", "path": "/user/repos", "method": "GET"},
+    {"id": "create_issue", "path": "/repos/{owner}/{repo}/issues", "method": "POST"},
+    {"id": "search_code", "path": "/search/code", "method": "GET"},
+    {"id": "create_file", "path": "/repos/{owner}/{repo}/contents/{path}", "method": "PUT"}
+  ],
+  "rate_limits": {
+    "core": "5000/hour (authenticated)",
+    "search": "30/minute"
+  },
+  "state": "action_capable",
+  "last_validated": null
+}

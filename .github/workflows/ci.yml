@@ -1,0 +1,217 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  operator-fidelity:
+    # Preserve the historical required-check identity while correcting its semantics.
+    name: Operator fidelity hard stop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact source identity
+        shell: bash
+        run: |
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$(git rev-parse HEAD)" = "$expected"
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Validate fidelity policies
+        run: |
+          python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
+          python -m json.tool config/apex_enforced_startup_policy.json >/dev/null
+          python -m json.tool config/operator_kernel_surface_bindings_v1.json >/dev/null
+          python scripts/validate_operator_kernel_surfaces.py
+
+      - name: Compile fidelity boundary
+        run: |
+          python -m py_compile \
+            src/operator_fidelity_lock.py \
+            src/operator_fidelity_preflight.py \
+            src/control_plane.py \
+            src/sitecustomize.py
+
+      - name: Run instruction-displacement and trust-root regression tests
+        run: |
+          python -m pip install --upgrade pytest
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_operator_fidelity_lock.py \
+            tests/test_operator_fidelity_preflight.py \
+            tests/test_operator_trust_root_policy.py \
+            tests/test_operator_kernel_surfaces.py
+
+      - name: Prove unresolved fidelity uplifts without killing the runtime
+        shell: bash
+        run: |
+          set +e
+          CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/fidelity.out 2>/tmp/fidelity.err
+          status=$?
+          set -e
+          if [[ "$status" -ne 0 ]]; then
+            cat /tmp/fidelity.out || true
+            cat /tmp/fidelity.err || true
+            echo "runtime should continue with startup uplift; received $status" >&2
+            exit 1
+          fi
+          test -s /tmp/fidelity.out
+          grep -q '"phase":"complete"' /tmp/fidelity.out
+          grep -q '"status": "uplift_required"' /tmp/fidelity.err
+          if grep -q '"external_action_authorized": true' /tmp/fidelity.err; then
+            echo "startup uplift must not manufacture blanket external authorization" >&2
+            exit 1
+          fi
+
+      - name: Prove disable and off modes create visible repair state without process death
+        shell: bash
+        run: |
+          CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
+            python - <<'PY' >/tmp/disable.out 2>/tmp/disable.err
+          import json
+          import os
+          import operator_fidelity_lock as lock
+
+          lock._IN_PROCESS = None
+          result = lock.automatic_operator_fidelity_lock()
+          assert result is not None
+          assert result.ok is False
+          assert result.status == "uplift_required"
+          assert any("CASEY_AUTO_BOOT_DISABLE" in item for item in result.errors)
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
+          print(json.dumps({"status": result.status, "errors": list(result.errors)}))
+          PY
+
+          CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
+            python - <<'PY' >/tmp/off.out 2>/tmp/off.err
+          import json
+          import os
+          import operator_fidelity_lock as lock
+
+          lock._IN_PROCESS = None
+          result = lock.automatic_operator_fidelity_lock()
+          assert result is not None
+          assert result.ok is False
+          assert result.status == "uplift_required"
+          assert any("CASEY_AUTO_BOOT_MODE=off" in item for item in result.errors)
+          assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
+          print(json.dumps({"status": result.status, "errors": list(result.errors)}))
+          PY
+
+          grep -q '"status": "uplift_required"' /tmp/disable.out
+          grep -q '"status": "uplift_required"' /tmp/off.out
+
+  estate-registry:
+    name: Estate registry quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact source identity
+        shell: bash
+        run: |
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$(git rev-parse HEAD)" = "$expected"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
+            git merge-base --is-ancestor "${{ github.event.pull_request.base.sha }}" HEAD
+          fi
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install quality tools
+        run: python -m pip install --upgrade ruff mypy pytest
+
+      - name: Operator fidelity uplift inside legacy required surface
+        run: |
+          python -m py_compile src/operator_fidelity_lock.py src/operator_fidelity_preflight.py
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_operator_fidelity_lock.py \
+            tests/test_operator_fidelity_preflight.py \
+            tests/test_operator_trust_root_policy.py
+
+      - name: Ruff lint
+        run: ruff check scripts/scan_repos.py tests/test_scan_repos.py --output-format=github
+
+      - name: Ruff format check
+        run: ruff format --check scripts/scan_repos.py tests/test_scan_repos.py
+
+      - name: Mypy
+        run: mypy scripts/scan_repos.py --ignore-missing-imports
+
+      - name: Tests
+        run: python -m pytest -q tests/test_scan_repos.py
+
+  audit-hardening:
+    name: Audit hardening quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact source identity
+        shell: bash
+        run: |
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$(git rev-parse HEAD)" = "$expected"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
+            git merge-base --is-ancestor "${{ github.event.pull_request.base.sha }}" HEAD
+          fi
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install focused dependencies
+        run: python -m pip install --upgrade ruff pytest requests rich
+
+      - name: Compile audit production surfaces
+        run: python -m py_compile src/audit_engine.py apex_runner.py daily_audit.py apex_issue_writer.py
+
+      - name: Ruff lint
+        run: >-
+          ruff check src/audit_engine.py apex_runner.py daily_audit.py apex_issue_writer.py
+          tests/test_audit_hardening.py --output-format=github
+
+      - name: Ruff format check
+        run: >-
+          ruff format --check src/audit_engine.py apex_runner.py daily_audit.py
+          apex_issue_writer.py tests/test_audit_hardening.py
+
+      - name: Tests
+        run: PYTHONPATH=src:. python -m pytest -q tests/test_audit_hardening.py
+
+  repository-security:
+    name: Repository security
+    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@6757957d290878b1c0831da95328dc29f65d77c9
+    with:
+      repo_name: ${{ github.event.repository.name }}
+      language: python
+      run_tests: false
+      run_lint: false
+      run_security: true
+      run_build: false

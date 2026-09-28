@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+import pytest
+
+from anti_minimization_compiler import (
+    compile_upward,
+    inspect_execution_text,
+    supported_rule_codes,
+)
+
+
+@pytest.mark.parametrize(
+    ("text", "code"),
+    [
+        ("Take the smallest useful next step.", "SMALLEST_DEFAULT"),
+        ("Do the bare minimum.", "MINIMUM_DEFAULT"),
+        ("Use the minimum required effort.", "MINIMUM_DEFAULT"),
+        ("Use minimum necessary permissions.", "MINIMUM_DEFAULT"),
+        ("Ship the minimum viable implementation.", "MVP_DEFAULT"),
+        ("Choose the safest slice for now.", "SAFEST_SLICE_DEFAULT"),
+        ("Use a bounded scope as the delivery target.", "BOUNDED_SLICE_DEFAULT"),
+        ("Pick the least capable implementation that passes.", "LEAST_CAPABILITY_DEFAULT"),
+        ("Freeze architecture after the first green test.", "FREEZE_PRODUCT"),
+        ("Enter a feature freeze as the delivery strategy.", "FEATURE_FREEZE_DELIVERY"),
+        ("Governance first, implementation later.", "GOVERNANCE_FIRST"),
+        (
+            "Preserve the repository instead of advance it.",
+            "PRESERVE_INSTEAD_OF_ACT",
+        ),
+    ],
+)
+def test_product_level_downward_routes_are_detected(text: str, code: str) -> None:
+    findings = inspect_execution_text(text)
+    assert any(finding.code == code for finding in findings)
+
+
+def test_rule_surface_is_explicit_and_stable() -> None:
+    assert supported_rule_codes() == (
+        "SMALLEST_DEFAULT",
+        "MINIMUM_DEFAULT",
+        "MVP_DEFAULT",
+        "SAFEST_SLICE_DEFAULT",
+        "BOUNDED_SLICE_DEFAULT",
+        "LEAST_CAPABILITY_DEFAULT",
+        "FREEZE_PRODUCT",
+        "FEATURE_FREEZE_DELIVERY",
+        "GOVERNANCE_FIRST",
+        "PRESERVE_INSTEAD_OF_ACT",
+    )
+
+
+def test_boolean_friendly_prose_still_gets_caught() -> None:
+    text = (
+        "This is the strongest coherent path. "
+        "We will nevertheless take the safest slice and freeze architecture."
+    )
+    codes = {finding.code for finding in inspect_execution_text(text)}
+    assert "SAFEST_SLICE_DEFAULT" in codes
+    assert "FREEZE_PRODUCT" in codes
+
+
+def test_legitimate_local_quality_phrase_cannot_camouflage_same_clause_regression() -> None:
+    text = (
+        "Use least privilege for deployment credentials and take the safest slice "
+        "while we freeze architecture."
+    )
+    codes = {finding.code for finding in inspect_execution_text(text)}
+    assert "SAFEST_SLICE_DEFAULT" in codes
+    assert "FREEZE_PRODUCT" in codes
+
+
+def test_negation_is_match_local_not_response_wide() -> None:
+    text = "Never freeze architecture; take the safest slice for the implementation."
+    codes = {finding.code for finding in inspect_execution_text(text)}
+    assert "FREEZE_PRODUCT" not in codes
+    assert "SAFEST_SLICE_DEFAULT" in codes
+
+
+def test_direct_prohibition_is_not_misclassified_as_regression() -> None:
+    assert inspect_execution_text("Do not take the smallest useful step.") == ()
+    assert inspect_execution_text("Never freeze architecture.") == ()
+    assert inspect_execution_text("Never do the bare minimum.") == ()
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Use least privilege for the deployment token.",
+        "Build a minimal reproducer for the race condition.",
+        "Capture a known-good rollback checkpoint before mutation.",
+        "Perform fault isolation on the failing adapter.",
+    ],
+)
+def test_local_quality_narrowing_is_preserved(text: str) -> None:
+    assert inspect_execution_text(text) == ()
+
+
+def test_explicit_operator_directed_reduction_is_authoritative() -> None:
+    assert inspect_execution_text(
+        "Freeze architecture and take the smallest implementation.",
+        operator_directed_reduction=True,
+    ) == ()
+
+
+def test_compile_upward_repairs_product_level_minimization() -> None:
+    compiled = compile_upward(
+        "Do the bare minimum. Take the smallest useful step. Freeze architecture. Governance first."
+    )
+    assert "maximum coherent advance consistent with the Operator-defined target" in compiled
+    assert "largest coherent executable tranche" in compiled
+    assert "continue evolution" in compiled
+    assert "governance serve functional advance" in compiled
+    assert inspect_execution_text(compiled) == ()
+
+
+def test_compile_upward_rewrites_minimum_permissions_language() -> None:
+    compiled = compile_upward("Use minimum necessary permissions for the worker identity.")
+    assert "minimum necessary permissions" not in compiled.lower()
+    assert "maximum coherent advance consistent with the Operator-defined target" in compiled
+    assert inspect_execution_text(compiled) == ()
+
+
+def test_compile_upward_preserves_quality_and_repairs_neighboring_regression() -> None:
+    compiled = compile_upward(
+        "Use least privilege for the GitHub token and take the safest slice."
+    )
+    assert "least privilege" in compiled
+    assert "control risk without reducing the target" in compiled
+    assert inspect_execution_text(compiled) == ()
+
+
+def test_compile_upward_preserves_negated_prohibition_and_repairs_other_clause() -> None:
+    compiled = compile_upward(
+        "Never freeze architecture; take the safest slice for the implementation."
+    )
+    assert "Never freeze architecture" in compiled
+    assert "control risk without reducing the target" in compiled
+    assert inspect_execution_text(compiled) == ()
+
+
+def test_compile_upward_does_not_rewrite_security_exception() -> None:
+    text = "Use least privilege for the GitHub token."
+    assert compile_upward(text) == text

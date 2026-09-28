@@ -1,0 +1,31 @@
+-- DEPLOYED RUNTIME MIRROR — generated from the live control-plane contract.
+-- Authoritative runtime: Supabase project supabase-backend-ops.
+-- This file intentionally records the public interface/invariants; live migrations
+-- and pg_get_functiondef readback control if this mirror ever differs.
+
+-- Core legal execution objects expected in production:
+--   legal_execution_state_v1
+--   legal_execution_transitions_v1
+--   legal_execution_control_v1
+--   legal_control_transition_rules_v1
+--   legal_execution_state_rank_v1
+--   legal_control_deadletter_v1
+--
+-- Functions:
+--   legal_execution_transition_v1(uuid,text,text,uuid,uuid,uuid,text,text,timestamptz,jsonb,jsonb)
+--   legal_reduce_continuity_event_v1()
+--   legal_record_external_action_v1(uuid,uuid,text,text,text,text,text,text,text,text,timestamptz,text,text,jsonb)
+--   legal_execution_snapshot_v1(text)
+--
+-- Required invariants:
+-- * provider/source receipt required where transition rule requires it
+-- * operator approval required where transition rule requires it
+-- * unique transition_key
+-- * deduplicated provider receipts
+-- * active commitment idempotency
+-- * event reducer non-regression
+-- * reducer failures to dead-letter
+-- * continuity_commitments_v1 is deadline source of truth
+--
+-- Do not hand-edit deployed state from this comment-only mirror. Apply a new
+-- additive Supabase migration, verify by readback, then update this mirror.

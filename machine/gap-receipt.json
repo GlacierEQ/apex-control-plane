@@ -1,0 +1,9 @@
+{
+  "schema": "glaciereq.elite-leaf-gap.v1",
+  "repository": "GlacierEQ/apex-control-plane",
+  "at": "2026-08-10T05:49Z",
+  "blocker": "TESTS_FAIL",
+  "evidence": "leaves/apex-control-plane/proof.log+launch.log",
+  "not_promoted_reason": "pr_ok=False ran=10 op_ok=True primary_ok=True",
+  "principal_state_claim": null
+}

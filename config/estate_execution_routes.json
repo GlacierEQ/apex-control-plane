@@ -1,0 +1,66 @@
+{
+  "schema_version": "2.0.0",
+  "name": "GlacierEQ Estate Execution Route Policy",
+  "status": "active",
+  "authority_boundary": {
+    "operator": "determines mission direction and authorizes external or destructive mutations",
+    "apex_control_plane": "binds execution intent, route policy, verification requirements, and receipts",
+    "source_system": "retains authority for provider-native source bytes, identity, execution state, and delivery receipts",
+    "compute_fabric": "selects an eligible verified backend without acquiring project authority",
+    "connector_worker_fabric": "executes provider-native event, sync, inventory, and mutation work under connector policy"
+  },
+  "route_definitions": {
+    "compute_fabric": {
+      "purpose": "route declared compute workloads to an eligible verified backend",
+      "requires_backend_promotion": true,
+      "requires_exact_source": true,
+      "requires_receipt": true,
+      "requires_terminal_readback": true
+    },
+    "buildkite_verified_execution": {
+      "purpose": "private CI, deterministic validation, and other workloads proven on Buildkite",
+      "requires_exact_source": true,
+      "requires_receipt": true,
+      "requires_terminal_readback": true
+    },
+    "public_action_face": {
+      "purpose": "explicitly admitted governed GitHub-hosted execution",
+      "catalog_admission": "explicit_only",
+      "requires_exact_source": true,
+      "requires_receipt": true,
+      "requires_terminal_readback": true
+    },
+    "connector_worker_fabric": {
+      "purpose": "provider-native sync, webhook, polling, inventory, and mutation work",
+      "destructive_requires_operator_approval": true,
+      "requires_receipt": true,
+      "requires_terminal_readback": true
+    },
+    "private_github_actions_exception": {
+      "purpose": "temporary compatibility or narrowly justified private GitHub-hosted execution",
+      "default_allowed": false,
+      "requires_exception_reason": true,
+      "requires_expiry_or_review": true,
+      "requires_receipt": true
+    },
+    "none": {
+      "purpose": "artifact has no active execution requirement"
+    }
+  },
+  "routing_laws": [
+    "selection_is_not_authority",
+    "routing_is_not_sovereignty",
+    "no_verified_delta_no_success",
+    "do_not_disable_current_route_until_target_route_is_proven",
+    "do_not_auto_admit_repositories_to_public_action_face",
+    "do_not_promote_unverified_compute_backends",
+    "destructive_provider_mutation_requires_explicit_operator_authorization",
+    "private_github_actions_is_not_the_estate_scheduler",
+    "failure_reporting_must_not_depend_on_the_same_failed_execution_substrate",
+    "preserve_provider_native_identity_and_receipts"
+  ],
+  "dynamic_workload_state": {
+    "embedded_in_static_policy": false,
+    "reason": "workload migration status is time-varying source-bearing state and must be supplied by the live control plane rather than fossilized in this policy"
+  }
+}

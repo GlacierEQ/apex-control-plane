@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "connector_key": "desktop_commander.glacier",
+  "role": "local_agent_execution_bridge",
+  "authority": {
+    "source_system": "GlacierEQ/UDC",
+    "backend_is_source_authority": false,
+    "live_device_state_is_runtime_only": true
+  },
+  "runtime": {
+    "plane": "supabase-backend-ops",
+    "bridge_function": "apex-desktop-commander-bridge",
+    "transport": "outbound_signed_bridge_v1",
+    "inbound_desktop_port_required": false
+  },
+  "tables": {
+    "devices": "desktop_commander_devices_v1",
+    "jobs": "desktop_commander_jobs_v1",
+    "receipts": "desktop_commander_receipts_v1",
+    "nonces": "desktop_commander_nonces_v1",
+    "operation_policy": "desktop_commander_operation_policy_v1"
+  },
+  "allowed_operations": [
+    "read_file",
+    "read_multiple_files",
+    "list_directory",
+    "search_files",
+    "get_file_info",
+    "write_file",
+    "edit_block",
+    "run_profile"
+  ],
+  "fixed_profiles": ["git_status", "git_diff", "test", "build", "lint", "typecheck"],
+  "forbidden_by_default": [
+    "arbitrary_shell",
+    "system_power",
+    "service_management",
+    "registry_mutation",
+    "process_termination",
+    "scheduled_task_control",
+    "ownership_change"
+  ],
+  "invariants": {
+    "approved_roots_required": true,
+    "compare_before_write_required": true,
+    "append_only_receipts": true,
+    "nonce_replay_protection": true,
+    "signed_device_requests": true,
+    "device_private_key_not_persisted_backend": true,
+    "atomic_enqueue_idempotency": true,
+    "expired_lease_recovery": true,
+    "finish_requires_live_lease": true,
+    "heartbeat_monotonic": true,
+    "read_selection_requires_execution_proof": true,
+    "result_hash_algorithm": "sha256",
+    "device_specific_execution_binding": true,
+    "binding_invalidated_on_identity_or_approval_loss": true
+  },
+  "source_parity": {
+    "migration_count": 11,
+    "edge_function_source": "supabase/functions/apex-desktop-commander-bridge/index.ts"
+  }
+}

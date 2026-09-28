@@ -1,4 +1,42 @@
-registry/**/*.pyc
+# Python
 __pycache__/
-*.bak-*
+*.py[cod]
+*$py.class
+*.so
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+
+# Secrets — NEVER COMMIT
+.env
+.env.*
+*.env
+secrets.json
+credentials.json
+*_credentials.*
+*_secrets.*
+.secrets/
+keys/
+# Virtual environments
+venv/
+.venv/
+env/
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+# OS
 .DS_Store
+Thumbs.db
+# Audit logs (large, kept locally or in separate storage)
+audit_logs/*.jsonl
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+registry/**/*.pyc
+*.bak-*

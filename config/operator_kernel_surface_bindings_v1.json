@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "status": "ACTIVE",
+  "canonical_contract": {
+    "repository": "GlacierEQ/apex-control-plane",
+    "path": "GLACIEREQ_OPERATOR_KERNEL.md",
+    "version": "1.0.0",
+    "role": "highest_user_controlled_shared_operator_contract",
+    "higher_priority_boundaries": [
+      "platform_system_developer_instructions",
+      "safety_requirements",
+      "provider_constraints",
+      "applicable_law"
+    ]
+  },
+  "codex": {
+    "native_entrypoint": "~/.codex/AGENTS.md",
+    "managed_block": "adapters/codex/GLOBAL_AGENTS_MANAGED_BLOCK.md",
+    "local_kernel_mirror": "~/.codex/GLACIEREQ_OPERATOR_KERNEL.md",
+    "executable_skill": "~/.codex/skills/casey-operator-execution-kernel/SKILL.md",
+    "installer": "scripts/install_codex_operator_kernel.py",
+    "load_semantics": "native_AGENTS_discovery_plus_local_kernel_reference"
+  },
+  "chatgpt": {
+    "project_instructions": "adapters/chatgpt/PROJECT_INSTRUCTIONS.md",
+    "custom_instructions": "adapters/chatgpt/CUSTOM_INSTRUCTIONS.md",
+    "full_kernel_project_source": "GLACIEREQ_OPERATOR_KERNEL.md",
+    "durable_library_projection": "/Operating Doctrine/GLACIEREQ_OPERATOR_KERNEL.md",
+    "native_project_instructions_required_for_deterministic_project_bootstrap": true,
+    "automated_account_setting_mutation_available_from_repo": false,
+    "load_semantics": "project_or_custom_instructions_plus_project_library_source_when_configured"
+  },
+  "invariants": [
+    "adapters_are_projections_not_competing_constitutions",
+    "current_operator_instruction_controls_active_user_mission",
+    "source_meaning_and_provider_native_truth_are_preserved",
+    "blocked_tool_changes_route_not_objective",
+    "no_execution_claim_without_receipt",
+    "no_verified_completion_claim_without_readback_when_possible",
+    "no_claim_that_user_controlled_kernel_overrides_platform_system_developer_instructions"
+  ]
+}
