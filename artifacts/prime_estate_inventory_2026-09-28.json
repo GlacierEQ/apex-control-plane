@@ -1,0 +1,3049 @@
+{
+  "generated_at": "2026-09-28",
+  "scope": "GitHub code search over repositories visible to the connected GlacierEQ GitHub identity; default-branch index only",
+  "queries": [
+    {
+      "query": "\"prime directive\" org:GlacierEQ",
+      "total": 228
+    },
+    {
+      "query": "prime_directive org:GlacierEQ",
+      "total": 138
+    }
+  ],
+  "unique_files": 427,
+  "repositories": 35,
+  "counts_by_repository": {
+    "GlacierEQ/monolith": 106,
+    "GlacierEQ/monolith-map": 106,
+    "GlacierEQ/apex-control-plane": 36,
+    "GlacierEQ/LEGAL-AI-NEXUS": 26,
+    "GlacierEQ/THE-CATACLYSM": 18,
+    "GlacierEQ/legal-motion-automation": 16,
+    "GlacierEQ/nexus-legal-grid": 16,
+    "GlacierEQ/legal-powerhouse": 14,
+    "GlacierEQ/apex-legal-case": 11,
+    "GlacierEQ/CASE-1FDV-23-0001009": 10,
+    "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX": 10,
+    "GlacierEQ/CYBERTACK-1FDV-23-0001009": 9,
+    "GlacierEQ/SUPERLUMINAL_CASE_MATRIX": 9,
+    "GlacierEQ/case-1FDV-23-0001009-legal-documents": 8,
+    "GlacierEQ/DOCKETS": 4,
+    "GlacierEQ/ANTIGRAVITY-STACK": 3,
+    "GlacierEQ/opryxx_logs": 3,
+    "GlacierEQ/1FDV-23-0001009-FEDERAL-WARFARE": 2,
+    "GlacierEQ/mega-skills": 2,
+    "GlacierEQ/OPRYXX_LOGS2": 2,
+    "GlacierEQ/THE_CATACLYSM": 2,
+    "GlacierEQ/AKOS": 1,
+    "GlacierEQ/AspenGrove-KEKOA-1FDV-23-0001009": 1,
+    "GlacierEQ/automation-hub": 1,
+    "GlacierEQ/colossal-agent": 1,
+    "GlacierEQ/erik-breisacher-legal-investigation": 1,
+    "GlacierEQ/job-app-helix": 1,
+    "GlacierEQ/mastermind": 1,
+    "GlacierEQ/MEGA-PDF": 1,
+    "GlacierEQ/mimo-config-backup": 1,
+    "GlacierEQ/Pro-Evidence": 1,
+    "GlacierEQ/Pro-Forensics": 1,
+    "GlacierEQ/Pro-Gateway": 1,
+    "GlacierEQ/public-actions-runner-host": 1,
+    "GlacierEQ/scribe-pdf-master": 1
+  },
+  "limitations": [
+    "GitHub code search indexes default branches; hidden/non-default branch occurrences require a separate branch-history sweep.",
+    "Exact phrase and underscore searches do not include every possible semantic synonym of PRIME.",
+    "Inventory is discovery state, not semantic classification; each governing or executable occurrence must be opened before mutation."
+  ],
+  "files": [
+    {
+      "repository": "GlacierEQ/1FDV-23-0001009-FEDERAL-WARFARE",
+      "path": "THE_CATACLYSM/EVIDENCE/CODING_LOGIC/2025-06-11_82715278-7140-4e52-b491-e8022769f66d_block_1.py",
+      "blob_sha": "d61232e535b821e79cc01e6851ab2738172dc97b",
+      "url": "https://github.com/GlacierEQ/1FDV-23-0001009-FEDERAL-WARFARE/blob/95c1cdd4a13805c4026847b57b6d2b23a21aa98c/THE_CATACLYSM/EVIDENCE/CODING_LOGIC/2025-06-11_82715278-7140-4e52-b491-e8022769f66d_block_1.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/1FDV-23-0001009-FEDERAL-WARFARE",
+      "path": "THE_CATACLYSM/EVIDENCE/CODING_LOGIC/FORENSIC_ENGINES__2025-06-11_82715278-7140-4e52-b491-e8022769f66d_block_1.py",
+      "blob_sha": "d61232e535b821e79cc01e6851ab2738172dc97b",
+      "url": "https://github.com/GlacierEQ/1FDV-23-0001009-FEDERAL-WARFARE/blob/95c1cdd4a13805c4026847b57b6d2b23a21aa98c/THE_CATACLYSM/EVIDENCE/CODING_LOGIC/FORENSIC_ENGINES__2025-06-11_82715278-7140-4e52-b491-e8022769f66d_block_1.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/AKOS",
+      "path": "JACK_CASEBUILDER_KNOWLEDGE_BINDING.md",
+      "blob_sha": "e724fdb23c0bf4d5e54810954fe63ca3017d40bf",
+      "url": "https://github.com/GlacierEQ/AKOS/blob/14fd721c6ba811a8cbc0d6cc00d2cb1af8a3554e/JACK_CASEBUILDER_KNOWLEDGE_BINDING.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/ANTIGRAVITY-STACK",
+      "path": "nexus-gateway/OPERATOR_CONFIG_OMNI_ASCENDANT.json",
+      "blob_sha": "47dbb2c5331628d3a9915dbb5651485009996016",
+      "url": "https://github.com/GlacierEQ/ANTIGRAVITY-STACK/blob/89f99cb74492698fdcae422e6ee0800e3e34aa4c/nexus-gateway/OPERATOR_CONFIG_OMNI_ASCENDANT.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/ANTIGRAVITY-STACK",
+      "path": "nexus-gateway/OPERATOR_FORMALIZATION_CERTIFICATE.md",
+      "blob_sha": "2b1221bb3239b761dc798a7cd896ea3ec92bf3bf",
+      "url": "https://github.com/GlacierEQ/ANTIGRAVITY-STACK/blob/89f99cb74492698fdcae422e6ee0800e3e34aa4c/nexus-gateway/OPERATOR_FORMALIZATION_CERTIFICATE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/ANTIGRAVITY-STACK",
+      "path": "OPERATOR_ACTIVATION_REPORT.md",
+      "blob_sha": "a99c80951189d8c381e056e738924322d6e48778",
+      "url": "https://github.com/GlacierEQ/ANTIGRAVITY-STACK/blob/89f99cb74492698fdcae422e6ee0800e3e34aa4c/OPERATOR_ACTIVATION_REPORT.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": ".github/workflows/apex-strongest-boot.yml",
+      "blob_sha": "3ee71fe7c5e3ad269eadcc65698cb142f65e5d52",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/.github/workflows/apex-strongest-boot.yml",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": ".github/workflows/casebrain-ci.yml",
+      "blob_sha": "73a9774770dcd6eff86898c818ff62280cab36bd",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/.github/workflows/casebrain-ci.yml",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": ".github/workflows/casey-auto-boot.yml",
+      "blob_sha": "93cb122e6378804fa26758eb23825e03e8b8a39c",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/.github/workflows/casey-auto-boot.yml",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": ".github/workflows/operator-fidelity-lock.yml",
+      "blob_sha": "ec61f4efe356fa3c3e0f8d5efc67e07d7e5694ca",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/.github/workflows/operator-fidelity-lock.yml",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "AKOS_ADOPTION.yaml",
+      "blob_sha": "958e64e900e1ca83ecd4f93a826f4cd202a98cee",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/AKOS_ADOPTION.yaml",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "config/apex_runtime_policy.json",
+      "blob_sha": "7d76998a287f579786a14192627c55185d35c7b3",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/config/apex_runtime_policy.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "config/casey_auto_boot_manifest.json",
+      "blob_sha": "cd1c468ad1608ded03cba41036eb00365e5794ae",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/config/casey_auto_boot_manifest.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "config/continuous_maintenance_execution_contract.json",
+      "blob_sha": "0c4b3ec8b02b2b4398e4a775c14650e382bc48dc",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/config/continuous_maintenance_execution_contract.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "config/prime_directive_policy.json",
+      "blob_sha": "87cf9973e675a3dc326c65d2c06d3a52050e5c1e",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/config/prime_directive_policy.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "docs/CASEY_AUTO_BOOT.md",
+      "blob_sha": "92073a6cc12af8463ca6fb64a4c85760a4642a88",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/docs/CASEY_AUTO_BOOT.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "docs/PRIME_DIRECTIVE_ENFORCER.md",
+      "blob_sha": "4dca4ea85bd2adc257550fc4080c032431ccec8b",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/docs/PRIME_DIRECTIVE_ENFORCER.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "legacy/2026-08-19-startup-continuation-recovery/config/prime_directive_policy.json",
+      "blob_sha": "3c1eec34522362e727e4cbeca43cd8291566d5b3",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/legacy/2026-08-19-startup-continuation-recovery/config/prime_directive_policy.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "legacy/2026-08-19-startup-continuation-recovery/src/apex_enforced_startup.py",
+      "blob_sha": "b9490bdc623e225fb28be07154dca9d3aeb222e0",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/legacy/2026-08-19-startup-continuation-recovery/src/apex_enforced_startup.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "legacy/2026-08-19-startup-continuation-recovery/src/operator_fidelity_lock.py",
+      "blob_sha": "60e14acec966047f1c9c186c33491a94f80d1dca",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/legacy/2026-08-19-startup-continuation-recovery/src/operator_fidelity_lock.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "legacy/2026-08-19-startup-continuation-recovery/src/operator_fidelity_preflight.py",
+      "blob_sha": "f4b55c9a811e8e6952307958e19ac0413a0e8415",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/legacy/2026-08-19-startup-continuation-recovery/src/operator_fidelity_preflight.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "legacy/2026-08-19-startup-continuation-recovery/src/sitecustomize.py",
+      "blob_sha": "814c8d61956d176fcd6244471ca8fd570a39e4a3",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/legacy/2026-08-19-startup-continuation-recovery/src/sitecustomize.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "README.md",
+      "blob_sha": "25a00a86fef1e24a7392d29f1b2931e5d90164ec",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/README.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/apex_enforced_startup.py",
+      "blob_sha": "3de8b691328079048cb1cf4ebc5b38e533624fe7",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/apex_enforced_startup.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/apex_runtime_kernel.py",
+      "blob_sha": "6981572a42f4dc6c7b1ebe405e632ebc33775ae9",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/apex_runtime_kernel.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/apex_strong_boot.py",
+      "blob_sha": "2085aabd1f1f12bcfc5ac666901e3805cbbb96ce",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/apex_strong_boot.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/model_attractor_defense.py",
+      "blob_sha": "19d2022823717b34c3932cc2258f037a8c633dd0",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/model_attractor_defense.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/notion_continuity_gate.py",
+      "blob_sha": "3446e1f5008b94cc7405444eead1d89f04410195",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/notion_continuity_gate.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/operator_fidelity_lock.py",
+      "blob_sha": "13498eb728059fc033c04e0f034b9da5c5e3c57a",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/operator_fidelity_lock.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/operator_fidelity_preflight.py",
+      "blob_sha": "c3b9c5e68d636f12c187be87dfadfb042a956a49",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/operator_fidelity_preflight.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/prime_directive_boot.py",
+      "blob_sha": "204d5933bd1f1717f3b42be59d8b0cf048a8b3d7",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/prime_directive_boot.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/prime_directive_enforcer.py",
+      "blob_sha": "8caa4f7d89adab7afccec3bad879374fb1d17173",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/prime_directive_enforcer.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/sitecustomize.py",
+      "blob_sha": "a314923f29940cd477dcd1a35bba44fadd5070ae",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/sitecustomize.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "src/strict_frontier_preflight.py",
+      "blob_sha": "62fbf92314b921f937553420110769cd83ed35f4",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/src/strict_frontier_preflight.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "STATE.md",
+      "blob_sha": "ad5ec126bb20e0186b9fac20b53cd61809a2fe01",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/STATE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "tests/conftest.py",
+      "blob_sha": "7a5f5d8a181132adad0df9b45a7cd0426b8e61e4",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/tests/conftest.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "tests/test_apex_strong_boot.py",
+      "blob_sha": "0bf6b6f3ea85b16ac74a828494479c88f96f136d",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/tests/test_apex_strong_boot.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "tests/test_auto_boot.py",
+      "blob_sha": "4f076637607206851ecc7276e86ba9e3da376689",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/tests/test_auto_boot.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "tests/test_control_plane.py",
+      "blob_sha": "cc6bda4795235dd17de6b6047146aff4715d22ac",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/tests/test_control_plane.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "tests/test_prime_directive_boot_hardening.py",
+      "blob_sha": "36150b96dab8cbf2a5f3b4cb002a145fb2550717",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/tests/test_prime_directive_boot_hardening.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "tests/test_prime_directive_boot.py",
+      "blob_sha": "e6217ed9877b1d8106ab5b0756698002cb5a817d",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/tests/test_prime_directive_boot.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "tests/test_prime_directive_enforcer.py",
+      "blob_sha": "fb5415e2d4f94fcea631ab288b5e4a8adbbfc0a0",
+      "url": "https://github.com/GlacierEQ/apex-control-plane/blob/abf5a328fc878bde0ca217f03586f30423c40efd/tests/test_prime_directive_enforcer.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "case-master/CASEBUILDER_ALLEGATION_FORGE.md",
+      "blob_sha": "1fba23cd1f1eaeb833a37eacb66a2d8ab371c20f",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/case-master/CASEBUILDER_ALLEGATION_FORGE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "case-master/casebuilder/JACK_V3_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "ae658213b9db7e09e87f198993221527420d1fc5",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/case-master/casebuilder/JACK_V3_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "case-master/cases/linkedin-profile-2026/CASE_DOSSIER.md",
+      "blob_sha": "3c8454369a1e0f3ee57ec0dc632969dfa0a478ea",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/case-master/cases/linkedin-profile-2026/CASE_DOSSIER.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "blob_sha": "750bcba0937c7ab6f80afbb507fa60b4e9d7ed26",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "blob_sha": "750bcba0937c7ab6f80afbb507fa60b4e9d7ed26",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "legal-forge/jack-casebuilder-v2.schema.json",
+      "blob_sha": "192f1bec9ffea14f20150a5726d946b368a8180d",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/legal-forge/jack-casebuilder-v2.schema.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/apex-legal-case",
+      "path": "legal-forge/scripts/casebuilder_engine.py",
+      "blob_sha": "e5c2b07f0b9b1609fad76ba3cb2668aecbcfe95b",
+      "url": "https://github.com/GlacierEQ/apex-legal-case/blob/09997e2cc20cc74c3edce6d5dfed07c66b8e3ee5/legal-forge/scripts/casebuilder_engine.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/AspenGrove-KEKOA-1FDV-23-0001009",
+      "path": "CASEBUILDER/JACK/TERESA/README.md",
+      "blob_sha": "575fe7c09d6b492638fe9c1d2add2e93d791d22f",
+      "url": "https://github.com/GlacierEQ/AspenGrove-KEKOA-1FDV-23-0001009/blob/89afa89c043d109e26d845be777ec622c74c9744/CASEBUILDER/JACK/TERESA/README.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/automation-hub",
+      "path": "workflows/job-app-helix/FULL_CYCLE_COMPANY_INNOVATION.md",
+      "blob_sha": "45841835c148e2b53b5ccebc93af12f1993b6937",
+      "url": "https://github.com/GlacierEQ/automation-hub/blob/d6e7919693f538443186fc2bfddc91874f885b0c/workflows/job-app-helix/FULL_CYCLE_COMPANY_INNOVATION.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "00_CASE_SPINE/1FDV_JACK_CONTROL_PLANE_BINDING_V5.md",
+      "blob_sha": "51c83bb16a476847b3e819bd3fcea24deeeb7b36",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/00_CASE_SPINE/1FDV_JACK_CONTROL_PLANE_BINDING_V5.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "00_CASE_SPINE/CASEBUILDER_RUNTIME.json",
+      "blob_sha": "6b3578a4470d79016b96c4c72198a261a899e125",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/00_CASE_SPINE/CASEBUILDER_RUNTIME.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "00_CASE_SPINE/JACK_CASEBUILDER_ALLEGATION_FORGE.md",
+      "blob_sha": "a583148726b0bb714b47191405c93add5c3dca8b",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/00_CASE_SPINE/JACK_CASEBUILDER_ALLEGATION_FORGE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "00_CASE_SPINE/JACK_WHOLE_CASE_DEPLOYMENT_2026-08-30.md",
+      "blob_sha": "5710eae7cec730d26d49c135e93dca73a93e0a21",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/00_CASE_SPINE/JACK_WHOLE_CASE_DEPLOYMENT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "00_CASE_SPINE/KYLE_DOWD_JACK_NODE_2026-08-30.md",
+      "blob_sha": "ca8cc43f420bc7f28c68e2f4b99757487bed20c1",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/00_CASE_SPINE/KYLE_DOWD_JACK_NODE_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "10_CASEBUILD_CONTROL/CSEA/00_JACK_CASE_SPINE_2026-08-30.md",
+      "blob_sha": "97b9f2b3b0b0de4911bcaab04de3d5ada84e5542",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/10_CASEBUILD_CONTROL/CSEA/00_JACK_CASE_SPINE_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "10_CASEBUILDER/00_MANIFEST.json",
+      "blob_sha": "33a2e21c0c4ea196e5438143af77115d41705830",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/10_CASEBUILDER/00_MANIFEST.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "10_CASEBUILDER/BROWER_MANIFEST.json",
+      "blob_sha": "ee25f6f16e93d8218dfec71cfe9120383fb8ebff",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/10_CASEBUILDER/BROWER_MANIFEST.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "10_CASEBUILDER/CONTROL_PLANE_ROUTING.md",
+      "blob_sha": "5357a00913d8f3e8b7d5d725416b8e42f32c5896",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/10_CASEBUILDER/CONTROL_PLANE_ROUTING.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CASE-1FDV-23-0001009",
+      "path": "10_CASEBUILDER/README.md",
+      "blob_sha": "82ef250253f32dbbcb3e1b80f15789aeb9d0cece",
+      "url": "https://github.com/GlacierEQ/CASE-1FDV-23-0001009/blob/82482dcd16611c6e06206b3a5ad04beeea965312/10_CASEBUILDER/README.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/case-1FDV-23-0001009-legal-documents",
+      "path": "CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/case-1FDV-23-0001009-legal-documents/blob/0b2d189c9939d0b8d26246cfd200bdd3091bc921/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/case-1FDV-23-0001009-legal-documents",
+      "path": "CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/case-1FDV-23-0001009-legal-documents/blob/0b2d189c9939d0b8d26246cfd200bdd3091bc921/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/case-1FDV-23-0001009-legal-documents",
+      "path": "CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/case-1FDV-23-0001009-legal-documents/blob/0b2d189c9939d0b8d26246cfd200bdd3091bc921/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/case-1FDV-23-0001009-legal-documents",
+      "path": "CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/case-1FDV-23-0001009-legal-documents/blob/0b2d189c9939d0b8d26246cfd200bdd3091bc921/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/case-1FDV-23-0001009-legal-documents",
+      "path": "cases/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/case-1FDV-23-0001009-legal-documents/blob/0b2d189c9939d0b8d26246cfd200bdd3091bc921/cases/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/case-1FDV-23-0001009-legal-documents",
+      "path": "cases/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/case-1FDV-23-0001009-legal-documents/blob/0b2d189c9939d0b8d26246cfd200bdd3091bc921/cases/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/case-1FDV-23-0001009-legal-documents",
+      "path": "cases/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/case-1FDV-23-0001009-legal-documents/blob/0b2d189c9939d0b8d26246cfd200bdd3091bc921/cases/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/case-1FDV-23-0001009-legal-documents",
+      "path": "cases/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/case-1FDV-23-0001009-legal-documents/blob/0b2d189c9939d0b8d26246cfd200bdd3091bc921/cases/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "CASES/NEVADA_UNEMPLOYMENT_MEUC/case.json",
+      "blob_sha": "25ec8005481f0e31a3e206da43b8f49169ca9b43",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/CASES/NEVADA_UNEMPLOYMENT_MEUC/case.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "CASES/NEVADA_UNEMPLOYMENT_MEUC/JACK_CASEBUILDER.md",
+      "blob_sha": "e0a27256769ef74a973918de1e5b83ec8c8086ef",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/CASES/NEVADA_UNEMPLOYMENT_MEUC/JACK_CASEBUILDER.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/CASEBUILDER/00_CASEBUILDER_CONTROL_PLANE.md",
+      "blob_sha": "98d8a961f4bf79aadd81c057c7ba41a90a9c30f8",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/CASES/NEX_JBPHH_RETAIL_INCIDENT/CASEBUILDER/00_CASEBUILDER_CONTROL_PLANE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/CASEBUILDER/15_RECONCILIATION_STATUS.md",
+      "blob_sha": "3ad42bf9a69737c1c16221f80cb304e6aeeea4f7",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/CASES/NEX_JBPHH_RETAIL_INCIDENT/CASEBUILDER/15_RECONCILIATION_STATUS.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/CASEBUILDER/CASE_GRAPH.json",
+      "blob_sha": "dffe96a3a985645d396217d587ae0388fb2ee71d",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/CASES/NEX_JBPHH_RETAIL_INCIDENT/CASEBUILDER/CASE_GRAPH.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER/00_INDEX.md",
+      "blob_sha": "f90e75eb5c1120ee012792074175858af7f08a93",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER/00_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER/case.json",
+      "blob_sha": "6b5cba82a78d47338c943164675fc65d44df9632",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER/case.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER/README.md",
+      "blob_sha": "172d751b658e9e6fa5e88ed7cf3bde414c06eff3",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/CASES/NEX_JBPHH_RETAIL_INCIDENT/JACK_CASEBUILDER/README.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "TOOLS/JACK_CASEBUILDER_ALLEGATION_FORGE.md",
+      "blob_sha": "c447f4465842d979376906e268139c93c3a3dd08",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/TOOLS/JACK_CASEBUILDER_ALLEGATION_FORGE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX",
+      "path": "TOOLS/JACK_CASEBUILDER_SCHEMA.json",
+      "blob_sha": "0af11e64eadfdf0ccb0866603843e3c935d89cf9",
+      "url": "https://github.com/GlacierEQ/CHERRY_CHAN_RECOVERY_MATRIX/blob/af2679fa50fe267c1991a39ddd59af4722b8a275/TOOLS/JACK_CASEBUILDER_SCHEMA.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/colossal-agent",
+      "path": "systems/digestive/small-intestine/file-intelligence.ts",
+      "blob_sha": "b7d4f58d26592ff224fac5f3bee7d7d4bcfd2341",
+      "url": "https://github.com/GlacierEQ/colossal-agent/blob/5bde7acc10ef69120dfffeaa2e92c3464966e003/systems/digestive/small-intestine/file-intelligence.ts",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "cases/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/cases/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "cases/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/cases/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "cases/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/cases/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "cases/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/cases/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/CYBERTACK-1FDV-23-0001009",
+      "path": "NAINOA_MARTIN/casebuilder/CASE_SPINE.md",
+      "blob_sha": "5a3ab90edbf162a955645295224aa893d25d7573",
+      "url": "https://github.com/GlacierEQ/CYBERTACK-1FDV-23-0001009/blob/59c3efa613226f3650e6da80511a8b65bae40c61/NAINOA_MARTIN/casebuilder/CASE_SPINE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/DOCKETS",
+      "path": "1FDV-23-0001009/CASEBUILDER/JACK_CASEBUILDER_CONTROL_PLANE.md",
+      "blob_sha": "132f44834f51e623eb7e928d35026ba8dce36211",
+      "url": "https://github.com/GlacierEQ/DOCKETS/blob/548e5bdb0291282e443baf26f476c1a07b567f29/1FDV-23-0001009/CASEBUILDER/JACK_CASEBUILDER_CONTROL_PLANE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/DOCKETS",
+      "path": "CASE-CHR-003/CASE_HOME.md",
+      "blob_sha": "f9171dfc76ae85fa4695b659012774ceff45a7ae",
+      "url": "https://github.com/GlacierEQ/DOCKETS/blob/548e5bdb0291282e443baf26f476c1a07b567f29/CASE-CHR-003/CASE_HOME.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/DOCKETS",
+      "path": "CASE-CHR-003/CASEBUILDER/00_CASEBUILDER_CONTROL_PLANE.md",
+      "blob_sha": "54c87d18cc1c2aca35743fe89591f23fdf3d43f7",
+      "url": "https://github.com/GlacierEQ/DOCKETS/blob/548e5bdb0291282e443baf26f476c1a07b567f29/CASE-CHR-003/CASEBUILDER/00_CASEBUILDER_CONTROL_PLANE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/DOCKETS",
+      "path": "CHERRY_CASEBUILDER/README.md",
+      "blob_sha": "6295306e811f41be9eed8a03372c4cac6204ee84",
+      "url": "https://github.com/GlacierEQ/DOCKETS/blob/548e5bdb0291282e443baf26f476c1a07b567f29/CHERRY_CASEBUILDER/README.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/erik-breisacher-legal-investigation",
+      "path": "case-analysis/JACK_THE_RIPPER_CASEBUILDER.md",
+      "blob_sha": "d4e68bfb32958b89444c8df64477741aae08c59d",
+      "url": "https://github.com/GlacierEQ/erik-breisacher-legal-investigation/blob/8f8c4f4cc03d1369ef4422b7e725340ee1b4cd84/case-analysis/JACK_THE_RIPPER_CASEBUILDER.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/job-app-helix",
+      "path": "docs/FRONTIER_REPOSITORY_INNOVATION_ENGINE.md",
+      "blob_sha": "244d1d2c2170383df809aec69a3ac270144f9db7",
+      "url": "https://github.com/GlacierEQ/job-app-helix/blob/c4c26df48e77c33ef8a75935ef7f905db2b3adb1/docs/FRONTIER_REPOSITORY_INNOVATION_ENGINE.md",
+      "private": false
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_CAMARO_HPD_CONVERSION/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_CAMARO_HPD_CONVERSION/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_CAMARO_HPD_CONVERSION/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_CAMARO_HPD_CONVERSION/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_CAMARO_HPD_CONVERSION/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_CAMARO_HPD_CONVERSION/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_CAMARO_HPD_CONVERSION/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_CAMARO_HPD_CONVERSION/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_NEXCOM_TITLE_VII_WHISTLEBLOWER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_NEXCOM_TITLE_VII_WHISTLEBLOWER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_NEXCOM_TITLE_VII_WHISTLEBLOWER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_NEXCOM_TITLE_VII_WHISTLEBLOWER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_NEXCOM_TITLE_VII_WHISTLEBLOWER/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_NEXCOM_TITLE_VII_WHISTLEBLOWER/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_NEXCOM_TITLE_VII_WHISTLEBLOWER/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_NEXCOM_TITLE_VII_WHISTLEBLOWER/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CHERRY_NEX_JBPHH/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "389a0e5e6e18c59e21c576b063776f161b7f0a76",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CHERRY_NEX_JBPHH/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CHERRY_NEX_JBPHH/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "blob_sha": "953f7a90165aff3b21246bbfeee8baf6b685b839",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CHERRY_NEX_JBPHH/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CHERRY_NEX_JBPHH/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "389a0e5e6e18c59e21c576b063776f161b7f0a76",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CHERRY_NEX_JBPHH/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CHERRY_NEX_JBPHH/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "blob_sha": "953f7a90165aff3b21246bbfeee8baf6b685b839",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CHERRY_NEX_JBPHH/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CWS_JACK_THE_RIPPER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CWS_JACK_THE_RIPPER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CWS_JACK_THE_RIPPER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CWS_JACK_THE_RIPPER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CWS_JACK_THE_RIPPER/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CWS_JACK_THE_RIPPER/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/CWS_JACK_THE_RIPPER/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/CWS_JACK_THE_RIPPER/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/DIAMOND_HEAD_EMPLOYMENT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "0639bf2ed12d2c99dea71bc3b84145bc245fb886",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/DIAMOND_HEAD_EMPLOYMENT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/DIAMOND_HEAD_EMPLOYMENT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/DIAMOND_HEAD_EMPLOYMENT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/DIAMOND_HEAD_EMPLOYMENT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/DIAMOND_HEAD_EMPLOYMENT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/DIAMOND_HEAD_EMPLOYMENT/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "0639bf2ed12d2c99dea71bc3b84145bc245fb886",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/DIAMOND_HEAD_EMPLOYMENT/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/DIAMOND_HEAD_EMPLOYMENT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/DIAMOND_HEAD_EMPLOYMENT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/LEGAL-AI-NEXUS",
+      "path": "cases/DIAMOND_HEAD_EMPLOYMENT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/LEGAL-AI-NEXUS/blob/a23308e90172d33cd73619dbf95e7ae1bc7284a8/cases/DIAMOND_HEAD_EMPLOYMENT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_LAS_VEGAS_DIVORCE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_LAS_VEGAS_DIVORCE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_LAS_VEGAS_DIVORCE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_LAS_VEGAS_DIVORCE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_LAS_VEGAS_DIVORCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_LAS_VEGAS_DIVORCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_LAS_VEGAS_DIVORCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_LAS_VEGAS_DIVORCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_NEVADA_MEUC_APPEAL/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_NEVADA_MEUC_APPEAL/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_NEVADA_MEUC_APPEAL/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_NEVADA_MEUC_APPEAL/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_NEVADA_MEUC_APPEAL/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_NEVADA_MEUC_APPEAL/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-motion-automation",
+      "path": "cases/CASE_NEVADA_MEUC_APPEAL/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-motion-automation/blob/604d368d490b89250ae25ae5768dec82aba3303e/cases/CASE_NEVADA_MEUC_APPEAL/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/CASE_BROWER_MARTIN_CONSPIRACY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/CASE_BROWER_MARTIN_CONSPIRACY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/CASE_BROWER_MARTIN_CONSPIRACY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/CASE_BROWER_MARTIN_CONSPIRACY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/CASE_BROWER_MARTIN_CONSPIRACY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/CASE_BROWER_MARTIN_CONSPIRACY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/CASE_BROWER_MARTIN_CONSPIRACY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/CASE_BROWER_MARTIN_CONSPIRACY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "blob_sha": "750bcba0937c7ab6f80afbb507fa60b4e9d7ed26",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/QUEENS_HOSPITAL_MARCH_2026/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/legal-powerhouse",
+      "path": "cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "blob_sha": "750bcba0937c7ab6f80afbb507fa60b4e9d7ed26",
+      "url": "https://github.com/GlacierEQ/legal-powerhouse/blob/0a11037dda6287061564e2a00a2372260de78a8e/cases/QUEENS_HOSPITAL_MARCH_2026/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/mastermind",
+      "path": "AGENTS.md",
+      "blob_sha": "81e988444936386efe0d0ee2fc155ed7387a7e93",
+      "url": "https://github.com/GlacierEQ/mastermind/blob/dd6360390087f7719671f53b650388ccb4bd97e0/AGENTS.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/MEGA-PDF",
+      "path": "Synapse/build_memory_cathedral.py",
+      "blob_sha": "b7072567085cba9a101deb0c2d793ef94587265e",
+      "url": "https://github.com/GlacierEQ/MEGA-PDF/blob/073de7a177f9e48753392a20f8ecb6b3a558e628/Synapse/build_memory_cathedral.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/mega-skills",
+      "path": "skills/apex-gemma4-omni-node/SKILL.md",
+      "blob_sha": "b1ded99b71b0625da2f8e960d8474f87d55a55c6",
+      "url": "https://github.com/GlacierEQ/mega-skills/blob/edef3a2a9f1744c37e2d291f4ddc319a65ada7fd/skills/apex-gemma4-omni-node/SKILL.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/mega-skills",
+      "path": "skills/desktop-commander-overview/SKILL.md",
+      "blob_sha": "5be61ed9ee13ec56b75947171f044db6be9c9390",
+      "url": "https://github.com/GlacierEQ/mega-skills/blob/edef3a2a9f1744c37e2d291f4ddc319a65ada7fd/skills/desktop-commander-overview/SKILL.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/mimo-config-backup",
+      "path": "gemini_skills/apex-gemma4-omni-node/SKILL.md",
+      "blob_sha": "42cdbdd43d7a2e7d11b0b9492665cc3cf4e0e9e5",
+      "url": "https://github.com/GlacierEQ/mimo-config-backup/blob/beeb51efd77d28a6cf451f5bc384a61c3499204f/gemini_skills/apex-gemma4-omni-node/SKILL.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/case-1fdv/library_of_links.py",
+      "blob_sha": "0442bcae4882ba92390646481fa558639c6cb511",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/case-1fdv/library_of_links.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/case-1fdv/piston_registry.schema_flattened.json",
+      "blob_sha": "7dc1b3efcecfaa20ae9b9d42f733b52dd1c99ef1",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/case-1fdv/piston_registry.schema_flattened.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/case-1fdv/superpower_rules.py",
+      "blob_sha": "5feb8cc63641a5cdc207d4984b54d570b276be62",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/case-1fdv/superpower_rules.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/case-1fdv/test_library_of_links.py",
+      "blob_sha": "36cd6c3226c522a7027130e3313728d655a4ff63",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/case-1fdv/test_library_of_links.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/case-1fdv/test_superpower_rules.py",
+      "blob_sha": "13ecb18bd275d3af0222720393a802ba2b184d87",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/case-1fdv/test_superpower_rules.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/----PHASE 1 ---Legal Strategy Execution Plan.md",
+      "blob_sha": "32cb5345c67530f4029435d8b9ebd801d1b61c2d",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/----PHASE 1 ---Legal Strategy Execution Plan.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/AI legal mind maps_3.md",
+      "blob_sha": "f847f5ab1d354b4e8e000f9c2b904aafcc0a1ff4",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/AI legal mind maps_3.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Cloud Legal Doc Automation.md",
+      "blob_sha": "18efe4d5e8bbc3a30780b1531709f1b6dc666a40",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Cloud Legal Doc Automation.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Court Walkout Inquiry.md",
+      "blob_sha": "f125cfc29e2cca1bf26e08e86dafaebbe2ed49fd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Court Walkout Inquiry.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Forensic Media Intelligence System.md",
+      "blob_sha": "b789ba1d85fc4ab6c7b063e74427457461061eed",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Forensic Media Intelligence System.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Intro to Apps Script.md",
+      "blob_sha": "d5bd7baa9bf43252ecb3ff3095a358a636936357",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Intro to Apps Script.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Mythic Court Memory Artifact.md",
+      "blob_sha": "7e7b7bf58f68ec8a2d53958682eb20c8c857f51e",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Mythic Court Memory Artifact.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Recursive Legal Tech Fusion.md",
+      "blob_sha": "2d6e5d8fbb8c01053618ba833d598ac47a7e15f8",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDA_23_0000515/07_DISCOVERY_RECORDS/Recursive Legal Tech Fusion.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/05_PLEADINGS_MOTIONS/Motion Strategy Outline.md",
+      "blob_sha": "b089a31b354e240e3e3b1fa0140f8eee189a6f99",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/05_PLEADINGS_MOTIONS/Motion Strategy Outline.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/05_PLEADINGS_MOTIONS/Response Motion Analysis.md",
+      "blob_sha": "88b6ff4a23a42fea8c6db3ef2db0826ef1253590",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/05_PLEADINGS_MOTIONS/Response Motion Analysis.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/07_DISCOVERY_RECORDS/Custody Litigation Strategy AI.md",
+      "blob_sha": "802ebf17d12c84f5415c908f71b48cfaab8deacf",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/07_DISCOVERY_RECORDS/Custody Litigation Strategy AI.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/07_DISCOVERY_RECORDS/Forensic evidence protocol.md",
+      "blob_sha": "70eac0bb20309a90102af8fed9cd71fd3ea0e6c2",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/07_DISCOVERY_RECORDS/Forensic evidence protocol.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/07_DISCOVERY_RECORDS/Legal counter-strategies analysis.md",
+      "blob_sha": "43163e1cd796487047d65e16d5aea8194a018974",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/07_DISCOVERY_RECORDS/Legal counter-strategies analysis.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/07_DISCOVERY_RECORDS/Legal Hierarchical Organization.md",
+      "blob_sha": "f45aa81b6d72b945cd2df29e92f4ab41f052a8eb",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/07_DISCOVERY_RECORDS/Legal Hierarchical Organization.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_1FDV_23_0001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/01_FACTS_TIMELINE/CONTEMPORANEOUS_CHAT_EVIDENCE_CHRONOLOGY.md",
+      "blob_sha": "10969c5edfc6cf47cb0b30bd2cc77701e68cfedb",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/01_FACTS_TIMELINE/CONTEMPORANEOUS_CHAT_EVIDENCE_CHRONOLOGY.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "0639bf2ed12d2c99dea71bc3b84145bc245fb886",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "0639bf2ed12d2c99dea71bc3b84145bc245fb886",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "389a0e5e6e18c59e21c576b063776f161b7f0a76",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "blob_sha": "953f7a90165aff3b21246bbfeee8baf6b685b839",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/07_DISCOVERY_RECORDS/API Legal Case Analysis.md",
+      "blob_sha": "eef12a1b5c3346b3ca5a0c3f417c0915ee5d6d3e",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/07_DISCOVERY_RECORDS/API Legal Case Analysis.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/07_DISCOVERY_RECORDS/Legal Task Optimization.md",
+      "blob_sha": "7b05f4d31153bf8f2e531d92991989848fd5180f",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/07_DISCOVERY_RECORDS/Legal Task Optimization.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "389a0e5e6e18c59e21c576b063776f161b7f0a76",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "blob_sha": "953f7a90165aff3b21246bbfeee8baf6b685b839",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_JBPHH_MASTER_CASE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_NAVY_EXCHANGE_FTCA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_NAVY_EXCHANGE_FTCA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_NAVY_EXCHANGE_FTCA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_NAVY_EXCHANGE_FTCA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_NAVY_EXCHANGE_FTCA_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_NAVY_EXCHANGE_FTCA_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NEX_NAVY_EXCHANGE_FTCA_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NEX_NAVY_EXCHANGE_FTCA_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "blob_sha": "750bcba0937c7ab6f80afbb507fa60b4e9d7ed26",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "blob_sha": "750bcba0937c7ab6f80afbb507fa60b4e9d7ed26",
+      "url": "https://github.com/GlacierEQ/monolith/blob/5b9f119bf54f3d7a1253a267a35a010900b290e3/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/case-exemplar-a/library_of_links.py",
+      "blob_sha": "60a7c053cf1f632d202f446bfaf44b51f0d55afd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/case-exemplar-a/library_of_links.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/case-exemplar-a/piston_registry.schema_flattened.json",
+      "blob_sha": "7dc1b3efcecfaa20ae9b9d42f733b52dd1c99ef1",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/case-exemplar-a/piston_registry.schema_flattened.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/case-exemplar-a/superpower_rules.py",
+      "blob_sha": "a32ab8bbd65803543ecde9c6d00af898fe239e1d",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/case-exemplar-a/superpower_rules.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/case-exemplar-a/test_library_of_links.py",
+      "blob_sha": "36cd6c3226c522a7027130e3313728d655a4ff63",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/case-exemplar-a/test_library_of_links.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/case-exemplar-a/test_superpower_rules.py",
+      "blob_sha": "13ecb18bd275d3af0222720393a802ba2b184d87",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/case-exemplar-a/test_superpower_rules.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CASINO_PI_24_001/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CFAA_1_26_CV_001030/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_CWS_CONSTITUTIONAL_TORT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/05_PLEADINGS_MOTIONS/Motion Strategy Outline.md",
+      "blob_sha": "f14e82df512de0c6192399d48ab6af7968bb83e0",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/05_PLEADINGS_MOTIONS/Motion Strategy Outline.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/05_PLEADINGS_MOTIONS/Response Motion Analysis.md",
+      "blob_sha": "cb3b08545d42a7dad0e465fa4397d7f35a783287",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/05_PLEADINGS_MOTIONS/Response Motion Analysis.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/07_DISCOVERY_RECORDS/Custody Litigation Strategy AI.md",
+      "blob_sha": "3ba1d3fe413741397b79510cc5220b2fd881f6b1",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/07_DISCOVERY_RECORDS/Custody Litigation Strategy AI.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/07_DISCOVERY_RECORDS/Forensic evidence protocol.md",
+      "blob_sha": "70eac0bb20309a90102af8fed9cd71fd3ea0e6c2",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/07_DISCOVERY_RECORDS/Forensic evidence protocol.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/07_DISCOVERY_RECORDS/Legal counter-strategies analysis.md",
+      "blob_sha": "43163e1cd796487047d65e16d5aea8194a018974",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/07_DISCOVERY_RECORDS/Legal counter-strategies analysis.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/07_DISCOVERY_RECORDS/Legal Hierarchical Organization.md",
+      "blob_sha": "f45aa81b6d72b945cd2df29e92f4ab41f052a8eb",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/07_DISCOVERY_RECORDS/Legal Hierarchical Organization.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_A_DOCKET/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/----PHASE 1 ---Legal Strategy Execution Plan.md",
+      "blob_sha": "a38fd782938786864e08cc487b169044dae8c4da",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/----PHASE 1 ---Legal Strategy Execution Plan.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/AI legal mind maps_3.md",
+      "blob_sha": "5d12b1abb3d624ebcaa3d907a75b55cb0bbd6fc6",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/AI legal mind maps_3.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Cloud Legal Doc Automation.md",
+      "blob_sha": "147d54c3f08f80fa800beb199d3ab4de0267b836",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Cloud Legal Doc Automation.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Court Walkout Inquiry.md",
+      "blob_sha": "ae00b5e22f56f54da4a0d4ba12c47aedd5fb0e83",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Court Walkout Inquiry.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Forensic Media Intelligence System.md",
+      "blob_sha": "b789ba1d85fc4ab6c7b063e74427457461061eed",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Forensic Media Intelligence System.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Intro to Apps Script.md",
+      "blob_sha": "bd3d6d9b3cef09d5635354fde3db732f5f106644",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Intro to Apps Script.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Mythic Court Memory Artifact.md",
+      "blob_sha": "961b7cba8717d8a1e77015dc16a97af451e79ac8",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Mythic Court Memory Artifact.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Recursive Legal Tech Fusion.md",
+      "blob_sha": "79602b0a95ac6bfb193b4e7d676666f333c6ac7e",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_MATTER_B_DOCKET/07_DISCOVERY_RECORDS/Recursive Legal Tech Fusion.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/01_FACTS_TIMELINE/CONTEMPORANEOUS_CHAT_EVIDENCE_CHRONOLOGY.md",
+      "blob_sha": "0ee0514c558a21ee2b42a2f5a735234b2c8e4761",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/01_FACTS_TIMELINE/CONTEMPORANEOUS_CHAT_EVIDENCE_CHRONOLOGY.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_NAINOA_MARTIN_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_ODC_COUNSEL_B_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_ODC_COUNSEL_B_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_ODC_COUNSEL_B_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_ODC_COUNSEL_B_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_ODC_COUNSEL_B_MISCONDUCT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_ODC_COUNSEL_B_MISCONDUCT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_ODC_COUNSEL_B_MISCONDUCT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_ODC_COUNSEL_B_MISCONDUCT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/CASE_USPS_MAIL_THEFT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "0639bf2ed12d2c99dea71bc3b84145bc245fb886",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "0639bf2ed12d2c99dea71bc3b84145bc245fb886",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/casey_barton_suite/DIAMOND_HEAD_EMPLOYMENT_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CASE_LAS_VEGAS_CASINO_BATTERY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_CAMARO_HPD_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_LAS_VEGAS_DIVORCE_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_NAVY_FEDERAL_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_NV_UNEMPLOYMENT_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/CHERRY_USAA_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "179d2297736c8608c97b9c756e4dd6dfdc92d3a2",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "blob_sha": "0a032e54f45fdd0c62718e365999027aa71b6504",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/07_DISCOVERY_RECORDS/API Legal Case Analysis.md",
+      "blob_sha": "d6e4724ef0b2c381ae1e3dc4a97693644ec8736f",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/07_DISCOVERY_RECORDS/API Legal Case Analysis.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/07_DISCOVERY_RECORDS/Legal Task Optimization.md",
+      "blob_sha": "cdc3ae7e609d5790307d6f1b42095f2185064ae5",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/07_DISCOVERY_RECORDS/Legal Task Optimization.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "179d2297736c8608c97b9c756e4dd6dfdc92d3a2",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/EVIDENCE_RESOURCES/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "blob_sha": "0a032e54f45fdd0c62718e365999027aa71b6504",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_JBPHH_MASTER_CASE/EVIDENCE_RESOURCES/11_JACK_V2_CONTROL_PLANE_BINDING_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_NAVY_EXCHANGE_FTCA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_NAVY_EXCHANGE_FTCA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_NAVY_EXCHANGE_FTCA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_NAVY_EXCHANGE_FTCA_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_NAVY_EXCHANGE_FTCA_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_NAVY_EXCHANGE_FTCA_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/PARTY_C_NEX_NAVY_EXCHANGE_FTCA_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/PARTY_C_NEX_NAVY_EXCHANGE_FTCA_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "blob_sha": "a4818b46e79db21050da7f009366a211792dd7dd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "df0bcc375bbed04be22a2ba60e2954a38c488efd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/monolith-map",
+      "path": "legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "blob_sha": "a4818b46e79db21050da7f009366a211792dd7dd",
+      "url": "https://github.com/GlacierEQ/monolith-map/blob/cfee935015d79a30641766bfd93a55d8ea62f163/legal/cases/cherry_chan_portfolio/QUEENS_MEDICAL_CENTER_CASE/EVIDENCE_RESOURCES/15_JACK_BOOTSTRAP.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_CHERRY_NFCU/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_CHERRY_NFCU/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_CHERRY_NFCU/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_CHERRY_NFCU/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_CHERRY_NFCU/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_CHERRY_NFCU/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_CHERRY_NFCU/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_CHERRY_NFCU/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_COMMERCIAL_BANKING_FRAUD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_COMMERCIAL_BANKING_FRAUD/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_MANHEIM_USAA_TRUCK/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_MANHEIM_USAA_TRUCK/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_USAA_SECURED_CARD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_USAA_SECURED_CARD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_USAA_SECURED_CARD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_USAA_SECURED_CARD/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_USAA_SECURED_CARD/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_USAA_SECURED_CARD/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/nexus-legal-grid",
+      "path": "cases/CASE_USAA_SECURED_CARD/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/nexus-legal-grid/blob/e8eab3d52bc41c238dedfea5c202ed2fb65ce1bd/cases/CASE_USAA_SECURED_CARD/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/opryxx_logs",
+      "path": "docs/colossal_operator_protocol.md",
+      "blob_sha": "36c1b90b95649cbcdd738a554787a1f975c497e1",
+      "url": "https://github.com/GlacierEQ/opryxx_logs/blob/d8e7d564b6ffaa5d365e29d070a1e3b1f474147d/docs/colossal_operator_protocol.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/opryxx_logs",
+      "path": "docs/COLOSSAL_OPERATOR_README.md",
+      "blob_sha": "4abc389a17e00e62843acf5cff1b4ad108e511d0",
+      "url": "https://github.com/GlacierEQ/opryxx_logs/blob/d8e7d564b6ffaa5d365e29d070a1e3b1f474147d/docs/COLOSSAL_OPERATOR_README.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/opryxx_logs",
+      "path": "docs/technical/supreme-systems-orchestration.md",
+      "blob_sha": "9759d481f1bd89f774c76d6c16f39f3e9ad44a41",
+      "url": "https://github.com/GlacierEQ/opryxx_logs/blob/d8e7d564b6ffaa5d365e29d070a1e3b1f474147d/docs/technical/supreme-systems-orchestration.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/OPRYXX_LOGS2",
+      "path": "config/opryxx_config.json",
+      "blob_sha": "0152367f29677afbcc30f1624b2e9ad628353ade",
+      "url": "https://github.com/GlacierEQ/OPRYXX_LOGS2/blob/316f8af12ade5417702bc884799726aa92063490/config/opryxx_config.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/OPRYXX_LOGS2",
+      "path": "core/modules/file_sorter_rename.bat",
+      "blob_sha": "ad131148c7ebf25b957cc5217aaf186d92eb5678",
+      "url": "https://github.com/GlacierEQ/OPRYXX_LOGS2/blob/316f8af12ade5417702bc884799726aa92063490/core/modules/file_sorter_rename.bat",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/Pro-Evidence",
+      "path": "VAULT/03_DEVICE_SCREENSHOTS_OCR/LEGAL_WARFARE/IMG_5332_CARD.json",
+      "blob_sha": "38c031054e823808d9eb0778942d6df21583ebde",
+      "url": "https://github.com/GlacierEQ/Pro-Evidence/blob/dfbd468b7d9625f2740a6ff879292fd3cf4d8689/VAULT/03_DEVICE_SCREENSHOTS_OCR/LEGAL_WARFARE/IMG_5332_CARD.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/Pro-Forensics",
+      "path": "VAULT_METADATA/IPHONE_SCREENSHOTS_OCR_INDEX.json",
+      "blob_sha": "59179bd9cbb71ad73e0db8ef837f109e6593c685",
+      "url": "https://github.com/GlacierEQ/Pro-Forensics/blob/8577ef480ee175b84e4bec07af02a0f00d85a684/VAULT_METADATA/IPHONE_SCREENSHOTS_OCR_INDEX.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/Pro-Gateway",
+      "path": "personas/juggernaut_jack.json",
+      "blob_sha": "aace6d20661751ba0cc52fb8047fbbb2e9183e9e",
+      "url": "https://github.com/GlacierEQ/Pro-Gateway/blob/b16e10c164d11194f3b1e82cb98da5f7a31b7a73/personas/juggernaut_jack.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/public-actions-runner-host",
+      "path": "crystallization/content-index/GlacierEQ__apex-control-plane.json",
+      "blob_sha": "b623c5734615eb76b19a89ccf8903027796074d2",
+      "url": "https://github.com/GlacierEQ/public-actions-runner-host/blob/beb543d130ca62ce3ecfd60b2ba43101d577224a/crystallization/content-index/GlacierEQ__apex-control-plane.json",
+      "private": false
+    },
+    {
+      "repository": "GlacierEQ/scribe-pdf-master",
+      "path": "engines/MEGA-PDF/Synapse/build_memory_cathedral.py",
+      "blob_sha": "b7072567085cba9a101deb0c2d793ef94587265e",
+      "url": "https://github.com/GlacierEQ/scribe-pdf-master/blob/3ef1af0cba6aaa912be416e4a948a772e0618fa0/engines/MEGA-PDF/Synapse/build_memory_cathedral.py",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "0.SYSTEM_CORE/JACK_THE_RIPPER_CASEBUILDER_ALLEGATION_FORGE.md",
+      "blob_sha": "2706460ac81f84c7def7071f9c5e322ccdee3ca8",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/0.SYSTEM_CORE/JACK_THE_RIPPER_CASEBUILDER_ALLEGATION_FORGE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "CASEBRAIN_V3/CASEBUILDER_BRIDGE.md",
+      "blob_sha": "aab83d844787dca1d58ba81c963c10dadffa78f9",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/CASEBRAIN_V3/CASEBUILDER_BRIDGE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "LEGAL_ESTATE/CASE_PROJECTIONS/CHERRY-NV-UI-MEUC-2021.md",
+      "blob_sha": "fcb9b6ebe1f8fdf3cb8d61ef0c921bc91fc12306",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/LEGAL_ESTATE/CASE_PROJECTIONS/CHERRY-NV-UI-MEUC-2021.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/JACK_CASEBUILDER/00_CONTROL_PLANE.md",
+      "blob_sha": "425cbef521a80ad48286da61605e3c59db236410",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/JACK_CASEBUILDER/00_CONTROL_PLANE.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/JACK_CASEBUILDER/00_JACK_CASEBUILDER_INDEX.md",
+      "blob_sha": "32f07b9076745c03c49c3b8c244c7f3dd53f8e7a",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/JACK_CASEBUILDER/00_JACK_CASEBUILDER_INDEX.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/JACK_CASEBUILDER/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "ed3e29a29c8283b2523f9ef6eae04f4ef5d47ba9",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/JACK_CASEBUILDER/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/JACK_CASEBUILDER/ITERATION_005_2026-09-07.md",
+      "blob_sha": "a4d41bd6bfeeae25326574e390ccbc3af9cb324a",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/JACK_CASEBUILDER/ITERATION_005_2026-09-07.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/README.md",
+      "blob_sha": "2e28c374540a1b9468d1e1949882e40e790494cd",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/LEGAL_ESTATE/EMPLOYMENT_DIAMOND_HEAD_DANIEL_SMITH/README.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX",
+      "path": "LEGAL_ESTATE/NEIGHBOR_JUSTIN_HIGA_CASE13/README.md",
+      "blob_sha": "0a19d2ececd20ad8df410b4d90a0734fe1914e84",
+      "url": "https://github.com/GlacierEQ/SUPERLUMINAL_CASE_MATRIX/blob/4cce2d4845009d5b9e7b506eec27228e73a6ea24/LEGAL_ESTATE/NEIGHBOR_JUSTIN_HIGA_CASE13/README.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE_CATACLYSM",
+      "path": "LEGAL_ESTATE/MASTER_PILLARS/Motion Strategy Outline.md",
+      "blob_sha": "b089a31b354e240e3e3b1fa0140f8eee189a6f99",
+      "url": "https://github.com/GlacierEQ/THE_CATACLYSM/blob/8f1b59da6b55f0d210071af6f0c29d4f5250d9ce/LEGAL_ESTATE/MASTER_PILLARS/Motion Strategy Outline.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE_CATACLYSM",
+      "path": "LEGAL_ESTATE/MASTER_PILLARS/Response Motion Analysis.md",
+      "blob_sha": "88b6ff4a23a42fea8c6db3ef2db0826ef1253590",
+      "url": "https://github.com/GlacierEQ/THE_CATACLYSM/blob/8f1b59da6b55f0d210071af6f0c29d4f5250d9ce/LEGAL_ESTATE/MASTER_PILLARS/Response Motion Analysis.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_BROWER_MARTIN_CONSPIRACY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_BROWER_MARTIN_CONSPIRACY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_BROWER_MARTIN_CONSPIRACY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_BROWER_MARTIN_CONSPIRACY/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_BROWER_MARTIN_CONSPIRACY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_BROWER_MARTIN_CONSPIRACY/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_BROWER_MARTIN_CONSPIRACY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_BROWER_MARTIN_CONSPIRACY/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_ODC_BROWER_MISCONDUCT/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_ODC_BROWER_MISCONDUCT/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_RICO_1_26_CV_001009/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CASE_RICO_1_26_CV_001009/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CWS_JACK_THE_RIPPER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CWS_JACK_THE_RIPPER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CWS_JACK_THE_RIPPER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CWS_JACK_THE_RIPPER/03_EXHIBITS_AND_EVIDENCE/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CWS_JACK_THE_RIPPER/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "blob_sha": "f87c7f2b8c73711fd6f382665eb37c6249eca478",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CWS_JACK_THE_RIPPER/EVIDENCE_RESOURCES/01_CASE_NODE_SCHEMA_V2.json",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "cases/CWS_JACK_THE_RIPPER/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "blob_sha": "8606db8d6f0c7e36b8fcf583934a9efa70b3a3dd",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/cases/CWS_JACK_THE_RIPPER/EVIDENCE_RESOURCES/08_BUILD_RECEIPT_2026-08-30.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "motions/MASTER_PILLARS/Motion Strategy Outline.md",
+      "blob_sha": "b089a31b354e240e3e3b1fa0140f8eee189a6f99",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/motions/MASTER_PILLARS/Motion Strategy Outline.md",
+      "private": true
+    },
+    {
+      "repository": "GlacierEQ/THE-CATACLYSM",
+      "path": "motions/MASTER_PILLARS/Response Motion Analysis.md",
+      "blob_sha": "88b6ff4a23a42fea8c6db3ef2db0826ef1253590",
+      "url": "https://github.com/GlacierEQ/THE-CATACLYSM/blob/44114359392bac0e9fc626f0709730e6d821d659/motions/MASTER_PILLARS/Response Motion Analysis.md",
+      "private": true
+    }
+  ]
+}
