@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0.0",
+  "name": "GlacierEQ Dynamic Execution Fabric",
+  "selection_model": "live_observation_ranked_per_work_unit",
+  "authority": {
+    "operator": "owns mission direction and mutation authority",
+    "router": "selects the strongest currently eligible execution route",
+    "substrate": "executes bounded work and reports provider-native state",
+    "rule": "route selection never becomes project authority"
+  },
+  "invariants": [
+    "no_static_default_substrate",
+    "provider_failure_changes_route_not_objective",
+    "routing_failure_does_not_shrink_mission",
+    "live_health_is_required_for_selection",
+    "stale_health_cannot_outrank_fresh_health",
+    "required_capabilities_are_hard_eligibility_constraints",
+    "exact_source_receipts_and_terminal_readback_are_workload_requirements_not_universal_freezers",
+    "ranked_fallbacks_are_preserved",
+    "provider_native_readback_closes_execution"
+  ],
+  "substrates": {
+    "buildkite": {
+      "class": "ci_compute",
+      "discovery": "scripts/buildkite_master_inventory.py",
+      "live_health_source": "buildkite_api",
+      "capabilities": [
+        "ci",
+        "python",
+        "typescript",
+        "private_repo",
+        "exact_source",
+        "receipts",
+        "terminal_readback"
+      ],
+      "dynamic_dimensions": [
+        "queue",
+        "agent_arch",
+        "agent_health",
+        "queue_paused",
+        "token_scope",
+        "pipeline_availability"
+      ]
+    },
+    "github_actions": {
+      "class": "ci_compute",
+      "discovery": "github_actions_provider_probe",
+      "live_health_source": "github_api_and_billing",
+      "capabilities": [
+        "ci",
+        "python",
+        "typescript",
+        "public_repo",
+        "exact_source",
+        "receipts",
+        "terminal_readback"
+      ],
+      "dynamic_dimensions": [
+        "repo_visibility",
+        "included_minutes",
+        "billing_state",
+        "runner_availability",
+        "workflow_permissions"
+      ],
+      "private_repo_requires": "explicit_exception_plus_live_capacity"
+    },
+    "local_device": {
+      "class": "interactive_compute",
+      "discovery": "desktop_commander_device_probe",
+      "live_health_source": "device_connector",
+      "capabilities": [
+        "python",
+        "typescript",
+        "shell",
+        "browser",
+        "local_files",
+        "exact_source",
+        "receipts"
+      ],
+      "dynamic_dimensions": [
+        "device_online",
+        "os",
+        "arch",
+        "installed_tools",
+        "workspace_state"
+      ]
+    },
+    "vercel": {
+      "class": "deployment_runtime",
+      "discovery": "vercel_project_probe",
+      "live_health_source": "vercel_api",
+      "capabilities": [
+        "deploy",
+        "vercel",
+        "serverless",
+        "agent_runtime",
+        "terminal_readback"
+      ],
+      "dynamic_dimensions": [
+        "project_health",
+        "deployment_state",
+        "build_state",
+        "runtime_errors",
+        "oidc_availability"
+      ]
+    },
+    "oracle": {
+      "class": "remote_compute",
+      "discovery": "oracle_or_buildkite_queue_probe",
+      "live_health_source": "remote_compute_readback",
+      "capabilities": [
+        "ci",
+        "linux",
+        "arm64",
+        "private_repo",
+        "exact_source",
+        "receipts"
+      ],
+      "dynamic_dimensions": [
+        "instance_state",
+        "agent_connected",
+        "queue_health",
+        "capacity"
+      ]
+    },
+    "supabase_worker": {
+      "class": "connector_compute",
+      "discovery": "connector_health_registry",
+      "live_health_source": "supabase_connector_health",
+      "capabilities": [
+        "database",
+        "edge_function",
+        "queue",
+        "connector_worker",
+        "terminal_readback"
+      ],
+      "dynamic_dimensions": [
+        "project_health",
+        "auth_state",
+        "queue_depth",
+        "edge_function_health"
+      ]
+    }
+  },
+  "scoring": {
+    "health_weight": 0.55,
+    "capability_coverage_weight": 0.15,
+    "latency_weight": 0.15,
+    "cost_weight": 0.15,
+    "degraded_health_multiplier": 0.72,
+    "unknown_health_multiplier": 0.45
+  },
+  "live_state": {
+    "embedded_in_registry": false,
+    "required_per_work_unit": true
+  }
+}
