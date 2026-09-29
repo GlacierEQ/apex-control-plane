@@ -57,10 +57,15 @@
     "destructive_provider_mutation_requires_explicit_operator_authorization",
     "private_github_actions_is_not_the_estate_scheduler",
     "failure_reporting_must_not_depend_on_the_same_failed_execution_substrate",
-    "preserve_provider_native_identity_and_receipts"
+    "preserve_provider_native_identity_and_receipts",
+    "provider_failure_changes_route_not_objective",
+    "routing_failure_does_not_shrink_mission"
   ],
   "dynamic_workload_state": {
     "embedded_in_static_policy": false,
-    "reason": "workload migration status is time-varying source-bearing state and must be supplied by the live control plane rather than fossilized in this policy"
+    "reason": "workload and provider health are time-varying source-bearing state and must be observed live per work unit",
+    "runtime_router": "src/dynamic_execution_fabric.py",
+    "substrate_registry": "config/dynamic_execution_fabric.json",
+    "selection": "live_observation_ranked_per_work_unit"
   }
 }
