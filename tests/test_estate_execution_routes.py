@@ -53,3 +53,14 @@ def test_static_policy_rejects_embedded_dynamic_workload_state() -> None:
     mutated["dynamic_workload_state"]["embedded_in_static_policy"] = True
     errors = validator.validate_policy(mutated)
     assert any("time-varying workload state" in error for error in errors)
+
+
+def test_execution_policy_binds_to_dynamic_router_without_static_winner() -> None:
+    live = policy()
+    dynamic = live["dynamic_workload_state"]
+    assert dynamic["runtime_router"] == "src/dynamic_execution_fabric.py"
+    assert dynamic["substrate_registry"] == "config/dynamic_execution_fabric.json"
+    assert dynamic["selection"] == "live_observation_ranked_per_work_unit"
+    assert "default_substrate" not in dynamic
+    assert "provider_failure_changes_route_not_objective" in live["routing_laws"]
+    assert "routing_failure_does_not_shrink_mission" in live["routing_laws"]
