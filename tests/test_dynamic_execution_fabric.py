@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from src.dynamic_execution_fabric import (
     DynamicExecutionFabric,
+    DynamicObservationRegistry,
     SubstrateObservation,
     Workload,
 )
@@ -189,3 +190,67 @@ def test_no_eligible_substrate_returns_blocked_execution_not_shrunken_mission() 
     assert plan.execution_state == "no_current_route"
     assert plan.objective == workload.objective
     assert plan.mission_state == "unchanged"
+
+
+
+def test_observation_registry_discovers_new_substrate_without_router_code_change() -> None:
+    registry = DynamicObservationRegistry()
+    registry.register("new_provider", lambda workload: obs(
+        "new_provider",
+        capabilities=set(workload.capabilities),
+        score=0.97,
+    ))
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload(
+        workload_id="dynamic:1",
+        objective="execute using whatever healthy substrate exists now",
+        capabilities=frozenset({"ci", "python"}),
+    )
+
+    observations = registry.observe(workload)
+    plan = fabric.plan(workload, observations)
+
+    assert [item.name for item in observations] == ["new_provider"]
+    assert plan.selected == "new_provider"
+
+
+def test_observer_failure_becomes_health_state_and_does_not_stop_other_routes() -> None:
+    registry = DynamicObservationRegistry()
+
+    def broken(_workload: Workload) -> SubstrateObservation:
+        raise RuntimeError("provider discovery failed")
+
+    registry.register("broken_provider", broken)
+    registry.register("healthy_provider", lambda workload: obs(
+        "healthy_provider",
+        capabilities=set(workload.capabilities),
+        score=0.88,
+    ))
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload(
+        workload_id="dynamic:2",
+        objective="continue through the strongest current route",
+        capabilities=frozenset({"deploy"}),
+    )
+
+    observations = registry.observe(workload, observed_at=NOW)
+    plan = fabric.plan(workload, observations)
+
+    assert plan.selected == "healthy_provider"
+    broken_observation = next(item for item in observations if item.name == "broken_provider")
+    assert broken_observation.health == "unavailable"
+    assert broken_observation.health_score == 0.0
+
+
+def test_dynamic_registry_contains_no_static_winner() -> None:
+    import json
+    from pathlib import Path
+
+    config = json.loads(
+        (Path(__file__).resolve().parents[1] / "config" / "dynamic_execution_fabric.json").read_text()
+    )
+
+    assert config["selection_model"] == "live_observation_ranked_per_work_unit"
+    assert "default_substrate" not in config
+    assert config["live_state"]["embedded_in_registry"] is False
+    assert config["live_state"]["required_per_work_unit"] is True
