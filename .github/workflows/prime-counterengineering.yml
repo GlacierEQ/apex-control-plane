@@ -13,6 +13,7 @@ on:
   push:
     branches:
       - main
+      - "fix/prime-established-state-20260928"
     paths:
       - "config/prime_counterengineering_policy.json"
       - "src/prime_established_state_guard.py"
