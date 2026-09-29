@@ -29,6 +29,8 @@ REQUIRED_ROUTING_LAWS = {
     "private_github_actions_is_not_the_estate_scheduler",
     "failure_reporting_must_not_depend_on_the_same_failed_execution_substrate",
     "preserve_provider_native_identity_and_receipts",
+    "provider_failure_changes_route_not_objective",
+    "routing_failure_does_not_shrink_mission",
 }
 
 
@@ -88,6 +90,13 @@ def validate_policy(data: dict[str, Any]) -> list[str]:
     dynamic = data.get("dynamic_workload_state")
     if not isinstance(dynamic, dict) or dynamic.get("embedded_in_static_policy") is not False:
         errors.append("time-varying workload state must not be embedded in static route policy")
+    elif (
+        dynamic.get("runtime_router") != "src/dynamic_execution_fabric.py"
+        or dynamic.get("substrate_registry") != "config/dynamic_execution_fabric.json"
+        or dynamic.get("selection") != "live_observation_ranked_per_work_unit"
+        or "default_substrate" in dynamic
+    ):
+        errors.append("dynamic workload state must bind live per-work-unit routing without a static default substrate")
 
     return errors
 
