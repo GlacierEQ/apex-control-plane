@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-09-28",
+  "scope": "GlacierEQ default-branch indexed semantic-risk sweep",
+  "findings": {
+    "prime_inventory": {
+      "unique_files": 427,
+      "repositories": 35
+    },
+    "open_blocker": {
+      "result_count": 13,
+      "high_risk": [
+        "GlacierEQ/apex-control-plane/src/apex_enforced_startup.py",
+        "GlacierEQ/apex-control-plane/config/apex_enforced_startup_policy.json",
+        "GlacierEQ/apex-control-plane/docs/CASEY_AUTO_BOOT.md",
+        "GlacierEQ/apex-control-plane/tests/test_apex_enforced_startup.py",
+        "GlacierEQ/apex-control-plane/tests/test_apex_authority_enrichment.py"
+      ],
+      "benign_or_contextual": [
+        "GlacierEQ/apex-control-plane/src/notion_mission_cockpit_contract.py",
+        "GlacierEQ/Ai-Personalization_Kernel/scripts/generate_seed_data.py",
+        "GlacierEQ/Ai-Personalization_Kernel/data/user_model.json",
+        "GlacierEQ/mega-skills/skills/apex-execution-modes/skill.py",
+        "GlacierEQ/mega-skills/skills/agent-memory-systems/continuity.py"
+      ],
+      "reason": "Generic blocker vocabulary is not itself harmful; the APEX contradiction path is high-risk because open_blocker currently produces a startup veto without requiring positive source-bearing conflict."
+    },
+    "canonical_authority": {
+      "result_count": 28,
+      "rule": "Classify domain-local authored-source authority separately from project-direction authority. Do not blanket-rewrite domain registries.",
+      "samples": [
+        "GlacierEQ/legal-powerhouse/brain/CANONICAL_AUTHORITY.md",
+        "GlacierEQ/fiat-justitia/QUALITY_CONTRACT.md",
+        "GlacierEQ/mermicorn-token-saver/CANONICAL.md",
+        "GlacierEQ/monolith/catalog/repo_excellence_promotion_policy.json"
+      ]
+    },
+    "settled_state_antidote": {
+      "exact_settled_facts_files": 1,
+      "exact_settled_positions_files": 31,
+      "interpretation": "The estate already contains broad stronger lineage that explicitly prevents settled state from being reopened by assistant heuristics."
+    }
+  },
+  "next_semantic_classes": [
+    "AMPLIFIER",
+    "MECHANICAL_GATE",
+    "DOMAIN_PRIME",
+    "HISTORICAL_PROVENANCE",
+    "AUTHORITY_INVERSION",
+    "PERPETUAL_SKEPTICISM",
+    "UNKNOWN"
+  ]
+}
