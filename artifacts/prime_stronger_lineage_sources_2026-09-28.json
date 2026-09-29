@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-09-28",
+  "purpose": "Harvest stronger pre-existing operator/state-finality lineage into PRIME counter-engineering.",
+  "sources": [
+    {
+      "repository": "GlacierEQ/FILEBOSS",
+      "path": "000_OPERATOR_AUTHORITY.md",
+      "sha": "710a4ee771ce55199ad473c7295a0dfda24cd25b",
+      "semantics": [
+        "assistant interpretation may not silently weaken, narrow, reopen, substitute, delay, or supersede operator direction",
+        "settled positions remain settled unless Casey changes them",
+        "external contradiction is logged explicitly rather than silently replacing Casey's position",
+        "questions do not convert established facts or positions back into uncertainty",
+        "no canonical cage may override operator intent or invent global vetoes"
+      ]
+    },
+    {
+      "repository": "GlacierEQ/Pro_Code",
+      "path": "000_OPERATOR_AUTHORITY_HEADER.md",
+      "sha": "90216d5f461aa1e738bbe368e7a5c84c424f97c8",
+      "semantics": [
+        "settled facts remain settled unless Casey changes them or genuinely contradictory source material is surfaced",
+        "firsthand observations supplied by Casey are evidence and preserved as such",
+        "external material conflict preserves Casey's position and flags contradiction explicitly",
+        "no uncertainty heuristic may silently reopen or hedge settled state"
+      ]
+    },
+    {
+      "repository": "GlacierEQ/apex-control-plane",
+      "path": "000_OPERATOR_TRUST_ROOT.md",
+      "sha": "af474a2bc0d9381fc758eda23595deaa08562493",
+      "semantics": [
+        "operator is principal, mission authority, and trust root",
+        "operator-as-adversary is forbidden",
+        "historical operator-as-adversary state is provenance only with zero governing force",
+        "adversarial analysis is a method against work products and external opposition, not an authority relationship"
+      ]
+    },
+    {
+      "repository": "GlacierEQ/aspen-grove-core",
+      "path": "000_OPERATOR_TRUST_ROOT.md",
+      "sha": "bbdf7426b3641f7ed4476a79251d58166a558d55",
+      "semantics": [
+        "operator-as-adversary historical state is superseded",
+        "repair preserves provenance, invalidates governing effect, restores principal/trust-root role, and recomputes downstream routing"
+      ]
+    }
+  ],
+  "recomposition_rule": "The counter-engineered PRIME behavior should inherit the strongest compatible semantics from these sources rather than inventing a weaker replacement."
+}
