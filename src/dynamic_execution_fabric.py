@@ -86,6 +86,77 @@ class RoutePlan:
     selection_is_authority: bool = False
 
 
+class DynamicObservationRegistry:
+    """Runtime registry of substrate observers.
+
+    Observers are supplied by connectors or control-plane adapters at runtime.
+    A failed observer degrades only that substrate; it does not stop collection
+    from other registered substrates.
+    """
+
+    def __init__(self) -> None:
+        self._observers: dict[str, Callable[[Workload], SubstrateObservation]] = {}
+
+    def register(
+        self,
+        name: str,
+        observer: Callable[[Workload], SubstrateObservation],
+    ) -> None:
+        key = name.strip()
+        if not key:
+            raise ValueError("observer name is required")
+        self._observers[key] = observer
+
+    def unregister(self, name: str) -> None:
+        self._observers.pop(name, None)
+
+    def observe(
+        self,
+        workload: Workload,
+        *,
+        observed_at: datetime | None = None,
+    ) -> tuple[SubstrateObservation, ...]:
+        fallback_time = observed_at or datetime.now(UTC)
+        if fallback_time.tzinfo is None or fallback_time.utcoffset() is None:
+            raise ValueError("observed_at must be timezone-aware")
+
+        observations: list[SubstrateObservation] = []
+        for name in sorted(self._observers):
+            observer = self._observers[name]
+            try:
+                observation = observer(workload)
+                if observation.name != name:
+                    observation = SubstrateObservation(
+                        name=name,
+                        capabilities=observation.capabilities,
+                        health=observation.health,
+                        health_score=observation.health_score,
+                        private_repo=observation.private_repo,
+                        exact_source=observation.exact_source,
+                        receipts=observation.receipts,
+                        terminal_readback=observation.terminal_readback,
+                        observed_at=observation.observed_at,
+                        cost_score=observation.cost_score,
+                        latency_score=observation.latency_score,
+                    )
+            except Exception:
+                observation = SubstrateObservation(
+                    name=name,
+                    capabilities=frozenset(),
+                    health="unavailable",
+                    health_score=0.0,
+                    private_repo=False,
+                    exact_source=False,
+                    receipts=False,
+                    terminal_readback=False,
+                    observed_at=fallback_time,
+                    cost_score=0.0,
+                    latency_score=0.0,
+                )
+            observations.append(observation)
+        return tuple(observations)
+
+
 class DynamicExecutionFabric:
     """Rank live execution substrates without letting routing redefine the mission."""
 
