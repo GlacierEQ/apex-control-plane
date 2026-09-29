@@ -1,0 +1,58 @@
+name: PRIME Counter-Engineering
+
+on:
+  pull_request:
+    paths:
+      - "config/prime_counterengineering_policy.json"
+      - "src/prime_established_state_guard.py"
+      - "tests/test_prime_established_state_guard.py"
+      - "scripts/prime_estate_scan.py"
+      - "artifacts/prime_estate_inventory_2026-09-28.json"
+      - "docs/PRIME_COUNTERENGINEERING_2026-09-28.md"
+      - ".github/workflows/prime-counterengineering.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "config/prime_counterengineering_policy.json"
+      - "src/prime_established_state_guard.py"
+      - "tests/test_prime_established_state_guard.py"
+      - "scripts/prime_estate_scan.py"
+      - "artifacts/prime_estate_inventory_2026-09-28.json"
+      - "docs/PRIME_COUNTERENGINEERING_2026-09-28.md"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-prime-counterengineering:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate policy and inventory JSON
+        run: |
+          python -m json.tool config/prime_counterengineering_policy.json >/dev/null
+          python -m json.tool artifacts/prime_estate_inventory_2026-09-28.json >/dev/null
+      - name: Compile counter-engineering modules
+        run: |
+          python -m py_compile src/prime_established_state_guard.py scripts/prime_estate_scan.py
+      - name: Run established-state guard tests
+        run: |
+          python -m pip install --disable-pip-version-check pytest
+          PYTHONPATH=src python -m pytest -q tests/test_prime_established_state_guard.py
+      - name: Build semantic preclassification
+        run: python scripts/prime_estate_scan.py
+      - name: Assert harmful classes are not blanket-rewritten
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("artifacts/prime_estate_preclassification_2026-09-28.json")
+          data=json.loads(p.read_text())
+          assert data["files"]
+          assert "UNKNOWN" in data["counts"]
+          print(data["counts"])
+          PY
