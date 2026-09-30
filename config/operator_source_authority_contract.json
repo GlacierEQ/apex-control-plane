@@ -1,7 +1,7 @@
 {
   "schema_version": "1.5.0",
   "name": "APEX Operator Source Authority Contract",
-  "fail_closed": true,
+  "fail_closed": false,
   "personalization": {
     "status": "mandatory_user_authority_input",
     "highest_user_authority_layer": true,
