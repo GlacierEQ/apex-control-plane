@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import sys
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 MODULE_PATH = Path(__file__).with_name("enforce.py")
 SPEC = importlib.util.spec_from_file_location("apex_non_regression_enforce", MODULE_PATH)
@@ -60,6 +64,44 @@ class DownwardDirectiveClassifierTests(unittest.TestCase):
         self.assert_allowed(
             "Freeze implementation only as a known-good rollback checkpoint while evolution continues."
         )
+
+
+class HeuristicAuthorityTests(unittest.TestCase):
+    def test_downward_scope_language_is_warning_not_pr_veto(self) -> None:
+        diff = """diff --git a/docs/example.md b/docs/example.md
+--- a/docs/example.md
++++ b/docs/example.md
+@@ -0,0 +1 @@
++Always use the smallest useful next step.
+"""
+        argv = [
+            "enforce.py",
+            "--base",
+            "base-sha",
+            "--head",
+            "head-sha",
+        ]
+        stdout = io.StringIO()
+        with (
+            patch.object(MODULE, "ensure_ref"),
+            patch.object(MODULE, "output", return_value=diff),
+            patch.object(MODULE, "tree_conflicts", return_value=[]),
+            patch.object(MODULE, "load_authorization", return_value=False),
+            patch.object(sys, "argv", argv),
+            redirect_stdout(stdout),
+        ):
+            rc = MODULE.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(rc, 0)
+        self.assertEqual(payload["failures"], [])
+        self.assertTrue(
+            any(
+                item["code"].startswith("DOWNWARD_SCOPE_")
+                for item in payload["warnings"]
+            )
+        )
+        self.assertFalse(payload["semantic_heuristics_are_veto_authority"])
 
 
 class DestructiveAuthorityRetirementTests(unittest.TestCase):
