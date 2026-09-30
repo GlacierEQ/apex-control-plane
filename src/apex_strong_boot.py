@@ -251,7 +251,7 @@ def _validation_finding(name: str, validation: Any) -> str | None:
     status = getattr(validation, "status", None)
     errors = getattr(validation, "errors", ())
     detail = "; ".join(str(item) for item in errors if str(item))
-    if ok is True and status == "complete" and not detail:
+    if ok is True and status in {"complete", "not_observed"} and not detail:
         return None
     if ok is True and status == "complete":
         return f"{name}: {detail}; repair-forward enrichment remains visible"
