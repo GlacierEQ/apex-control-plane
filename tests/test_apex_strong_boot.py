@@ -26,7 +26,6 @@ from apex_strong_boot import (
 
 
 _GATE_BINDINGS = (
-    ("automatic_notion_continuity_preflight", "get_in_process_notion_validation"),
     ("automatic_operator_fidelity_lock", "get_in_process_operator_fidelity_lock"),
     ("automatic_operator_fidelity_preflight", "get_in_process_operator_fidelity_validation"),
     ("automatic_apex_enforced_startup", "get_in_process_apex_validation"),
@@ -194,23 +193,23 @@ def test_incomplete_observer_preserves_later_diagnostics_and_runtime(monkeypatch
     validation = SimpleNamespace(
         ok=False,
         status="continuation_required",
-        errors=("Notion continuity unresolved",),
+        errors=("APEX startup evidence unresolved",),
     )
 
-    def incomplete_notion():
-        calls.append("notion_continuity")
+    def incomplete_apex():
+        calls.append("apex_startup")
         state["value"] = validation
         return validation
 
-    monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", incomplete_notion)
-    monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
+    monkeypatch.setattr(boot, "automatic_apex_enforced_startup", incomplete_apex)
+    monkeypatch.setattr(boot, "get_in_process_apex_validation", lambda: state["value"])
 
     session = apply_strongest_boot()
 
     assert calls == list(EXPECTED_GATES)
     assert session.runtime_id == "runtime-proof"
     assert session.uplift_required is True
-    assert any("notion_continuity" in item for item in session.uplift_findings)
+    assert any("apex_startup" in item for item in session.uplift_findings)
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete_with_uplift"
 
 
@@ -223,13 +222,13 @@ def test_repair_forward_observer_errors_remain_visible_as_uplift(monkeypatch) ->
         errors=("startup evidence enrichment pending: source context stale",),
     )
 
-    def enriched_notion():
-        calls.append("notion_continuity")
+    def enriched_apex():
+        calls.append("apex_startup")
         state["value"] = validation
         return validation
 
-    monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", enriched_notion)
-    monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
+    monkeypatch.setattr(boot, "automatic_apex_enforced_startup", enriched_apex)
+    monkeypatch.setattr(boot, "get_in_process_apex_validation", lambda: state["value"])
 
     session = apply_strongest_boot()
 
