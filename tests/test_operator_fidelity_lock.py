@@ -257,18 +257,20 @@ def test_durable_context_anchor_is_required() -> None:
     assert any("context first" in error for error in errors)
 
 
-def test_durable_upward_anchor_is_required() -> None:
+def test_fidelity_does_not_require_historical_slogan_anchors() -> None:
     receipt = _receipt()
     words = [
-        "Context first hard work second answer last",
-        "stay bounded",
-        "Powerful code elite excellence",
-        "Function before governance",
+        "Current explicit instruction controls this work unit",
+        "Preserve the actual source wording and scope",
     ]
     receipt["operator_fidelity"]["literal_constraints"] = words
     receipt["operator_fidelity"]["operator_words_digest"] = digest_operator_words(*words)
+
     errors = validate_operator_fidelity_lock(receipt)
-    assert any("look up" in error or "do not look down" in error for error in errors)
+
+    assert not any("durable directional anchor" in error for error in errors)
+    assert not any("look up" in error or "do not look down" in error for error in errors)
+    assert not any("elite excellence" in error or "powerful code" in error for error in errors)
 
 
 def test_minimum_scope_and_governance_first_are_flagged_for_repair() -> None:
