@@ -117,7 +117,12 @@ if _should_boot():
         # inside StrongBoot rather than promoted into global vetoes.
         from operator_source_authority import enforce_operator_source_authority
 
-        enforce_operator_source_authority()
+        try:
+            enforce_operator_source_authority()
+        except Exception as exc:
+            # Source-fidelity configuration defects are visible repair work, not
+            # global permission to terminate an otherwise constructible runtime.
+            _record_startup_uplift(exc)
 
         from apex_strong_boot import apply_strongest_boot
 
