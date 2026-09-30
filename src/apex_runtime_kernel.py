@@ -594,6 +594,11 @@ def create_verified_runtime_kernel(
         status = getattr(validation, "status", None)
         if status != "complete":
             findings.append(f"{name}: status={status!r}")
+        errors = getattr(validation, "errors", ())
+        for error in errors if isinstance(errors, (tuple, list)) else ():
+            detail = str(error).strip()
+            if detail:
+                findings.append(f"{name}: {detail}")
 
     return ApexRuntimeKernel(
         policy=dict(policy or load_runtime_policy()),
