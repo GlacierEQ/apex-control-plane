@@ -18,7 +18,7 @@ from typing import Any
 
 from auto_boot import EXIT_BOOT_BLOCKED, BootError
 from operator_working_model import load_operator_working_model, public_operator_model_projection
-from prime_directive_boot import receipt_from_environment
+from startup_receipt import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
     Path(__file__).resolve().parents[1] / "config" / "apex_enforced_startup_policy.json"
