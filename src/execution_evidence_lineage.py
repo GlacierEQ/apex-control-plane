@@ -1,10 +1,11 @@
 """Cross-run lineage authority for execution evidence.
 
-A prior VERIFIED execution claim is not permanently authoritative merely because a
-previous run verified it. Each continuation must independently re-resolve provider
-evidence. If readback becomes unavailable, the claim is preserved as historical
-state but loses authority until readback is restored. Contradicted or superseded
-claims likewise cannot authorize continuation.
+Historical truth, current readback, and current execution authority are distinct.
+A prior provider-verified proposition remains verified historical state unless
+affirmative evidence invalidates it. Current readback can still be required for
+a new dependent action; when it is unavailable, only current execution authority
+is unresolved. Projection omissions, search misses, and readback failures do not
+rewrite established history.
 """
 from __future__ import annotations
 
@@ -43,10 +44,11 @@ def _canonical_hash(record: Mapping[str, Any]) -> str:
 def reconcile_execution_lineage(
     record: Mapping[str, Any], *, resolver: EvidenceResolver
 ) -> LineageResult:
-    """Re-resolve a carried execution claim and assign its current truth state.
+    """Reconcile a carried execution claim without collapsing state dimensions.
 
-    The carried record is historical input, not authority. `execution_evidence`
-    must independently pass the provider-evidence verifier on every run.
+    Current provider verification governs current execution authority. Historical
+    provider verification remains historical truth even when current readback is
+    unavailable or a later projection omits the source.
     """
     errors: list[str] = []
     prior_state = str(record.get("prior_truth_state", "")).strip().upper()
