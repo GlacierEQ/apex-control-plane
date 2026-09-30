@@ -27,10 +27,6 @@ from model_attractor_defense import (
     automatic_model_attractor_defense,
     get_in_process_model_attractor_validation,
 )
-from notion_continuity_gate import (
-    automatic_notion_continuity_preflight,
-    get_in_process_notion_validation,
-)
 from operator_fidelity_lock import (
     automatic_operator_fidelity_lock,
     get_in_process_operator_fidelity_lock,
@@ -48,7 +44,6 @@ from strict_frontier_preflight import validate_runtime_strict_frontier
 
 MODEL_ATTRACTOR_PREFLIGHT = "model_attractor_defense"
 EXPECTED_GATES = (
-    "notion_continuity",
     "operator_fidelity_lock",
     "operator_fidelity",
     "apex_startup",
@@ -271,11 +266,6 @@ def _gate_sequence() -> tuple[
     tuple[str, Callable[[], Any], Callable[[], Any]], ...
 ]:
     return (
-        (
-            "notion_continuity",
-            automatic_notion_continuity_preflight,
-            get_in_process_notion_validation,
-        ),
         (
             "operator_fidelity_lock",
             automatic_operator_fidelity_lock,
