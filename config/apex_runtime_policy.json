@@ -6,13 +6,11 @@
   "legacy_fail_closed_field_semantics": "deprecated_non_authorizing_compatibility_only",
   "fail_closed": false,
   "startup_observers": [
-    "notion_continuity",
     "operator_fidelity_lock",
     "operator_fidelity",
     "apex_startup"
   ],
   "required_startup_gates": [
-    "notion_continuity",
     "operator_fidelity_lock",
     "operator_fidelity",
     "apex_startup"
