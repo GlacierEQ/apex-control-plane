@@ -35,7 +35,7 @@ CURRENT OPERATOR MESSAGE
   -> CURRENT_STATE ⊕ VERIFIED_GAIN
 ```
 
-Startup observations do not grant or withhold project-direction authority. Missing or incomplete self-created proof is repair/enrichment debt. A real provider, credential, security, destructive-action, or factual constraint limits the affected route only.
+Startup observations do not grant or withhold project-direction authority. Absence of optional self-created proof is neutral. Explicitly supplied incomplete or invalid proof becomes repair/enrichment evidence. A real provider, credential, security, destructive-action, or factual constraint limits the affected route only.
 
 A new chat, worker, process, or runtime is a new execution context, not a new project. It does not create authority to rediscover or reconstruct relevant state that is already available in usable provenance-bearing form.
 
@@ -143,7 +143,7 @@ For existing work, `decision=extend` is valid. An Operator-authorized separate r
 CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py
 ```
 
-Malformed explicit receipt input may fail that receipt-parsing route. Missing or incomplete self-created startup proof remains visible as uplift/repair debt and does not independently become general execution permission.
+Malformed explicit receipt input may fail that receipt-parsing route. An absent optional receipt creates no debt. Explicitly supplied incomplete startup evidence remains visible as enrichment and does not independently become general execution permission.
 
 ## Request mode
 
@@ -151,7 +151,7 @@ Malformed explicit receipt input may fail that receipt-parsing route. Missing or
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
 ```
 
-Request mode emits or exposes required startup contracts and may continue only as degraded. It is useful for connector-bridge development and local inspection. It is not proof of continuity, current-source retrieval, or runtime readiness.
+Request mode can emit or expose startup contracts when explicitly invoked for connector-bridge development or local inspection. Ordinary request-mode startup remains clean when no optional receipt is supplied. Emitting a contract is not proof of continuity, current-source retrieval, or runtime readiness.
 
 Expected status projections include:
 
