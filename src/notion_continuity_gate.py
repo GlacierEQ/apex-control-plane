@@ -1,8 +1,8 @@
-"""Fail-closed Notion-first continuity preflight for the APEX control-plane boot.
+"""Provider-local Notion continuity validator and repair-forward observer.
 
-Compatibility fields that contain the word ``canonical`` remain supported for
-existing receipts, but they are topology/source labels only. They never confer
-project-direction authority over explicit Operator intent.
+Notion is one continuity source when materially useful; it is never a universal
+prerequisite for user-facing text, context recovery, or execution. Explicit
+Notion receipts can still be validated strictly for source/tool/topology fidelity.
 
 Relationship discovery is observational. It may map owner, consumer,
 dependency, and overlap relationships, but it may not convert those observations
@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from auto_boot import BootError
 from startup_receipt import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
@@ -49,7 +49,21 @@ def _issue(
     return NotionContinuityValidation(ok, status, tuple(errors), _SEAL)
 
 
+def _is_enrichment_pending(validation: NotionContinuityValidation | None) -> bool:
+    return bool(
+        validation
+        and validation.ok is True
+        and validation.status == "complete"
+        and any(
+            error.startswith("Notion continuity enrichment pending:")
+            for error in validation.errors
+        )
+    )
+
+
 def get_in_process_notion_validation() -> NotionContinuityValidation | None:
+    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+        return None
     return _IN_PROCESS
 
 
@@ -406,7 +420,8 @@ def build_notion_preflight_request(
         "canonical_notion_pages": list(policy.get("canonical_notion_pages", ())),
         "authority_semantics": dict(policy.get("authority_semantics", {})),
         "requirements": {
-            "notion_before_user_facing_text": True,
+            "notion_before_user_facing_text": False,
+            "provider_specific_continuity_source_only": True,
             "recover_identity_expectations_capabilities_and_current_state": True,
             "determine_whether_work_already_exists_before_starting": True,
             "resolve_existing_owner_as_topology_not_project_authority": True,
@@ -421,10 +436,34 @@ def build_notion_preflight_request(
     }
 
 
+def _record_notion_enrichment(
+    errors: Sequence[str], *, request: Mapping[str, Any]
+) -> NotionContinuityValidation:
+    from startup_continuation import emit_startup_continuation, record_startup_enrichment
+
+    enrichment = record_startup_enrichment(
+        "notion_continuity",
+        errors,
+        request=request,
+        environment_key="GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS",
+    )
+    emit_startup_continuation(enrichment)
+    return _issue(
+        True,
+        "complete",
+        tuple(f"Notion continuity enrichment pending: {error}" for error in errors),
+    )
+
+
 def automatic_notion_continuity_preflight() -> NotionContinuityValidation | None:
+    """Observe Notion continuity without turning one provider into boot authority."""
     global _IN_PROCESS
     if _IN_PROCESS is not None:
-        return _IN_PROCESS
+        if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+            _IN_PROCESS = None
+        else:
+            return _IN_PROCESS
+
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
     if mode == "off" or os.getenv("CASEY_AUTO_BOOT_DISABLE") == "1":
         os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] = "off"
@@ -435,43 +474,24 @@ def automatic_notion_continuity_preflight() -> NotionContinuityValidation | None
     policy = load_notion_policy()
     task = os.getenv("CASEY_BOOT_TASK", "resume Operator-directed unfinished material action")
     receipt = receipt_from_environment()
-    if receipt is None:
-        print(
-            json.dumps(
-                build_notion_preflight_request(policy, task=task),
-                ensure_ascii=False,
-                sort_keys=True,
-            ),
-            file=sys.stderr,
-        )
-        sys.stderr.flush()
-        status = "blocked" if mode == "strict" else "degraded"
-        os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] = status
-        return _issue(False, status, ("no boot receipt supplied",))
+    request = build_notion_preflight_request(policy, task=task)
 
-    errors = validate_notion_continuity_receipt(policy, receipt)
-    validation = _issue(not errors, "complete" if not errors else "blocked", errors)
-    if validation.ok:
+    if receipt is None:
+        validation = _record_notion_enrichment(
+            ("no boot receipt supplied",),
+            request=request,
+        )
         _IN_PROCESS = validation
-        os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] = "complete"
         return validation
 
-    os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] = "blocked"
-    print(
-        json.dumps(
-            {
-                "boot_status": "blocked",
-                "notion_continuity_status": "blocked",
-                "errors": list(validation.errors),
-                "external_action_authorized": False,
-            },
-            ensure_ascii=False,
-            sort_keys=True,
-        ),
-        file=sys.stderr,
-    )
-    sys.stderr.flush()
-    if mode == "strict":
-        raise SystemExit(EXIT_BOOT_BLOCKED)
-    os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] = "degraded"
+    errors = validate_notion_continuity_receipt(policy, receipt)
+    if errors:
+        request["receipt_errors"] = list(errors)
+        validation = _record_notion_enrichment(errors, request=request)
+        _IN_PROCESS = validation
+        return validation
+
+    validation = _issue(True, "complete")
+    _IN_PROCESS = validation
+    os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] = "complete"
     return validation
