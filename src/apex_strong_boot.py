@@ -254,10 +254,12 @@ def _validation_finding(name: str, validation: Any) -> str | None:
         return f"{name}: validation missing; continue and repair observer"
     ok = getattr(validation, "ok", None)
     status = getattr(validation, "status", None)
-    if ok is True and status == "complete":
-        return None
     errors = getattr(validation, "errors", ())
     detail = "; ".join(str(item) for item in errors if str(item))
+    if ok is True and status == "complete" and not detail:
+        return None
+    if ok is True and status == "complete":
+        return f"{name}: {detail}; repair-forward enrichment remains visible"
     suffix = f": {detail}" if detail else ""
     return (
         f"{name}: status={status!r}, ok={ok!r}{suffix}; "
