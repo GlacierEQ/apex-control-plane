@@ -85,40 +85,37 @@ def test_incomplete_receipt_is_enrichment_not_global_permission_gate(monkeypatch
     assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "complete_enrichment_pending"
 
 
-def test_explicit_contradiction_remains_route_local_while_global_state_is_uplift(monkeypatch, tmp_path) -> None:
+def test_explicit_contradiction_is_diagnostic_enrichment_not_permission_gate(monkeypatch, tmp_path) -> None:
     _reset_runtime(monkeypatch, tmp_path)
     receipt = {"apex_startup": {"contradiction_status": "open_blocker"}}
     monkeypatch.setattr(apex, "receipt_from_environment", lambda: receipt)
     monkeypatch.setattr(
         apex,
         "validate_apex_startup_receipt",
-        lambda policy, value: ("apex_startup has an unresolved contradiction blocker",),
+        lambda policy, value: ("apex_startup reports an unresolved contradiction",),
     )
 
     validation = apex.automatic_apex_enforced_startup()
 
     assert validation is not None
-    assert validation.ok is False
-    assert validation.status == "continuation_required"
-    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "uplift_required"
+    assert validation.ok is True
+    assert validation.status == "complete"
+    assert validation.errors == (
+        "startup proof enrichment pending: apex_startup reports an unresolved contradiction",
+    )
+    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "complete_enrichment_pending"
 
     records = list(tmp_path.glob("apex_enforced_startup-*.json"))
     assert len(records) == 1
     record = json.loads(records[0].read_text(encoding="utf-8"))
-    assert record["status"] == "uplift_required"
+    assert record["status"] == "enrichment_pending"
+    assert record["execution_permission_effect"] == "none"
 
 
-def test_explicit_authority_and_scope_negatives_are_blocking() -> None:
-    policy = {
-        "authority": "operator_intent",
-        "objective": "maximum_coherent_advance",
-        "mutation_interlock": {"required_true_fields": ["standing_authorizations_preserved"]},
-        "path_requirements": {"unsupported_scope_narrowing": False},
-    }
+def test_receipt_conflicts_are_diagnostics_not_global_blockers(monkeypatch, tmp_path) -> None:
+    _reset_runtime(monkeypatch, tmp_path)
     receipt = {
         "apex_startup": {
-            "authority": "operator_intent",
-            "objective": "maximum_coherent_advance",
             "standing_authorizations_preserved": False,
             "operator_plan_authorized": False,
             "operator_scope_binding": {
@@ -130,15 +127,23 @@ def test_explicit_authority_and_scope_negatives_are_blocking() -> None:
             "operator_authorization": {"authorized": False},
         }
     }
+    monkeypatch.setattr(apex, "receipt_from_environment", lambda: receipt)
+    monkeypatch.setattr(
+        apex,
+        "validate_apex_startup_receipt",
+        lambda policy, value: (
+            "apex_startup.standing_authorizations_preserved must be true",
+            "operator_plan_authorized conflicts with current execution context",
+        ),
+    )
 
-    blockers = apex._explicit_blocking_receipt_errors(policy, receipt)
+    validation = apex.automatic_apex_enforced_startup()
 
-    assert "apex_startup.standing_authorizations_preserved is explicitly false" in blockers
-    assert "operator_plan_authorized is explicitly false" in blockers
-    assert "operator_scope_binding explicitly does not preserve Operator scope" in blockers
-    assert "Operator scope was explicitly narrowed without Operator authorization" in blockers
-    assert any("unsupported_scope_narrowing" in item for item in blockers)
-    assert "operator_authorization.authorized is explicitly false" in blockers
+    assert validation is not None
+    assert validation.ok is True
+    assert validation.status == "complete"
+    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "complete_enrichment_pending"
+    assert all("startup proof enrichment pending:" in item for item in validation.errors)
 
 
 
