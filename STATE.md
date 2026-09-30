@@ -30,10 +30,10 @@ STATE_EVOLUTION  = CURRENT_STATE ⊕ VERIFIED_GAIN
 
 Historical or `canonical` labels are evidence/topology classifications only. They do not control current project direction.
 
-## Mandatory startup sequence
+## Runtime startup sequence
 
-1. Freeze material mutation.
-2. Consult relevant already-known memory, continuity, current-conversation, and project state before any rediscovery.
+1. Bind the current Operator instruction and preserve the active operation class.
+2. Consult relevant already-known memory, continuity, current-conversation, and project state before unnecessary rediscovery.
 3. Reuse known valid state and identify the nearest valid continuation point. Search or re-open state only for a material delta: unavailable usable state, likely change, source-native verification, conflict resolution, or exact-artifact execution requirements.
 4. Resolve requested referents, existing lineage, dependencies, unfinished work, and the unresolved material delta.
 5. Resolve current Operator intent and target state.
@@ -56,11 +56,11 @@ The entrypoint is repair-forward:
 - failed verification -> limit the claim it disproves and repair the affected route;
 - provider, credential, security, destructive-action, or factual constraints -> constrain only the route they actually affect.
 - missing current-source or repository receipts -> constrain only the claim or route that materially requires them;
-- unresolved contradiction blocker -> block;
-- artificial minimization selected -> block;
-- destructive reduction selected -> block;
-- unsupported action path -> block;
-- unearned execution-state promotion -> block;
+- unresolved factual contradiction -> investigate or constrain the affected claim/route while unrelated executable work continues;
+- artificial minimization signal -> repair path selection upward without creating a global veto;
+- destructive or irreversible reduction without the required scoped authority -> reject that destructive route and preserve existing state;
+- unsupported action path -> reroute through a supported executable path;
+- unearned execution-state promotion -> reject only the unsupported promotion and preserve the truthful lower state;
 - complete provider-backed startup proof -> support evidence-backed state promotion; runtime construction does not depend on that proof.
 
 Failure does not authorize mission shrinkage. Repair or reroute.
