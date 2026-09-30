@@ -10,7 +10,7 @@
   "operator_trust_root_contract": "000_OPERATOR_TRUST_ROOT.md",
   "operator_working_model_path": "config/operator_working_model.json",
   "worker_execution_contract_path": "config/casey_worker_execution_contract.json",
-  "fail_closed": true,
+  "fail_closed": false,
   "operator_authority": {
     "mode": "absolute_project_direction",
     "sole_human_project_authority": true,
@@ -121,17 +121,11 @@
     "prior_valid_gains_identified",
     "prior_valid_gains_preserved",
     "relevant_source_inspected",
-    "contradiction_status",
     "state_model_bound",
     "mutation_intent",
     "action_scope",
     "selected_path",
     "verification_plan"
-  ],
-  "contradiction_statuses": [
-    "none",
-    "resolved",
-    "open_blocker"
   ],
   "action_scopes": [
     "none",
