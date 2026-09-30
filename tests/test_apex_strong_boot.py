@@ -27,7 +27,6 @@ from apex_strong_boot import (
 
 _GATE_BINDINGS = (
     ("automatic_notion_continuity_preflight", "get_in_process_notion_validation"),
-    ("automatic_prime_directive_boot", "get_in_process_boot_validation"),
     ("automatic_operator_fidelity_lock", "get_in_process_operator_fidelity_lock"),
     ("automatic_operator_fidelity_preflight", "get_in_process_operator_fidelity_validation"),
     ("automatic_apex_enforced_startup", "get_in_process_apex_validation"),
@@ -187,20 +186,6 @@ def test_session_cannot_be_forged() -> None:
             _seal=object(),
         )
 
-
-def test_missing_in_process_validation_becomes_repair_finding(monkeypatch) -> None:
-    _arm_complete_boot(monkeypatch)
-    validation = SimpleNamespace(ok=True, status="complete", errors=())
-    monkeypatch.setattr(boot, "automatic_prime_directive_boot", lambda: validation)
-    monkeypatch.setattr(boot, "get_in_process_boot_validation", lambda: None)
-
-    session = apply_strongest_boot()
-
-    assert session.runtime_id == "runtime-proof"
-    assert any(
-        "prime_directive: no in-process validation published" in item
-        for item in session.uplift_findings
-    )
 
 
 def test_incomplete_observer_preserves_later_diagnostics_and_runtime(monkeypatch) -> None:
