@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Callable, FrozenSet, Iterable, Sequence
+from typing import Any, Callable, FrozenSet, Iterable, Sequence
 
 
 ELIGIBLE_HEALTH = {"healthy", "degraded", "unknown"}
@@ -72,6 +72,19 @@ class RouteCandidate:
     score: float
     reasons: tuple[str, ...]
     observed_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionResult:
+    ok: bool
+    status: str
+    workload_id: str
+    objective: str
+    substrate: str | None
+    attempted: tuple[str, ...]
+    failures: tuple[dict[str, str], ...]
+    result: Any = None
+    mission_state: str = "unchanged"
 
 
 @dataclass(frozen=True, slots=True)
@@ -269,6 +282,55 @@ class DynamicExecutionFabric:
             fallbacks=fallbacks,
             routes=ranked,
             execution_state="routable" if selected else "no_current_route",
+        )
+
+    def execute(
+        self,
+        workload: Workload,
+        observations: Sequence[SubstrateObservation] | Iterable[SubstrateObservation],
+        executor: Callable[[str, Workload], Any],
+    ) -> ExecutionResult:
+        """Attempt ranked eligible routes until one succeeds.
+
+        Provider failure changes provider state for this work unit; it does not
+        mutate the Operator objective or reinterpret the mission.
+        """
+        plan = self.plan(workload, observations)
+        attempted: list[str] = []
+        failures: list[dict[str, str]] = []
+
+        route_order = ([plan.selected] if plan.selected else []) + list(plan.fallbacks)
+        for substrate in route_order:
+            if substrate is None:
+                continue
+            attempted.append(substrate)
+            try:
+                result = executor(substrate, workload)
+            except Exception as exc:
+                failures.append({
+                    "substrate": substrate,
+                    "error": str(exc),
+                })
+                continue
+            return ExecutionResult(
+                ok=True,
+                status="success",
+                workload_id=workload.workload_id,
+                objective=workload.objective,
+                substrate=substrate,
+                attempted=tuple(attempted),
+                failures=tuple(failures),
+                result=result,
+            )
+
+        return ExecutionResult(
+            ok=False,
+            status="route_exhausted" if route_order else "no_current_route",
+            workload_id=workload.workload_id,
+            objective=workload.objective,
+            substrate=None,
+            attempted=tuple(attempted),
+            failures=tuple(failures),
         )
 
     def _candidate(self, workload: Workload, obs: SubstrateObservation) -> RouteCandidate:
