@@ -10,12 +10,7 @@
     "operator_fidelity",
     "apex_startup"
   ],
-  "required_startup_gates": [
-    "operator_fidelity_lock",
-    "operator_fidelity",
-    "apex_startup"
-  ],
-  "startup_observer_failure": "record_uplift_and_continue_known_executable_frontiers",
+  "startup_observer_failure": "record_diagnostic_enrichment_and_continue_known_executable_frontiers",
   "action_scopes": [
     "none",
     "internal",
