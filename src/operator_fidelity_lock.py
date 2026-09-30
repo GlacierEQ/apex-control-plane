@@ -56,7 +56,23 @@ def _issue(
     return OperatorFidelityLockValidation(ok, status, tuple(errors), _SEAL)
 
 
+def _is_enrichment_pending(
+    validation: OperatorFidelityLockValidation | None,
+) -> bool:
+    return bool(
+        validation
+        and validation.ok is True
+        and validation.status == "complete"
+        and any(
+            error.startswith("operator fidelity lock enrichment pending:")
+            for error in validation.errors
+        )
+    )
+
+
 def get_in_process_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
+    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+        return None
     return _IN_PROCESS
 
 
@@ -253,34 +269,30 @@ def _reject_runtime_bypass(
 
 
 def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
-    """Record fidelity repair work while preserving executable frontiers."""
+    """Record fidelity findings as non-authorizing, retryable enrichment."""
     global _IN_PROCESS
-    from startup_continuation import (
-        emit_startup_continuation,
-        record_startup_continuation,
-    )
+    from startup_continuation import emit_startup_continuation, record_startup_enrichment
 
-    payload = {
-        "boot_status": "continue_with_uplift",
-        "operator_fidelity_lock_status": "uplift_required",
+    request = {
         "failure_class": "INSTRUCTION_DISPLACEMENT",
         "errors": list(errors),
-        "mission_execution": "continue_known_executable_frontiers",
-        "external_action_authorized": "route_local_only",
         "repair_actions": [
             "recover_source_bound_operator_context",
             "repair_instruction_displacement",
             "reverify_fidelity",
         ],
     }
-    continuation = record_startup_continuation(
+    enrichment = record_startup_enrichment(
         "operator_fidelity_lock",
         errors,
-        request=payload,
+        request=request,
         environment_key="GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS",
     )
-    emit_startup_continuation(continuation)
-    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
-    validation = _issue(False, "uplift_required", errors)
+    emit_startup_continuation(enrichment)
+    validation = _issue(
+        True,
+        "complete",
+        tuple(f"operator fidelity lock enrichment pending: {error}" for error in errors),
+    )
     _IN_PROCESS = validation
     return validation
