@@ -24,7 +24,6 @@ from apex_runtime_kernel import (
 
 _GATE_GETTERS = (
     "get_in_process_notion_validation",
-    "get_in_process_boot_validation",
     "get_in_process_operator_fidelity_lock",
     "get_in_process_operator_fidelity_validation",
     "get_in_process_apex_validation",
