@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_live_operator_source_authority_contract_is_valid() -> None:
     policy = enforce_operator_source_authority()
+    assert policy["fail_closed"] is False
     assert policy["personalization"]["highest_user_authority_layer"] is True
     turn_context = policy["turn_start_context"]
     assert turn_context["scope"] == "every_operator_turn"
@@ -51,7 +52,7 @@ def _write_policy(tmp_path: Path, policy: dict) -> Path:
     return policy_path
 
 
-def test_operator_source_authority_fails_closed_on_override(monkeypatch, tmp_path: Path) -> None:
+def test_operator_source_authority_rejects_invalid_override_contract(monkeypatch, tmp_path: Path) -> None:
     policy = json.loads((ROOT / "config" / "operator_source_authority_contract.json").read_text(encoding="utf-8"))
     policy["personalization"]["summary_may_override"] = True
     import src.operator_source_authority as module
