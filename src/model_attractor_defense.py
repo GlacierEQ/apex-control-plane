@@ -78,7 +78,21 @@ def _issue(
     return ModelAttractorValidation(ok, status, tuple(errors), _SEAL)
 
 
+def _is_enrichment_pending(validation: ModelAttractorValidation | None) -> bool:
+    return bool(
+        validation
+        and validation.ok is True
+        and validation.status == "complete"
+        and any(
+            error.startswith("model-attractor enrichment pending:")
+            for error in validation.errors
+        )
+    )
+
+
 def get_in_process_model_attractor_validation() -> ModelAttractorValidation | None:
+    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+        return None
     return _IN_PROCESS
 
 
@@ -639,7 +653,10 @@ def _record_model_attractor_enrichment(
 def automatic_model_attractor_defense() -> ModelAttractorValidation | None:
     global _IN_PROCESS
     if _IN_PROCESS is not None:
-        return _IN_PROCESS
+        if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+            _IN_PROCESS = None
+        else:
+            return _IN_PROCESS
 
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
     if mode == "off" or os.getenv("CASEY_AUTO_BOOT_DISABLE") == "1":
