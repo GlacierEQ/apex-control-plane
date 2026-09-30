@@ -121,37 +121,61 @@ jobs:
 
           findings = []
           _run_model_attractor_preflight(findings)
-          assert findings == [
-              "strict_executable_frontier_authority: strict frontier preflight requires a boot receipt",
-              "model_attractor_defense: no in-process validation published",
-          ], findings
+          assert findings == [], findings
           PY
 
-      - name: Prove runtime entrypoint continues with startup uplift without receipts
+      - name: Prove runtime entrypoint does not manufacture startup debt without receipts
         shell: bash
         run: |
           CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/strong.out 2>/tmp/strong.err
           test -s /tmp/strong.out
           grep -q '"phase":"complete"' /tmp/strong.out
-          grep -q '"status": "enrichment_pending"' /tmp/strong.err
+          ! grep -q '"status": "enrichment_pending"' /tmp/strong.err
+          ! grep -q '"status": "uplift_required"' /tmp/strong.err
           if grep -q '"external_action_authorized": true' /tmp/strong.err; then
-            echo "startup enrichment must not manufacture blanket external authorization" >&2
+            echo "startup must not manufacture blanket external authorization" >&2
             exit 1
           fi
 
-      - name: Prove strict Python auto-boot preserves execution with visible uplift
+      - name: Prove strict Python auto-boot stays clean when synthetic receipts are absent
         shell: bash
         run: |
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=strict \
-          python -c 'print("RAN")' >/tmp/site.out 2>/tmp/site.err
-          grep -q '^RAN$' /tmp/site.out
-          grep -q '"status": "enrichment_pending"' /tmp/site.err
-          if grep -q '"external_action_authorized": true' /tmp/site.err; then
-            echo "startup uplift must not manufacture blanket external authorization" >&2
-            exit 1
-          fi
+          python -c 'import os; print("RAN"); assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete"' \
+            >/tmp/site.out 2>/tmp/site.err
+          grep -q '^RAN
+      - name: Prove legacy runtime stays local and cannot authorize external action
+        shell: bash
+        run: |
+          CASEY_AUTO_BOOT_MODE=strict python src/control_plane_runtime.py >/tmp/legacy.out 2>/tmp/legacy.err
+          test -s /tmp/legacy.out
+          grep -q '"status":"completed"' /tmp/legacy.out
+          grep -q '"human_review_required":true' /tmp/legacy.out
+          grep -q '"external_action_authorized":false' /tmp/legacy.out
+
+      - name: Prove request-mode auto-boot does not invent diagnostics without evidence
+        shell: bash
+        run: |
+          PYTHONPATH=src \
+          CASEY_AUTO_BOOT=1 \
+          CASEY_AUTO_BOOT_MODE=request \
+          python - <<'PY'
+          import os
+          import sitecustomize
+
+          session = sitecustomize.APEX_STRONG_BOOT_SESSION
+          kernel = sitecustomize.APEX_RUNTIME_KERNEL
+          assert session is not None
+          assert kernel is session.runtime_kernel
+          assert session.uplift_required is False
+          assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete"
+          assert os.environ.get("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED") not in {"1", "true", "True"}
+          PY
+ /tmp/site.out
+          ! grep -q '"status": "enrichment_pending"' /tmp/site.err
+          ! grep -q '"status": "uplift_required"' /tmp/site.err
 
       - name: Prove legacy runtime stays local and cannot authorize external action
         shell: bash
