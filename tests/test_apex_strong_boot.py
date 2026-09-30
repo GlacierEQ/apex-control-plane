@@ -67,6 +67,7 @@ def _arm_model_attractor_preflight(monkeypatch) -> None:
 
 def _arm_complete_boot(monkeypatch) -> list[str]:
     calls: list[str] = []
+    monkeypatch.setattr(boot, "receipt_from_environment", lambda: {"synthetic": True})
     _arm_model_attractor_preflight(monkeypatch)
     for index, (automatic_name, getter_name) in enumerate(_GATE_BINDINGS):
         state = {"value": None}
@@ -112,6 +113,31 @@ def test_strong_boot_runs_exact_observation_sequence_and_creates_kernel(monkeypa
 def test_not_observed_startup_observer_is_clean_not_uplift() -> None:
     validation = SimpleNamespace(ok=True, status="not_observed", errors=())
     assert boot._validation_finding("apex_startup", validation) is None
+
+
+def test_missing_optional_startup_receipt_does_not_create_repair_debt(monkeypatch) -> None:
+    boot._IN_PROCESS = None
+    monkeypatch.setattr(boot, "receipt_from_environment", lambda: None)
+    calls: list[str] = []
+
+    def forbidden(*args, **kwargs):
+        calls.append("observer")
+        raise AssertionError("receipt-bound observer should not run without receipt evidence")
+
+    monkeypatch.setattr(boot, "validate_runtime_strict_frontier", forbidden)
+    monkeypatch.setattr(boot, "automatic_model_attractor_defense", forbidden)
+    monkeypatch.setattr(boot, "automatic_operator_fidelity_lock", forbidden)
+    monkeypatch.setattr(boot, "automatic_operator_fidelity_preflight", forbidden)
+    monkeypatch.setattr(boot, "automatic_apex_enforced_startup", forbidden)
+    monkeypatch.setattr(boot, "create_verified_runtime_kernel", lambda: _fake_kernel())
+    monkeypatch.setattr(boot, "enforce_outcome_fidelity", lambda kernel: kernel)
+
+    session = apply_strongest_boot()
+
+    assert calls == []
+    assert session.uplift_findings == ()
+    assert session.uplift_required is False
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
 
 
 def test_model_attractor_failure_becomes_uplift_and_kernel_still_exists(monkeypatch) -> None:
