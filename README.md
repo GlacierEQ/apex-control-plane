@@ -139,7 +139,7 @@ See:
 - [`docs/APEX_CONNECTOR_BRIDGE.md`](docs/APEX_CONNECTOR_BRIDGE.md)
 - [`config/apex_enforced_startup_policy.json`](config/apex_enforced_startup_policy.json)
 - [`config/casey_auto_boot_manifest.json`](config/casey_auto_boot_manifest.json)
-- [`config/notion_continuity_policy.json`](config/notion_continuity_policy.json)
+- [`config/notion_continuity_policy.json`](config/notion_continuity_policy.json) — provider-local Notion validation only
 - [`config/outcome_fidelity_policy.json`](config/outcome_fidelity_policy.json)
 
 ## Native proof
@@ -204,7 +204,7 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 |---|---|
 | `src/control_plane.py` | Explicit startup wrapper and runtime handoff |
 | `src/apex_enforced_startup.py` | APEX Genesis startup + state-transition enforcement |
-| `src/notion_continuity_gate.py` | Continuity and existing-work topology proof |
+| `src/notion_continuity_gate.py` | Optional Notion-specific continuity/topology validator; not a universal startup prerequisite |
 | `src/apex_strong_boot.py` | Strong-boot composition |
 | `src/outcome_fidelity_runtime.py` | Mission-outcome postcondition hard lock |
 | `src/control_plane_runtime.py` | Preserved runtime |
