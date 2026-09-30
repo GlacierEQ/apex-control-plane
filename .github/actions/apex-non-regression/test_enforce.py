@@ -104,6 +104,20 @@ class HeuristicAuthorityTests(unittest.TestCase):
         self.assertFalse(payload["semantic_heuristics_are_veto_authority"])
 
 
+class WorkflowBootstrapTests(unittest.TestCase):
+    def test_control_plane_pr_uses_checked_out_non_regression_action(self) -> None:
+        workflow_path = MODULE_PATH.parents[3] / ".github" / "workflows" / "estate-non-regression.yml"
+        workflow = workflow_path.read_text(encoding="utf-8")
+
+        self.assertIn("github.repository == 'GlacierEQ/apex-control-plane'", workflow)
+        self.assertIn("python .github/actions/apex-non-regression/enforce.py", workflow)
+        self.assertIn("github.repository != 'GlacierEQ/apex-control-plane'", workflow)
+        self.assertIn(
+            "uses: GlacierEQ/apex-control-plane/.github/actions/apex-non-regression@main",
+            workflow,
+        )
+
+
 class DestructiveAuthorityRetirementTests(unittest.TestCase):
     def test_allows_ref_deletion_retirement_with_lineage_replacement(self) -> None:
         parts = {
