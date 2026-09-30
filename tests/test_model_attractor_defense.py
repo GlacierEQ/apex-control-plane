@@ -301,7 +301,7 @@ def test_operation_class_must_be_preserved() -> None:
         ("concise_delivery_reduced_underlying_operation", True),
     ],
 )
-def test_derivative_intent_substitutions_fail_closed(
+def test_derivative_intent_substitutions_are_detected(
     field_name: str, invalid_value: bool
 ) -> None:
     policy = load_model_attractor_policy()
