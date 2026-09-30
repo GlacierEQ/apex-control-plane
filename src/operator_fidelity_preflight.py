@@ -63,7 +63,21 @@ def _issue(
     return OperatorFidelityValidation(ok, status, tuple(errors), _SEAL)
 
 
+def _is_enrichment_pending(validation: OperatorFidelityValidation | None) -> bool:
+    return bool(
+        validation
+        and validation.ok is True
+        and validation.status == "complete"
+        and any(
+            error.startswith("operator fidelity enrichment pending:")
+            for error in validation.errors
+        )
+    )
+
+
 def get_in_process_operator_fidelity_validation() -> OperatorFidelityValidation | None:
+    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+        return None
     return _IN_PROCESS
 
 
@@ -509,32 +523,26 @@ def _continue_operator_fidelity(
     request: Mapping[str, Any],
 ) -> OperatorFidelityValidation:
     global _IN_PROCESS
-    from startup_continuation import (
-        emit_startup_continuation,
-        record_startup_continuation,
-    )
+    from startup_continuation import emit_startup_continuation, record_startup_enrichment
 
     enriched_request = dict(request)
-    enriched_request.update(
-        {
-            "operator_fidelity_status": "uplift_required",
-            "mission_execution": "continue_known_executable_frontiers",
-            "external_action_authorized": "route_local_only",
-            "repair_actions": [
-                "recover_source_bound_operator_context",
-                "repair_instruction_displacement",
-                "reverify_fidelity",
-            ],
-        }
-    )
-    continuation = record_startup_continuation(
+    enriched_request["repair_actions"] = [
+        "recover_source_bound_operator_context",
+        "repair_instruction_displacement",
+        "reverify_fidelity",
+    ]
+    enrichment = record_startup_enrichment(
         "operator_fidelity_preflight",
         errors,
         request=enriched_request,
         environment_key="GLACIEREQ_OPERATOR_FIDELITY_STATUS",
     )
-    emit_startup_continuation(continuation)
-    validation = _issue(False, "uplift_required", errors)
+    emit_startup_continuation(enrichment)
+    validation = _issue(
+        True,
+        "complete",
+        tuple(f"operator fidelity enrichment pending: {error}" for error in errors),
+    )
     _IN_PROCESS = validation
     return validation
 
