@@ -129,12 +129,18 @@ def test_missing_optional_startup_receipt_does_not_create_repair_debt(monkeypatc
     monkeypatch.setattr(boot, "automatic_operator_fidelity_lock", forbidden)
     monkeypatch.setattr(boot, "automatic_operator_fidelity_preflight", forbidden)
     monkeypatch.setattr(boot, "automatic_apex_enforced_startup", forbidden)
-    monkeypatch.setattr(boot, "create_verified_runtime_kernel", lambda: _fake_kernel())
+    monkeypatch.setattr(
+        boot,
+        "create_verified_runtime_kernel",
+        lambda: _fake_kernel(gates=()),
+    )
     monkeypatch.setattr(boot, "enforce_outcome_fidelity", lambda kernel: kernel)
 
     session = apply_strongest_boot()
 
     assert calls == []
+    assert session.gates == ()
+    assert session.runtime_kernel.snapshot().startup_gates == ()
     assert session.uplift_findings == ()
     assert session.uplift_required is False
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
