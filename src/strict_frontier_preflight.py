@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 from executable_frontier_authority import FrontierAuthorizationResult
-from prime_directive_boot import receipt_from_environment
+from startup_receipt import receipt_from_environment
 from strict_executable_frontier_authority import (
     validate_strict_executable_frontier_authority,
 )
