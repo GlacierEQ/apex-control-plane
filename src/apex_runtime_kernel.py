@@ -25,7 +25,6 @@ from typing import Any, Mapping, Sequence
 from uuid import uuid4
 
 from apex_enforced_startup import get_in_process_apex_validation
-from notion_continuity_gate import get_in_process_notion_validation
 from operator_fidelity_lock import get_in_process_operator_fidelity_lock
 from operator_fidelity_preflight import get_in_process_operator_fidelity_validation
 
@@ -34,7 +33,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "config" / "apex_runtime_policy.json"
 _FACTORY_SEAL = object()
 EXPECTED_STARTUP_OBSERVERS = (
-    "notion_continuity",
     "operator_fidelity_lock",
     "operator_fidelity",
     "apex_startup",
@@ -579,7 +577,6 @@ def create_verified_runtime_kernel(
 ) -> ApexRuntimeKernel:
     """Create a live kernel and attach startup observer findings for later repair."""
     gate_values = (
-        ("notion_continuity", get_in_process_notion_validation()),
         ("operator_fidelity_lock", get_in_process_operator_fidelity_lock()),
         ("operator_fidelity", get_in_process_operator_fidelity_validation()),
         ("apex_startup", get_in_process_apex_validation()),
