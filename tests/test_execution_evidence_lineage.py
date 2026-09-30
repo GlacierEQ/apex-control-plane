@@ -5,8 +5,10 @@ from execution_evidence_authority import derive_execution_claim_id
 from execution_evidence_lineage import (
     AUTHORITATIVE,
     CONTRADICTED,
+    READBACK_NOT_ATTEMPTED,
     READBACK_UNRESOLVED,
     REJECTED,
+    UNESTABLISHED,
     SUPERSEDED,
     reconcile_execution_lineage,
 )
@@ -63,14 +65,16 @@ def test_verified_claim_must_be_re_read_from_provider():
     assert result.truth_state == AUTHORITATIVE
 
 
-def test_prior_verified_claim_degrades_when_provider_readback_is_unavailable():
+def test_prior_verified_claim_preserves_truth_when_provider_readback_is_unavailable():
     _, _, evidence = _fixture()
     result = reconcile_execution_lineage(
         {"prior_truth_state": "PROVIDER_VERIFIED", "execution_evidence": evidence},
         resolver=lambda _: (_ for _ in ()).throw(ConnectionError("offline")),
     )
     assert result.authoritative is False
-    assert result.truth_state == READBACK_UNRESOLVED
+    assert result.truth_state == AUTHORITATIVE
+    assert result.readback_state == READBACK_UNRESOLVED
+    assert result.authority_state == READBACK_UNRESOLVED
     assert result.execution_claim_id == evidence["execution_claim_id"]
 
 
@@ -80,7 +84,9 @@ def test_retrieval_failure_does_not_become_contradiction_or_absence():
         {"prior_truth_state": "PROVIDER_VERIFIED", "execution_evidence": evidence},
         resolver=lambda _: (_ for _ in ()).throw(TimeoutError("timeout")),
     )
-    assert result.truth_state == READBACK_UNRESOLVED
+    assert result.truth_state == AUTHORITATIVE
+    assert result.readback_state == READBACK_UNRESOLVED
+    assert result.authority_state == READBACK_UNRESOLVED
     assert result.truth_state not in {CONTRADICTED, SUPERSEDED, REJECTED}
 
 
@@ -95,7 +101,9 @@ def test_explicit_contradiction_quarantines_prior_verified_claim():
         resolver=lambda _: payload,
     )
     assert result.authoritative is False
-    assert result.truth_state == CONTRADICTED
+    assert result.truth_state == AUTHORITATIVE
+    assert result.readback_state == READBACK_NOT_ATTEMPTED
+    assert result.authority_state == CONTRADICTED
 
 
 def test_explicit_supersession_quarantines_prior_verified_claim():
@@ -109,7 +117,9 @@ def test_explicit_supersession_quarantines_prior_verified_claim():
         resolver=lambda _: payload,
     )
     assert result.authoritative is False
-    assert result.truth_state == SUPERSEDED
+    assert result.truth_state == AUTHORITATIVE
+    assert result.readback_state == READBACK_NOT_ATTEMPTED
+    assert result.authority_state == SUPERSEDED
 
 
 def test_tampered_previous_lineage_record_is_rejected():
@@ -125,4 +135,33 @@ def test_tampered_previous_lineage_record_is_rejected():
         resolver=lambda requested: payload if requested == ref else b"",
     )
     assert result.authoritative is False
-    assert result.truth_state == REJECTED
+    assert result.truth_state == AUTHORITATIVE
+    assert result.readback_state == AUTHORITATIVE
+    assert result.authority_state == REJECTED
+
+
+def test_unverified_history_does_not_get_promoted_when_current_readback_is_unavailable():
+    _, _, evidence = _fixture()
+    result = reconcile_execution_lineage(
+        {"execution_evidence": evidence},
+        resolver=lambda _: (_ for _ in ()).throw(ConnectionError("offline")),
+    )
+    assert result.authoritative is False
+    assert result.truth_state == UNESTABLISHED
+    assert result.readback_state == READBACK_UNRESOLVED
+    assert result.authority_state == READBACK_UNRESOLVED
+
+
+def test_later_projection_cannot_demote_prior_verified_truth_by_omission():
+    _, _, evidence = _fixture()
+    result = reconcile_execution_lineage(
+        {
+            "prior_truth_state": "PROVIDER_VERIFIED",
+            "execution_evidence": evidence,
+            "projection_state": "UNRESOLVED",
+        },
+        resolver=lambda _: (_ for _ in ()).throw(FileNotFoundError("projection omitted source")),
+    )
+    assert result.truth_state == AUTHORITATIVE
+    assert result.readback_state == READBACK_UNRESOLVED
+    assert result.authority_state == READBACK_UNRESOLVED
