@@ -1,10 +1,9 @@
-"""APEX Genesis fail-closed startup and execution-state enforcement.
+"""APEX startup evidence and execution-state diagnostics.
 
-This layer sits above the existing continuity and Prime Directive proofs. It does
-not replace them. It binds those proofs to absolute OPERATOR project-direction
-authority, continuation, preserved prior gain, Operator-aligned coherent path
-selection, Operator asset sovereignty, Operator-model state reuse, longitudinal
-Operator-scope fidelity, and evidence-backed execution-state transitions.
+This layer observes continuity, Operator fidelity, preserved prior gain,
+Operator-aligned path selection, asset sovereignty, state reuse, longitudinal
+scope fidelity, and evidence-backed execution-state transitions. Its evidence is
+diagnostic and descriptive; it does not grant or withhold project permission.
 """
 from __future__ import annotations
 

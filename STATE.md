@@ -46,16 +46,15 @@ Historical or `canonical` labels are evidence/topology classifications only. The
 
 A failed call is not a completed startup step. Rediscovery of already-known relevant Operator/project state is not progress.
 
-## Current enforcement model
+## Current execution model
 
-The entrypoint is fail-closed:
+The entrypoint is repair-forward:
 
-- unresolved required material state -> block material mutation;
-- unresolved continuation -> block restart/replacement mutation;
-- unresolved Operator intent -> block material mutation;
-- missing or stale required continuity -> block;
-- unread pinned operating files -> block;
-- no required tool inventory -> block;
+- missing or stale framework evidence -> record enrichment debt and continue known executable frontiers;
+- unresolved continuity -> recover or route around the missing state without redefining the mission;
+- uncertain Operator intent -> recover relevant source context rather than inventing a replacement;
+- failed verification -> limit the claim it disproves and repair the affected route;
+- provider, credential, security, destructive-action, or factual constraints -> constrain only the route they actually affect.
 - missing current-source or repository receipts -> block when required;
 - unresolved contradiction blocker -> block;
 - artificial minimization selected -> block;

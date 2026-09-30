@@ -1,10 +1,8 @@
-"""Fail-closed defense against generic-model attractors and platform-pressure drift.
+"""Repair-forward diagnostics for model-attractor and platform-pressure drift.
 
-This gate prevents a compressed assistant representation from impersonating
-source-bearing Operator state. It does not attempt to override platform policy;
-it proves that any higher-priority constraint is scoped to the constrained
-action and has not silently rewritten the Operator mission, operation class,
-continuation point, or source topology.
+This observer detects when a compressed assistant representation impersonates
+source-bearing Operator state. Findings are repair/routing evidence, not a global
+permission gate; real platform constraints remain scoped to the affected action.
 """
 
 from __future__ import annotations

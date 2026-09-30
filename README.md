@@ -34,14 +34,14 @@ The enforced startup contract is [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STAR
 
 ## Enforced startup
 
-`python src/control_plane.py` is the explicit fail-closed wrapper. The composed startup/strong-boot path protects the preserved runtime in `src/control_plane_runtime.py` with these proof boundaries:
+`python src/control_plane.py` is the explicit repair-forward wrapper. The composed startup/strong-boot path attaches diagnostic evidence to the preserved runtime in `src/control_plane_runtime.py` without turning self-created proof into permission authority:
 
 1. **Known-state / continuity preflight** — consult relevant already-known state, reuse provenance-bearing state where usable, resolve the nearest valid continuation, map owners/consumers/dependencies/overlaps where material, and preserve valid prior capability.
 2. **APEX Genesis + Operator fidelity** — bind literal Operator intent and operation class, continuation, target state, prior valid gains, execution-state model, coherent path, and verification plan; investigate material conflicts when they actually arise.
 3. **Model-attractor defense** — detect `CONTINUE -> RECONSTRUCT`, needless rediscovery, mission/support substitution, and related continuity drift as repair-forward diagnostics rather than estate-wide vetoes.
 4. **Mission-outcome fidelity** — mutation work cannot persist merely because the assistant produced a ledger, matrix, summary, report, plan, commit, task update, or other artifact; it must prove an underlying source-bearing mission-state transition or an evidenced genuine external boundary after materially available internal routes are exhausted.
 
-Strict mode is the default. Without complete provider-backed proof, startup exits with status `78` rather than pretending context or execution state exists.
+Strict mode is the default. Missing or incomplete self-created startup evidence is recorded as enrichment debt while the runtime continues through known executable frontiers. Malformed explicitly supplied evidence and genuine runtime-construction failures remain concrete errors.
 
 **Rediscovery of already-known relevant Operator/project state is not progress.**
 
@@ -190,7 +190,7 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 - cluster state and worker-health management;
 - gateway control;
 - immutable receipts and provenance;
-- fail-closed startup and recovery;
+- repair-forward startup diagnostics and recovery;
 - reuse-first continuation semantics;
 - execution-state integrity;
 - mission-outcome fidelity;

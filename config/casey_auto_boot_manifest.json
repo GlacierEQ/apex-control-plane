@@ -102,7 +102,7 @@
     "chatgpt_product_memory_is_correctness_dependency": false,
     "summaries_are_routing_hints_only": true,
     "source_bearing_hydration_required_for_continuity_work": true,
-    "fail_closed": true
+    "fail_closed": false
   },
   "profiles": {
     "always": [
@@ -200,7 +200,7 @@
     "verified",
     "not_relevant"
   ],
-  "fail_closed": true,
+  "fail_closed": false,
   "security": {
     "never_embed_secrets": true,
     "restricted_child_profile_requires_explicit_authorization": true,
