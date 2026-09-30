@@ -97,6 +97,7 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     assert manifest["canonical_mem_manifest"]["version_mode"] == "at_least"
     assert "prime_directive" not in manifest
     assert manifest["apex_genesis"].get("fail_closed") is not True
+    assert manifest["fail_closed"] is False
     assert "requires_contradiction_resolution" not in manifest["apex_genesis"]
     assert "resume_chain" not in manifest
 
@@ -160,11 +161,11 @@ def test_hidden_harm_contract_is_machine_bound_to_always_boot() -> None:
     assert defense["chatgpt_product_memory_is_correctness_dependency"] is False
     assert defense["summaries_are_routing_hints_only"] is True
     assert defense["source_bearing_hydration_required_for_continuity_work"] is True
-    assert defense["fail_closed"] is True
+    assert defense["fail_closed"] is False
     assert HIDDEN_HARM_NOTE_ID in manifest["profiles"]["always"]
 
 
-def test_missing_worker_or_hidden_harm_memory_blocks_boot() -> None:
+def test_missing_worker_or_hidden_harm_memory_is_detected() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["systems"])
     for missing_id in (WORKER_CONTRACT_NOTE_ID, HIDDEN_HARM_NOTE_ID):
@@ -187,7 +188,7 @@ def test_complete_legal_receipt_passes() -> None:
     assert result.errors == ()
 
 
-def test_missing_note_blocks_boot() -> None:
+def test_missing_note_is_detected() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["legal_case"])
     receipt = _valid_receipt(manifest, profiles)
@@ -258,7 +259,7 @@ def test_standing_authority_progress_semantics_and_operation_class_are_required(
     assert "operator_operation_class is required" in result.errors
 
 
-def test_legal_profile_without_valid_opened_source_blocks_boot() -> None:
+def test_legal_profile_without_valid_opened_source_is_detected() -> None:
     manifest = load_manifest()
     profiles = normalize_profiles(manifest, ["legal_case"])
     receipt = _valid_receipt(manifest, profiles)

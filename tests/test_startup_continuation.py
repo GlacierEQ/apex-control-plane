@@ -49,16 +49,15 @@ def test_automatic_boot_strict_mode_publishes_uplift_without_global_veto(tmp_pat
     validation = auto_boot.automatic_boot()
 
     assert validation is not None
-    assert validation.ok is False
-    # BootValidation retains the historical compatibility value until its public
-    # status schema is migrated; execution authority is controlled by the uplift
-    # record and route-local provider constraints, not by this label.
-    assert validation.status == "continuation_required"
-    assert auto_boot.os.environ["CASEY_BOOT_STATUS"] == "uplift_required"
+    assert validation.ok is True
+    assert validation.status == "complete"
+    assert validation.errors == ("startup evidence enrichment pending: no boot receipt supplied",)
+    assert auto_boot.os.environ["CASEY_BOOT_STATUS"] == "complete_enrichment_pending"
     assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in auto_boot.os.environ
     records = list(tmp_path.glob("auto_boot-*.json"))
     assert len(records) == 1
     record = json.loads(records[0].read_text(encoding="utf-8"))
-    assert record["status"] == "uplift_required"
+    assert record["status"] == "enrichment_pending"
+    assert record["execution_permission_effect"] == "none"
     assert record["mission_execution"] == "continue_known_executable_frontiers"
     assert record["request"]["receipt_errors"] == ["no boot receipt supplied"]
