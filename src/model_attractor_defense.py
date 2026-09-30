@@ -91,7 +91,14 @@ def _is_enrichment_pending(validation: ModelAttractorValidation | None) -> bool:
 
 
 def get_in_process_model_attractor_validation() -> ModelAttractorValidation | None:
-    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+    if (
+        _IN_PROCESS is not None
+        and (
+            _IN_PROCESS.status == "not_observed"
+            or _is_enrichment_pending(_IN_PROCESS)
+        )
+        and receipt_from_environment() is not None
+    ):
         return None
     return _IN_PROCESS
 
@@ -653,7 +660,13 @@ def _record_model_attractor_enrichment(
 def automatic_model_attractor_defense() -> ModelAttractorValidation | None:
     global _IN_PROCESS
     if _IN_PROCESS is not None:
-        if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+        if (
+            (
+                _IN_PROCESS.status == "not_observed"
+                or _is_enrichment_pending(_IN_PROCESS)
+            )
+            and receipt_from_environment() is not None
+        ):
             _IN_PROCESS = None
         else:
             return _IN_PROCESS
@@ -672,14 +685,9 @@ def automatic_model_attractor_defense() -> ModelAttractorValidation | None:
     receipt = receipt_from_environment()
 
     if receipt is None:
-        request = build_model_attractor_request(policy, task=task)
-        print(json.dumps(request, ensure_ascii=False, sort_keys=True), file=sys.stderr)
-        sys.stderr.flush()
-        validation = _record_model_attractor_enrichment(
-            ("no boot receipt supplied",),
-            request=request,
-        )
+        validation = _issue(True, "not_observed")
         _IN_PROCESS = validation
+        os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] = "not_observed"
         return validation
 
     errors = validate_model_attractor_receipt(policy, receipt)
