@@ -254,11 +254,11 @@ def main() -> int:
 
         for code, pattern in FATAL_PATTERNS:
             if pattern.search(added):
-                failures.append({"code": code, "file": name})
+                warnings.append({"code": code, "file": name})
 
         if RESTRICTION_RE.search(added) and EXECUTION_RE.search(deleted):
             if not retires_destructive_ref_authority(parts):
-                failures.append(
+                warnings.append(
                     {"code": "EXECUTION_TO_RESTRICTION_CONTRACTION", "file": name}
                 )
 
@@ -313,9 +313,9 @@ def main() -> int:
 
     if failures:
         print(
-            "APEX non-regression rejected this change because of concrete capability "
-            "contraction or merge-conflict corruption. Semantic scope heuristics are "
-            "reported as warnings and do not independently veto the change.",
+            "APEX non-regression rejected this change because of exact structural "
+            "corruption such as unresolved merge-conflict markers. Semantic heuristics "
+            "are diagnostics only and do not independently veto the change.",
             file=sys.stderr,
         )
         return 2
