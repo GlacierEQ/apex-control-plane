@@ -133,9 +133,9 @@ jobs:
           CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/strong.out 2>/tmp/strong.err
           test -s /tmp/strong.out
           grep -q '"phase":"complete"' /tmp/strong.out
-          grep -q '"status": "uplift_required"' /tmp/strong.err
+          grep -q '"status": "enrichment_pending"' /tmp/strong.err
           if grep -q '"external_action_authorized": true' /tmp/strong.err; then
-            echo "startup uplift must not manufacture blanket external authorization" >&2
+            echo "startup enrichment must not manufacture blanket external authorization" >&2
             exit 1
           fi
 
@@ -147,7 +147,7 @@ jobs:
           CASEY_AUTO_BOOT_MODE=strict \
           python -c 'print("RAN")' >/tmp/site.out 2>/tmp/site.err
           grep -q '^RAN$' /tmp/site.out
-          grep -q '"status": "uplift_required"' /tmp/site.err
+          grep -q '"status": "enrichment_pending"' /tmp/site.err
           if grep -q '"external_action_authorized": true' /tmp/site.err; then
             echo "startup uplift must not manufacture blanket external authorization" >&2
             exit 1
