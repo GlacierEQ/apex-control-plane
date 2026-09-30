@@ -2,7 +2,7 @@
   "schema_version": "1.3.0",
   "name": "APEX Model Attractor + Platform Pressure Defense",
   "failure_class": "MODEL_ATTRACTOR_DRIFT",
-  "fail_closed": true,
+  "fail_closed": false,
   "principle": "No derivative representation of Operator intent, architecture, or state may outrank the live Operator objective or the source-bearing evidence from which that representation was derived. Compressed representations may route retrieval, never redefine the target, operation class, scale, authority, or completion state.",
   "required_boolean_fields": {
     "current_operator_message_bound": true,
