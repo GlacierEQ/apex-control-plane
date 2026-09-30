@@ -20,7 +20,7 @@ from typing import Any
 
 from auto_boot import BootError
 from executable_frontier_authority import validate_executable_frontier_authority
-from prime_directive_boot import receipt_from_environment
+from startup_receipt import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
     Path(__file__).resolve().parents[1]
