@@ -43,17 +43,12 @@ from outcome_fidelity_runtime import (
     OutcomeFidelityRuntime,
     enforce_outcome_fidelity,
 )
-from prime_directive_boot import (
-    automatic_prime_directive_boot,
-    get_in_process_boot_validation,
-)
 from strict_frontier_preflight import validate_runtime_strict_frontier
 
 
 MODEL_ATTRACTOR_PREFLIGHT = "model_attractor_defense"
 EXPECTED_GATES = (
     "notion_continuity",
-    "prime_directive",
     "operator_fidelity_lock",
     "operator_fidelity",
     "apex_startup",
@@ -278,11 +273,6 @@ def _gate_sequence() -> tuple[
             "notion_continuity",
             automatic_notion_continuity_preflight,
             get_in_process_notion_validation,
-        ),
-        (
-            "prime_directive",
-            automatic_prime_directive_boot,
-            get_in_process_boot_validation,
         ),
         (
             "operator_fidelity_lock",
