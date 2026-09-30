@@ -165,3 +165,15 @@ def test_later_projection_cannot_demote_prior_verified_truth_by_omission():
     assert result.truth_state == AUTHORITATIVE
     assert result.readback_state == READBACK_UNRESOLVED
     assert result.authority_state == READBACK_UNRESOLVED
+
+
+def test_projection_omission_cannot_erase_prior_verified_truth():
+    result = reconcile_execution_lineage(
+        {"prior_truth_state": "PROVIDER_VERIFIED"},
+        resolver=lambda _: (_ for _ in ()).throw(AssertionError("resolver must not be called")),
+    )
+    assert result.authoritative is False
+    assert result.truth_state == AUTHORITATIVE
+    assert result.readback_state == READBACK_NOT_ATTEMPTED
+    assert result.authority_state == REJECTED
+    assert any("execution_evidence must be an object" in error for error in result.errors)
