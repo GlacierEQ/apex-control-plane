@@ -10,7 +10,9 @@ from executable_frontier_authority import FrontierAuthorizationResult
 def test_runtime_preflight_reports_unresolved_frontier_without_global_authority(monkeypatch) -> None:
     monkeypatch.setattr(preflight, "receipt_from_environment", lambda: None)
     result = preflight.validate_runtime_strict_frontier()
-    assert result.ok is False
+    assert result.ok is True
+    assert result.status == "frontier_not_observed"
+    assert result.errors == ()
     assert result.status == "frontier_authorization_unresolved"
     assert any("requires a boot receipt" in error for error in result.errors)
 
