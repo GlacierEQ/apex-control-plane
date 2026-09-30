@@ -38,6 +38,8 @@ def _receipt() -> dict:
             "context_reconstructed": True,
             "prior_state_retrieved": True,
             "continuation_resolved": True,
+            "dependency_ownership_classified": True,
+            "operator_input_required_proven_or_not_applicable": True,
             "target_identity_resolved": True,
             "operator_intent_resolved": True,
             "operator_plan_authorized": True,
@@ -489,3 +491,15 @@ def test_unlisted_state_jump_fails_closed() -> None:
     assert errors == (
         "state transition PROPOSED->DEPLOYED is not explicitly authorized",
     )
+
+
+def test_dependency_ownership_gates_fail_closed() -> None:
+    policy = load_apex_policy()
+    for field in (
+        "dependency_ownership_classified",
+        "operator_input_required_proven_or_not_applicable",
+    ):
+        receipt = _receipt()
+        receipt["apex_startup"][field] = False
+        errors = validate_apex_startup_receipt(policy, receipt)
+        assert f"apex_startup.{field} must be true" in errors
