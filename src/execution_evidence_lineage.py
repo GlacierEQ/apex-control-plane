@@ -17,6 +17,8 @@ from execution_evidence_authority import EvidenceResolver, validate_execution_ev
 
 AUTHORITATIVE = "PROVIDER_VERIFIED"
 READBACK_UNRESOLVED = "PROVIDER_READBACK_UNRESOLVED"
+READBACK_NOT_ATTEMPTED = "READBACK_NOT_ATTEMPTED"
+UNESTABLISHED = "UNESTABLISHED"
 CONTRADICTED = "CONTRADICTED"
 SUPERSEDED = "SUPERSEDED"
 REJECTED = "REJECTED"
@@ -26,6 +28,8 @@ REJECTED = "REJECTED"
 class LineageResult:
     authoritative: bool
     truth_state: str
+    readback_state: str
+    authority_state: str
     execution_claim_id: str
     record_hash: str
     errors: tuple[str, ...]
