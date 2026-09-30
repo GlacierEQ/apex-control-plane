@@ -29,6 +29,14 @@ _GATE_GETTERS = (
 )
 
 
+def test_runtime_policy_selects_adversarial_testing_by_risk() -> None:
+    policy = load_runtime_policy()
+    selection = policy["verification_selection"]
+    assert selection["routine_internal_mutation_requires_adversarial_test"] is False
+    assert selection["external_mutation_requires_adversarial_test"] is True
+    assert selection["destructive_irreversible_requires_adversarial_test"] is True
+
+
 def test_kernel_contract_is_task_local_and_non_sovereign() -> None:
     contract = ApexRuntimeKernel.__doc__ or ""
     assert "locally bound active task" in contract
@@ -178,14 +186,15 @@ def test_destructive_mutation_retains_scoped_authority(monkeypatch) -> None:
         )
 
 
-def test_mutation_completes_with_full_evidence_chain(monkeypatch) -> None:
+def test_routine_internal_mutation_completes_without_mandatory_adversarial_stage(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
     kernel.begin()
     kernel.record_execution("github-commit:abc123")
-    kernel.record_test("pytest:run-1", passed=True)
-    kernel.record_adversarial_test("pytest:adversarial-1", passed=True)
+    after_test = kernel.record_test("pytest:run-1", passed=True)
+    assert after_test.phase == "verifying"
+
     kernel.record_verification(
         "verification:run-1",
         passed=True,
@@ -205,11 +214,40 @@ def test_mutation_completes_with_full_evidence_chain(monkeypatch) -> None:
         "context_recovery",
         "execution",
         "test",
-        "adversarial_test",
         "verification",
         "persistence",
         "readback",
     )
+
+
+def test_external_mutation_automatically_requires_enhanced_adversarial_stage(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="update the external provider object",
+        target_state="provider object updated and read back",
+        operation_class="update_provider_object",
+        mode=TaskMode.MUTATION,
+        action_scope="external",
+        prior_state_ref="provider:object-before",
+        source_refs=("provider:object-before",),
+        verification_plan=("verify provider postconditions",),
+    )
+    kernel.record_context_recovery(
+        "context-recovery:provider-object",
+        recovered_refs=("provider:object-before",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
+    )
+
+    kernel.begin()
+    kernel.record_execution("provider-write:update-1")
+    after_test = kernel.record_test("provider-test:update-1", passed=True)
+
+    assert after_test.phase == "adversarial_testing"
 
 
 def test_failed_test_forces_repair_and_retest(monkeypatch) -> None:
@@ -233,7 +271,25 @@ def test_failed_test_forces_repair_and_retest(monkeypatch) -> None:
 
 def test_failed_adversarial_test_forces_repair(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
-    _bind_mutation(kernel)
+    kernel.bind_task(
+        literal_instruction="update the external provider object safely",
+        target_state="provider object updated with adverse cases checked",
+        operation_class="update_provider_object",
+        mode=TaskMode.MUTATION,
+        action_scope="external",
+        source_refs=("provider:object-before",),
+        verification_plan=("exercise adverse provider cases",),
+    )
+    kernel.record_context_recovery(
+        "context-recovery:provider-object",
+        recovered_refs=("provider:object-before",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
+    )
     kernel.begin()
     kernel.record_execution("execution:first")
     kernel.record_test("pytest:first", passed=True)
@@ -241,7 +297,6 @@ def test_failed_adversarial_test_forces_repair(monkeypatch) -> None:
     result = kernel.record_adversarial_test("pytest:adversarial", passed=False)
     assert result.phase == "repairing"
     assert "adversarial_test_failed" in result.repair_reasons
-
 
 def test_instruction_drift_is_detected_without_becoming_startup_authority(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
