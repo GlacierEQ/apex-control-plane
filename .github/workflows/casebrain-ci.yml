@@ -34,7 +34,7 @@ jobs:
         run: python -m compileall -q src tests
       - name: Test safety and resilience invariants
         run: python -m pytest -q
-      - name: Synthetic read-only smoke test continues with diagnostic uplift
+      - name: Synthetic read-only smoke test continues with diagnostic enrichment
         run: |
           CASEY_AUTO_BOOT_MODE=request \
           python src/control_plane.py \
@@ -42,8 +42,8 @@ jobs:
             2> /tmp/casebrain-boot-request.json
           test -s /tmp/casebrain-smoke.json
           grep -q '"phase":"complete"' /tmp/casebrain-smoke.json
-          grep -q '"status": "uplift_required"' /tmp/casebrain-boot-request.json
+          grep -q '"status": "enrichment_pending"' /tmp/casebrain-boot-request.json
           if grep -q '"external_action_authorized": true' /tmp/casebrain-boot-request.json; then
-            echo "diagnostic uplift must not manufacture blanket external authorization" >&2
+            echo "diagnostic enrichment must not manufacture blanket external authorization" >&2
             exit 1
           fi
