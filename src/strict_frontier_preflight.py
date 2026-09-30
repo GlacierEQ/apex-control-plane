@@ -1,4 +1,4 @@
-"""Fail-closed runtime preflight for strict executable-frontier authority.
+"""Runtime evidence preflight for strict executable-frontier validation.
 
 This adapter keeps source-bearing bytes and provider readback bytes in separate
 mounted trust roots. A provider-scoped reference can never fall through to the
