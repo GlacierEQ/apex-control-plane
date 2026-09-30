@@ -162,4 +162,5 @@ def test_policy_rejects_authorization_semantic_drift(tmp_path) -> None:
 
 def test_runtime_consumes_nonblocking_proof_policy() -> None:
     policy = apex.load_apex_policy()
+    assert policy["fail_closed"] is False
     assert apex._incomplete_proof_is_nonblocking(policy) is True
