@@ -128,9 +128,10 @@ jobs:
           lock._IN_PROCESS = None
           validation = lock.automatic_operator_fidelity_lock()
           assert validation is not None
-          assert validation.ok is False
-          assert validation.status == "uplift_required"
-          assert any("receipt" in error for error in validation.errors)
+          assert validation.ok is True
+          assert validation.status == "complete"
+          assert any("enrichment pending" in error and "receipt" in error for error in validation.errors)
+          assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "complete_enrichment_pending"
           PY
 
       - name: Prove semantic minimization becomes repair evidence even with clean flags
