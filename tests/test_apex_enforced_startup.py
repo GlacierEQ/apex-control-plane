@@ -341,12 +341,12 @@ def test_mutation_interlock_fields_are_mandatory() -> None:
         assert f"apex_startup.{field} must be true" in errors
 
 
-def test_open_contradiction_blocks_startup() -> None:
+def test_contradiction_label_is_not_startup_authority() -> None:
     policy = load_apex_policy()
     receipt = _receipt()
     receipt["apex_startup"]["contradiction_status"] = "open_blocker"
     errors = validate_apex_startup_receipt(policy, receipt)
-    assert "apex_startup has an unresolved contradiction blocker" in errors
+    assert not any("contradiction" in error for error in errors)
 
 
 def test_artificial_minimization_blocks_selected_path() -> None:
