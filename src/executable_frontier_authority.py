@@ -1,4 +1,4 @@
-"""Fail-closed authorization for continuity-dependent executable frontiers.
+"""Evidence validation for continuity-dependent executable frontiers.
 
 A continuation summary may suggest where to look, but it may not authorize the
 branch that runtime execution follows. This module separates frontier selection
