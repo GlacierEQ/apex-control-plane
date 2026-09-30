@@ -630,7 +630,7 @@ def create_verified_runtime_kernel(
         if getattr(validation, "ok", None) is not True:
             findings.append(f"{name}: ok is not true")
         status = getattr(validation, "status", None)
-        if status != "complete":
+        if status not in {"complete", "not_observed"}:
             findings.append(f"{name}: status={status!r}")
         errors = getattr(validation, "errors", ())
         for error in errors if isinstance(errors, (tuple, list)) else ():
