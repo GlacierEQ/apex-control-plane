@@ -183,20 +183,6 @@ def validate_operator_fidelity_lock(
             )
             errors.extend(verification.errors)
 
-    normalized = "\n".join(constraints).lower()
-    anchor_groups = (
-        ("context first",),
-        ("look up", "look up!", "do not look down"),
-        ("powerful code", "elite excellence"),
-        ("function", "functional"),
-    )
-    for group in anchor_groups:
-        if not any(anchor in normalized for anchor in group):
-            errors.append(
-                "operator_fidelity.literal_constraints missing durable directional anchor: "
-                + " | ".join(group)
-            )
-
     path = row.get("selected_path")
     if isinstance(path, Mapping):
         if (
