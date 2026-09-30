@@ -645,7 +645,7 @@ def create_verified_runtime_kernel(
 
     return ApexRuntimeKernel(
         policy=dict(policy or load_runtime_policy()),
-        startup_gates=EXPECTED_STARTUP_OBSERVERS,
+        startup_gates=tuple(name for name, _ in gate_values),
         startup_findings=tuple(dict.fromkeys(findings)),
         _seal=_FACTORY_SEAL,
     )
