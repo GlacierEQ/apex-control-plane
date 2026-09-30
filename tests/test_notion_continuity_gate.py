@@ -9,6 +9,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+import notion_continuity_gate as notion
 from notion_continuity_gate import (
     build_notion_preflight_request,
     load_notion_policy,
@@ -309,7 +310,8 @@ def test_request_declares_operator_asset_sovereignty_laws() -> None:
     policy = load_notion_policy()
     request = build_notion_preflight_request(policy, task="look at legal repos")
     assert request["request_type"] == "glaciereq_notion_continuity_preflight"
-    assert request["requirements"]["notion_before_user_facing_text"] is True
+    assert request["requirements"]["notion_before_user_facing_text"] is False
+    assert request["requirements"]["provider_specific_continuity_source_only"] is True
     assert request["requirements"]["determine_whether_work_already_exists_before_starting"] is True
     assert request["requirements"]["discover_owner_consumers_dependencies_and_overlap_before_making"] is True
     assert request["requirements"]["relationship_discovery_produces_map_not_integration_order"] is True
@@ -317,6 +319,52 @@ def test_request_declares_operator_asset_sovereignty_laws() -> None:
     assert request["requirements"]["no_unsolicited_operator_asset_value_ranking"] is True
     assert request["requirements"]["no_unsolicited_operator_asset_disposition"] is True
     assert request["requirements"]["operator_override_may_authorize_new_root"] is True
+
+
+def test_automatic_notion_missing_receipt_is_nonblocking_enrichment(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.setattr(notion, "_IN_PROCESS", None)
+    monkeypatch.setattr(notion, "receipt_from_environment", lambda: None)
+
+    validation = notion.automatic_notion_continuity_preflight()
+
+    assert validation is not None
+    assert validation.ok is True
+    assert validation.status == "complete"
+    assert validation.errors == (
+        "Notion continuity enrichment pending: no boot receipt supplied",
+    )
+    assert notion.os.environ["GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS"] == "complete_enrichment_pending"
+    records = list(tmp_path.glob("notion_continuity-*.json"))
+    assert len(records) == 1
+    record = json.loads(records[0].read_text(encoding="utf-8"))
+    assert record["status"] == "enrichment_pending"
+    assert record["execution_permission_effect"] == "none"
+
+
+def test_notion_enrichment_retries_when_material_receipt_arrives(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    current_receipt = {"value": None}
+    monkeypatch.setattr(notion, "_IN_PROCESS", None)
+    monkeypatch.setattr(notion, "receipt_from_environment", lambda: current_receipt["value"])
+
+    first = notion.automatic_notion_continuity_preflight()
+    assert first is not None
+    assert first.errors
+
+    current_receipt["value"] = {"notion_boot_analysis": {"status": "complete"}}
+    monkeypatch.setattr(notion, "validate_notion_continuity_receipt", lambda policy, receipt: ())
+
+    assert notion.get_in_process_notion_validation() is None
+    second = notion.automatic_notion_continuity_preflight()
+
+    assert second is not None
+    assert second.ok is True
+    assert second.status == "complete"
+    assert second.errors == ()
+    assert notion.get_in_process_notion_validation() is second
 
 
 def test_policy_file_is_valid_json() -> None:
