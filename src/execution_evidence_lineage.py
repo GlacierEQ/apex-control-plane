@@ -108,15 +108,25 @@ def reconcile_execution_lineage(
             errors.append("lineage.previous_record_hash does not match previous_record")
 
     verification = validate_execution_evidence(evidence, resolver=resolver)
-    if verification.ok and not errors:
+    if verification.ok:
+        if not errors:
+            return LineageResult(
+                True,
+                AUTHORITATIVE,
+                AUTHORITATIVE,
+                AUTHORITATIVE,
+                claim_id,
+                _canonical_hash(record),
+                (),
+            )
         return LineageResult(
-            True,
+            False,
             AUTHORITATIVE,
             AUTHORITATIVE,
-            AUTHORITATIVE,
+            REJECTED,
             claim_id,
             _canonical_hash(record),
-            (),
+            tuple(dict.fromkeys(errors)),
         )
 
     combined = tuple(dict.fromkeys([*errors, *verification.errors]))
