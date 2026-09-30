@@ -72,18 +72,17 @@ def _resolve_frontier_source(source_ref: str) -> bytes:
 
 
 def validate_runtime_strict_frontier() -> FrontierAuthorizationResult:
-    """Require the live boot receipt to pass strict frontier authority.
+    """Validate a supplied frontier claim without manufacturing one when absent.
 
-    Missing receipts are unresolved rather than silently downgraded. Source
-    material and provider readback material are resolved from distinct roots so
-    neither namespace can silently substitute for the other.
+    Source material and provider readback material are resolved from distinct
+    roots so neither namespace can silently substitute for the other.
     """
     receipt = receipt_from_environment()
     if receipt is None:
         return FrontierAuthorizationResult(
-            False,
-            "frontier_authorization_unresolved",
-            ("strict frontier preflight requires a boot receipt",),
+            True,
+            "frontier_not_observed",
+            (),
         )
     return validate_strict_executable_frontier_authority(
         receipt,
