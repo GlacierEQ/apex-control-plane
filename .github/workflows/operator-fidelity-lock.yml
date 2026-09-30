@@ -125,7 +125,6 @@ jobs:
           GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
           GLACIEREQ_APEX_STARTUP_STATUS=complete \
-          GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
           GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
           CASEY_BOOT_STATUS=complete \
           CASEY_AUTO_BOOT_MODE=strict \
