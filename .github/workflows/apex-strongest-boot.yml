@@ -20,7 +20,6 @@ on:
       - "src/operator_fidelity_lock.py"
       - "src/operator_fidelity_preflight.py"
       - "src/notion_continuity_gate.py"
-      - "src/prime_directive_boot.py"
       - "tests/test_apex_strong_boot.py"
       - "tests/test_strict_frontier_runtime_cutover.py"
       - "tests/test_strict_executable_frontier_authority.py"
@@ -49,7 +48,6 @@ on:
       - "src/operator_fidelity_lock.py"
       - "src/operator_fidelity_preflight.py"
       - "src/notion_continuity_gate.py"
-      - "src/prime_directive_boot.py"
       - "tests/test_apex_strong_boot.py"
       - "tests/test_strict_frontier_runtime_cutover.py"
       - "tests/test_strict_executable_frontier_authority.py"
@@ -100,7 +98,6 @@ jobs:
             src/epistemic_risk_gate.py \
             src/apex_enforced_startup.py \
             src/notion_continuity_gate.py \
-            src/prime_directive_boot.py \
             src/operator_fidelity_lock.py \
             src/operator_fidelity_preflight.py \
             src/control_plane.py \
