@@ -118,6 +118,7 @@ class _TaskState:
     prior_state_ref: str | None
     source_refs: tuple[str, ...]
     verification_plan: tuple[str, ...]
+    adversarial_test_required: bool
     receipts: list[RuntimeReceipt] = field(default_factory=list)
     verified_gain_refs: list[str] = field(default_factory=list)
     unresolved_blockers: list[str] = field(default_factory=list)
@@ -206,6 +207,31 @@ class ApexRuntimeKernel:
                 "repair any mismatch and reverify",
             )
 
+        verification_selection = self.policy["verification_selection"]
+        adversarial_required = bool(
+            task_mode is TaskMode.MUTATION
+            and (
+                (
+                    normalized_scope == "external"
+                    and verification_selection[
+                        "external_mutation_requires_adversarial_test"
+                    ]
+                )
+                or (
+                    _is_destructive_operation(operation)
+                    and verification_selection[
+                        "destructive_irreversible_requires_adversarial_test"
+                    ]
+                )
+                or (
+                    normalized_scope == "internal"
+                    and verification_selection[
+                        "routine_internal_mutation_requires_adversarial_test"
+                    ]
+                )
+            )
+        )
+
         self._task = _TaskState(
             task_id=str(uuid4()),
             literal_instruction=instruction,
@@ -218,6 +244,7 @@ class ApexRuntimeKernel:
             prior_state_ref=prior_ref,
             source_refs=refs,
             verification_plan=plan,
+            adversarial_test_required=adversarial_required,
         )
         self.phase = RuntimePhase.CONTEXT_RECOVERING
         self._audit_event("task_bound")
@@ -291,8 +318,16 @@ class ApexRuntimeKernel:
         self._require_phase(RuntimePhase.TESTING)
         self._record_receipt("test", reference, passed, details)
         if passed:
-            self.phase = RuntimePhase.ADVERSARIAL_TESTING
-            self._audit_event("test_passed")
+            self.phase = (
+                RuntimePhase.ADVERSARIAL_TESTING
+                if self.task.adversarial_test_required
+                else RuntimePhase.VERIFYING
+            )
+            self._audit_event(
+                "test_passed_adversarial_required"
+                if self.task.adversarial_test_required
+                else "test_passed_verification_selected"
+            )
         else:
             self._enter_repair("test_failed")
         return self.snapshot()
@@ -520,6 +555,12 @@ class ApexRuntimeKernel:
             receipt.kind for receipt in self.task.receipts if receipt.successful
         }
         gaps.extend(kind for kind in required if kind not in successful_kinds)
+        if (
+            self.task.mode is TaskMode.MUTATION
+            and self.task.adversarial_test_required
+            and "adversarial_test" not in successful_kinds
+        ):
+            gaps.append("adversarial_test")
         if self.task.mode is TaskMode.MUTATION and not self.task.verified_gain_refs:
             gaps.append("verified_gain")
         return list(dict.fromkeys(gaps))
@@ -610,6 +651,7 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
         "schema_version",
         "objective",
         "receipt_requirements",
+        "verification_selection",
         "action_scopes",
         "privacy",
     }
@@ -645,7 +687,6 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
             "context_recovery",
             "execution",
             "test",
-            "adversarial_test",
             "verification",
             "persistence",
             "readback",
@@ -656,6 +697,20 @@ def _validate_policy(policy: Mapping[str, Any]) -> None:
         if not isinstance(values, list) or set(values) != required_kinds:
             raise RuntimeViolation(
                 f"receipt_requirements.{mode} must contain the full evidence set"
+            )
+
+    selection = policy.get("verification_selection")
+    if not isinstance(selection, Mapping):
+        raise RuntimeViolation("verification_selection must be an object")
+    expected_selection = {
+        "routine_internal_mutation_requires_adversarial_test": False,
+        "external_mutation_requires_adversarial_test": True,
+        "destructive_irreversible_requires_adversarial_test": True,
+    }
+    for key, expected_value in expected_selection.items():
+        if selection.get(key) is not expected_value:
+            raise RuntimeViolation(
+                f"verification_selection.{key} must be {expected_value!r}"
             )
 
     scopes = set(policy.get("action_scopes", ()))
