@@ -112,35 +112,38 @@ def test_valid_lock_receipt_passes() -> None:
     assert validate_operator_fidelity_lock(_receipt()) == ()
 
 
-def test_request_mode_without_receipt_yields_enrichment_and_preserves_execution(monkeypatch) -> None:
+def test_request_mode_without_receipt_is_not_observed_not_enrichment(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "request")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
     monkeypatch.delenv("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED", raising=False)
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     lock._IN_PROCESS = None
 
     validation = lock.automatic_operator_fidelity_lock()
 
     assert validation is not None
     assert validation.ok is True
-    assert validation.status == "complete"
-    assert "enrichment pending" in validation.errors[0]
-    assert "receipt" in validation.errors[0]
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "complete_enrichment_pending"
+    assert validation.status == "not_observed"
+    assert validation.errors == ()
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "not_observed"
     assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in lock.os.environ
+    assert not list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
-def test_strict_mode_without_receipt_yields_enrichment_not_process_death(monkeypatch) -> None:
+def test_strict_mode_without_receipt_is_not_observed_not_defect(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     lock._IN_PROCESS = None
 
     validation = lock.automatic_operator_fidelity_lock()
 
     assert validation is not None
     assert validation.ok is True
-    assert validation.status == "complete"
-    assert "enrichment pending" in validation.errors[0]
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "complete_enrichment_pending"
+    assert validation.status == "not_observed"
+    assert validation.errors == ()
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "not_observed"
+    assert not list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
 def test_disable_flag_really_disables_fidelity_observer(
@@ -183,7 +186,9 @@ def test_enrichment_reopens_when_source_bound_receipt_arrives(monkeypatch, tmp_p
     lock._IN_PROCESS = None
 
     first = lock.automatic_operator_fidelity_lock()
-    assert first is not None and first.errors
+    assert first is not None
+    assert first.status == "not_observed"
+    assert first.errors == ()
 
     current["value"] = _receipt()
     monkeypatch.setattr(lock, "validate_operator_fidelity_lock", lambda receipt, task=None: ())
