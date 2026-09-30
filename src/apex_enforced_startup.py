@@ -9,13 +9,12 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from auto_boot import BootError
 from operator_working_model import load_operator_working_model, public_operator_model_projection
 from startup_receipt import receipt_from_environment
 
