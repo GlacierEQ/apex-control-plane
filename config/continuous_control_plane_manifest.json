@@ -1,12 +1,13 @@
 {
   "manifest": "apex.continuous-control-plane",
-  "version": "1.0.0",
-  "generated_at": "2026-09-03T06:17:00-10:00",
-  "generated_at_utc": "2026-09-03T16:17:00Z",
-  "generated_by": "SuperNova NOVA-001 (Notion AI orchestration node)",
-  "binding_event": "STATE-CTRL-001 activation checklist execution",
+  "version": "1.1.0",
+  "generated_at": "2026-09-13T08:20:00-10:00",
+  "generated_by": "GlacierEQ operator-directed gate remediation",
+  "binding_event": "GENERALIZED_GATE_SUPERSESSION",
   "case_scope": ["1FDV-23-0001009", "MAT-NEX-JBPHH-2026-08-14"],
   "authority_precedence": [
+    "current_operator_mission_and_corrections",
+    "source_bearing_provider_state",
     "github_decision_schema",
     "supabase_runtime_receipt",
     "approved_original_source_bytes",
@@ -15,7 +16,11 @@
     "unverified_memory_or_prose"
   ],
   "planes": {
-    "0_operator": { "owner": "Operator", "authority": "direction_and_approval", "role": "Approves writes, destructive actions, filings" },
+    "0_operator": {
+      "owner": "Operator",
+      "authority": "mission_strategy_facts_and_consequence_scope",
+      "role": "Defines mission and major strategic choices. Mission authority persists across routine reversible execution; no repeated per-step approval ceremony."
+    },
     "1_case_continuous_control": {
       "owner": "Notion CONTINUOUS CONTROL PLANE databases (State Registry / Event Bus / Action-Receipt Ledger)",
       "authority": "case_state_spine",
@@ -24,33 +29,33 @@
     "2_connector_ops": {
       "owner": "Unified Operations Plane + Connector Mesh Control Plane (Notion)",
       "authority": "routing_and_failure_law",
-      "role": "Connector selection, circuits, failure ledger, toolbelt tiers"
+      "role": "Connector selection, circuits, failure ledger, toolbelt tiers; local route failure never becomes global stop-work"
     },
     "3_machine_projection": {
       "owner": "GitHub GlacierEQ/apex-control-plane",
-      "authority": "schemas_validators_decisions_pr_ci_receipts",
-      "role": "Versioned machine state; runtime manifest home (this file)"
+      "authority": "schemas_validators_decisions_ci_receipts",
+      "role": "Versioned machine state; runtime manifest home"
     },
     "4_operational_ledger": {
       "owner": "Supabase supabase-backend-ops",
       "project_ref": "dyhprklicgewmrimecey",
       "authority": "runtime_receipts_circuits_budgets",
-      "role": "Immutable runtime truth; canonical health writer = job 12 connector-health-ping-every-10-min"
+      "role": "Runtime truth where provider binding is verified; connector visibility does not erase known project state"
     },
     "5_evidence_vaults": {
       "owner": "Google Drive originals / Dropbox forensic mirror / Box controlled archive",
       "authority": "original_bytes",
-      "role": "SHA-256 manifests; immutable originals"
+      "role": "SHA-256 manifests; preserve originals"
     },
     "6_task_execution": {
       "owner": "Linear (APEX Prime queue); Asana secondary",
       "authority": "work_packets",
-      "role": "One task authority; no competing queues"
+      "role": "Task routing is projection/work organization, not permission authority"
     },
     "7_comms_time": {
       "owner": "Gmail / Outlook / Google Calendar / Slack",
       "authority": "source_native_comms_and_deadlines",
-      "role": "Read-first; writes approval-gated"
+      "role": "Read and execute current mission-authorized exact actions; new major strategy or uncovered consequential external action requires scoped Operator authority"
     },
     "8_nex_case_plane": {
       "owner": "APEX OMEGA Durable Control-Plane Sync + JACK NEX control plane",
@@ -59,7 +64,21 @@
     }
   },
   "heartbeat_loop": ["OBSERVE", "EVENT", "TRANSITION", "ACTION", "VERIFY", "PROJECT"],
-  "state_law": "OBSERVED != INFERRED != PROPOSED != ATTEMPTED != EXECUTED != VERIFIED != COMMITTED != DEPLOYED != OBSERVED_IN_OPERATION; material promotion requires the matching receipt",
+  "state_law": "OBSERVED != INFERRED != PROPOSED != ATTEMPTED != EXECUTED != VERIFIED != COMMITTED != DEPLOYED != OBSERVED_IN_OPERATION; receipts control claims about state changes, not permission to continue unrelated work",
+  "execution_law": {
+    "prime": "MISSION_AUTHORITY_PERSISTS",
+    "routine_reversible": "execute exact mission-authorized route, verify, persist receipt",
+    "scoped_consequence_authority_only_for": [
+      "new major strategy",
+      "materially different target or message",
+      "destructive_or_irreversible_action",
+      "permission_or_security_change",
+      "credential_administration",
+      "external_consequence_outside_current_operator_direction"
+    ],
+    "local_block": "record continuation and reroute/continue elsewhere; never globalize automatically",
+    "checkpoint": "observability/resume surface, never a generic permission gate"
+  },
   "event_taxonomy": [
     "Source Acquired", "Source Verified", "Email Sent", "Email Received",
     "Call Planned", "Call Started", "Call Failed", "Call Completed",
@@ -73,11 +92,12 @@
     "external_actor_action", "operator_directive"
   ],
   "failure_escalation_law": [
-    "auth_failure -> disable dependent routes + open circuits + stale freshness + reauth + probe",
-    "rate_limit -> respect cooldown + no retry storms + record budget impact",
-    "ambiguous_external_outcome -> never auto-replay; dead-letter + evidence reconciliation",
-    "policy_block -> retain block; never weaken approval gates to force execution",
-    "projection_failure_after_durable_success -> recover from durable payload; never reinvoke connector"
+    "auth_failure -> isolate dependent route + stale freshness + reauth/probe; unaffected routes continue",
+    "rate_limit -> respect cooldown + no retry storms + record budget impact; alternate valid routes continue",
+    "ambiguous_external_outcome -> never auto-replay; reconcile provider evidence before retrying that side effect",
+    "source_or_schema_integrity_failure -> block only the affected claim/route until repaired",
+    "projection_failure_after_durable_success -> recover from durable payload; never reinvoke connector merely to satisfy projection",
+    "no policy failure may manufacture a generalized approval gate or global stop-work condition"
   ],
   "notion_bindings": {
     "pipeline_page": "3ceb1e4f-3223-81f6-a0db-ed1dc94e4ebe",
@@ -89,7 +109,10 @@
       "STATE-M01-001", "STATE-M02-001", "STATE-M03-001", "STATE-M04-001",
       "STATE-M05-001", "STATE-M06-001", "STATE-M07-001", "STATE-M08-001", "STATE-M09-001"
     ],
-    "priority_map": { "P0": ["STATE-M01-001", "STATE-M04-001", "STATE-M05-001"], "P1": ["STATE-M02-001", "STATE-M03-001", "STATE-M06-001", "STATE-M07-001", "STATE-M08-001", "STATE-M09-001"] }
+    "priority_map": {
+      "P0": ["STATE-M01-001", "STATE-M04-001", "STATE-M05-001"],
+      "P1": ["STATE-M02-001", "STATE-M03-001", "STATE-M06-001", "STATE-M07-001", "STATE-M08-001", "STATE-M09-001"]
+    }
   },
   "ingested_failure_reference": {
     "event_id": "EVT-20260902-FBI-FAIL-001",
@@ -97,11 +120,11 @@
     "summary": "FBI Honolulu intake call execution failed; CALL-E run hs7oGKfkDMW4ZDNYHC0YAg; backend_status FAILED; no intake/reference number",
     "linked_state": "STATE-CRIM-FBI-001 (FAILED)",
     "linked_action": "ACT-FBI-CALL-001 (FAILED, Failure Receipt)",
-    "note": "Pre-existing ingestion verified and adopted; duplicate EV-0001 row intentionally not created (anti-sprawl / continuity law)"
+    "note": "Pre-existing ingestion verified and adopted; duplicate EV-0001 row intentionally not created"
   },
   "health_cadence": {
-    "continuous": "Supabase job 12 connector-health-ping (10-min) remains canonical health writer",
-    "per_session": "State Registry queried before case work; stale projections flagged, not trusted",
+    "continuous": "Supabase job 12 connector-health-ping (10-min) remains health writer when that provider route is live",
+    "per_session": "recover current state before case work; stale projections flagged, not trusted and not promoted into global blockers",
     "weekly": "Operator summary in Unified Operations Plane format; meaningful changes only"
   },
   "hard_invariants": [
@@ -110,14 +133,18 @@
     "no_forecast_as_fact",
     "no_second_control_plane_extend_never_fork",
     "no_privileged_bytes_secrets_or_protected_minor_identifiers_in_notion",
-    "a_win_is_not_complete_until_ordered_relief_is_implemented"
+    "a_win_is_not_complete_until_ordered_relief_is_implemented",
+    "local_block_never_global_block",
+    "no_generalized_execution_gates",
+    "mission_authority_persists",
+    "provider_receipt_required_for_execution_claim"
   ],
   "activation_checklist": [
-    { "item": "Seed live P0/P1 state rows into State Registry", "status": "DONE", "receipt": "STATE-M01-001..STATE-M09-001 created 2026-09-03 HST" },
-    { "item": "Ingest current failed call as Event Bus record EV-0001", "status": "SATISFIED_EXISTING", "receipt": "EVT-20260902-FBI-FAIL-001 verified fully wired (event->state->action) 2026-09-03 HST" },
-    { "item": "Commit runtime manifest to GlacierEQ/apex-control-plane", "status": "IN_REVIEW", "receipt": "this PR; merge creates durable receipt" },
-    { "item": "Create operator views on the three continuous-control databases", "status": "PENDING" },
-    { "item": "Verify recurring health check writes through to State Registry", "status": "PENDING" }
+    {"item": "Seed live P0/P1 state rows into State Registry", "status": "DONE", "receipt": "STATE-M01-001..STATE-M09-001 created 2026-09-03 HST"},
+    {"item": "Ingest current failed call as Event Bus record EV-0001", "status": "SATISFIED_EXISTING", "receipt": "EVT-20260902-FBI-FAIL-001 verified fully wired"},
+    {"item": "Continuous control manifest", "status": "ACTIVE", "receipt": "v1.1.0 generalized-gate supersession on protected update branch"},
+    {"item": "Create operator views on continuous-control databases", "status": "CONTINUATION_LOCAL", "blocking_scope": "projection only"},
+    {"item": "Verify recurring health check writes through to State Registry", "status": "CONTINUATION_LOCAL", "blocking_scope": "health projection only"}
   ],
   "receipts": []
 }
