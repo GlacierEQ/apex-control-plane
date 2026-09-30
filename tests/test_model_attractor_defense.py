@@ -416,6 +416,30 @@ def test_automatic_model_attractor_missing_receipt_is_enrichment(monkeypatch, tm
     assert defense.os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] == "complete_enrichment_pending"
 
 
+def test_model_attractor_enrichment_retries_when_receipt_arrives(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    current_receipt = {"value": None}
+    monkeypatch.setattr(defense, "_IN_PROCESS", None)
+    monkeypatch.setattr(defense, "receipt_from_environment", lambda: current_receipt["value"])
+
+    first = defense.automatic_model_attractor_defense()
+    assert first is not None
+    assert first.errors
+
+    current_receipt["value"] = {"model_attractor_defense": {"proof": "arrived"}}
+    monkeypatch.setattr(defense, "validate_model_attractor_receipt", lambda policy, receipt: ())
+
+    assert defense.get_in_process_model_attractor_validation() is None
+    second = defense.automatic_model_attractor_defense()
+
+    assert second is not None
+    assert second.ok is True
+    assert second.status == "complete"
+    assert second.errors == ()
+    assert defense.get_in_process_model_attractor_validation() is second
+
+
 def test_request_exposes_the_hidden_harm_countermeasures() -> None:
     policy = load_model_attractor_policy()
     request = build_model_attractor_request(policy, task="continue living estate")
