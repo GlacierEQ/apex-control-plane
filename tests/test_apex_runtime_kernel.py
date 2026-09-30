@@ -45,6 +45,7 @@ def test_kernel_contract_is_task_local_and_non_sovereign() -> None:
 
 
 def _arm(monkeypatch) -> ApexRuntimeKernel:
+    monkeypatch.setattr(runtime, "receipt_from_environment", lambda: {"synthetic": True})
     valid = SimpleNamespace(ok=True, status="complete")
     for getter in _GATE_GETTERS:
         monkeypatch.setattr(runtime, getter, lambda valid=valid: valid)
@@ -103,7 +104,19 @@ def test_factory_treats_not_observed_startup_observer_as_clean(monkeypatch) -> N
     assert not any("apex_startup" in item for item in kernel.startup_findings)
 
 
-def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> None:
+def test_factory_without_optional_startup_receipt_has_no_missing_observer_findings(monkeypatch) -> None:
+    monkeypatch.setattr(runtime, "receipt_from_environment", lambda: None)
+    for getter in _GATE_GETTERS:
+        monkeypatch.setattr(runtime, getter, lambda: None)
+
+    kernel = create_verified_runtime_kernel()
+
+    assert kernel.phase is RuntimePhase.BOOTSTRAPPED
+    assert kernel.startup_findings == ()
+
+
+def test_factory_converts_missing_startup_observer_to_uplift_when_receipt_exists(monkeypatch) -> None:
+    monkeypatch.setattr(runtime, "receipt_from_environment", lambda: {"synthetic": True})
     valid = SimpleNamespace(ok=True, status="complete")
     for getter in _GATE_GETTERS:
         monkeypatch.setattr(runtime, getter, lambda valid=valid: valid)
@@ -117,6 +130,7 @@ def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> Non
 
 
 def test_factory_preserves_repair_forward_observer_details(monkeypatch) -> None:
+    monkeypatch.setattr(runtime, "receipt_from_environment", lambda: {"synthetic": True})
     clean = SimpleNamespace(ok=True, status="complete", errors=())
     enriched = SimpleNamespace(
         ok=True,
