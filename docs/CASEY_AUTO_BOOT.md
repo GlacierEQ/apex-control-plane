@@ -4,9 +4,9 @@ The APEX control plane uses deterministic continuity startup observations for wo
 
 The startup path is governed by [`APEX_ENFORCED_STARTUP.md`](../APEX_ENFORCED_STARTUP.md).
 
-## Enforcement stack
+## Startup observation stack
 
-The startup/strong-boot path composes multiple compatible proofs before material execution is trusted:
+When corresponding evidence is available or materially required for a specific claim or route, the startup/strong-boot path can compose these compatible observations:
 
 1. **Model-attractor / hidden-harm defense** — detects `CONTINUE -> RECONSTRUCT`, needless known-state rediscovery, operation-class drift, and substitution of assistant support work for the Operator mission, then surfaces repair-forward findings.
 2. **Notion/continuity integration proof** — resolves configured identity, expectations, capabilities, existing work, owners, consumers, dependencies, and overlaps where that live provider state is materially required.
@@ -16,7 +16,7 @@ The startup/strong-boot path composes multiple compatible proofs before material
 
 These contracts compose. None grants a repository, page, registry, summary, manifest, validator, CI gate, or historical governance label project-direction authority over current Operator intent.
 
-## Mandatory startup order
+## Runtime continuation order
 
 ```text
 CURRENT OPERATOR MESSAGE
