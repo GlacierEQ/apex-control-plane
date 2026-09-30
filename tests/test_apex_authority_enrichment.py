@@ -16,7 +16,7 @@ def _reset_runtime(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(apex, "_IN_PROCESS", None)
 
 
-def test_missing_receipt_is_durable_nonblocking_enrichment(monkeypatch, tmp_path) -> None:
+def test_missing_receipt_is_not_observed_not_enrichment(monkeypatch, tmp_path) -> None:
     _reset_runtime(monkeypatch, tmp_path)
     monkeypatch.setattr(apex, "receipt_from_environment", lambda: None)
 
@@ -24,30 +24,22 @@ def test_missing_receipt_is_durable_nonblocking_enrichment(monkeypatch, tmp_path
 
     assert validation is not None
     assert validation.ok is True
-    assert validation.status == "complete"
-    assert validation.errors == (
-        "startup proof enrichment pending: no boot receipt supplied",
-    )
-    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "complete_enrichment_pending"
+    assert validation.status == "not_observed"
+    assert validation.errors == ()
+    assert os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] == "not_observed"
     assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
-
-    records = list(tmp_path.glob("apex_enforced_startup-*.json"))
-    assert len(records) == 1
-    record = json.loads(records[0].read_text(encoding="utf-8"))
-    assert record["status"] == "enrichment_pending"
-    assert record["execution_permission_effect"] == "none"
-    assert record["state_promotion_limited"] is True
-    assert record["retryable"] is True
+    assert not list(tmp_path.glob("apex_enforced_startup-*.json"))
 
 
-def test_pending_enrichment_retries_and_promotes_without_restart(monkeypatch, tmp_path) -> None:
+def test_not_observed_startup_retries_when_receipt_arrives(monkeypatch, tmp_path) -> None:
     _reset_runtime(monkeypatch, tmp_path)
     current_receipt = {"value": None}
     monkeypatch.setattr(apex, "receipt_from_environment", lambda: current_receipt["value"])
 
     first = apex.automatic_apex_enforced_startup()
     assert first is not None
-    assert first.errors
+    assert first.status == "not_observed"
+    assert first.errors == ()
 
     current_receipt["value"] = {"apex_startup": {"proof": "now-present"}}
     monkeypatch.setattr(apex, "validate_apex_startup_receipt", lambda policy, receipt: ())
