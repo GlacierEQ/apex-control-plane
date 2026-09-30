@@ -76,7 +76,14 @@ def _is_enrichment_pending(validation: OperatorFidelityValidation | None) -> boo
 
 
 def get_in_process_operator_fidelity_validation() -> OperatorFidelityValidation | None:
-    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+    if (
+        _IN_PROCESS is not None
+        and (
+            _IN_PROCESS.status == "not_observed"
+            or _is_enrichment_pending(_IN_PROCESS)
+        )
+        and receipt_from_environment() is not None
+    ):
         return None
     return _IN_PROCESS
 
@@ -567,16 +574,10 @@ def automatic_operator_fidelity_preflight() -> OperatorFidelityValidation | None
     receipt = receipt_from_environment()
 
     if receipt is None:
-        request = build_operator_fidelity_request(policy, task=task)
-        print(
-            json.dumps(request, ensure_ascii=False, sort_keys=True),
-            file=sys.stderr,
-        )
-        sys.stderr.flush()
-        return _continue_operator_fidelity(
-            ("no boot receipt supplied",),
-            request=request,
-        )
+        validation = _issue(True, "not_observed")
+        _IN_PROCESS = validation
+        os.environ["GLACIEREQ_OPERATOR_FIDELITY_STATUS"] = "not_observed"
+        return validation
 
     errors = validate_operator_fidelity_receipt(policy, receipt, task=task)
     if not errors:
