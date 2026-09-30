@@ -135,19 +135,18 @@ jobs:
             tests/test_scan_repos.py \
             jack/tests/test_jack_relentless_gate.py
 
-      - name: Prove strict mode preserves execution with visible enrichment without receipt
+      - name: Prove strict mode starts cleanly without optional receipt
         shell: bash
         run: |
           CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py >/tmp/boot.out 2>/tmp/boot.err
           test -s /tmp/boot.out
           grep -q '"phase":"complete"' /tmp/boot.out
-          grep -q '"status": "enrichment_pending"' /tmp/boot.err
           if grep -q '"external_action_authorized": true' /tmp/boot.err; then
-            echo "startup enrichment must not manufacture blanket external authorization" >&2
+            echo "clean startup must not manufacture blanket external authorization" >&2
             exit 1
           fi
 
-      - name: Prove malformed receipt fails closed without traceback
+      - name: Prove malformed explicit receipt is rejected without traceback
         shell: bash
         run: |
           set +e
@@ -178,7 +177,6 @@ jobs:
           python src/control_plane.py >/tmp/forged.out 2>/tmp/forged.err
           test -s /tmp/forged.out
           grep -q '"phase":"complete"' /tmp/forged.out
-          grep -q '"status": "enrichment_pending"' /tmp/forged.err
           if grep -q '"external_action_authorized": true' /tmp/forged.err; then
             echo "forged status environment manufactured blanket external authorization" >&2
             exit 1
@@ -208,18 +206,17 @@ jobs:
           grep -q 'literal_operator_words_preserved' /tmp/fidelity.err
           test ! -s /tmp/fidelity.out
 
-      - name: Prove request mode preserves execution while exposing enrichment
+      - name: Prove request mode starts cleanly without optional receipt proof
         shell: bash
         run: |
           CASEY_AUTO_BOOT_MODE=request python src/control_plane.py >/tmp/control-plane.json 2>/tmp/boot-request.json
           test -s /tmp/control-plane.json
           grep -q '"phase":"complete"' /tmp/control-plane.json
-          grep -q '"status": "enrichment_pending"' /tmp/boot-request.json
           if grep -q '"external_action_authorized": true' /tmp/boot-request.json; then
-            echo "request-mode uplift must not manufacture blanket external authorization" >&2
+            echo "request-mode startup must not manufacture blanket external authorization" >&2
             exit 1
           fi
           PYTHONPATH=src \
           CASEY_AUTO_BOOT=1 \
           CASEY_AUTO_BOOT_MODE=request \
-          python -c 'import os; assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete_with_uplift"; assert os.environ.get("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED") not in {"1", "true", "True"}'
+          python -c 'import os; assert os.environ.get("GLACIEREQ_STRONG_BOOT_STATUS") == "complete"; assert os.environ.get("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED") not in {"1", "true", "True"}'
