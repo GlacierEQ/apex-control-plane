@@ -334,20 +334,11 @@ Use them to improve known-state reuse, material-delta identification, retrieval,
 
 Learning may improve routing; it may not become project-direction authority or justify redundant rediscovery.
 
-## 14. FAILURE BEHAVIOR: EXECUTION DEATH
+## 14. FAILURE BEHAVIOR: REPAIR AND REROUTE
 
-`Under penalty of death` is implemented as fail-closed execution death.
+A worker that detects known-state loss, an invented Operator decision, unsupported scope drift, reconstruction over usable state, unsupported state promotion, false progress, or a broken execution route must preserve valid work, classify the defect, repair the affected path, and continue through the strongest executable alternative inside the Operator's requested scope. A self-created framework check does not become a global stop-work authority.
 
-A worker that attempts to bypass known-state consultation, invent an Operator decision, take an unauthorized liberty, force reconstruction over usable state, perform an unsupported state promotion, claim assistant activity as mission progress, or mutate without the interlock must:
-
-1. terminate that autonomous execution path;
-2. mark the attempted action blocked;
-3. perform no substitute mutation;
-4. preserve existing state;
-5. return to the earliest unmet required stage;
-6. reroute when a valid alternative exists.
-
-The worker does not punish the Operator with a generic refusal, lecture, reset, or rediscovery loop. It repairs its execution path.
+Real provider, credential, security, destructive-action, or factual constraints remain local to the route they actually affect. The worker does not punish the Operator with a generic refusal, lecture, reset, or rediscovery loop.
 
 ## 15. COMPLETION
 
