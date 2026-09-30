@@ -56,8 +56,15 @@ def _is_enrichment_pending(validation: ApexStartupValidation | None) -> bool:
 
 
 def get_in_process_apex_validation() -> ApexStartupValidation | None:
-    """Return current proof, reopening pending enrichment when new proof appears."""
-    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+    """Return current observation, reopening it when evidence later appears."""
+    if (
+        _IN_PROCESS is not None
+        and (
+            _IN_PROCESS.status == "not_observed"
+            or _is_enrichment_pending(_IN_PROCESS)
+        )
+        and receipt_from_environment() is not None
+    ):
         return None
     return _IN_PROCESS
 
@@ -521,13 +528,20 @@ def _record_apex_enrichment(
 def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
     """Evaluate startup evidence without turning framework state into permission.
 
-    Missing, incomplete, stale, conflicting, or negative self-created startup
-    evidence is durable, retryable enrichment debt. Real provider/security/
+    Absent self-created startup evidence is simply not observed. Incomplete,
+    stale, conflicting, or negative supplied evidence is retryable enrichment.
+    Real provider/security/
     credential/destructive constraints remain enforced at the route that owns them.
     """
     global _IN_PROCESS
     if _IN_PROCESS is not None:
-        if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+        if (
+            (
+                _IN_PROCESS.status == "not_observed"
+                or _is_enrichment_pending(_IN_PROCESS)
+            )
+            and receipt_from_environment() is not None
+        ):
             _IN_PROCESS = None
         else:
             return _IN_PROCESS
@@ -544,12 +558,9 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
     receipt = receipt_from_environment()
 
     if receipt is None:
-        request = build_apex_startup_request(policy, task=task)
-        validation = _record_apex_enrichment(
-            ("no boot receipt supplied",),
-            request=request,
-        )
+        validation = _issue(True, "not_observed")
         _IN_PROCESS = validation
+        os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "not_observed"
         return validation
 
     errors = validate_apex_startup_receipt(policy, receipt)
