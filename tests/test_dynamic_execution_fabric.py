@@ -113,7 +113,7 @@ def test_missing_capability_changes_route_not_objective() -> None:
     assert plan.objective == "ship the operator runtime to the reachable mobile surface"
     rejected = next(route for route in plan.routes if route.substrate == "buildkite")
     assert rejected.eligible is False
-    assert "missing_capabilities" in rejected.reasons
+    assert any(reason.startswith("missing_capabilities:") for reason in rejected.reasons)
 
 
 def test_stale_health_is_ineligible_when_fresh_alternative_exists() -> None:
