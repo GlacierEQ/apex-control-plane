@@ -30,7 +30,7 @@ from operator_source_binding_contract import (
     validate_operator_source_binding_shape,
     validate_source_span_binding_shape,
 )
-from prime_directive_boot import receipt_from_environment
+from startup_receipt import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
     Path(__file__).resolve().parents[1]
