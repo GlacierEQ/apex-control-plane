@@ -49,10 +49,21 @@ def reconcile_execution_lineage(
     must independently pass the provider-evidence verifier on every run.
     """
     errors: list[str] = []
+    prior_state = str(record.get("prior_truth_state", "")).strip().upper()
+    preserved_truth = AUTHORITATIVE if prior_state == AUTHORITATIVE else UNESTABLISHED
+
     evidence = record.get("execution_evidence")
     if not isinstance(evidence, Mapping):
         errors.append("lineage.execution_evidence must be an object")
-        return LineageResult(False, REJECTED, "", _canonical_hash(record), tuple(errors))
+        return LineageResult(
+            False,
+            preserved_truth,
+            READBACK_NOT_ATTEMPTED,
+            REJECTED,
+            "",
+            _canonical_hash(record),
+            tuple(errors),
+        )
 
     claim_id = str(evidence.get("execution_claim_id", ""))
     contradiction = record.get("contradicted_by")
