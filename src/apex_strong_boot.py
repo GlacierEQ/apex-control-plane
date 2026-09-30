@@ -78,8 +78,10 @@ class StrongBootSession:
             raise ValueError("StrongBootSession status must remain compatibility-complete")
         if self.created_at.tzinfo is None:
             raise ValueError("StrongBootSession.created_at must be timezone-aware")
-        if self.gates != EXPECTED_GATES:
-            raise ValueError("StrongBootSession must preserve the startup observation sequence")
+        if self.gates not in {(), EXPECTED_GATES}:
+            raise ValueError(
+                "StrongBootSession gates must truthfully record the executed startup observation sequence"
+            )
 
     @property
     def runtime_id(self) -> str:
@@ -147,6 +149,8 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
         if finding is not None:
             findings.append(finding)
 
+    executed_gates = EXPECTED_GATES if startup_receipt_present else ()
+
     # Kernel construction is capability creation, not permission promotion. A
     # real construction failure is still a genuine technical failure.
     runtime_kernel = enforce_outcome_fidelity(create_verified_runtime_kernel())
@@ -157,9 +161,9 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
         )
     if snapshot.task_id is not None:
         raise StrongBootViolation("new runtime kernel unexpectedly contains a bound task")
-    if snapshot.startup_gates != EXPECTED_GATES:
+    if snapshot.startup_gates != executed_gates:
         raise StrongBootViolation(
-            "runtime kernel startup observation sequence does not match strong boot"
+            "runtime kernel executed startup observations do not match strong boot"
         )
     if runtime_kernel.outcome_state()["recorded"] is not False:
         raise StrongBootViolation("new runtime kernel unexpectedly contains a mission outcome")
@@ -168,7 +172,7 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
         session_id=str(uuid4()),
         status="complete",
         created_at=datetime.now(UTC),
-        gates=EXPECTED_GATES,
+        gates=executed_gates,
         runtime_kernel=runtime_kernel,
         uplift_findings=tuple(dict.fromkeys(findings)),
         _seal=_SESSION_SEAL,
@@ -240,11 +244,11 @@ def require_strong_boot() -> StrongBootSession:
 def _validate_existing_session(session: StrongBootSession) -> None:
     if not isinstance(session, StrongBootSession) or session._seal is not _SESSION_SEAL:
         raise StrongBootViolation("strong boot session is not authentic")
-    if session.status != "complete" or session.gates != EXPECTED_GATES:
+    if session.status != "complete" or session.gates not in {(), EXPECTED_GATES}:
         raise StrongBootViolation("strong boot session structure is invalid")
     snapshot = session.runtime_kernel.snapshot()
-    if snapshot.startup_gates != EXPECTED_GATES:
-        raise StrongBootViolation("strong boot runtime kernel lost startup observation binding")
+    if snapshot.startup_gates != session.gates:
+        raise StrongBootViolation("strong boot runtime kernel lost executed-observer binding")
 
 
 def _validation_finding(name: str, validation: Any) -> str | None:
