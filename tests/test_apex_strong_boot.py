@@ -214,6 +214,31 @@ def test_incomplete_observer_preserves_later_diagnostics_and_runtime(monkeypatch
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete_with_uplift"
 
 
+def test_repair_forward_observer_errors_remain_visible_as_uplift(monkeypatch) -> None:
+    calls = _arm_complete_boot(monkeypatch)
+    state = {"value": None}
+    validation = SimpleNamespace(
+        ok=True,
+        status="complete",
+        errors=("startup evidence enrichment pending: source context stale",),
+    )
+
+    def enriched_notion():
+        calls.append("notion_continuity")
+        state["value"] = validation
+        return validation
+
+    monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", enriched_notion)
+    monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
+
+    session = apply_strongest_boot()
+
+    assert session.runtime_id == "runtime-proof"
+    assert session.uplift_required is True
+    assert any("source context stale" in item for item in session.uplift_findings)
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete_with_uplift"
+
+
 def test_incomplete_fidelity_observer_does_not_prevent_kernel_creation(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     state = {"value": None}
