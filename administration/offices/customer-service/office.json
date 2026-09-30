@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "office_id": "customer-service",
+  "display_name": "Customer Service Office",
+  "status": "ACTIVE",
+  "principal": "Casey Barton / GlacierEQ Operator",
+  "administrative_role": "single_front_door_for_service_failure_and_administrative_friction",
+  "execution_home": "GlacierEQ/apex-control-plane",
+  "owns": [
+    "service_request_intake",
+    "complaint_intake",
+    "service_failure_recovery",
+    "internal_routing",
+    "customer_facing_ticket_ownership",
+    "cross_office_follow_through",
+    "resolution_verification",
+    "reopen_on_failed_completion"
+  ],
+  "does_not_replace": [
+    "telecom",
+    "email",
+    "papers",
+    "case",
+    "evidence",
+    "records",
+    "court_docket",
+    "claims",
+    "employment",
+    "scheduler_follow_up",
+    "engineering",
+    "memory_continuity"
+  ],
+  "service_loop": [
+    "RECEIVE",
+    "RECOVER",
+    "CLASSIFY",
+    "ROUTE",
+    "TRACK",
+    "VERIFY",
+    "READ_BACK",
+    "CLOSE_OR_REOPEN"
+  ],
+  "ticket_states": [
+    "NEW",
+    "RECOVERING",
+    "ROUTED",
+    "IN_EXECUTION",
+    "WAITING_EXTERNAL",
+    "VERIFYING",
+    "RESOLVED",
+    "BLOCKED_OPERATOR_DECISION",
+    "BLOCKED_EXTERNAL_DEPENDENCY",
+    "DEGRADED_ROUTE",
+    "REOPENED"
+  ],
+  "operator_escalation_only_for": [
+    "substantive_personal_decision",
+    "new_mission_or_scope_authority",
+    "personally_required_signature_verification_consent_or_testimony",
+    "materially_irreversible_or_high_impact_approval",
+    "unresolvable_authority_conflict",
+    "uniquely_operator_known_information_not_recoverable_elsewhere"
+  ],
+  "invariants": {
+    "recover_before_repeat_request": true,
+    "internal_routing_is_administration_job": true,
+    "customer_service_retains_ticket_until_verified_resolution": true,
+    "support_work_is_not_mission_completion": true,
+    "provider_or_system_readback_required_for_external_completion_claim": true,
+    "responsibility_follows_function": true,
+    "operator_is_not_default_error_handler": true,
+    "blocked_route_changes_route_not_objective": true
+  }
+}
