@@ -40,6 +40,7 @@ from outcome_fidelity_runtime import (
     enforce_outcome_fidelity,
 )
 from strict_frontier_preflight import validate_runtime_strict_frontier
+from startup_receipt import receipt_from_environment
 
 
 MODEL_ATTRACTOR_PREFLIGHT = "model_attractor_defense"
@@ -107,12 +108,14 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
         return _IN_PROCESS
 
     findings: list[str] = []
-    _run_model_attractor_preflight(findings)
+    startup_receipt_present = receipt_from_environment() is not None
+    if startup_receipt_present:
+        _run_model_attractor_preflight(findings)
 
-    # Every historical startup component still runs so its knowledge is retained.
-    # Its result is diagnostic/uplift state, not a vote on whether the runtime may
-    # exist at all.
-    for name, automatic, getter in _gate_sequence():
+    # Receipt-bound observers run only when receipt evidence actually exists.
+    # Absence of optional proof is neutral; supplied evidence is validated and
+    # any findings remain diagnostic/uplift state rather than runtime permission.
+    for name, automatic, getter in (_gate_sequence() if startup_receipt_present else ()):
         validation: Any = None
         try:
             validation = getter()
