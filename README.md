@@ -206,7 +206,7 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 | `src/apex_enforced_startup.py` | APEX Genesis startup + state-transition enforcement |
 | `src/notion_continuity_gate.py` | Optional Notion-specific continuity/topology validator; not a universal startup prerequisite |
 | `src/apex_strong_boot.py` | Strong-boot composition |
-| `src/outcome_fidelity_runtime.py` | Mission-outcome postcondition hard lock |
+| `src/outcome_fidelity_runtime.py` | Mission-outcome completion verifier that preserves intermediate gain |
 | `src/control_plane_runtime.py` | Preserved runtime |
 | `migrations/` | Relational state migrations |
 | `tests/` | Execution, continuity, proof, and regression tests |
