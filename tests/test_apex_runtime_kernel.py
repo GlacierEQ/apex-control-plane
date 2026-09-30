@@ -96,6 +96,26 @@ def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> Non
     assert any("apex_startup: validation missing" in item for item in kernel.startup_findings)
 
 
+def test_factory_preserves_repair_forward_observer_details(monkeypatch) -> None:
+    clean = SimpleNamespace(ok=True, status="complete", errors=())
+    enriched = SimpleNamespace(
+        ok=True,
+        status="complete",
+        errors=("startup proof enrichment pending: source context stale",),
+    )
+    for getter in _GATE_GETTERS:
+        monkeypatch.setattr(runtime, getter, lambda clean=clean: clean)
+    monkeypatch.setattr(runtime, "get_in_process_apex_validation", lambda: enriched)
+
+    kernel = create_verified_runtime_kernel()
+
+    assert kernel.phase is RuntimePhase.BOOTSTRAPPED
+    assert any(
+        "apex_startup: startup proof enrichment pending: source context stale" in item
+        for item in kernel.startup_findings
+    )
+
+
 def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     kernel.bind_task(
