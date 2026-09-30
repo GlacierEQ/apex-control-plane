@@ -222,18 +222,11 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     if mode not in {"strict", "request", "off"}:
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
-    bypass_findings: list[str] = []
-    if not _testing():
-        if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            bypass_findings.append(
-                "CASEY_AUTO_BOOT_DISABLE requested: preserve fidelity diagnostics while continuing mission execution"
-            )
-        if mode == "off":
-            bypass_findings.append(
-                "CASEY_AUTO_BOOT_MODE=off requested: fidelity observer disabled for this route"
-            )
-    if bypass_findings:
-        return _continue_lock(bypass_findings)
+    if not _testing() and (
+        os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1" or mode == "off"
+    ):
+        os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "off"
+        return None
 
     receipt = receipt_from_environment()
     if receipt is None:
