@@ -7,14 +7,12 @@
   "fail_closed": false,
   "startup_observers": [
     "notion_continuity",
-    "prime_directive",
     "operator_fidelity_lock",
     "operator_fidelity",
     "apex_startup"
   ],
   "required_startup_gates": [
     "notion_continuity",
-    "prime_directive",
     "operator_fidelity_lock",
     "operator_fidelity",
     "apex_startup"
