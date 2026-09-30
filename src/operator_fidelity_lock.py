@@ -220,16 +220,8 @@ def validate_operator_fidelity_lock(
     return tuple(dict.fromkeys(errors))
 
 
-def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
-    global _IN_PROCESS
-    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
-    validation = _issue(False, "uplift_required", errors)
-    _IN_PROCESS = validation
-    return validation
-
-
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    """Issue fidelity proof or durable uplift findings without killing execution."""
+    """Issue fidelity proof or retryable enrichment without becoming startup authority."""
     global _IN_PROCESS
     # Latest-result readback only. Never reuse a prior turn's fidelity decision.
     _IN_PROCESS = None
@@ -264,7 +256,7 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
 def _reject_runtime_bypass(
     errors: Sequence[str],
 ) -> OperatorFidelityLockValidation:
-    """Compatibility shim: historical bypass rejection is now durable uplift."""
+    """Compatibility shim: historical bypass rejection is now enrichment debt."""
     return _continue_lock(errors)
 
 
