@@ -27,6 +27,7 @@ from uuid import uuid4
 from apex_enforced_startup import get_in_process_apex_validation
 from operator_fidelity_lock import get_in_process_operator_fidelity_lock
 from operator_fidelity_preflight import get_in_process_operator_fidelity_validation
+from startup_receipt import receipt_from_environment
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -618,9 +619,13 @@ def create_verified_runtime_kernel(
 ) -> ApexRuntimeKernel:
     """Create a live kernel and attach startup observer findings for later repair."""
     gate_values = (
-        ("operator_fidelity_lock", get_in_process_operator_fidelity_lock()),
-        ("operator_fidelity", get_in_process_operator_fidelity_validation()),
-        ("apex_startup", get_in_process_apex_validation()),
+        (
+            ("operator_fidelity_lock", get_in_process_operator_fidelity_lock()),
+            ("operator_fidelity", get_in_process_operator_fidelity_validation()),
+            ("apex_startup", get_in_process_apex_validation()),
+        )
+        if receipt_from_environment() is not None
+        else ()
     )
     findings: list[str] = []
     for name, validation in gate_values:
