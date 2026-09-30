@@ -1,4 +1,4 @@
-# APEX // ENFORCED STARTUP PROTOCOL
+# APEX // REPAIR-FORWARD STARTUP PROTOCOL
 
 **Status:** mandatory execution contract for compatible APEX workers.
 
@@ -107,7 +107,7 @@ READ CURRENT OPERATOR MESSAGE
   -> REPORT MATERIAL DELTA
 ```
 
-Startup checks preserve known state, continuity, literal operation scope, the Operator's working method, asset sovereignty, and intent. Startup evidence records observations about those checks; it does not grant permission, re-authorize an already-authorized Operator action, or freeze material execution while enrichment is incomplete. Missing, incomplete, stale, conflicting, or negative self-created startup evidence remains durable, retryable repair/enrichment debt and may limit only the claim that the corresponding startup condition was established. Real provider, credential, security, destructive-action, or factual constraints remain route-local execution facts enforced by the component that actually owns that route.
+Startup checks preserve known state, continuity, literal operation scope, the Operator's working method, asset sovereignty, and intent. Startup evidence records observations about those checks; it does not grant permission, re-authorize an already-authorized Operator action, or freeze material execution while enrichment is incomplete. Absence of an optional startup receipt is neutral. When evidence is explicitly supplied, incomplete, stale, conflicting, or negative self-created evidence becomes durable, retryable repair/enrichment debt and may limit only the claim that the corresponding startup condition was established. Real provider, credential, security, destructive-action, or factual constraints remain route-local execution facts enforced by the component that actually owns that route.
 
 ## Known-state reuse and context hydration
 
@@ -458,7 +458,7 @@ Existing field names containing `canonical` may remain where changing an externa
 
 ```text
 STATE=APEX
-STARTUP=ENFORCED
+STARTUP=REPAIR_FORWARD
 CENTER=OPERATOR
 AUTHORITY_MODE=ABSOLUTE_PROJECT_DIRECTION
 ASSET_AUTHORITY=OPERATOR_ONLY
