@@ -95,15 +95,9 @@ def test_manifest_loads_and_always_profile_is_first() -> None:
     assert manifest["worker_execution_contract"]["mem_note"]["id"] == WORKER_CONTRACT_NOTE_ID
     assert manifest["canonical_mem_manifest"]["version"] == 6
     assert manifest["canonical_mem_manifest"]["version_mode"] == "at_least"
-    prime = manifest["prime_directive"]
-    assert prime["policy_schema_version"] == "1.5.0"
-    assert prime["requires_memory_state"] is True
-    assert prime["requires_memory_search"] is False
-    assert prime["known_state_reuse_before_rediscovery"] is True
-    assert prime["memory_search_requires_material_justification"] is True
-    assert prime["rediscovery_is_not_progress"] is True
-    assert prime["worker_activity_is_not_progress"] is True
-    assert prime["standing_authority_persists_across_mechanical_state_changes"] is True
+    assert "prime_directive" not in manifest
+    assert manifest["apex_genesis"].get("fail_closed") is not True
+    assert "requires_contradiction_resolution" not in manifest["apex_genesis"]
     assert "resume_chain" not in manifest
 
 
