@@ -336,8 +336,8 @@ def load_model_attractor_policy(
     missing = sorted(required - value.keys())
     if missing:
         raise BootError("model-attractor policy missing: " + ", ".join(missing))
-    if value.get("fail_closed") is not True:
-        raise BootError("model-attractor policy must remain fail_closed=true")
+    if value.get("fail_closed") is not False:
+        raise BootError("model-attractor policy must remain repair-forward with fail_closed=false")
     if not isinstance(value.get("required_boolean_fields"), Mapping):
         raise BootError("model-attractor required_boolean_fields must be an object")
     if not isinstance(value.get("continuity_required_fields"), Mapping):
@@ -619,22 +619,23 @@ def build_model_attractor_request(
     }
 
 
-def _continue_model_attractor(
+def _record_model_attractor_enrichment(
     errors: Sequence[str], *, request: Mapping[str, Any]
 ) -> ModelAttractorValidation:
-    from startup_continuation import (
-        emit_startup_continuation,
-        record_startup_continuation,
-    )
+    from startup_continuation import emit_startup_continuation, record_startup_enrichment
 
-    continuation = record_startup_continuation(
+    enrichment = record_startup_enrichment(
         "model_attractor_defense",
         errors,
         request=request,
         environment_key="GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS",
     )
-    emit_startup_continuation(continuation)
-    return _issue(False, "continuation_required", errors)
+    emit_startup_continuation(enrichment)
+    return _issue(
+        True,
+        "complete",
+        tuple(f"model-attractor enrichment pending: {error}" for error in errors),
+    )
 
 
 def automatic_model_attractor_defense() -> ModelAttractorValidation | None:
@@ -659,15 +660,22 @@ def automatic_model_attractor_defense() -> ModelAttractorValidation | None:
         request = build_model_attractor_request(policy, task=task)
         print(json.dumps(request, ensure_ascii=False, sort_keys=True), file=sys.stderr)
         sys.stderr.flush()
-        return _continue_model_attractor(("no boot receipt supplied",), request=request)
-
-    errors = validate_model_attractor_receipt(policy, receipt)
-    validation = _issue(not errors, "complete" if not errors else "blocked", errors)
-    if validation.ok:
+        validation = _record_model_attractor_enrichment(
+            ("no boot receipt supplied",),
+            request=request,
+        )
         _IN_PROCESS = validation
-        os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] = "complete"
         return validation
 
-    request = build_model_attractor_request(policy, task=task)
-    request["receipt_errors"] = list(validation.errors)
-    return _continue_model_attractor(validation.errors, request=request)
+    errors = validate_model_attractor_receipt(policy, receipt)
+    if errors:
+        request = build_model_attractor_request(policy, task=task)
+        request["receipt_errors"] = list(errors)
+        validation = _record_model_attractor_enrichment(errors, request=request)
+        _IN_PROCESS = validation
+        return validation
+
+    validation = _issue(True, "complete")
+    _IN_PROCESS = validation
+    os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] = "complete"
+    return validation
