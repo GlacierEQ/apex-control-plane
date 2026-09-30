@@ -109,6 +109,11 @@ def test_strong_boot_runs_exact_observation_sequence_and_creates_kernel(monkeypa
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
 
 
+def test_not_observed_startup_observer_is_clean_not_uplift() -> None:
+    validation = SimpleNamespace(ok=True, status="not_observed", errors=())
+    assert boot._validation_finding("apex_startup", validation) is None
+
+
 def test_model_attractor_failure_becomes_uplift_and_kernel_still_exists(monkeypatch) -> None:
     _arm_complete_boot(monkeypatch)
     state = {"value": None}
