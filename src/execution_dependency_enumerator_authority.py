@@ -1,4 +1,4 @@
-"""Fail-closed authority for enumerating execution dependencies.
+"""Evidence validator for enumerating execution dependencies.
 
 Dependency completeness cannot be established by a verifier merely asserting that
 its own declared set is complete. This boundary requires separately resolved,
