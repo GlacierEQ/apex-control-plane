@@ -399,7 +399,7 @@ def test_policy_requires_repair_forward_non_sovereign_semantics(tmp_path) -> Non
         load_model_attractor_policy(target)
 
 
-def test_automatic_model_attractor_missing_receipt_is_enrichment(monkeypatch, tmp_path) -> None:
+def test_automatic_model_attractor_missing_receipt_is_not_observed(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
     monkeypatch.setattr(defense, "_IN_PROCESS", None)
@@ -409,14 +409,13 @@ def test_automatic_model_attractor_missing_receipt_is_enrichment(monkeypatch, tm
 
     assert validation is not None
     assert validation.ok is True
-    assert validation.status == "complete"
-    assert validation.errors == (
-        "model-attractor enrichment pending: no boot receipt supplied",
-    )
-    assert defense.os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] == "complete_enrichment_pending"
+    assert validation.status == "not_observed"
+    assert validation.errors == ()
+    assert defense.os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] == "not_observed"
+    assert not list(tmp_path.glob("model_attractor_defense-*.json"))
 
 
-def test_model_attractor_enrichment_retries_when_receipt_arrives(monkeypatch, tmp_path) -> None:
+def test_model_attractor_not_observed_retries_when_receipt_arrives(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
     current_receipt = {"value": None}
@@ -425,7 +424,8 @@ def test_model_attractor_enrichment_retries_when_receipt_arrives(monkeypatch, tm
 
     first = defense.automatic_model_attractor_defense()
     assert first is not None
-    assert first.errors
+    assert first.status == "not_observed"
+    assert first.errors == ()
 
     current_receipt["value"] = {"model_attractor_defense": {"proof": "arrived"}}
     monkeypatch.setattr(defense, "validate_model_attractor_receipt", lambda policy, receipt: ())
