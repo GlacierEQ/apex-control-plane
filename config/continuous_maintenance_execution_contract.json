@@ -4,7 +4,7 @@
   "authority": "operator_intent",
   "scope": "global recurring and continuation-dependent execution",
   "objective": "continuous_useful_state_improvement",
-  "prime_directive": "Every recurring run is maintenance, repair, strengthening, verification, and preservation first; observation and reporting are secondary.",
+  "maintenance_objective": "Every recurring run is maintenance, repair, strengthening, verification, and preservation first; observation and reporting are secondary.",
   "execution_loop": [
     "HYDRATE",
     "RECOVER_PRIOR_VERIFIED_GAIN",
