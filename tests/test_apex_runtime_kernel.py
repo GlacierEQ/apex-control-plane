@@ -112,6 +112,7 @@ def test_factory_without_optional_startup_receipt_has_no_missing_observer_findin
     kernel = create_verified_runtime_kernel()
 
     assert kernel.phase is RuntimePhase.BOOTSTRAPPED
+    assert kernel.startup_gates == ()
     assert kernel.startup_findings == ()
 
 
