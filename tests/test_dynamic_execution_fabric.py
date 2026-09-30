@@ -254,3 +254,64 @@ def test_dynamic_registry_contains_no_static_winner() -> None:
     assert "default_substrate" not in config
     assert config["live_state"]["embedded_in_registry"] is False
     assert config["live_state"]["required_per_work_unit"] is True
+
+
+
+def test_execute_fails_over_between_ranked_substrates_without_changing_objective() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload(
+        workload_id="ci:failover",
+        objective="verify exact source and produce a terminal receipt",
+        capabilities=frozenset({"ci", "python"}),
+        requires_receipts=True,
+        requires_terminal_readback=True,
+    )
+    observations = [
+        obs("provider_a", capabilities={"ci", "python"}, score=0.99),
+        obs("provider_b", capabilities={"ci", "python"}, score=0.90),
+    ]
+    calls: list[str] = []
+
+    def execute(substrate: str, _workload: Workload) -> dict:
+        calls.append(substrate)
+        if substrate == "provider_a":
+            raise RuntimeError("provider_a capacity exhausted")
+        return {
+            "status": "success",
+            "receipt": "receipt-b",
+            "terminal_readback": True,
+        }
+
+    result = fabric.execute(workload, observations, execute)
+
+    assert calls == ["provider_a", "provider_b"]
+    assert result.ok is True
+    assert result.substrate == "provider_b"
+    assert result.objective == workload.objective
+    assert result.attempted == ("provider_a", "provider_b")
+    assert result.failures[0]["substrate"] == "provider_a"
+
+
+def test_execute_returns_route_exhausted_without_rewriting_mission() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload(
+        workload_id="ci:exhausted",
+        objective="complete the exact requested verification",
+        capabilities=frozenset({"ci"}),
+    )
+    observations = [
+        obs("provider_a", capabilities={"ci"}, score=0.9),
+        obs("provider_b", capabilities={"ci"}, score=0.8),
+    ]
+
+    result = fabric.execute(
+        workload,
+        observations,
+        lambda substrate, _workload: (_ for _ in ()).throw(RuntimeError(f"{substrate} failed")),
+    )
+
+    assert result.ok is False
+    assert result.status == "route_exhausted"
+    assert result.objective == workload.objective
+    assert result.mission_state == "unchanged"
+    assert result.attempted == ("provider_a", "provider_b")
