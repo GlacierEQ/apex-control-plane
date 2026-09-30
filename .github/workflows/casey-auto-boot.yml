@@ -18,13 +18,10 @@ on:
       - "config/operator_fidelity_runtime_policy.json"
       - "config/casey_auto_boot_manifest.json"
       - "config/notion_continuity_policy.json"
-      - "config/prime_directive_policy.json"
       - "src/apex_enforced_startup.py"
       - "src/operator_fidelity_preflight.py"
       - "src/auto_boot.py"
       - "src/notion_continuity_gate.py"
-      - "src/prime_directive_boot.py"
-      - "src/prime_directive_enforcer.py"
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
@@ -33,8 +30,6 @@ on:
       - "tests/test_operator_fidelity_preflight.py"
       - "tests/test_auto_boot.py"
       - "tests/test_notion_continuity_gate.py"
-      - "tests/test_prime_directive_boot.py"
-      - "tests/test_prime_directive_enforcer.py"
       - "tests/test_scan_repos.py"
       - "jack/config/jack_relentless_contract.yaml"
       - "jack/config/jack_relentless_contract.compiled.json"
@@ -43,7 +38,6 @@ on:
       - "jack/odin/jack_relentless_gate.odin"
       - "glaciereq/jack/v1/jack_relentless_contract.proto"
       - "docs/CASEY_AUTO_BOOT.md"
-      - "docs/PRIME_DIRECTIVE_ENFORCER.md"
       - "README.md"
       - ".github/workflows/casey-auto-boot.yml"
   pull_request:
@@ -58,13 +52,10 @@ on:
       - "config/operator_fidelity_runtime_policy.json"
       - "config/casey_auto_boot_manifest.json"
       - "config/notion_continuity_policy.json"
-      - "config/prime_directive_policy.json"
       - "src/apex_enforced_startup.py"
       - "src/operator_fidelity_preflight.py"
       - "src/auto_boot.py"
       - "src/notion_continuity_gate.py"
-      - "src/prime_directive_boot.py"
-      - "src/prime_directive_enforcer.py"
       - "src/control_plane.py"
       - "src/control_plane_runtime.py"
       - "src/sitecustomize.py"
@@ -73,8 +64,6 @@ on:
       - "tests/test_operator_fidelity_preflight.py"
       - "tests/test_auto_boot.py"
       - "tests/test_notion_continuity_gate.py"
-      - "tests/test_prime_directive_boot.py"
-      - "tests/test_prime_directive_enforcer.py"
       - "tests/test_scan_repos.py"
       - "jack/config/jack_relentless_contract.yaml"
       - "jack/config/jack_relentless_contract.compiled.json"
@@ -83,7 +72,6 @@ on:
       - "jack/odin/jack_relentless_gate.odin"
       - "glaciereq/jack/v1/jack_relentless_contract.proto"
       - "docs/CASEY_AUTO_BOOT.md"
-      - "docs/PRIME_DIRECTIVE_ENFORCER.md"
       - "README.md"
       - ".github/workflows/casey-auto-boot.yml"
 
@@ -121,8 +109,6 @@ jobs:
             src/operator_fidelity_preflight.py \
             src/auto_boot.py \
             src/notion_continuity_gate.py \
-            src/prime_directive_boot.py \
-            src/prime_directive_enforcer.py \
             src/control_plane.py \
             src/sitecustomize.py \
             scripts/scan_repos.py \
@@ -134,7 +120,6 @@ jobs:
           python -m json.tool config/operator_fidelity_runtime_policy.json >/dev/null
           python -m json.tool config/casey_auto_boot_manifest.json >/dev/null
           python -m json.tool config/notion_continuity_policy.json >/dev/null
-          python -m json.tool config/prime_directive_policy.json >/dev/null
           python -m json.tool jack/config/jack_relentless_contract.compiled.json >/dev/null
           python src/auto_boot.py --profile legal_case --task continue --emit-request > /tmp/casey-boot-request.json
           python -m json.tool /tmp/casey-boot-request.json >/dev/null
@@ -148,8 +133,6 @@ jobs:
             tests/test_operator_fidelity_preflight.py \
             tests/test_auto_boot.py \
             tests/test_notion_continuity_gate.py \
-            tests/test_prime_directive_boot.py \
-            tests/test_prime_directive_enforcer.py \
             tests/test_scan_repos.py \
             jack/tests/test_jack_relentless_gate.py
 
@@ -189,7 +172,6 @@ jobs:
         shell: bash
         run: |
           GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=complete \
-          GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=complete \
           GLACIEREQ_OPERATOR_FIDELITY_STATUS=complete \
           GLACIEREQ_APEX_STARTUP_STATUS=complete \
           CASEY_BOOT_STATUS=complete \
