@@ -13,7 +13,6 @@
 - APEX startup policy: `config/apex_enforced_startup_policy.json`
 - APEX startup enforcer: `src/apex_enforced_startup.py`
 - Continuity manifest: `config/casey_auto_boot_manifest.json`
-- Prime Directive policy: `config/prime_directive_policy.json`
 - Operator execution law: `OPERATOR_EXECUTION_LAW.md`
 - Agent prompt: `AGENT_SYSTEM_PROMPT.md`
 
@@ -41,9 +40,9 @@ Historical or `canonical` labels are evidence/topology classifications only. The
 6. Read this file, `AGENT_SYSTEM_PROMPT.md`, `OPERATOR_EXECUTION_LAW.md`, and `APEX_ENFORCED_STARTUP.md` as pinned source-native startup surfaces.
 7. Enumerate the tools and connectors actually loaded.
 8. Open current sources required by the task where freshness, exact bytes, conflict resolution, or mutation safety materially requires source-native state.
-9. Validate continuity and Prime Directive receipts.
-10. Validate the APEX Genesis startup receipt.
-11. Only after the required gates pass, execute material mutation.
+9. Validate continuity evidence and record any material gaps.
+10. Evaluate APEX startup observations; missing self-created proof is repair/enrichment debt, not general execution permission.
+11. Execute within the current Operator-authorized scope; genuine route-local constraints limit only the affected route.
 
 A failed call is not a completed startup step. Rediscovery of already-known relevant Operator/project state is not progress.
 
