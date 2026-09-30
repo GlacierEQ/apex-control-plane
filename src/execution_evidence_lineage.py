@@ -69,9 +69,25 @@ def reconcile_execution_lineage(
     contradiction = record.get("contradicted_by")
     superseded = record.get("superseded_by")
     if contradiction:
-        return LineageResult(False, CONTRADICTED, claim_id, _canonical_hash(record), ())
+        return LineageResult(
+            False,
+            preserved_truth,
+            READBACK_NOT_ATTEMPTED,
+            CONTRADICTED,
+            claim_id,
+            _canonical_hash(record),
+            (),
+        )
     if superseded:
-        return LineageResult(False, SUPERSEDED, claim_id, _canonical_hash(record), ())
+        return LineageResult(
+            False,
+            preserved_truth,
+            READBACK_NOT_ATTEMPTED,
+            SUPERSEDED,
+            claim_id,
+            _canonical_hash(record),
+            (),
+        )
 
     if prior_state and prior_state not in {
         AUTHORITATIVE,
@@ -93,10 +109,34 @@ def reconcile_execution_lineage(
 
     verification = validate_execution_evidence(evidence, resolver=resolver)
     if verification.ok and not errors:
-        return LineageResult(True, AUTHORITATIVE, claim_id, _canonical_hash(record), ())
+        return LineageResult(
+            True,
+            AUTHORITATIVE,
+            AUTHORITATIVE,
+            AUTHORITATIVE,
+            claim_id,
+            _canonical_hash(record),
+            (),
+        )
 
     combined = tuple(dict.fromkeys([*errors, *verification.errors]))
     if verification.status == "provider_readback_unresolved" and not errors:
         # Preserve historical claim identity, but remove execution authority.
-        return LineageResult(False, READBACK_UNRESOLVED, claim_id, _canonical_hash(record), combined)
-    return LineageResult(False, REJECTED, claim_id, _canonical_hash(record), combined)
+        return LineageResult(
+            False,
+            preserved_truth,
+            READBACK_UNRESOLVED,
+            READBACK_UNRESOLVED,
+            claim_id,
+            _canonical_hash(record),
+            combined,
+        )
+    return LineageResult(
+        False,
+        preserved_truth,
+        REJECTED,
+        REJECTED,
+        claim_id,
+        _canonical_hash(record),
+        combined,
+    )
