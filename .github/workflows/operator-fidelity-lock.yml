@@ -85,7 +85,7 @@ jobs:
             tests/test_operator_fidelity_preflight.py \
             tests/test_apex_strong_boot.py
 
-      - name: Prove disable flag becomes visible uplift without global execution veto
+      - name: Prove explicit disable is honored without penalty state
         run: |
           CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
             python - <<'PY'
@@ -94,15 +94,12 @@ jobs:
 
           lock._IN_PROCESS = None
           validation = lock.automatic_operator_fidelity_lock()
-          assert validation is not None
-          assert validation.ok is False
-          assert validation.status == "uplift_required"
-          assert any("CASEY_AUTO_BOOT_DISABLE" in error for error in validation.errors)
-          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+          assert validation is None
+          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "off"
           assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
           PY
 
-      - name: Prove off mode becomes visible uplift without process death
+      - name: Prove off mode is actually off
         run: |
           CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
             python - <<'PY'
@@ -111,11 +108,8 @@ jobs:
 
           lock._IN_PROCESS = None
           validation = lock.automatic_operator_fidelity_lock()
-          assert validation is not None
-          assert validation.ok is False
-          assert validation.status == "uplift_required"
-          assert any("CASEY_AUTO_BOOT_MODE=off" in error for error in validation.errors)
-          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+          assert validation is None
+          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "off"
           assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
           PY
 
