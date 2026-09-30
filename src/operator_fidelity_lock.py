@@ -30,7 +30,7 @@ from operator_source_binding_contract import (
     validate_operator_source_binding_shape,
     verify_source_span_binding,
 )
-from prime_directive_boot import receipt_from_environment
+from startup_receipt import receipt_from_environment
 
 _SEAL = object()
 
