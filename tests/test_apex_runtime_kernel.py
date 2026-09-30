@@ -266,7 +266,7 @@ def test_failed_test_forces_repair_and_retest(monkeypatch) -> None:
     repaired = kernel.record_repair("patch:repair-1")
     assert repaired.phase == "testing"
     kernel.record_test("pytest:second", passed=True)
-    assert kernel.phase is RuntimePhase.ADVERSARIAL_TESTING
+    assert kernel.phase is RuntimePhase.VERIFYING
 
 
 def test_failed_adversarial_test_forces_repair(monkeypatch) -> None:
@@ -474,7 +474,6 @@ def test_missing_verified_gain_routes_to_repair_instead_of_permission_failure(mo
     kernel.begin()
     kernel.record_execution("execution:first")
     kernel.record_test("pytest:first", passed=True)
-    kernel.record_adversarial_test("pytest:adversarial", passed=True)
 
     result = kernel.record_verification("verification:first", passed=True)
 
@@ -488,7 +487,6 @@ def test_readback_mismatch_routes_to_repair_without_erasing_execution(monkeypatc
     kernel.begin()
     kernel.record_execution("execution:first")
     kernel.record_test("pytest:first", passed=True)
-    kernel.record_adversarial_test("pytest:adversarial", passed=True)
     kernel.record_verification(
         "verification:first",
         passed=True,
