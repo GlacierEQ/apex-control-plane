@@ -30,3 +30,29 @@ ONNX SHA-256: `5602367fb172d7457c9cc7dc57e87e6aa765e8bc53cfbe8662468c5ad91d338b`
 
 Jack attacks execution failure, arguments, contradictions, source gaps, and broken workflows.
 The contract does not authorize violence, threats, unlawful access, unauthorized external actions, or fabrication.
+
+## CaseBuilder / Allegation Forge
+
+Jack includes a case-construction layer in addition to the relentless execution gate.
+
+- `CASEBUILDER.md` — operating doctrine and hardening loop.
+- `config/casebuilder_contract.json` — stable v1 allegation contract.
+- `src/casebuilder.py` — source-linked allegation hardening, scoring, promotion, discovery-target conversion, rendering, and packet compilation.
+- `../legal/schemas/casebuilder_case.schema.json` — stable v1 external packet schema.
+- `tests/test_casebuilder.py` — fail-closed allegation regression tests.
+
+### Full typed case graph
+
+The additive CaseGraph extension preserves the stable allegation API while making the complete case architecture executable.
+
+- `src/casegraph.py` — typed facts, actors, events, defenses, damages, remedies, accountability paths, contradiction state, orphan detection, pressure vectors, and extended promotion.
+- `config/casebuilder_graph_contract.json` — full graph contract.
+- `../legal/schemas/casebuilder_graph.schema.json` — compiled graph output schema.
+- `tests/test_casegraph.py` — full-graph regression suite.
+- `../machine/casebuilder.json` — machine capability routing for both layers.
+
+Traversal:
+
+`SOURCE -> FACT -> EVENT -> ACTOR -> ALLEGATION -> ELEMENT -> CONTRADICTION -> KNOWLEDGE -> CAUSATION -> DAMAGE -> DEFENSE -> DISCOVERY -> REMEDY -> ACCOUNTABILITY`
+
+Private case evidence must remain outside this public repository. The runtime accepts private case bindings at execution time and preserves source lineage without publishing the underlying evidence.

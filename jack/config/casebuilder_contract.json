@@ -1,0 +1,12 @@
+{
+  "contract_id": "JTR-CASEBUILDER-v1",
+  "version": "1.0.0",
+  "prime_directive": "TURN EVERY MATERIAL EVENT INTO A PROPOSITION THAT CAN BE PROVEN, ATTACKED, STRENGTHENED, AND USED.",
+  "case_layers": ["incidents","events","actors","acts","sources","harms","allegations","contradictions","damages","defenses","discovery","remedies"],
+  "allegation_lanes": ["FACTUAL","PROCEDURAL","ETHICAL","CIVIL","ADMINISTRATIVE","EVIDENTIARY","POTENTIAL_CRIMINAL"],
+  "proof_states": ["VERIFIED_PRIMARY","CORROBORATED","FIRSTHAND_CONTEMPORANEOUS","ATTRIBUTED","STRONG_INFERENCE","ALLEGED","UNRESOLVED","CONTRADICTED","QUARANTINED","DISPROVED"],
+  "promotion_states": ["RAW","STRUCTURED","SOURCED","CORROBORATED","ELEMENT_MAPPED","DEFENSE_TESTED","HARDENED","PLEADING_READY","REFERRAL_READY","TRIAL_READY"],
+  "hardening_loop": ["attack_facts","attack_source","attack_elements","attack_causation","attack_mental_state","attack_damages","attack_procedure","attack_authority","build_best_defense","rebut","identify_gap","convert_gap_to_discovery","rewrite","attack_again"],
+  "completion_requirements": ["every_material_event_routed","every_allegation_has_source_lineage","every_legal_allegation_has_element_map","every_material_contradiction_attached_to_allegation","every_mental_state_claim_has_separate_support_or_is_demoted","every_material_gap_has_discovery_target","every_core_allegation_is_defense_tested","every_harm_has_causation_link","every_surviving_allegation_has_remedy_path","every_unknown_material_actor_is_modeled_as_identity_discovery_target"],
+  "guardrails": ["unknown_actor_does_not_block_event_allegation","contradiction_does_not_equal_intent","missing_record_does_not_equal_destruction","timing_does_not_equal_conspiracy","criminal_theory_requires_element_and_mental_state_support","public_repo_must_not_receive_private_case_evidence"]
+}
