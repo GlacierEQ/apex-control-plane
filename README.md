@@ -41,7 +41,7 @@ The enforced startup contract is [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STAR
 3. **Model-attractor defense** — detect `CONTINUE -> RECONSTRUCT`, needless rediscovery, mission/support substitution, and related continuity drift as repair-forward diagnostics rather than estate-wide vetoes.
 4. **Mission-outcome fidelity** — mutation work cannot persist merely because the assistant produced a ledger, matrix, summary, report, plan, commit, task update, or other artifact; it must prove an underlying source-bearing mission-state transition or an evidenced genuine external boundary after materially available internal routes are exhausted.
 
-Strict mode is the default. Missing or incomplete self-created startup evidence is recorded as enrichment debt while the runtime continues through known executable frontiers. Malformed explicitly supplied evidence and genuine runtime-construction failures remain concrete errors.
+Strict mode is the default. Absence of an optional self-created startup receipt is neutral and does not manufacture repair debt. When startup evidence is explicitly supplied, incomplete, stale, conflicting, or negative evidence is recorded as diagnostic enrichment while the runtime continues through known executable frontiers. Malformed explicitly supplied evidence and genuine runtime-construction failures remain concrete errors.
 
 **Rediscovery of already-known relevant Operator/project state is not progress.**
 
@@ -128,7 +128,7 @@ The profile name above is an interface example. No case-specific evidence or pri
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
 ```
 
-Request mode exposes the required proof contract without claiming a complete boot.
+Request mode can expose an explicit proof contract when requested; ordinary startup does not manufacture a proof request merely because no optional receipt was supplied.
 
 `src/sitecustomize.py` is an optional secondary hook when `src` is already on `PYTHONPATH` or another entrypoint is explicitly forced with `CASEY_AUTO_BOOT=1`. The primary command does not depend on that hook.
 
