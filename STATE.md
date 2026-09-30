@@ -41,7 +41,7 @@ Historical or `canonical` labels are evidence/topology classifications only. The
 7. Enumerate the tools and connectors actually loaded.
 8. Open current sources required by the task where freshness, exact bytes, conflict resolution, or mutation safety materially requires source-native state.
 9. Validate continuity evidence and record any material gaps.
-10. Evaluate APEX startup observations; missing self-created proof is repair/enrichment debt, not general execution permission.
+10. Evaluate explicitly supplied APEX startup observations; absence of optional self-created proof is neutral, while invalid supplied evidence becomes diagnostic enrichment rather than general execution permission.
 11. Execute within the current Operator-authorized scope; genuine route-local constraints limit only the affected route.
 
 A failed call is not a completed startup step. Rediscovery of already-known relevant Operator/project state is not progress.
@@ -50,18 +50,18 @@ A failed call is not a completed startup step. Rediscovery of already-known rele
 
 The entrypoint is repair-forward:
 
-- missing or stale framework evidence -> record enrichment debt and continue known executable frontiers;
+- absent optional framework evidence -> no repair debt; supplied stale or incomplete evidence -> record enrichment and continue known executable frontiers;
 - unresolved continuity -> recover or route around the missing state without redefining the mission;
 - uncertain Operator intent -> recover relevant source context rather than inventing a replacement;
 - failed verification -> limit the claim it disproves and repair the affected route;
 - provider, credential, security, destructive-action, or factual constraints -> constrain only the route they actually affect.
-- missing current-source or repository receipts -> block when required;
+- missing current-source or repository receipts -> constrain only the claim or route that materially requires them;
 - unresolved contradiction blocker -> block;
 - artificial minimization selected -> block;
 - destructive reduction selected -> block;
 - unsupported action path -> block;
 - unearned execution-state promotion -> block;
-- complete provider-backed startup proof -> allow runtime load.
+- complete provider-backed startup proof -> support evidence-backed state promotion; runtime construction does not depend on that proof.
 
 Failure does not authorize mission shrinkage. Repair or reroute.
 
