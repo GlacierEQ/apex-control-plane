@@ -71,7 +71,14 @@ def _is_enrichment_pending(
 
 
 def get_in_process_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+    if (
+        _IN_PROCESS is not None
+        and _IN_PROCESS.status in {"not_observed", "complete"}
+        and (
+            _IN_PROCESS.status == "not_observed" or _is_enrichment_pending(_IN_PROCESS)
+        )
+        and receipt_from_environment() is not None
+    ):
         return None
     return _IN_PROCESS
 
@@ -238,7 +245,10 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
 
     receipt = receipt_from_environment()
     if receipt is None:
-        return _continue_lock(("operator fidelity source-bound receipt is unresolved",))
+        validation = _issue(True, "not_observed")
+        _IN_PROCESS = validation
+        os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "not_observed"
+        return validation
 
     task = os.getenv(
         "CASEY_BOOT_TASK", "resume Operator-directed unfinished material action"
