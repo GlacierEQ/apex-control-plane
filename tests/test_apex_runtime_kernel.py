@@ -90,6 +90,19 @@ def test_direct_constructor_is_rejected() -> None:
         )
 
 
+def test_factory_treats_not_observed_startup_observer_as_clean(monkeypatch) -> None:
+    clean = SimpleNamespace(ok=True, status="complete", errors=())
+    not_observed = SimpleNamespace(ok=True, status="not_observed", errors=())
+    for getter in _GATE_GETTERS:
+        monkeypatch.setattr(runtime, getter, lambda clean=clean: clean)
+    monkeypatch.setattr(runtime, "get_in_process_apex_validation", lambda: not_observed)
+
+    kernel = create_verified_runtime_kernel()
+
+    assert kernel.phase is RuntimePhase.BOOTSTRAPPED
+    assert not any("apex_startup" in item for item in kernel.startup_findings)
+
+
 def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> None:
     valid = SimpleNamespace(ok=True, status="complete")
     for getter in _GATE_GETTERS:
