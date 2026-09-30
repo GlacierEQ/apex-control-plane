@@ -1,12 +1,12 @@
 {
   "schema_version": "1.2.0",
-  "name": "Notion-First Continuity + Relationship Mapping Preflight",
+  "name": "Notion Continuity + Relationship Mapping Validator",
   "stage_order": [
     "notion_boot_analysis",
     "existing_work_discovery",
     "integration_map"
   ],
-  "block_user_facing_text_until_complete": true,
+  "block_user_facing_text_until_complete": false,
   "operator_asset_sovereignty_contract": "OPERATOR_ASSET_SOVEREIGNTY.md",
   "authority_semantics": {
     "project_direction_authority": "operator_intent",
@@ -18,7 +18,9 @@
     "discovered_relationships_do_not_authorize_integration": true,
     "inspection_and_mapping_are_observation_only": true,
     "operator_owned_asset_value_ranking_requires_explicit_operator_request": true,
-    "operator_owned_asset_disposition_requires_explicit_operator_request": true
+    "operator_owned_asset_disposition_requires_explicit_operator_request": true,
+    "notion_is_universal_context_prerequisite": false,
+    "provider_specific_validator_is_non_sovereign": true
   },
   "canonical_notion_pages": [
     {
@@ -100,5 +102,6 @@
     "never_embed_secrets": true,
     "do_not_require_sensitive_payloads_in_receipts": true,
     "store_pointers_and_roles_not_private_content": true
-  }
+  },
+  "provider_scope": "material_notion_work_only"
 }
