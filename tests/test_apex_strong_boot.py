@@ -401,3 +401,11 @@ def test_sitecustomize_executes_same_strong_boot_session(monkeypatch) -> None:
     assert calls == ["boot"]
     assert namespace["APEX_STRONG_BOOT_SESSION"] is session
     assert namespace["APEX_RUNTIME_KERNEL"] is kernel
+
+def test_retired_prime_directive_is_not_an_active_strong_boot_gate() -> None:
+    assert "prime_directive" not in EXPECTED_GATES
+    assert all(
+        "prime_directive" not in binding_name
+        for binding in _GATE_BINDINGS
+        for binding_name in binding
+    )
