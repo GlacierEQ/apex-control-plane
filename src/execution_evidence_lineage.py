@@ -73,9 +73,13 @@ def reconcile_execution_lineage(
     if superseded:
         return LineageResult(False, SUPERSEDED, claim_id, _canonical_hash(record), ())
 
-    prior_state = str(record.get("prior_truth_state", "")).strip().upper()
     if prior_state and prior_state not in {
-        AUTHORITATIVE, READBACK_UNRESOLVED, CONTRADICTED, SUPERSEDED, REJECTED
+        AUTHORITATIVE,
+        UNESTABLISHED,
+        READBACK_UNRESOLVED,
+        CONTRADICTED,
+        SUPERSEDED,
+        REJECTED,
     }:
         errors.append("lineage.prior_truth_state is unknown")
 
