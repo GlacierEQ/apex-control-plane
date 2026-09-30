@@ -37,7 +37,6 @@ def test_runtime_authorization_requires_every_gate_to_complete() -> None:
     _require_completed_startup_validations(
         (
             ("notion_continuity", completed),
-            ("prime_directive", completed),
             ("operator_fidelity_lock", completed),
             ("operator_fidelity", completed),
             ("apex_startup", completed),
@@ -48,7 +47,6 @@ def test_runtime_authorization_requires_every_gate_to_complete() -> None:
         _require_completed_startup_validations(
             (
                 ("notion_continuity", completed),
-                ("prime_directive", completed),
                 ("operator_fidelity_lock", _startup_validation(ok=False, status="continuation_required")),
                 ("operator_fidelity", completed),
                 ("apex_startup", completed),
