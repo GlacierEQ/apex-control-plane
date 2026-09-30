@@ -1,4 +1,4 @@
-"""Composite executable-frontier authority with runtime-owned dependency discovery.
+"""Composite executable-frontier evidence validator with runtime-owned dependency discovery.
 
 The runtime derives execution dependencies from independently resolved material
 inputs before base frontier authorization. Caller-supplied execution_claim_ids
