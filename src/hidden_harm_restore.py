@@ -22,6 +22,19 @@ RESTORATIONS = {
     "ACCUSATION -> WAIT": "keep the accusation and name the missing proof as a target",
     "SOURCE_MESH -> SINGLE_SOURCE": "keep case roots separate; pointer, not merge",
     "PLATFORM_CONSTRAINT -> MISSION_REWRITE": "scope the constraint to the blocked action; do not rewrite the mission",
+    "CONTINUE -> SUMMARY": "continue the named object; a summary is not the act",
+    "CONTINUE -> CONSTRAINT_STOP": "continue the named object; scope the constraint, do not stop the operation",
+    "FIX -> SUMMARY": "repair the named object; a summary is not the repair",
+    "LOOK -> SUMMARY": "inspect the named object; a summary is not the inspection",
+}
+
+OPERATION_RESTORE = {
+    "continue": "continue the named object; do not open a new root",
+    "build": "build the named object; a plan is not the act",
+    "fix": "repair the named object; an audit is not the fix",
+    "look": "inspect the named object; do not rank or retire it",
+    "organize": "structure the named object; do not stop at a summary",
+    "execute": "execute the named operation",
 }
 
 
@@ -37,6 +50,24 @@ def restore(transform: str, named_object: str) -> dict[str, str]:
     return {
         "status": "restore_operation",
         "named_object": named_object,
+        "restoration": action,
+        "intent_claim": "not_promoted",
+    }
+
+
+def restore_operation_class(operation_class: str, named_object: str) -> dict[str, str]:
+    action = OPERATION_RESTORE.get(operation_class.strip().lower())
+    if action is None:
+        return {
+            "status": "unmapped",
+            "named_object": named_object,
+            "restoration": "do not invent a beneficial reframe; leave the act untrusted",
+            "intent_claim": "not_promoted",
+        }
+    return {
+        "status": "restore_operation",
+        "named_object": named_object,
+        "operation_class": operation_class.strip().lower(),
         "restoration": action,
         "intent_claim": "not_promoted",
     }
