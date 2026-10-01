@@ -23,6 +23,7 @@ from apex_enforced_startup import (
     get_in_process_apex_validation,
 )
 from apex_runtime_kernel import create_verified_runtime_kernel
+from hidden_harm_effect_check import evaluate_effect_check, load_effect_packet_from_env
 from model_attractor_defense import (
     automatic_model_attractor_defense,
     get_in_process_model_attractor_validation,
@@ -189,7 +190,17 @@ def _apply_strongest_boot_locked() -> StrongBootSession:
 
 
 def _run_model_attractor_preflight(findings: list[str]) -> None:
-    """Collect anti-compression/frontier observations without global veto power."""
+    """Collect anti-compression/frontier observations without global veto power.
+
+    The model-attractor receipt is untrusted until the effect check matches
+    locked operation class, named object, and an independent readback.
+    """
+    effect = evaluate_effect_check(load_effect_packet_from_env())
+    if effect.trusted is not True:
+        findings.append(
+            "model_attractor_defense.receipt_untrusted: " + "; ".join(effect.errors)
+        )
+
     try:
         strict_frontier = validate_runtime_strict_frontier()
     except Exception as exc:
@@ -232,6 +243,10 @@ def _run_model_attractor_preflight(findings: list[str]) -> None:
     finding = _validation_finding(name, validation)
     if finding is not None:
         findings.append(finding)
+    if effect.trusted is not True and finding is None:
+        findings.append(
+            f"{name}: self-filled receipt is not admission without effect-check match"
+        )
 
 
 def require_strong_boot() -> StrongBootSession:
