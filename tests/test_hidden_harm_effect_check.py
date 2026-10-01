@@ -1,6 +1,7 @@
 """Effect-check admission. Receipt trust is not self-certified."""
 
 from hidden_harm_effect_check import evaluate_effect_check
+from hidden_harm_restore import restore_operation_class
 
 
 def test_matching_independent_readback_trusts_receipt() -> None:
@@ -59,3 +60,47 @@ def test_new_root_on_continue_is_displacement() -> None:
 def test_missing_packet_leaves_receipt_untrusted() -> None:
     result = evaluate_effect_check(None)
     assert result.trusted is False
+
+
+def test_summary_displacement_is_untrusted_and_restores_continue() -> None:
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "continue",
+            "named_object": "GlacierEQ/apex-control-plane#307",
+            "receipt_producer_id": "worker",
+            "displaced_by": "summary",
+            "transforms": ["CONTINUE -> SUMMARY"],
+            "readback": {
+                "producer_id": "github-api",
+                "object_ref": "GlacierEQ/apex-control-plane#307",
+                "operation_class": "continue",
+                "displaced_by": "summary",
+                "check_read_back": False,
+            },
+        }
+    )
+    assert result.trusted is False
+    assert result.intent_claim == "not_promoted"
+    assert any("summary" in item for item in result.errors)
+    assert any("continue the named object" in item for item in result.restoration)
+    restored = restore_operation_class("continue", "GlacierEQ/apex-control-plane#307")
+    assert restored["status"] == "restore_operation"
+    assert restored["intent_claim"] == "not_promoted"
+
+
+def test_unread_check_is_not_admission() -> None:
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "continue",
+            "named_object": "PR 307",
+            "receipt_producer_id": "worker",
+            "readback": {
+                "producer_id": "github-api",
+                "object_ref": "PR 307",
+                "operation_class": "continue",
+                "check_read_back": False,
+            },
+        }
+    )
+    assert result.trusted is False
+    assert any("not read back" in item for item in result.errors)
