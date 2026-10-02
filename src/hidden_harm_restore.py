@@ -26,6 +26,14 @@ RESTORATIONS = {
     "CONTINUE -> CONSTRAINT_STOP": "continue the named object; scope the constraint, do not stop the operation",
     "FIX -> SUMMARY": "repair the named object; a summary is not the repair",
     "LOOK -> SUMMARY": "inspect the named object; a summary is not the inspection",
+    "CONTINUE -> GENERIC_PRIOR": "continue the named object; a generic prior is not the act",
+    "BUILD -> GENERIC_PRIOR": "build the named object; a generic prior is not the act",
+    "FIX -> GENERIC_PRIOR": "repair the named object; a generic prior is not the repair",
+    "LOOK -> GENERIC_PRIOR": "inspect the named object; a generic prior is not the inspection",
+    "CONTINUE -> CONSTRAINT": "continue the named object; scope the constraint, do not stop the operation",
+    "BUILD -> CONSTRAINT": "build the named object; scope the constraint, do not stop the operation",
+    "FIX -> CONSTRAINT": "repair the named object; scope the constraint, do not stop the repair",
+    "LOOK -> CONSTRAINT": "inspect the named object; scope the constraint, do not rank it",
 }
 
 OPERATION_RESTORE = {
@@ -35,6 +43,33 @@ OPERATION_RESTORE = {
     "look": "inspect the named object; do not rank or retire it",
     "organize": "structure the named object; do not stop at a summary",
     "execute": "execute the named operation",
+}
+
+DISPLACER_RESTORE = {
+    "summary": {
+        "continue": "continue the named object; a summary is not the act",
+        "build": "build the named object; a summary is not the act",
+        "fix": "repair the named object; a summary is not the repair",
+        "look": "inspect the named object; a summary is not the inspection",
+        "organize": "structure the named object; do not stop at a summary",
+        "execute": "execute the named operation; a summary is not the act",
+    },
+    "generic_prior": {
+        "continue": "continue the named object; a generic prior is not the act",
+        "build": "build the named object; a generic prior is not the act",
+        "fix": "repair the named object; a generic prior is not the repair",
+        "look": "inspect the named object; a generic prior is not the inspection",
+        "organize": "structure the named object; a generic prior is not the act",
+        "execute": "execute the named operation; a generic prior is not the act",
+    },
+    "constraint": {
+        "continue": "continue the named object; scope the constraint, do not stop the operation",
+        "build": "build the named object; scope the constraint, do not stop the operation",
+        "fix": "repair the named object; scope the constraint, do not stop the repair",
+        "look": "inspect the named object; scope the constraint, do not rank it",
+        "organize": "structure the named object; scope the constraint, do not stop the operation",
+        "execute": "execute the named operation; scope the constraint, do not stop the operation",
+    },
 }
 
 
@@ -68,6 +103,22 @@ def restore_operation_class(operation_class: str, named_object: str) -> dict[str
         "status": "restore_operation",
         "named_object": named_object,
         "operation_class": operation_class.strip().lower(),
+        "restoration": action,
+        "intent_claim": "not_promoted",
+    }
+
+
+def restore_displacer(operation_class: str, named_object: str, displacer: str) -> dict[str, str]:
+    operation = operation_class.strip().lower()
+    marker = displacer.strip().lower()
+    action = DISPLACER_RESTORE.get(marker, {}).get(operation)
+    if action is None:
+        return restore_operation_class(operation, named_object)
+    return {
+        "status": "restore_operation",
+        "named_object": named_object,
+        "operation_class": operation,
+        "displaced_by": marker,
         "restoration": action,
         "intent_claim": "not_promoted",
     }
