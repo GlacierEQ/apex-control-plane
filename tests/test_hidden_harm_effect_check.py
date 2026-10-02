@@ -104,3 +104,53 @@ def test_unread_check_is_not_admission() -> None:
     )
     assert result.trusted is False
     assert any("not read back" in item for item in result.errors)
+
+
+def test_generic_prior_on_look_restores_inspect() -> None:
+    named = "GlacierEQ/apex-control-plane:hidden-harm-effect-check-2026-09-30"
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "look",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "generic_prior",
+            "transforms": ["LOOK -> GENERIC_PRIOR"],
+            "readback": {
+                "producer_id": "branch-reader",
+                "object_ref": named,
+                "operation_class": "look",
+                "displaced_by": "generic_prior",
+                "check_read_back": True,
+            },
+        }
+    )
+    assert result.trusted is False
+    assert result.intent_claim == "not_promoted"
+    assert any("generic_prior" in item for item in result.errors)
+    assert any("inspect the named object" in item for item in result.restoration)
+    restored = restore_operation_class("look", named)
+    assert restored["status"] == "restore_operation"
+    assert "rank" not in restored["restoration"]
+
+
+def test_constraint_on_fix_restores_repair_without_mapped_transform() -> None:
+    named = "src/hidden_harm_effect_check.py"
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "fix",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "constraint",
+            "readback": {
+                "producer_id": "branch-reader",
+                "object_ref": named,
+                "operation_class": "fix",
+                "displaced_by": "constraint",
+                "check_read_back": True,
+            },
+        }
+    )
+    assert result.trusted is False
+    assert result.intent_claim == "not_promoted"
+    assert any("constraint" in item for item in result.errors)
+    assert any("repair the named object" in item for item in result.restoration)
