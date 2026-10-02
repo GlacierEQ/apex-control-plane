@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import sys
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 MODULE_PATH = Path(__file__).with_name("enforce.py")
 SPEC = importlib.util.spec_from_file_location("apex_non_regression_enforce", MODULE_PATH)
@@ -59,6 +63,116 @@ class DownwardDirectiveClassifierTests(unittest.TestCase):
     def test_allows_rollback_checkpoint(self) -> None:
         self.assert_allowed(
             "Freeze implementation only as a known-good rollback checkpoint while evolution continues."
+        )
+
+
+class HeuristicAuthorityTests(unittest.TestCase):
+    def test_downward_scope_language_is_warning_not_pr_veto(self) -> None:
+        diff = """diff --git a/docs/example.md b/docs/example.md
+--- a/docs/example.md
++++ b/docs/example.md
+@@ -0,0 +1 @@
++Always use the smallest useful next step.
+"""
+        argv = [
+            "enforce.py",
+            "--base",
+            "base-sha",
+            "--head",
+            "head-sha",
+        ]
+        stdout = io.StringIO()
+        with (
+            patch.object(MODULE, "ensure_ref"),
+            patch.object(MODULE, "output", return_value=diff),
+            patch.object(MODULE, "tree_conflicts", return_value=[]),
+            patch.object(MODULE, "load_authorization", return_value=False),
+            patch.object(sys, "argv", argv),
+            redirect_stdout(stdout),
+        ):
+            rc = MODULE.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(rc, 0)
+        self.assertEqual(payload["failures"], [])
+        self.assertTrue(
+            any(
+                item["code"].startswith("DOWNWARD_SCOPE_")
+                for item in payload["warnings"]
+            )
+        )
+        self.assertFalse(payload["semantic_heuristics_are_veto_authority"])
+
+
+    def test_hard_execution_language_is_warning_not_pr_veto(self) -> None:
+        diff = """diff --git a/docs/example.md b/docs/example.md
+--- a/docs/example.md
++++ b/docs/example.md
+@@ -0,0 +1 @@
++execution_rejected = true
+"""
+        argv = ["enforce.py", "--base", "base-sha", "--head", "head-sha"]
+        stdout = io.StringIO()
+        with (
+            patch.object(MODULE, "ensure_ref"),
+            patch.object(MODULE, "output", return_value=diff),
+            patch.object(MODULE, "tree_conflicts", return_value=[]),
+            patch.object(MODULE, "load_authorization", return_value=False),
+            patch.object(sys, "argv", argv),
+            redirect_stdout(stdout),
+        ):
+            rc = MODULE.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(rc, 0)
+        self.assertEqual(payload["failures"], [])
+        self.assertTrue(
+            any(item["code"] == "HARD_EXECUTION_DISABLE" for item in payload["warnings"])
+        )
+
+    def test_execution_contraction_heuristic_is_warning_not_pr_veto(self) -> None:
+        diff = """diff --git a/src/example.py b/src/example.py
+--- a/src/example.py
++++ b/src/example.py
+@@ -1,2 +1 @@
+-def dispatch(self) -> None:
+-    requests.post(self.endpoint)
++"""Read-only adapter."""
+"""
+        argv = ["enforce.py", "--base", "base-sha", "--head", "head-sha"]
+        stdout = io.StringIO()
+        with (
+            patch.object(MODULE, "ensure_ref"),
+            patch.object(MODULE, "output", return_value=diff),
+            patch.object(MODULE, "tree_conflicts", return_value=[]),
+            patch.object(MODULE, "load_authorization", return_value=False),
+            patch.object(sys, "argv", argv),
+            redirect_stdout(stdout),
+        ):
+            rc = MODULE.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(rc, 0)
+        self.assertEqual(payload["failures"], [])
+        self.assertTrue(
+            any(
+                item["code"] == "EXECUTION_TO_RESTRICTION_CONTRACTION"
+                for item in payload["warnings"]
+            )
+        )
+
+
+class WorkflowBootstrapTests(unittest.TestCase):
+    def test_control_plane_pr_uses_checked_out_non_regression_action(self) -> None:
+        workflow_path = MODULE_PATH.parents[3] / ".github" / "workflows" / "estate-non-regression.yml"
+        workflow = workflow_path.read_text(encoding="utf-8")
+
+        self.assertIn("github.repository == 'GlacierEQ/apex-control-plane'", workflow)
+        self.assertIn("python .github/actions/apex-non-regression/enforce.py", workflow)
+        self.assertIn("github.repository != 'GlacierEQ/apex-control-plane'", workflow)
+        self.assertIn(
+            "uses: GlacierEQ/apex-control-plane/.github/actions/apex-non-regression@main",
+            workflow,
         )
 
 

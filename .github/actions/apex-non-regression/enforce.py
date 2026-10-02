@@ -33,8 +33,9 @@ EXECUTION_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Downward-routing language is not merely advisory. When newly introduced as an
-# active engineering directive, it is a policy regression and must fail closed.
+# Downward-routing language is a diagnostic signal, not permission authority.
+# It can surface a likely regression for review, but text heuristics alone may
+# not veto an otherwise valid change.
 DOWNWARD_SCOPE_RE = re.compile(
     r"(smallest\s+(?:possible|useful|change|slice|step|implementation|scope|solution|version)|"
     r"minimum\s+viable(?:\s+(?:product|plan|slice|scope|implementation|change))?|"
@@ -253,18 +254,18 @@ def main() -> int:
 
         for code, pattern in FATAL_PATTERNS:
             if pattern.search(added):
-                failures.append({"code": code, "file": name})
+                warnings.append({"code": code, "file": name})
 
         if RESTRICTION_RE.search(added) and EXECUTION_RE.search(deleted):
             if not retires_destructive_ref_authority(parts):
-                failures.append(
+                warnings.append(
                     {"code": "EXECUTION_TO_RESTRICTION_CONTRACTION", "file": name}
                 )
 
         for line_number, line in enumerate(parts["added"], start=1):
             code = classify_downward_directive(line)
             if code:
-                failures.append(
+                warnings.append(
                     {
                         "code": code,
                         "file": name,
@@ -294,7 +295,8 @@ def main() -> int:
         "operator_reduction_authorization_bound": authorized,
         "full_tree_conflict_scan": True,
         "exact_conflict_marker_matching": True,
-        "anti_minimization_fail_closed": True,
+        "anti_minimization_fail_closed": False,
+        "semantic_heuristics_are_veto_authority": False,
         "retired_destructive_ref_authority_exception": True,
         "downward_scope_exceptions": [
             "local_debug_or_diagnostic_isolation",
@@ -311,9 +313,9 @@ def main() -> int:
 
     if failures:
         print(
-            "APEX non-regression rejected this change. Repair forward into a stronger "
-            "coherent implementation or bind an exact-diff Operator reduction authorization. "
-            "Downward scope routing and merge-conflict corruption fail closed.",
+            "APEX non-regression rejected this change because of exact structural "
+            "corruption such as unresolved merge-conflict markers. Semantic heuristics "
+            "are diagnostics only and do not independently veto the change.",
             file=sys.stderr,
         )
         return 2

@@ -112,36 +112,41 @@ def test_valid_lock_receipt_passes() -> None:
     assert validate_operator_fidelity_lock(_receipt()) == ()
 
 
-def test_request_mode_without_receipt_yields_uplift_and_preserves_execution(monkeypatch) -> None:
+def test_request_mode_without_receipt_is_not_observed_not_enrichment(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "request")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
     monkeypatch.delenv("GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED", raising=False)
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     lock._IN_PROCESS = None
 
     validation = lock.automatic_operator_fidelity_lock()
 
     assert validation is not None
-    assert validation.ok is False
-    assert validation.status == "uplift_required"
-    assert "receipt" in validation.errors[0]
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+    assert validation.ok is True
+    assert validation.status == "not_observed"
+    assert validation.errors == ()
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "not_observed"
     assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in lock.os.environ
+    assert not list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
-def test_strict_compatibility_mode_without_receipt_yields_uplift_not_process_death(monkeypatch) -> None:
+def test_strict_mode_without_receipt_is_not_observed_not_defect(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
     monkeypatch.delenv("CASEY_BOOT_RECEIPT_JSON", raising=False)
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
     lock._IN_PROCESS = None
 
     validation = lock.automatic_operator_fidelity_lock()
 
     assert validation is not None
-    assert validation.ok is False
-    assert validation.status == "uplift_required"
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
+    assert validation.ok is True
+    assert validation.status == "not_observed"
+    assert validation.errors == ()
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "not_observed"
+    assert not list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
-def test_disable_flag_records_uplift_without_terminating_runtime(
+def test_disable_flag_really_disables_fidelity_observer(
     monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setattr(lock, "_testing", lambda: False)
@@ -152,15 +157,12 @@ def test_disable_flag_records_uplift_without_terminating_runtime(
 
     validation = lock.automatic_operator_fidelity_lock()
 
-    assert validation is not None
-    assert validation.ok is False
-    assert validation.status == "uplift_required"
-    assert any("CASEY_AUTO_BOOT_DISABLE" in error for error in validation.errors)
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
-    assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
+    assert validation is None
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "off"
+    assert not list(tmp_path.glob("operator_fidelity_lock-*.json"))
 
 
-def test_off_mode_records_uplift_without_terminating_runtime(
+def test_off_mode_really_disables_fidelity_observer(
     monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setattr(lock, "_testing", lambda: False)
@@ -171,12 +173,33 @@ def test_off_mode_records_uplift_without_terminating_runtime(
 
     validation = lock.automatic_operator_fidelity_lock()
 
-    assert validation is not None
-    assert validation.ok is False
-    assert validation.status == "uplift_required"
-    assert any("CASEY_AUTO_BOOT_MODE=off" in error for error in validation.errors)
-    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "uplift_required"
-    assert list(tmp_path.glob("operator_fidelity_lock-*.json"))
+    assert validation is None
+    assert lock.os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "off"
+    assert not list(tmp_path.glob("operator_fidelity_lock-*.json"))
+
+
+def test_enrichment_reopens_when_source_bound_receipt_arrives(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    current = {"value": None}
+    monkeypatch.setattr(lock, "receipt_from_environment", lambda: current["value"])
+    lock._IN_PROCESS = None
+
+    first = lock.automatic_operator_fidelity_lock()
+    assert first is not None
+    assert first.status == "not_observed"
+    assert first.errors == ()
+
+    current["value"] = _receipt()
+    monkeypatch.setattr(lock, "validate_operator_fidelity_lock", lambda receipt, task=None: ())
+
+    assert lock.get_in_process_operator_fidelity_lock() is None
+    second = lock.automatic_operator_fidelity_lock()
+
+    assert second is not None
+    assert second.ok is True
+    assert second.status == "complete"
+    assert second.errors == ()
 
 
 def test_digest_is_cryptographically_bound_to_literal_constraints() -> None:
@@ -257,18 +280,20 @@ def test_durable_context_anchor_is_required() -> None:
     assert any("context first" in error for error in errors)
 
 
-def test_durable_upward_anchor_is_required() -> None:
+def test_fidelity_does_not_require_historical_slogan_anchors() -> None:
     receipt = _receipt()
     words = [
-        "Context first hard work second answer last",
-        "stay bounded",
-        "Powerful code elite excellence",
-        "Function before governance",
+        "Current explicit instruction controls this work unit",
+        "Preserve the actual source wording and scope",
     ]
     receipt["operator_fidelity"]["literal_constraints"] = words
     receipt["operator_fidelity"]["operator_words_digest"] = digest_operator_words(*words)
+
     errors = validate_operator_fidelity_lock(receipt)
-    assert any("look up" in error or "do not look down" in error for error in errors)
+
+    assert not any("durable directional anchor" in error for error in errors)
+    assert not any("look up" in error or "do not look down" in error for error in errors)
+    assert not any("elite excellence" in error or "powerful code" in error for error in errors)
 
 
 def test_minimum_scope_and_governance_first_are_flagged_for_repair() -> None:

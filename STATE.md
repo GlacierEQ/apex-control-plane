@@ -13,7 +13,6 @@
 - APEX startup policy: `config/apex_enforced_startup_policy.json`
 - APEX startup enforcer: `src/apex_enforced_startup.py`
 - Continuity manifest: `config/casey_auto_boot_manifest.json`
-- Prime Directive policy: `config/prime_directive_policy.json`
 - Operator execution law: `OPERATOR_EXECUTION_LAW.md`
 - Agent prompt: `AGENT_SYSTEM_PROMPT.md`
 
@@ -31,39 +30,38 @@ STATE_EVOLUTION  = CURRENT_STATE ⊕ VERIFIED_GAIN
 
 Historical or `canonical` labels are evidence/topology classifications only. They do not control current project direction.
 
-## Mandatory startup sequence
+## Runtime startup sequence
 
-1. Freeze material mutation.
-2. Consult relevant already-known memory, continuity, current-conversation, and project state before any rediscovery.
+1. Bind the current Operator instruction and preserve the active operation class.
+2. Consult relevant already-known memory, continuity, current-conversation, and project state before unnecessary rediscovery.
 3. Reuse known valid state and identify the nearest valid continuation point. Search or re-open state only for a material delta: unavailable usable state, likely change, source-native verification, conflict resolution, or exact-artifact execution requirements.
 4. Resolve requested referents, existing lineage, dependencies, unfinished work, and the unresolved material delta.
 5. Resolve current Operator intent and target state.
 6. Read this file, `AGENT_SYSTEM_PROMPT.md`, `OPERATOR_EXECUTION_LAW.md`, and `APEX_ENFORCED_STARTUP.md` as pinned source-native startup surfaces.
 7. Enumerate the tools and connectors actually loaded.
 8. Open current sources required by the task where freshness, exact bytes, conflict resolution, or mutation safety materially requires source-native state.
-9. Validate continuity and Prime Directive receipts.
-10. Validate the APEX Genesis startup receipt.
-11. Only after the required gates pass, execute material mutation.
+9. Validate continuity evidence and record any material gaps.
+10. Evaluate explicitly supplied APEX startup observations; absence of optional self-created proof is neutral, while invalid supplied evidence becomes diagnostic enrichment rather than general execution permission.
+11. Execute within the current Operator-authorized scope; genuine route-local constraints limit only the affected route.
 
 A failed call is not a completed startup step. Rediscovery of already-known relevant Operator/project state is not progress.
 
-## Current enforcement model
+## Current execution model
 
-The entrypoint is fail-closed:
+The entrypoint is repair-forward:
 
-- unresolved required material state -> block material mutation;
-- unresolved continuation -> block restart/replacement mutation;
-- unresolved Operator intent -> block material mutation;
-- missing or stale required continuity -> block;
-- unread pinned operating files -> block;
-- no required tool inventory -> block;
-- missing current-source or repository receipts -> block when required;
-- unresolved contradiction blocker -> block;
-- artificial minimization selected -> block;
-- destructive reduction selected -> block;
-- unsupported action path -> block;
-- unearned execution-state promotion -> block;
-- complete provider-backed startup proof -> allow runtime load.
+- absent optional framework evidence -> no repair debt; supplied stale or incomplete evidence -> record enrichment and continue known executable frontiers;
+- unresolved continuity -> recover or route around the missing state without redefining the mission;
+- uncertain Operator intent -> recover relevant source context rather than inventing a replacement;
+- failed verification -> limit the claim it disproves and repair the affected route;
+- provider, credential, security, destructive-action, or factual constraints -> constrain only the route they actually affect.
+- missing current-source or repository receipts -> constrain only the claim or route that materially requires them;
+- unresolved factual contradiction -> investigate or constrain the affected claim/route while unrelated executable work continues;
+- artificial minimization signal -> repair path selection upward without creating a global veto;
+- destructive or irreversible reduction without the required scoped authority -> reject that destructive route and preserve existing state;
+- unsupported action path -> reroute through a supported executable path;
+- unearned execution-state promotion -> reject only the unsupported promotion and preserve the truthful lower state;
+- complete provider-backed startup proof -> support evidence-backed state promotion; runtime construction does not depend on that proof.
 
 Failure does not authorize mission shrinkage. Repair or reroute.
 

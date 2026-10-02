@@ -1,9 +1,8 @@
-"""Fail-closed validation for Operator personalization and source authority.
+"""Strict validation for Operator personalization and source fidelity.
 
-Static contract validation is intentionally strict because malformed authority
-configuration should never silently become runtime doctrine. Per-turn context
-recovery is different: missing or unavailable context must auto-route to recovery
-or degraded continuation rather than becoming a generalized mission stop.
+Malformed source-fidelity configuration is rejected when this validator is
+explicitly invoked. That validation does not acquire global runtime permission
+authority: per-turn recovery failures remain repair/routing signals.
 """
 from __future__ import annotations
 
@@ -80,8 +79,10 @@ def enforce_verbatim_response_fidelity(
 
 def enforce_operator_source_authority() -> dict[str, Any]:
     policy = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
-    if policy.get("fail_closed") is not True:
-        raise OperatorSourceAuthorityError("operator source authority must fail closed")
+    if policy.get("fail_closed") is not False:
+        raise OperatorSourceAuthorityError(
+            "operator source authority must remain non-sovereign with fail_closed=false"
+        )
 
     personalization = policy.get("personalization")
     turn_start_context = policy.get("turn_start_context")

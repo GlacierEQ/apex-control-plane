@@ -56,4 +56,4 @@ verification:
   runtime_state: dry_run_pending
   verified_live: false
   required_receipt: one audited read-only source-to-recall slice
-  startup_proof: apex_genesis_plus_continuity_plus_prime_directive
+  startup_proof: apex_genesis_plus_continuity

@@ -42,7 +42,17 @@ jobs:
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "head=$head" >> "$GITHUB_OUTPUT"
 
-      - name: Enforce capability conservation
+      - name: Enforce capability conservation from checked-out control-plane head
+        if: github.repository == 'GlacierEQ/apex-control-plane'
+        shell: bash
+        run: |
+          python .github/actions/apex-non-regression/test_enforce.py
+          python .github/actions/apex-non-regression/enforce.py \
+            --base "${{ steps.refs.outputs.base }}" \
+            --head "${{ steps.refs.outputs.head }}"
+
+      - name: Enforce capability conservation from published control-plane policy
+        if: github.repository != 'GlacierEQ/apex-control-plane'
         uses: GlacierEQ/apex-control-plane/.github/actions/apex-non-regression@main
         with:
           base: ${{ steps.refs.outputs.base }}

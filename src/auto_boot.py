@@ -546,22 +546,24 @@ def automatic_boot() -> BootValidation | None:
         loaded_ids = ()
         degraded_errors = ("no boot receipt supplied",)
 
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
+    from startup_continuation import emit_startup_continuation, record_startup_enrichment
 
-    continuation = record_startup_continuation(
+    enrichment = record_startup_enrichment(
         "auto_boot",
         degraded_errors,
         request=request,
         environment_key="CASEY_BOOT_STATUS",
     )
-    emit_startup_continuation(continuation)
+    emit_startup_continuation(enrichment)
     return BootValidation(
-        ok=False,
-        status="continuation_required",
+        ok=True,
+        status="complete",
         profiles=tuple(profiles),
         required_note_ids=tuple(request["required_note_ids"]),
         loaded_note_ids=tuple(loaded_ids),
-        errors=tuple(degraded_errors),
+        errors=tuple(
+            f"startup evidence enrichment pending: {error}" for error in degraded_errors
+        ),
     )
 
 

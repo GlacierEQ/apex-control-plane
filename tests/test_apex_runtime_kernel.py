@@ -23,12 +23,18 @@ from apex_runtime_kernel import (
 
 
 _GATE_GETTERS = (
-    "get_in_process_notion_validation",
-    "get_in_process_boot_validation",
     "get_in_process_operator_fidelity_lock",
     "get_in_process_operator_fidelity_validation",
     "get_in_process_apex_validation",
 )
+
+
+def test_runtime_policy_selects_adversarial_testing_by_risk() -> None:
+    policy = load_runtime_policy()
+    selection = policy["verification_selection"]
+    assert selection["routine_internal_mutation_requires_adversarial_test"] is False
+    assert selection["external_mutation_requires_adversarial_test"] is True
+    assert selection["destructive_irreversible_requires_adversarial_test"] is True
 
 
 def test_kernel_contract_is_task_local_and_non_sovereign() -> None:
@@ -39,6 +45,7 @@ def test_kernel_contract_is_task_local_and_non_sovereign() -> None:
 
 
 def _arm(monkeypatch) -> ApexRuntimeKernel:
+    monkeypatch.setattr(runtime, "receipt_from_environment", lambda: {"synthetic": True})
     valid = SimpleNamespace(ok=True, status="complete")
     for getter in _GATE_GETTERS:
         monkeypatch.setattr(runtime, getter, lambda valid=valid: valid)
@@ -84,7 +91,33 @@ def test_direct_constructor_is_rejected() -> None:
         )
 
 
-def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> None:
+def test_factory_treats_not_observed_startup_observer_as_clean(monkeypatch) -> None:
+    clean = SimpleNamespace(ok=True, status="complete", errors=())
+    not_observed = SimpleNamespace(ok=True, status="not_observed", errors=())
+    for getter in _GATE_GETTERS:
+        monkeypatch.setattr(runtime, getter, lambda clean=clean: clean)
+    monkeypatch.setattr(runtime, "get_in_process_apex_validation", lambda: not_observed)
+
+    kernel = create_verified_runtime_kernel()
+
+    assert kernel.phase is RuntimePhase.BOOTSTRAPPED
+    assert not any("apex_startup" in item for item in kernel.startup_findings)
+
+
+def test_factory_without_optional_startup_receipt_has_no_missing_observer_findings(monkeypatch) -> None:
+    monkeypatch.setattr(runtime, "receipt_from_environment", lambda: None)
+    for getter in _GATE_GETTERS:
+        monkeypatch.setattr(runtime, getter, lambda: None)
+
+    kernel = create_verified_runtime_kernel()
+
+    assert kernel.phase is RuntimePhase.BOOTSTRAPPED
+    assert kernel.startup_gates == ()
+    assert kernel.startup_findings == ()
+
+
+def test_factory_converts_missing_startup_observer_to_uplift_when_receipt_exists(monkeypatch) -> None:
+    monkeypatch.setattr(runtime, "receipt_from_environment", lambda: {"synthetic": True})
     valid = SimpleNamespace(ok=True, status="complete")
     for getter in _GATE_GETTERS:
         monkeypatch.setattr(runtime, getter, lambda valid=valid: valid)
@@ -95,6 +128,27 @@ def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> Non
     assert kernel.phase is RuntimePhase.BOOTSTRAPPED
     assert kernel.startup_gates == runtime.EXPECTED_STARTUP_OBSERVERS
     assert any("apex_startup: validation missing" in item for item in kernel.startup_findings)
+
+
+def test_factory_preserves_repair_forward_observer_details(monkeypatch) -> None:
+    monkeypatch.setattr(runtime, "receipt_from_environment", lambda: {"synthetic": True})
+    clean = SimpleNamespace(ok=True, status="complete", errors=())
+    enriched = SimpleNamespace(
+        ok=True,
+        status="complete",
+        errors=("startup proof enrichment pending: source context stale",),
+    )
+    for getter in _GATE_GETTERS:
+        monkeypatch.setattr(runtime, getter, lambda clean=clean: clean)
+    monkeypatch.setattr(runtime, "get_in_process_apex_validation", lambda: enriched)
+
+    kernel = create_verified_runtime_kernel()
+
+    assert kernel.phase is RuntimePhase.BOOTSTRAPPED
+    assert any(
+        "apex_startup: startup proof enrichment pending: source context stale" in item
+        for item in kernel.startup_findings
+    )
 
 
 def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:
@@ -160,14 +214,15 @@ def test_destructive_mutation_retains_scoped_authority(monkeypatch) -> None:
         )
 
 
-def test_mutation_completes_with_full_evidence_chain(monkeypatch) -> None:
+def test_routine_internal_mutation_completes_without_mandatory_adversarial_stage(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
 
     kernel.begin()
     kernel.record_execution("github-commit:abc123")
-    kernel.record_test("pytest:run-1", passed=True)
-    kernel.record_adversarial_test("pytest:adversarial-1", passed=True)
+    after_test = kernel.record_test("pytest:run-1", passed=True)
+    assert after_test.phase == "verifying"
+
     kernel.record_verification(
         "verification:run-1",
         passed=True,
@@ -187,11 +242,40 @@ def test_mutation_completes_with_full_evidence_chain(monkeypatch) -> None:
         "context_recovery",
         "execution",
         "test",
-        "adversarial_test",
         "verification",
         "persistence",
         "readback",
     )
+
+
+def test_external_mutation_automatically_requires_enhanced_adversarial_stage(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    kernel.bind_task(
+        literal_instruction="update the external provider object",
+        target_state="provider object updated and read back",
+        operation_class="update_provider_object",
+        mode=TaskMode.MUTATION,
+        action_scope="external",
+        prior_state_ref="provider:object-before",
+        source_refs=("provider:object-before",),
+        verification_plan=("verify provider postconditions",),
+    )
+    kernel.record_context_recovery(
+        "context-recovery:provider-object",
+        recovered_refs=("provider:object-before",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
+    )
+
+    kernel.begin()
+    kernel.record_execution("provider-write:update-1")
+    after_test = kernel.record_test("provider-test:update-1", passed=True)
+
+    assert after_test.phase == "adversarial_testing"
 
 
 def test_failed_test_forces_repair_and_retest(monkeypatch) -> None:
@@ -210,12 +294,30 @@ def test_failed_test_forces_repair_and_retest(monkeypatch) -> None:
     repaired = kernel.record_repair("patch:repair-1")
     assert repaired.phase == "testing"
     kernel.record_test("pytest:second", passed=True)
-    assert kernel.phase is RuntimePhase.ADVERSARIAL_TESTING
+    assert kernel.phase is RuntimePhase.VERIFYING
 
 
 def test_failed_adversarial_test_forces_repair(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
-    _bind_mutation(kernel)
+    kernel.bind_task(
+        literal_instruction="update the external provider object safely",
+        target_state="provider object updated with adverse cases checked",
+        operation_class="update_provider_object",
+        mode=TaskMode.MUTATION,
+        action_scope="external",
+        source_refs=("provider:object-before",),
+        verification_plan=("exercise adverse provider cases",),
+    )
+    kernel.record_context_recovery(
+        "context-recovery:provider-object",
+        recovered_refs=("provider:object-before",),
+        details={
+            "prior_corrections_checked": True,
+            "material_context_found": False,
+            "material_context_applied": False,
+            "applied_context_refs": (),
+        },
+    )
     kernel.begin()
     kernel.record_execution("execution:first")
     kernel.record_test("pytest:first", passed=True)
@@ -223,7 +325,6 @@ def test_failed_adversarial_test_forces_repair(monkeypatch) -> None:
     result = kernel.record_adversarial_test("pytest:adversarial", passed=False)
     assert result.phase == "repairing"
     assert "adversarial_test_failed" in result.repair_reasons
-
 
 def test_instruction_drift_is_detected_without_becoming_startup_authority(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
@@ -401,7 +502,6 @@ def test_missing_verified_gain_routes_to_repair_instead_of_permission_failure(mo
     kernel.begin()
     kernel.record_execution("execution:first")
     kernel.record_test("pytest:first", passed=True)
-    kernel.record_adversarial_test("pytest:adversarial", passed=True)
 
     result = kernel.record_verification("verification:first", passed=True)
 
@@ -415,7 +515,6 @@ def test_readback_mismatch_routes_to_repair_without_erasing_execution(monkeypatc
     kernel.begin()
     kernel.record_execution("execution:first")
     kernel.record_test("pytest:first", passed=True)
-    kernel.record_adversarial_test("pytest:adversarial", passed=True)
     kernel.record_verification(
         "verification:first",
         passed=True,

@@ -1,25 +1,16 @@
 {
-  "schema_version": "2.1.0",
+  "schema_version": "2.2.0",
   "name": "APEX Execution Uplift Runtime Kernel",
   "objective": "maximum_coherent_advance",
   "execution_semantics": "execute_harden_verify_repair_complete_receipt",
   "legacy_fail_closed_field_semantics": "deprecated_non_authorizing_compatibility_only",
   "fail_closed": false,
   "startup_observers": [
-    "notion_continuity",
-    "prime_directive",
     "operator_fidelity_lock",
     "operator_fidelity",
     "apex_startup"
   ],
-  "required_startup_gates": [
-    "notion_continuity",
-    "prime_directive",
-    "operator_fidelity_lock",
-    "operator_fidelity",
-    "apex_startup"
-  ],
-  "startup_observer_failure": "record_uplift_and_continue_known_executable_frontiers",
+  "startup_observer_failure": "record_diagnostic_enrichment_and_continue_known_executable_frontiers",
   "action_scopes": [
     "none",
     "internal",
@@ -42,7 +33,6 @@
       "context_recovery",
       "execution",
       "test",
-      "adversarial_test",
       "verification",
       "persistence",
       "readback"
@@ -53,7 +43,7 @@
     "ready",
     "executing",
     "testing",
-    "adversarial_testing",
+    "adversarial_testing_when_risk_selected",
     "repairing_when_needed",
     "verifying",
     "verified",
@@ -80,7 +70,8 @@
     "missing_quality_receipt_routes_to_repair": true,
     "missing_verified_gain_routes_to_repair": true,
     "unresolved_startup_observer_does_not_veto_kernel_creation": true,
-    "risk_increases_hardening_not_permission": true
+    "risk_increases_hardening_not_permission": true,
+    "adversarial_testing_is_risk_selected": true
   },
   "completion_truth": {
     "complete_claim_requires_successful_receipt_chain": true,
@@ -102,5 +93,11 @@
     "audit_tool_payloads": false,
     "public_snapshot_uses_instruction_sha256": true,
     "receipt_details_are_digest_only": true
+  },
+  "verification_selection": {
+    "routine_internal_mutation_requires_adversarial_test": false,
+    "external_mutation_requires_adversarial_test": true,
+    "destructive_irreversible_requires_adversarial_test": true,
+    "principle": "verification depth follows material risk; proof does not become the project"
   }
 }

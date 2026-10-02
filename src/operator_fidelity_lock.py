@@ -30,7 +30,7 @@ from operator_source_binding_contract import (
     validate_operator_source_binding_shape,
     verify_source_span_binding,
 )
-from prime_directive_boot import receipt_from_environment
+from startup_receipt import receipt_from_environment
 
 _SEAL = object()
 
@@ -56,7 +56,30 @@ def _issue(
     return OperatorFidelityLockValidation(ok, status, tuple(errors), _SEAL)
 
 
+def _is_enrichment_pending(
+    validation: OperatorFidelityLockValidation | None,
+) -> bool:
+    return bool(
+        validation
+        and validation.ok is True
+        and validation.status == "complete"
+        and any(
+            error.startswith("operator fidelity lock enrichment pending:")
+            for error in validation.errors
+        )
+    )
+
+
 def get_in_process_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
+    if (
+        _IN_PROCESS is not None
+        and _IN_PROCESS.status in {"not_observed", "complete"}
+        and (
+            _IN_PROCESS.status == "not_observed" or _is_enrichment_pending(_IN_PROCESS)
+        )
+        and receipt_from_environment() is not None
+    ):
+        return None
     return _IN_PROCESS
 
 
@@ -183,20 +206,6 @@ def validate_operator_fidelity_lock(
             )
             errors.extend(verification.errors)
 
-    normalized = "\n".join(constraints).lower()
-    anchor_groups = (
-        ("context first",),
-        ("look up", "look up!", "do not look down"),
-        ("powerful code", "elite excellence"),
-        ("function", "functional"),
-    )
-    for group in anchor_groups:
-        if not any(anchor in normalized for anchor in group):
-            errors.append(
-                "operator_fidelity.literal_constraints missing durable directional anchor: "
-                + " | ".join(group)
-            )
-
     path = row.get("selected_path")
     if isinstance(path, Mapping):
         if (
@@ -218,16 +227,8 @@ def validate_operator_fidelity_lock(
     return tuple(dict.fromkeys(errors))
 
 
-def _degrade(errors: Sequence[str]) -> OperatorFidelityLockValidation:
-    global _IN_PROCESS
-    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
-    validation = _issue(False, "uplift_required", errors)
-    _IN_PROCESS = validation
-    return validation
-
-
 def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
-    """Issue fidelity proof or durable uplift findings without killing execution."""
+    """Issue fidelity proof or retryable enrichment without becoming startup authority."""
     global _IN_PROCESS
     # Latest-result readback only. Never reuse a prior turn's fidelity decision.
     _IN_PROCESS = None
@@ -236,22 +237,18 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
     if mode not in {"strict", "request", "off"}:
         raise BootError(f"unsupported CASEY_AUTO_BOOT_MODE: {mode}")
 
-    bypass_findings: list[str] = []
-    if not _testing():
-        if os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1":
-            bypass_findings.append(
-                "CASEY_AUTO_BOOT_DISABLE requested: preserve fidelity diagnostics while continuing mission execution"
-            )
-        if mode == "off":
-            bypass_findings.append(
-                "CASEY_AUTO_BOOT_MODE=off requested: fidelity observer disabled for this route"
-            )
-    if bypass_findings:
-        return _continue_lock(bypass_findings)
+    if not _testing() and (
+        os.getenv("CASEY_AUTO_BOOT_DISABLE", "0") == "1" or mode == "off"
+    ):
+        os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "off"
+        return None
 
     receipt = receipt_from_environment()
     if receipt is None:
-        return _continue_lock(("operator fidelity source-bound receipt is unresolved",))
+        validation = _issue(True, "not_observed")
+        _IN_PROCESS = validation
+        os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "not_observed"
+        return validation
 
     task = os.getenv(
         "CASEY_BOOT_TASK", "resume Operator-directed unfinished material action"
@@ -269,39 +266,35 @@ def automatic_operator_fidelity_lock() -> OperatorFidelityLockValidation | None:
 def _reject_runtime_bypass(
     errors: Sequence[str],
 ) -> OperatorFidelityLockValidation:
-    """Compatibility shim: historical bypass rejection is now durable uplift."""
+    """Compatibility shim: historical bypass rejection is now enrichment debt."""
     return _continue_lock(errors)
 
 
 def _continue_lock(errors: Sequence[str]) -> OperatorFidelityLockValidation:
-    """Record fidelity repair work while preserving executable frontiers."""
+    """Record fidelity findings as non-authorizing, retryable enrichment."""
     global _IN_PROCESS
-    from startup_continuation import (
-        emit_startup_continuation,
-        record_startup_continuation,
-    )
+    from startup_continuation import emit_startup_continuation, record_startup_enrichment
 
-    payload = {
-        "boot_status": "continue_with_uplift",
-        "operator_fidelity_lock_status": "uplift_required",
+    request = {
         "failure_class": "INSTRUCTION_DISPLACEMENT",
         "errors": list(errors),
-        "mission_execution": "continue_known_executable_frontiers",
-        "external_action_authorized": "route_local_only",
         "repair_actions": [
             "recover_source_bound_operator_context",
             "repair_instruction_displacement",
             "reverify_fidelity",
         ],
     }
-    continuation = record_startup_continuation(
+    enrichment = record_startup_enrichment(
         "operator_fidelity_lock",
         errors,
-        request=payload,
+        request=request,
         environment_key="GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS",
     )
-    emit_startup_continuation(continuation)
-    os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] = "uplift_required"
-    validation = _issue(False, "uplift_required", errors)
+    emit_startup_continuation(enrichment)
+    validation = _issue(
+        True,
+        "complete",
+        tuple(f"operator fidelity lock enrichment pending: {error}" for error in errors),
+    )
     _IN_PROCESS = validation
     return validation

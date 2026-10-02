@@ -10,7 +10,6 @@ The repository contains local control-plane and audit mechanisms for:
 - connector retries, circuit breakers, dead-letter capture, and audit receipts;
 - repository census/registry checks;
 - strict continuity boot requests and provider-receipt validation;
-- **reuse-first Prime Directive startup with materially justified rediscovery only**;
 - **APEX Genesis enforced startup with proof-bound execution-state transitions**;
 - **model-attractor / Operator-fidelity hard locks against continuation drift**;
 - **mission-outcome fidelity that rejects assistant activity as mission progress**;
@@ -35,15 +34,14 @@ The enforced startup contract is [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STAR
 
 ## Enforced startup
 
-`python src/control_plane.py` is the explicit fail-closed wrapper. The composed startup/strong-boot path protects the preserved runtime in `src/control_plane_runtime.py` with these proof boundaries:
+`python src/control_plane.py` is the explicit repair-forward wrapper. The composed startup/strong-boot path attaches diagnostic evidence to the preserved runtime in `src/control_plane_runtime.py` without turning self-created proof into permission authority:
 
 1. **Known-state / continuity preflight** — consult relevant already-known state, reuse provenance-bearing state where usable, resolve the nearest valid continuation, map owners/consumers/dependencies/overlaps where material, and preserve valid prior capability.
-2. **Prime Directive memory-state proof** — satisfy memory acquisition either by provenance-bearing reuse or by a materially justified search; hash-bind pinned ground-truth reads; prove tool inventory, current-source requirements, and provider-backed receipt validation.
-3. **APEX Genesis + Operator fidelity** — bind literal Operator intent and operation class, continuation, target state, prior valid gains, contradiction status, execution-state model, maximum coherent path, and verification plan.
-4. **Model-attractor defense** — fail closed on `CONTINUE -> RECONSTRUCT`, known-state rediscovery, mission/support substitution, and related continuity drift.
-5. **Mission-outcome fidelity** — mutation work cannot persist merely because the assistant produced a ledger, matrix, summary, report, plan, commit, task update, or other artifact; it must prove an underlying source-bearing mission-state transition or an evidenced genuine external boundary after materially available internal routes are exhausted.
+2. **APEX Genesis + Operator fidelity** — bind literal Operator intent and operation class, continuation, target state, prior valid gains, execution-state model, coherent path, and verification plan; investigate material conflicts when they actually arise.
+3. **Model-attractor defense** — detect `CONTINUE -> RECONSTRUCT`, needless rediscovery, mission/support substitution, and related continuity drift as repair-forward diagnostics rather than estate-wide vetoes.
+4. **Mission-outcome fidelity** — mutation work cannot persist merely because the assistant produced a ledger, matrix, summary, report, plan, commit, task update, or other artifact; it must prove an underlying source-bearing mission-state transition or an evidenced genuine external boundary after materially available internal routes are exhausted.
 
-Strict mode is the default. Without complete provider-backed proof, startup exits with status `78` rather than pretending context or execution state exists.
+Strict mode is the default. Absence of an optional self-created startup receipt is neutral and does not manufacture repair debt. When startup evidence is explicitly supplied, incomplete, stale, conflicting, or negative evidence is recorded as diagnostic enrichment while the runtime continues through known executable frontiers. Malformed explicitly supplied evidence and genuine runtime-construction failures remain concrete errors.
 
 **Rediscovery of already-known relevant Operator/project state is not progress.**
 
@@ -130,7 +128,7 @@ The profile name above is an interface example. No case-specific evidence or pri
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
 ```
 
-Request mode exposes the required proof contract without claiming a complete boot.
+Request mode can expose an explicit proof contract when requested; ordinary startup does not manufacture a proof request merely because no optional receipt was supplied.
 
 `src/sitecustomize.py` is an optional secondary hook when `src` is already on `PYTHONPATH` or another entrypoint is explicitly forced with `CASEY_AUTO_BOOT=1`. The primary command does not depend on that hook.
 
@@ -138,12 +136,10 @@ See:
 
 - [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STARTUP.md)
 - [`docs/CASEY_AUTO_BOOT.md`](docs/CASEY_AUTO_BOOT.md)
-- [`docs/PRIME_DIRECTIVE_ENFORCER.md`](docs/PRIME_DIRECTIVE_ENFORCER.md)
 - [`docs/APEX_CONNECTOR_BRIDGE.md`](docs/APEX_CONNECTOR_BRIDGE.md)
 - [`config/apex_enforced_startup_policy.json`](config/apex_enforced_startup_policy.json)
 - [`config/casey_auto_boot_manifest.json`](config/casey_auto_boot_manifest.json)
-- [`config/notion_continuity_policy.json`](config/notion_continuity_policy.json)
-- [`config/prime_directive_policy.json`](config/prime_directive_policy.json)
+- [`config/notion_continuity_policy.json`](config/notion_continuity_policy.json) — provider-local Notion validation only
 - [`config/outcome_fidelity_policy.json`](config/outcome_fidelity_policy.json)
 
 ## Native proof
@@ -155,8 +151,6 @@ Core proof commands include:
 ```bash
 python -m pytest -q tests/test_apex_enforced_startup.py
 python -m pytest -q tests/test_notion_continuity_gate.py
-python -m pytest -q tests/test_prime_directive_boot.py
-python -m pytest -q tests/test_prime_directive_enforcer.py
 python -m pytest -q tests/test_apex_strong_boot.py
 python -m pytest -q tests/test_outcome_fidelity_runtime.py
 python -m pytest -q tests/test_scan_repos.py
@@ -196,7 +190,7 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 - cluster state and worker-health management;
 - gateway control;
 - immutable receipts and provenance;
-- fail-closed startup and recovery;
+- repair-forward startup diagnostics and recovery;
 - reuse-first continuation semantics;
 - execution-state integrity;
 - mission-outcome fidelity;
@@ -210,11 +204,9 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 |---|---|
 | `src/control_plane.py` | Explicit startup wrapper and runtime handoff |
 | `src/apex_enforced_startup.py` | APEX Genesis startup + state-transition enforcement |
-| `src/notion_continuity_gate.py` | Continuity and existing-work topology proof |
-| `src/prime_directive_boot.py` | Reuse/search-aware provider-backed startup receipt validation |
-| `src/prime_directive_enforcer.py` | Pre-gate response middleware with monotonic known-state reuse |
+| `src/notion_continuity_gate.py` | Optional Notion-specific continuity/topology validator; not a universal startup prerequisite |
 | `src/apex_strong_boot.py` | Strong-boot composition |
-| `src/outcome_fidelity_runtime.py` | Mission-outcome postcondition hard lock |
+| `src/outcome_fidelity_runtime.py` | Mission-outcome completion verifier that preserves intermediate gain |
 | `src/control_plane_runtime.py` | Preserved runtime |
 | `migrations/` | Relational state migrations |
 | `tests/` | Execution, continuity, proof, and regression tests |

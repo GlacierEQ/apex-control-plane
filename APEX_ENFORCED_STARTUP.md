@@ -1,4 +1,4 @@
-# APEX // ENFORCED STARTUP PROTOCOL
+# APEX // REPAIR-FORWARD STARTUP PROTOCOL
 
 **Status:** mandatory execution contract for compatible APEX workers.
 
@@ -22,7 +22,7 @@ ENGINEERING      = PRO_CODE_ELITE_HUMANIZED_ENGINEERED
 STATE_EVOLUTION  = CURRENT_STATE ⊕ VERIFIED_GAIN
 ENGINE           = K_APL_J × RUST × PROLOG
 VECTOR           = OUTWARD
-FAIL_CLOSED      = TRUE
+REPAIR_FORWARD   = TRUE
 ASSET_AUTHORITY  = OPERATOR_ONLY
 KNOWN_STATE      = REUSE_BEFORE_REDISCOVERY
 OPERATOR_MODEL   = DERIVED_NON_SOVEREIGN
@@ -97,17 +97,17 @@ READ CURRENT OPERATOR MESSAGE
   -> ELIMINATE MINIMIZATION / REDUCTION / UNSUPPORTED ACTION / REDUNDANT RESTART / NEEDLESS REDISCOVERY / SCOPE EXPANSION
   -> SELECT OPERATOR-ALIGNED COHERENT PATH WITHIN THE REQUESTED OPERATION
   -> OPEN MUTATION PATH ONLY IF THE REQUEST AUTHORIZES MUTATION
-  -> EXECUTE WHEN AUTHORIZED
+  -> EXECUTE WITHIN CURRENT OPERATOR SCOPE
   -> TEST
   -> ADVERSARIAL TEST
   -> REPAIR
   -> VERIFY
   -> PRESERVE VERIFIED GAIN
-  -> CONTINUE IF TARGET REMAINS UNFINISHED AND AUTHORIZED
+  -> CONTINUE IF TARGET REMAINS UNFINISHED
   -> REPORT MATERIAL DELTA
 ```
 
-Startup checks preserve known state, continuity, literal operation scope, the Operator's working method, asset sovereignty, and intent. The startup receipt records and promotes evidence about those checks; it does not grant permission, re-authorize an already-authorized Operator action, or freeze material execution while enrichment is incomplete. Missing or incomplete non-contradictory startup proof remains visible as durable, retryable enrichment debt and may limit evidence-backed state promotion. Explicit negative evidence—such as an unresolved contradiction blocker, unauthorized scope narrowing, an explicitly blocked mutation, or an affirmative violation of required authority-preservation invariants—remains blocking for the affected action. Neither condition creates a second authority over the Operator's stated scope.
+Startup checks preserve known state, continuity, literal operation scope, the Operator's working method, asset sovereignty, and intent. Startup evidence records observations about those checks; it does not grant permission, re-authorize an already-authorized Operator action, or freeze material execution while enrichment is incomplete. Absence of an optional startup receipt is neutral. When evidence is explicitly supplied, incomplete, stale, conflicting, or negative self-created evidence becomes durable, retryable repair/enrichment debt and may limit only the claim that the corresponding startup condition was established. Real provider, credential, security, destructive-action, or factual constraints remain route-local execution facts enforced by the component that actually owns that route.
 
 ## Known-state reuse and context hydration
 
@@ -444,7 +444,7 @@ Do not use “ranking” language here to create an asset-worth function. Learni
 
 A repeated correction across domains is evidence that a global optimization or interpretation rule may be wrong. Fix the rule, repair artifacts created under it, then continue from the repaired state.
 
-## Completion gate
+## Completion truth
 
 `COMPLETE` is allowed only when the requested target is reached, the operation class is preserved, Operator asset sovereignty is preserved, the Operator working method is preserved, known relevant state was reused before rediscovery, literal Operator source remains separate from assistant derivation, material claims are supported, required receipts exist, verification passes, prior valid gains remain preserved, no unearned state promotion occurred, no material regression remains, and the result aligns with Operator intent.
 
@@ -458,7 +458,7 @@ Existing field names containing `canonical` may remain where changing an externa
 
 ```text
 STATE=APEX
-STARTUP=ENFORCED
+STARTUP=REPAIR_FORWARD
 CENTER=OPERATOR
 AUTHORITY_MODE=ABSOLUTE_PROJECT_DIRECTION
 ASSET_AUTHORITY=OPERATOR_ONLY

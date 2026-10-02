@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+import operator_fidelity_preflight as fidelity
 from anti_minimization_compiler import supported_rule_codes
 from auto_boot import BootError
 from operator_fidelity_preflight import (
@@ -99,6 +100,44 @@ def _receipt() -> dict:
             "next_ceiling": "propagate the same invariant into downstream agents",
         }
     }
+
+
+def test_missing_fidelity_receipt_is_not_observed_not_debt(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    monkeypatch.setattr(fidelity, "_IN_PROCESS", None)
+    monkeypatch.setattr(fidelity, "receipt_from_environment", lambda: None)
+
+    validation = fidelity.automatic_operator_fidelity_preflight()
+
+    assert validation is not None
+    assert validation.ok is True
+    assert validation.status == "not_observed"
+    assert validation.errors == ()
+    assert fidelity.os.environ["GLACIEREQ_OPERATOR_FIDELITY_STATUS"] == "not_observed"
+    assert not list(tmp_path.glob("operator_fidelity_preflight-*.json"))
+
+
+def test_not_observed_fidelity_reopens_when_receipt_arrives(monkeypatch) -> None:
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    current = {"value": None}
+    monkeypatch.setattr(fidelity, "_IN_PROCESS", None)
+    monkeypatch.setattr(fidelity, "receipt_from_environment", lambda: current["value"])
+
+    first = fidelity.automatic_operator_fidelity_preflight()
+    assert first is not None
+    assert first.status == "not_observed"
+
+    current["value"] = _receipt()
+    monkeypatch.setattr(fidelity, "validate_operator_fidelity_receipt", lambda policy, receipt, task=None: ())
+
+    assert fidelity.get_in_process_operator_fidelity_validation() is None
+    second = fidelity.automatic_operator_fidelity_preflight()
+
+    assert second is not None
+    assert second.ok is True
+    assert second.status == "complete"
+    assert second.errors == ()
 
 
 def test_valid_operator_fidelity_receipt_passes() -> None:

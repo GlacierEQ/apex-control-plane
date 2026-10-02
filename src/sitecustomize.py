@@ -2,8 +2,8 @@
 """Python startup hook for the single APEX strongest-boot path.
 
 When this hook is active, it establishes the same sealed boot session used by
-`src/control_plane.py`: continuity observers, Prime Directive evidence,
-Operator-fidelity checks, APEX startup, and the verified runtime kernel.
+`src/control_plane.py`: continuity observers, Operator-fidelity checks,
+APEX startup, and the verified runtime kernel.
 
 Recoverable startup observations are repair-forward: missing or incomplete
 proof is attached to the live boot session as uplift work while known executable
@@ -56,8 +56,6 @@ def _should_boot() -> bool:
         "operator_fidelity_preflight.py",
         "operator_source_authority.py",
         "notion_continuity_gate.py",
-        "prime_directive_boot.py",
-        "prime_directive_enforcer.py",
     } or _is_pytest_startup():
         return False
 
@@ -119,7 +117,12 @@ if _should_boot():
         # inside StrongBoot rather than promoted into global vetoes.
         from operator_source_authority import enforce_operator_source_authority
 
-        enforce_operator_source_authority()
+        try:
+            enforce_operator_source_authority()
+        except Exception as exc:
+            # Source-fidelity configuration defects are visible repair work, not
+            # global permission to terminate an otherwise constructible runtime.
+            _record_startup_uplift(exc)
 
         from apex_strong_boot import apply_strongest_boot
 

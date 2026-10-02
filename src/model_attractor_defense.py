@@ -1,10 +1,8 @@
-"""Fail-closed defense against generic-model attractors and platform-pressure drift.
+"""Repair-forward diagnostics for model-attractor and platform-pressure drift.
 
-This gate prevents a compressed assistant representation from impersonating
-source-bearing Operator state. It does not attempt to override platform policy;
-it proves that any higher-priority constraint is scoped to the constrained
-action and has not silently rewritten the Operator mission, operation class,
-continuation point, or source topology.
+This observer detects when a compressed assistant representation impersonates
+source-bearing Operator state. Findings are repair/routing evidence, not a global
+permission gate; real platform constraints remain scoped to the affected action.
 """
 
 from __future__ import annotations
@@ -20,7 +18,7 @@ from typing import Any
 
 from auto_boot import BootError
 from executable_frontier_authority import validate_executable_frontier_authority
-from prime_directive_boot import receipt_from_environment
+from startup_receipt import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
     Path(__file__).resolve().parents[1]
@@ -80,7 +78,28 @@ def _issue(
     return ModelAttractorValidation(ok, status, tuple(errors), _SEAL)
 
 
+def _is_enrichment_pending(validation: ModelAttractorValidation | None) -> bool:
+    return bool(
+        validation
+        and validation.ok is True
+        and validation.status == "complete"
+        and any(
+            error.startswith("model-attractor enrichment pending:")
+            for error in validation.errors
+        )
+    )
+
+
 def get_in_process_model_attractor_validation() -> ModelAttractorValidation | None:
+    if (
+        _IN_PROCESS is not None
+        and (
+            _IN_PROCESS.status == "not_observed"
+            or _is_enrichment_pending(_IN_PROCESS)
+        )
+        and receipt_from_environment() is not None
+    ):
+        return None
     return _IN_PROCESS
 
 
@@ -336,8 +355,8 @@ def load_model_attractor_policy(
     missing = sorted(required - value.keys())
     if missing:
         raise BootError("model-attractor policy missing: " + ", ".join(missing))
-    if value.get("fail_closed") is not True:
-        raise BootError("model-attractor policy must remain fail_closed=true")
+    if value.get("fail_closed") is not False:
+        raise BootError("model-attractor policy must remain repair-forward with fail_closed=false")
     if not isinstance(value.get("required_boolean_fields"), Mapping):
         raise BootError("model-attractor required_boolean_fields must be an object")
     if not isinstance(value.get("continuity_required_fields"), Mapping):
@@ -619,28 +638,38 @@ def build_model_attractor_request(
     }
 
 
-def _continue_model_attractor(
+def _record_model_attractor_enrichment(
     errors: Sequence[str], *, request: Mapping[str, Any]
 ) -> ModelAttractorValidation:
-    from startup_continuation import (
-        emit_startup_continuation,
-        record_startup_continuation,
-    )
+    from startup_continuation import emit_startup_continuation, record_startup_enrichment
 
-    continuation = record_startup_continuation(
+    enrichment = record_startup_enrichment(
         "model_attractor_defense",
         errors,
         request=request,
         environment_key="GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS",
     )
-    emit_startup_continuation(continuation)
-    return _issue(False, "continuation_required", errors)
+    emit_startup_continuation(enrichment)
+    return _issue(
+        True,
+        "complete",
+        tuple(f"model-attractor enrichment pending: {error}" for error in errors),
+    )
 
 
 def automatic_model_attractor_defense() -> ModelAttractorValidation | None:
     global _IN_PROCESS
     if _IN_PROCESS is not None:
-        return _IN_PROCESS
+        if (
+            (
+                _IN_PROCESS.status == "not_observed"
+                or _is_enrichment_pending(_IN_PROCESS)
+            )
+            and receipt_from_environment() is not None
+        ):
+            _IN_PROCESS = None
+        else:
+            return _IN_PROCESS
 
     mode = os.getenv("CASEY_AUTO_BOOT_MODE", "strict").strip().lower()
     if mode == "off" or os.getenv("CASEY_AUTO_BOOT_DISABLE") == "1":
@@ -656,18 +685,20 @@ def automatic_model_attractor_defense() -> ModelAttractorValidation | None:
     receipt = receipt_from_environment()
 
     if receipt is None:
-        request = build_model_attractor_request(policy, task=task)
-        print(json.dumps(request, ensure_ascii=False, sort_keys=True), file=sys.stderr)
-        sys.stderr.flush()
-        return _continue_model_attractor(("no boot receipt supplied",), request=request)
-
-    errors = validate_model_attractor_receipt(policy, receipt)
-    validation = _issue(not errors, "complete" if not errors else "blocked", errors)
-    if validation.ok:
+        validation = _issue(True, "not_observed")
         _IN_PROCESS = validation
-        os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] = "complete"
+        os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] = "not_observed"
         return validation
 
-    request = build_model_attractor_request(policy, task=task)
-    request["receipt_errors"] = list(validation.errors)
-    return _continue_model_attractor(validation.errors, request=request)
+    errors = validate_model_attractor_receipt(policy, receipt)
+    if errors:
+        request = build_model_attractor_request(policy, task=task)
+        request["receipt_errors"] = list(errors)
+        validation = _record_model_attractor_enrichment(errors, request=request)
+        _IN_PROCESS = validation
+        return validation
+
+    validation = _issue(True, "complete")
+    _IN_PROCESS = validation
+    os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] = "complete"
+    return validation

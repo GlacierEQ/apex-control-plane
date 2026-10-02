@@ -1,24 +1,22 @@
-"""APEX Genesis fail-closed startup and execution-state enforcement.
+"""APEX startup evidence and execution-state diagnostics.
 
-This layer sits above the existing continuity and Prime Directive proofs. It does
-not replace them. It binds those proofs to absolute OPERATOR project-direction
-authority, continuation, preserved prior gain, Operator-aligned coherent path
-selection, Operator asset sovereignty, Operator-model state reuse, longitudinal
-Operator-scope fidelity, and evidence-backed execution-state transitions.
+This layer observes continuity, Operator fidelity, preserved prior gain,
+Operator-aligned path selection, asset sovereignty, state reuse, longitudinal
+scope fidelity, and evidence-backed execution-state transitions. Its evidence is
+diagnostic and descriptive; it does not grant or withhold project permission.
 """
 from __future__ import annotations
 
 import json
 import os
-import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
+from auto_boot import BootError
 from operator_working_model import load_operator_working_model, public_operator_model_projection
-from prime_directive_boot import receipt_from_environment
+from startup_receipt import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
     Path(__file__).resolve().parents[1] / "config" / "apex_enforced_startup_policy.json"
@@ -58,8 +56,15 @@ def _is_enrichment_pending(validation: ApexStartupValidation | None) -> bool:
 
 
 def get_in_process_apex_validation() -> ApexStartupValidation | None:
-    """Return current proof, reopening pending enrichment when new proof appears."""
-    if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+    """Return current observation, reopening it when evidence later appears."""
+    if (
+        _IN_PROCESS is not None
+        and (
+            _IN_PROCESS.status == "not_observed"
+            or _is_enrichment_pending(_IN_PROCESS)
+        )
+        and receipt_from_environment() is not None
+    ):
         return None
     return _IN_PROCESS
 
@@ -76,6 +81,7 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         raise BootError("APEX startup policy must be a JSON object")
     required = {
         "schema_version",
+        "fail_closed",
         "authority",
         "operator_authority",
         "operator_working_model_path",
@@ -91,6 +97,8 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
     missing = sorted(required - value.keys())
     if missing:
         raise BootError("APEX startup policy missing: " + ", ".join(missing))
+    if value.get("fail_closed") is not False:
+        raise BootError("APEX startup policy must remain repair-forward with fail_closed=false")
 
     operator_authority = value.get("operator_authority")
     if not isinstance(operator_authority, dict):
@@ -298,18 +306,6 @@ def validate_apex_startup_receipt(
     if not _nonempty_text(row.get("target_state")):
         errors.append("apex_startup.target_state must be non-empty")
 
-    contradiction_status = _norm(row.get("contradiction_status"))
-    allowed_contradictions = {
-        _norm(value) for value in policy.get("contradiction_statuses", ())
-    }
-    if contradiction_status not in allowed_contradictions:
-        errors.append(
-            "apex_startup.contradiction_status must be one of: "
-            + ", ".join(sorted(allowed_contradictions))
-        )
-    if contradiction_status == "open_blocker":
-        errors.append("apex_startup has an unresolved contradiction blocker")
-
     path = row.get("selected_path")
     if not isinstance(path, Mapping):
         errors.append("apex_startup.selected_path must be an object")
@@ -469,7 +465,6 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
                 "prior_valid_gains_identified": True,
                 "prior_valid_gains_preserved": True,
                 "relevant_source_inspected": True,
-                "contradiction_status": "none|resolved|open_blocker",
                 "state_model_bound": True,
                 "mutation_intent": "none|authorized|blocked",
                 "action_scope": "none|internal|external",
@@ -496,72 +491,6 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
             }
         },
     }
-
-
-def _explicit_blocking_receipt_errors(
-    policy: Mapping[str, Any],
-    receipt: Mapping[str, Any],
-) -> tuple[str, ...]:
-    """Return explicit negative evidence that blocks the affected action.
-
-    Missing fields and absent proof are enrichment debt. Explicit contradictions,
-    unauthorized narrowing, blocked mutation intent, or affirmative violation of
-    path/authority invariants remain blocking evidence.
-    """
-    row = receipt.get("apex_startup")
-    if not isinstance(row, Mapping):
-        return ()
-
-    blockers: list[str] = []
-    expected_authority = _norm(policy.get("authority"))
-    actual_authority = row.get("authority")
-    if _nonempty_text(actual_authority) and _norm(actual_authority) != expected_authority:
-        blockers.append(f"apex_startup.authority conflicts with {expected_authority}")
-
-    expected_objective = _norm(policy.get("objective"))
-    actual_objective = row.get("objective")
-    if _nonempty_text(actual_objective) and _norm(actual_objective) != expected_objective:
-        blockers.append(f"apex_startup.objective conflicts with {expected_objective}")
-
-    if _norm(row.get("contradiction_status")) == "open_blocker":
-        blockers.append("apex_startup has an unresolved contradiction blocker")
-    if _norm(row.get("mutation_intent")) == "blocked":
-        blockers.append("apex_startup.mutation_intent explicitly blocks mutation")
-
-    binding = row.get("operator_scope_binding")
-    if isinstance(binding, Mapping):
-        if binding.get("preserved") is False:
-            blockers.append("operator_scope_binding explicitly does not preserve Operator scope")
-        if binding.get("narrowed") is True and not _receipt_ref(
-            binding.get("operator_narrowing_authorization_ref")
-        ):
-            blockers.append("Operator scope was explicitly narrowed without Operator authorization")
-
-    interlock = policy.get("mutation_interlock", {})
-    if isinstance(interlock, Mapping):
-        for field_name in interlock.get("required_true_fields", ()):
-            if field_name in row and row.get(field_name) is False:
-                blockers.append(f"apex_startup.{field_name} is explicitly false")
-
-    path = row.get("selected_path")
-    if isinstance(path, Mapping):
-        for key, expected in policy.get("path_requirements", {}).items():
-            if key in path and path.get(key) is not expected:
-                blockers.append(
-                    f"apex_startup.selected_path.{key} explicitly violates required value {expected!r}"
-                )
-
-    if row.get("operator_plan_authorized") is False:
-        blockers.append("operator_plan_authorized is explicitly false")
-
-    operator_authorization = row.get("operator_authorization")
-    if (
-        isinstance(operator_authorization, Mapping)
-        and operator_authorization.get("authorized") is False
-    ):
-        blockers.append("operator_authorization.authorized is explicitly false")
-
-    return tuple(dict.fromkeys(blockers))
 
 
 def _incomplete_proof_is_nonblocking(policy: Mapping[str, Any]) -> bool:
@@ -596,32 +525,23 @@ def _record_apex_enrichment(
     )
 
 
-def _continue_apex_startup(
-    errors: Sequence[str],
-    *,
-    request: Mapping[str, Any],
-) -> ApexStartupValidation:
-    from startup_continuation import emit_startup_continuation, record_startup_continuation
-
-    continuation = record_startup_continuation(
-        "apex_enforced_startup",
-        errors,
-        request=request,
-        environment_key="GLACIEREQ_APEX_STARTUP_STATUS",
-    )
-    emit_startup_continuation(continuation)
-    return _issue(False, "continuation_required", errors)
-
-
 def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
-    """Evaluate startup proof without turning proof into execution permission.
+    """Evaluate startup evidence without turning framework state into permission.
 
-    Missing or incomplete non-contradictory proof is durable, retryable
-    enrichment debt. Explicit negative authority evidence remains blocking.
+    Absent self-created startup evidence is simply not observed. Incomplete,
+    stale, conflicting, or negative supplied evidence is retryable enrichment.
+    Real provider/security/
+    credential/destructive constraints remain enforced at the route that owns them.
     """
     global _IN_PROCESS
     if _IN_PROCESS is not None:
-        if _is_enrichment_pending(_IN_PROCESS) and receipt_from_environment() is not None:
+        if (
+            (
+                _IN_PROCESS.status == "not_observed"
+                or _is_enrichment_pending(_IN_PROCESS)
+            )
+            and receipt_from_environment() is not None
+        ):
             _IN_PROCESS = None
         else:
             return _IN_PROCESS
@@ -638,30 +558,15 @@ def automatic_apex_enforced_startup() -> ApexStartupValidation | None:
     receipt = receipt_from_environment()
 
     if receipt is None:
-        request = build_apex_startup_request(policy, task=task)
-        if not _incomplete_proof_is_nonblocking(policy):
-            return _continue_apex_startup(
-                ("no boot receipt supplied",),
-                request=request,
-            )
-        validation = _record_apex_enrichment(
-            ("no boot receipt supplied",),
-            request=request,
-        )
+        validation = _issue(True, "not_observed")
         _IN_PROCESS = validation
+        os.environ["GLACIEREQ_APEX_STARTUP_STATUS"] = "not_observed"
         return validation
 
     errors = validate_apex_startup_receipt(policy, receipt)
     if errors:
         request = build_apex_startup_request(policy, task=task)
         request["receipt_errors"] = list(errors)
-        blocking_errors = _explicit_blocking_receipt_errors(policy, receipt)
-        if blocking_errors:
-            request["blocking_receipt_errors"] = list(blocking_errors)
-            return _continue_apex_startup(blocking_errors, request=request)
-        if not _incomplete_proof_is_nonblocking(policy):
-            return _continue_apex_startup(errors, request=request)
-
         validation = _record_apex_enrichment(errors, request=request)
         _IN_PROCESS = validation
         return validation

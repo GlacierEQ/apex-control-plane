@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import model_attractor_defense as defense
 from auto_boot import BootError
 from executable_frontier_authority import derive_frontier_id
 from model_attractor_defense import (
@@ -300,7 +301,7 @@ def test_operation_class_must_be_preserved() -> None:
         ("concise_delivery_reduced_underlying_operation", True),
     ],
 )
-def test_derivative_intent_substitutions_fail_closed(
+def test_derivative_intent_substitutions_are_detected(
     field_name: str, invalid_value: bool
 ) -> None:
     policy = load_model_attractor_policy()
@@ -388,13 +389,55 @@ def test_blocked_sources_require_partial_hydration_declaration() -> None:
     assert validate_model_attractor_receipt(policy, receipt) == ()
 
 
-def test_policy_cannot_disable_fail_closed(tmp_path) -> None:
+def test_policy_requires_repair_forward_non_sovereign_semantics(tmp_path) -> None:
     policy = load_model_attractor_policy()
-    policy["fail_closed"] = False
-    target = tmp_path / "disabled.json"
+    assert policy["fail_closed"] is False
+    policy["fail_closed"] = True
+    target = tmp_path / "sovereign.json"
     target.write_text(json.dumps(policy), encoding="utf-8")
-    with pytest.raises(BootError, match="fail_closed=true"):
+    with pytest.raises(BootError, match="fail_closed=false"):
         load_model_attractor_policy(target)
+
+
+def test_automatic_model_attractor_missing_receipt_is_not_observed(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.setattr(defense, "_IN_PROCESS", None)
+    monkeypatch.setattr(defense, "receipt_from_environment", lambda: None)
+
+    validation = defense.automatic_model_attractor_defense()
+
+    assert validation is not None
+    assert validation.ok is True
+    assert validation.status == "not_observed"
+    assert validation.errors == ()
+    assert defense.os.environ["GLACIEREQ_MODEL_ATTRACTOR_DEFENSE_STATUS"] == "not_observed"
+    assert not list(tmp_path.glob("model_attractor_defense-*.json"))
+
+
+def test_model_attractor_not_observed_retries_when_receipt_arrives(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    current_receipt = {"value": None}
+    monkeypatch.setattr(defense, "_IN_PROCESS", None)
+    monkeypatch.setattr(defense, "receipt_from_environment", lambda: current_receipt["value"])
+
+    first = defense.automatic_model_attractor_defense()
+    assert first is not None
+    assert first.status == "not_observed"
+    assert first.errors == ()
+
+    current_receipt["value"] = {"model_attractor_defense": {"proof": "arrived"}}
+    monkeypatch.setattr(defense, "validate_model_attractor_receipt", lambda policy, receipt: ())
+
+    assert defense.get_in_process_model_attractor_validation() is None
+    second = defense.automatic_model_attractor_defense()
+
+    assert second is not None
+    assert second.ok is True
+    assert second.status == "complete"
+    assert second.errors == ()
+    assert defense.get_in_process_model_attractor_validation() is second
 
 
 def test_request_exposes_the_hidden_harm_countermeasures() -> None:

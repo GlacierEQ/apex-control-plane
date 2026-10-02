@@ -66,54 +66,42 @@ jobs:
           if [[ "$status" -ne 0 ]]; then
             cat /tmp/fidelity.out || true
             cat /tmp/fidelity.err || true
-            echo "runtime should continue with startup uplift; received $status" >&2
+            echo "runtime should start cleanly without optional receipt proof; received $status" >&2
             exit 1
           fi
           test -s /tmp/fidelity.out
           grep -q '"phase":"complete"' /tmp/fidelity.out
-          grep -q '"status": "uplift_required"' /tmp/fidelity.err
           if grep -q '"external_action_authorized": true' /tmp/fidelity.err; then
-            echo "startup uplift must not manufacture blanket external authorization" >&2
+            echo "clean startup must not manufacture blanket external authorization" >&2
             exit 1
           fi
 
-      - name: Prove disable and off modes create visible repair state without process death
+      - name: Prove explicit fidelity disable and off modes are honored
         shell: bash
         run: |
           CASEY_AUTO_BOOT_DISABLE=1 CASEY_AUTO_BOOT_MODE=strict PYTHONPATH=src \
-            python - <<'PY' >/tmp/disable.out 2>/tmp/disable.err
-          import json
+            python - <<'PY'
           import os
           import operator_fidelity_lock as lock
 
           lock._IN_PROCESS = None
           result = lock.automatic_operator_fidelity_lock()
-          assert result is not None
-          assert result.ok is False
-          assert result.status == "uplift_required"
-          assert any("CASEY_AUTO_BOOT_DISABLE" in item for item in result.errors)
+          assert result is None
+          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "off"
           assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
-          print(json.dumps({"status": result.status, "errors": list(result.errors)}))
           PY
 
           CASEY_AUTO_BOOT_MODE=off PYTHONPATH=src \
-            python - <<'PY' >/tmp/off.out 2>/tmp/off.err
-          import json
+            python - <<'PY'
           import os
           import operator_fidelity_lock as lock
 
           lock._IN_PROCESS = None
           result = lock.automatic_operator_fidelity_lock()
-          assert result is not None
-          assert result.ok is False
-          assert result.status == "uplift_required"
-          assert any("CASEY_AUTO_BOOT_MODE=off" in item for item in result.errors)
+          assert result is None
+          assert os.environ["GLACIEREQ_OPERATOR_FIDELITY_LOCK_STATUS"] == "off"
           assert "GLACIEREQ_EXTERNAL_ACTION_AUTHORIZED" not in os.environ
-          print(json.dumps({"status": result.status, "errors": list(result.errors)}))
           PY
-
-          grep -q '"status": "uplift_required"' /tmp/disable.out
-          grep -q '"status": "uplift_required"' /tmp/off.out
 
   estate-registry:
     name: Estate registry quality

@@ -52,40 +52,15 @@
     "policy_path": "config/apex_enforced_startup_policy.json",
     "enforcer_module": "src/apex_enforced_startup.py",
     "required": true,
-    "fail_closed": true,
+    "fail_closed": false,
     "requires_context_before_mutation": true,
     "requires_continuation_before_restart": true,
     "requires_operator_intent_binding": true,
     "requires_prior_valid_gain_preservation": true,
-    "requires_contradiction_resolution": true,
     "requires_state_model": true,
     "requires_maximum_coherent_path": true,
     "requires_verification_plan": true,
     "requires_receipts_for_material_state_promotion": true
-  },
-  "prime_directive": {
-    "policy_path": "config/prime_directive_policy.json",
-    "policy_schema_version": "1.5.0",
-    "agent_prompt_path": "AGENT_SYSTEM_PROMPT.md",
-    "state_path": "STATE.md",
-    "operator_law_path": "OPERATOR_EXECUTION_LAW.md",
-    "apex_protocol_path": "APEX_ENFORCED_STARTUP.md",
-    "enforcer_module": "src/prime_directive_enforcer.py",
-    "boot_module": "src/prime_directive_boot.py",
-    "requires_memory_state": true,
-    "requires_memory_search": false,
-    "known_state_reuse_before_rediscovery": true,
-    "memory_search_requires_material_justification": true,
-    "rediscovery_is_not_progress": true,
-    "worker_activity_is_not_progress": true,
-    "standing_authority_persists_across_mechanical_state_changes": true,
-    "requires_ground_truth_hash_verification": true,
-    "requires_tool_inventory": true,
-    "requires_current_source_open": true,
-    "requires_receipt_validation": true,
-    "requires_core_operator_model": true,
-    "requires_worker_execution_contract": true,
-    "blocks_user_facing_text_until_complete": true
   },
   "adaptive_intelligence": {
     "status": "required-foundation",
@@ -127,7 +102,7 @@
     "chatgpt_product_memory_is_correctness_dependency": false,
     "summaries_are_routing_hints_only": true,
     "source_bearing_hydration_required_for_continuity_work": true,
-    "fail_closed": true
+    "fail_closed": false
   },
   "profiles": {
     "always": [
@@ -225,7 +200,7 @@
     "verified",
     "not_relevant"
   ],
-  "fail_closed": true,
+  "fail_closed": false,
   "security": {
     "never_embed_secrets": true,
     "restricted_child_profile_requires_explicit_authorization": true,

@@ -35,6 +35,36 @@ def test_automatic_preflight_revalidates_every_invocation(monkeypatch) -> None:
     assert calls == ["first turn", "second turn"]
 
 
+def test_missing_receipt_is_nonblocking_enrichment_and_retries(monkeypatch, tmp_path) -> None:
+    module._IN_PROCESS = None
+    current = {"value": None}
+    monkeypatch.setenv("CASEY_AUTO_BOOT_MODE", "strict")
+    monkeypatch.setenv("GLACIEREQ_STARTUP_CONTINUATION_DIR", str(tmp_path))
+    monkeypatch.setattr(module, "receipt_from_environment", lambda: current["value"])
+    monkeypatch.setattr(module, "load_operator_fidelity_policy", lambda: {"schema_version": "test"})
+    monkeypatch.setattr(
+        module,
+        "build_operator_fidelity_request",
+        lambda policy, task: {"request_type": "operator_fidelity_test", "task": task},
+    )
+
+    first = module.automatic_operator_fidelity_preflight()
+    assert first is not None
+    assert first.ok is True
+    assert first.status == "complete"
+    assert first.errors == ("operator fidelity enrichment pending: no boot receipt supplied",)
+
+    current["value"] = _valid_receipt()
+    monkeypatch.setattr(module, "validate_operator_fidelity_receipt", lambda policy, receipt, task=None: ())
+
+    assert module.get_in_process_operator_fidelity_validation() is None
+    second = module.automatic_operator_fidelity_preflight()
+    assert second is not None
+    assert second.ok is True
+    assert second.status == "complete"
+    assert second.errors == ()
+
+
 def test_verbatim_task_requires_verbatim_receipt_proof() -> None:
     policy = module.load_operator_fidelity_policy()
     receipt = {

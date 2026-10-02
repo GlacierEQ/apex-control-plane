@@ -154,6 +154,8 @@ def record_startup_enrichment(
             "promote_evidence_state_when_valid",
         ],
         "execution_permission_effect": "none",
+        "mission_execution": "continue_known_executable_frontiers",
+        "local_recovery_authorized": True,
         "state_promotion_limited": True,
         "retryable": True,
         "recorded_at": time.time(),

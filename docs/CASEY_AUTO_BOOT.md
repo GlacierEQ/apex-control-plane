@@ -1,23 +1,22 @@
-# Casey Continuity Auto-Boot + APEX Genesis
+# Casey Continuity Auto-Boot + APEX Runtime
 
-The APEX control plane uses a deterministic, fail-closed startup path for workers that must continue the living GlacierEQ estate without inventing missing state, rebuilding already-known state, or assuming that loaded state is current enough for a material action.
+The APEX control plane uses deterministic continuity startup observations for workers that must continue the living GlacierEQ estate without inventing missing state, rebuilding already-known state, or assuming that loaded state is current enough for a material action. Startup completeness is diagnostic evidence, not project-direction permission.
 
 The startup path is governed by [`APEX_ENFORCED_STARTUP.md`](../APEX_ENFORCED_STARTUP.md).
 
-## Enforcement stack
+## Startup observation stack
 
-The startup/strong-boot path composes multiple compatible proofs before material execution is trusted:
+When corresponding evidence is available or materially required for a specific claim or route, the startup/strong-boot path can compose these compatible observations:
 
-1. **Model-attractor / hidden-harm defense** — blocks `CONTINUE -> RECONSTRUCT`, known-state rediscovery, operation-class drift, and substitution of assistant support work for the Operator mission.
+1. **Model-attractor / hidden-harm defense** — detects `CONTINUE -> RECONSTRUCT`, needless known-state rediscovery, operation-class drift, and substitution of assistant support work for the Operator mission, then surfaces repair-forward findings.
 2. **Notion/continuity integration proof** — resolves configured identity, expectations, capabilities, existing work, owners, consumers, dependencies, and overlaps where that live provider state is materially required.
 3. **Continuity proof** — exact memory notes/versions where configured, current sources where required, repository receipts, lanes, deadlines, task context, and blocker state.
-4. **Prime Directive proof** — relevant memory/continuity state was consulted; provenance-bearing known state was reused when usable, or a fresh search was performed only with a material rediscovery justification; pinned operating files were hash-verified; structured tool inventory, current-source proof, and provider-backed receipt validation were established.
-5. **APEX Genesis / Operator fidelity proof** — Operator intent, literal operation class, nearest valid continuation, preserved prior gains, contradiction status, execution-state model, strongest coherent path, and verification plan remain intact.
-6. **Mission-outcome fidelity hard lock** — mutation work cannot persist merely because the assistant produced a ledger, matrix, summary, report, plan, commit, task update, or other durable artifact; it must prove an underlying source-bearing mission-state transition or an evidenced genuine external boundary after materially available internal routes are exhausted.
+4. **APEX Genesis / Operator fidelity observation** — Operator intent, literal operation class, nearest valid continuation, preserved prior gains, execution-state model, coherent path, and verification plan remain available; actual material conflicts are investigated when present.
+5. **Mission-outcome fidelity accounting** — assistant activity is not automatically mission progress; claims about execution or external state remain tied to evidence of what actually changed.
 
 These contracts compose. None grants a repository, page, registry, summary, manifest, validator, CI gate, or historical governance label project-direction authority over current Operator intent.
 
-## Mandatory startup order
+## Runtime continuation order
 
 ```text
 CURRENT OPERATOR MESSAGE
@@ -36,55 +35,15 @@ CURRENT OPERATOR MESSAGE
   -> CURRENT_STATE ⊕ VERIFIED_GAIN
 ```
 
-Material mutation is blocked until the required startup proof is complete.
+Startup observations do not grant or withhold project-direction authority. Absence of optional self-created proof is neutral. Explicitly supplied incomplete or invalid proof becomes repair/enrichment evidence. A real provider, credential, security, destructive-action, or factual constraint limits the affected route only.
 
 A new chat, worker, process, or runtime is a new execution context, not a new project. It does not create authority to rediscover or reconstruct relevant state that is already available in usable provenance-bearing form.
 
-## Memory-state acquisition
+## Context acquisition
 
-Prime Directive memory acquisition has two valid paths:
+Reuse materially relevant known state when it is already available and usable. Retrieve or reopen source-native state when it is absent, may have changed, conflicts materially, or exact source bytes are needed for the requested work.
 
-### Reuse path
-
-Use when materially relevant state is already available and usable.
-
-```json
-{
-  "memory_state": {
-    "mode": "reused",
-    "status": "complete",
-    "source": "conversation-context:current-worker",
-    "item_count": 3,
-    "known_state_available": true,
-    "material_rediscovery_justification": ""
-  }
-}
-```
-
-No search tool call is required for this path. The source must be provenance-bearing and the state cannot be empty or invented.
-
-### Search path
-
-Use only when rediscovery is materially justified, for example because usable state is absent, state may have changed, exact source-native verification is required, available states conflict, or an exact artifact is needed for execution.
-
-```json
-{
-  "memory_state": {
-    "mode": "searched",
-    "status": "complete",
-    "source": "personal_context.search:task-topic",
-    "item_count": 4,
-    "known_state_available": false,
-    "material_rediscovery_justification": "state_not_available_in_usable_form",
-    "tool": "personal_context.search",
-    "query": "task topic and user/project context"
-  }
-}
-```
-
-Legacy `memory_search` provider receipts remain accepted as a compatibility projection, but the runtime no longer emits mandatory-search semantics.
-
-**Rediscovery of already-known relevant Operator/project state is not progress.**
+A failed retrieval does not prove the underlying state is absent, and rediscovering already-known relevant state is not mission progress.
 
 ## Continuity labels and historical `canonical` fields
 
@@ -152,7 +111,6 @@ A compatible provider receipt may therefore include:
     "operator_plan_authorized": true,
     "target_state": "non-empty target",
     "prior_valid_gains_preserved": true,
-    "contradiction_status": "none",
     "state_model_bound": true,
     "mutation_intent": "authorized",
     "selected_path": {
@@ -173,8 +131,6 @@ A compatible provider receipt may therefore include:
 }
 ```
 
-`contradiction_status=open_blocker` fails closed before runtime mutation.
-
 ## Notion continuity receipt
 
 The continuity preflight may still require configured Notion wake-set evidence and existing-work discovery across specified systems when that live provider proof is part of the selected profile. That provider-specific requirement does **not** convert into a global rule that every worker must search memory or reconstruct already-known state.
@@ -187,7 +143,7 @@ For existing work, `decision=extend` is valid. An Operator-authorized separate r
 CASEY_AUTO_BOOT_MODE=strict python src/control_plane.py
 ```
 
-Missing, stale, malformed, conflicting, or incomplete required proof exits with status `78` before runtime load.
+Malformed explicit receipt input may fail that receipt-parsing route. An absent optional receipt creates no debt. Explicitly supplied incomplete startup evidence remains visible as enrichment and does not independently become general execution permission.
 
 ## Request mode
 
@@ -195,14 +151,13 @@ Missing, stale, malformed, conflicting, or incomplete required proof exits with 
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
 ```
 
-Request mode emits or exposes required startup contracts and may continue only as degraded. It is useful for connector-bridge development and local inspection. It is not proof of continuity, current-source retrieval, or runtime readiness.
+Request mode can emit or expose startup contracts when explicitly invoked for connector-bridge development or local inspection. Ordinary request-mode startup remains clean when no optional receipt is supplied. Emitting a contract is not proof of continuity, current-source retrieval, or runtime readiness.
 
 Expected status projections include:
 
 ```text
 GLACIEREQ_NOTION_CONTINUITY_GATE_STATUS=degraded|complete|blocked
-GLACIEREQ_PRIME_DIRECTIVE_GATE_STATUS=degraded|complete|blocked
-GLACIEREQ_APEX_STARTUP_STATUS=off|complete|complete_enrichment_pending|continuation_required
+GLACIEREQ_APEX_STARTUP_STATUS=off|complete|complete_enrichment_pending
 CASEY_BOOT_STATUS=degraded|complete|blocked
 ```
 
@@ -218,29 +173,23 @@ or:
 CASEY_AUTO_BOOT_DISABLE=1 python src/control_plane.py
 ```
 
-A disabled run cannot claim continuity, Prime Directive completion, APEX startup completion, or connected-source awareness.
+A disabled run cannot claim continuity, APEX startup observation, or connected-source awareness.
 
 ## Profiles
 
 Configured profiles remain in `config/casey_auto_boot_manifest.json`. A profile may require exact provider-native notes or current sources for its own proof boundary. Such profile requirements are material acquisition requirements, not authority to discard usable state already present elsewhere.
 
-## Ground-truth operating files
+## APEX operating files
 
-Prime Directive startup hash-verifies its pinned operating files against active bytes. A mismatched active file does not satisfy the stage.
-
-Current Prime Directive pins are defined in `config/prime_directive_policy.json`; the policy's memory stage is `memory_state`, not mandatory `memory_search`.
-
-APEX adds its own policy and protocol:
+APEX keeps its active policy and protocol in:
 
 - `APEX_ENFORCED_STARTUP.md`
 - `config/apex_enforced_startup_policy.json`
 - `src/apex_enforced_startup.py`
 
-## Response middleware
+## Runtime diagnostics
 
-`src/prime_directive_enforcer.py` blocks unsupported model text before its startup gate completes. Its correction path orders workers to consult/reuse known state first and to search only when rediscovery is materially justified.
-
-APEX and strong boot add runtime boundaries against unsupported state, minimization, destructive reduction, model-attractor drift, and false mission-progress claims.
+APEX and strong boot surface unsupported state, destructive reduction, model-attractor drift, and false mission-progress claims as diagnostics and repair work. They do not suppress user-facing output merely because a self-created startup observer is incomplete.
 
 ## Optional site hook
 

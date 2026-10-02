@@ -26,8 +26,6 @@ from apex_strong_boot import (
 
 
 _GATE_BINDINGS = (
-    ("automatic_notion_continuity_preflight", "get_in_process_notion_validation"),
-    ("automatic_prime_directive_boot", "get_in_process_boot_validation"),
     ("automatic_operator_fidelity_lock", "get_in_process_operator_fidelity_lock"),
     ("automatic_operator_fidelity_preflight", "get_in_process_operator_fidelity_validation"),
     ("automatic_apex_enforced_startup", "get_in_process_apex_validation"),
@@ -69,6 +67,7 @@ def _arm_model_attractor_preflight(monkeypatch) -> None:
 
 def _arm_complete_boot(monkeypatch) -> list[str]:
     calls: list[str] = []
+    monkeypatch.setattr(boot, "receipt_from_environment", lambda: {"synthetic": True})
     _arm_model_attractor_preflight(monkeypatch)
     for index, (automatic_name, getter_name) in enumerate(_GATE_BINDINGS):
         state = {"value": None}
@@ -108,6 +107,42 @@ def test_strong_boot_runs_exact_observation_sequence_and_creates_kernel(monkeypa
     assert session.uplift_findings == ()
     assert session.uplift_required is False
     assert get_in_process_strong_boot() is session
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
+
+
+def test_not_observed_startup_observer_is_clean_not_uplift() -> None:
+    validation = SimpleNamespace(ok=True, status="not_observed", errors=())
+    assert boot._validation_finding("apex_startup", validation) is None
+
+
+def test_missing_optional_startup_receipt_does_not_create_repair_debt(monkeypatch) -> None:
+    boot._IN_PROCESS = None
+    monkeypatch.setattr(boot, "receipt_from_environment", lambda: None)
+    calls: list[str] = []
+
+    def forbidden(*args, **kwargs):
+        calls.append("observer")
+        raise AssertionError("receipt-bound observer should not run without receipt evidence")
+
+    monkeypatch.setattr(boot, "validate_runtime_strict_frontier", forbidden)
+    monkeypatch.setattr(boot, "automatic_model_attractor_defense", forbidden)
+    monkeypatch.setattr(boot, "automatic_operator_fidelity_lock", forbidden)
+    monkeypatch.setattr(boot, "automatic_operator_fidelity_preflight", forbidden)
+    monkeypatch.setattr(boot, "automatic_apex_enforced_startup", forbidden)
+    monkeypatch.setattr(
+        boot,
+        "create_verified_runtime_kernel",
+        lambda: _fake_kernel(gates=()),
+    )
+    monkeypatch.setattr(boot, "enforce_outcome_fidelity", lambda kernel: kernel)
+
+    session = apply_strongest_boot()
+
+    assert calls == []
+    assert session.gates == ()
+    assert session.runtime_kernel.snapshot().startup_gates == ()
+    assert session.uplift_findings == ()
+    assert session.uplift_required is False
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
 
 
@@ -188,20 +223,6 @@ def test_session_cannot_be_forged() -> None:
         )
 
 
-def test_missing_in_process_validation_becomes_repair_finding(monkeypatch) -> None:
-    _arm_complete_boot(monkeypatch)
-    validation = SimpleNamespace(ok=True, status="complete", errors=())
-    monkeypatch.setattr(boot, "automatic_prime_directive_boot", lambda: validation)
-    monkeypatch.setattr(boot, "get_in_process_boot_validation", lambda: None)
-
-    session = apply_strongest_boot()
-
-    assert session.runtime_id == "runtime-proof"
-    assert any(
-        "prime_directive: no in-process validation published" in item
-        for item in session.uplift_findings
-    )
-
 
 def test_incomplete_observer_preserves_later_diagnostics_and_runtime(monkeypatch) -> None:
     calls = _arm_complete_boot(monkeypatch)
@@ -209,23 +230,48 @@ def test_incomplete_observer_preserves_later_diagnostics_and_runtime(monkeypatch
     validation = SimpleNamespace(
         ok=False,
         status="continuation_required",
-        errors=("Notion continuity unresolved",),
+        errors=("APEX startup evidence unresolved",),
     )
 
-    def incomplete_notion():
-        calls.append("notion_continuity")
+    def incomplete_apex():
+        calls.append("apex_startup")
         state["value"] = validation
         return validation
 
-    monkeypatch.setattr(boot, "automatic_notion_continuity_preflight", incomplete_notion)
-    monkeypatch.setattr(boot, "get_in_process_notion_validation", lambda: state["value"])
+    monkeypatch.setattr(boot, "automatic_apex_enforced_startup", incomplete_apex)
+    monkeypatch.setattr(boot, "get_in_process_apex_validation", lambda: state["value"])
 
     session = apply_strongest_boot()
 
     assert calls == list(EXPECTED_GATES)
     assert session.runtime_id == "runtime-proof"
     assert session.uplift_required is True
-    assert any("notion_continuity" in item for item in session.uplift_findings)
+    assert any("apex_startup" in item for item in session.uplift_findings)
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete_with_uplift"
+
+
+def test_repair_forward_observer_errors_remain_visible_as_uplift(monkeypatch) -> None:
+    calls = _arm_complete_boot(monkeypatch)
+    state = {"value": None}
+    validation = SimpleNamespace(
+        ok=True,
+        status="complete",
+        errors=("startup evidence enrichment pending: source context stale",),
+    )
+
+    def enriched_apex():
+        calls.append("apex_startup")
+        state["value"] = validation
+        return validation
+
+    monkeypatch.setattr(boot, "automatic_apex_enforced_startup", enriched_apex)
+    monkeypatch.setattr(boot, "get_in_process_apex_validation", lambda: state["value"])
+
+    session = apply_strongest_boot()
+
+    assert session.runtime_id == "runtime-proof"
+    assert session.uplift_required is True
+    assert any("source context stale" in item for item in session.uplift_findings)
     assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete_with_uplift"
 
 
@@ -401,3 +447,20 @@ def test_sitecustomize_executes_same_strong_boot_session(monkeypatch) -> None:
     assert calls == ["boot"]
     assert namespace["APEX_STRONG_BOOT_SESSION"] is session
     assert namespace["APEX_RUNTIME_KERNEL"] is kernel
+
+def test_provider_specific_notion_is_not_an_always_on_strong_boot_gate() -> None:
+    assert "notion_continuity" not in EXPECTED_GATES
+    assert all(
+        "notion_continuity" not in binding_name
+        for binding in _GATE_BINDINGS
+        for binding_name in binding
+    )
+
+
+def test_retired_prime_directive_is_not_an_active_strong_boot_gate() -> None:
+    assert "prime_directive" not in EXPECTED_GATES
+    assert all(
+        "prime_directive" not in binding_name
+        for binding in _GATE_BINDINGS
+        for binding_name in binding
+    )
