@@ -19,7 +19,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from hidden_harm_restore import scan_packet
+from hidden_harm_restore import restore_displacer, scan_packet
 
 FAILURE_CLASS = "MODEL_ATTRACTOR_DRIFT"
 LOCKED_CLASSES = frozenset({"continue", "build", "fix", "look", "organize", "execute"})
@@ -46,6 +46,8 @@ def _text(value: object) -> str:
 def _displacement(packet: Mapping[str, object]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     restorations: list[str] = []
+    operation = _text(packet.get("locked_operation_class")).lower()
+    named = _text(packet.get("named_object"))
     transforms = packet.get("transforms")
     if isinstance(transforms, list) and transforms:
         for item in scan_packet(packet):
@@ -58,15 +60,22 @@ def _displacement(packet: Mapping[str, object]) -> tuple[list[str], list[str]]:
     readback_marker = None
     if isinstance(readback, Mapping):
         readback_marker = readback.get("displaced_by")
+    seen: set[str] = set()
     for source, raw in (
         ("displaced_by", packet.get("displaced_by")),
         ("readback.displaced_by", readback_marker),
     ):
         marker = _text(raw).lower()
-        if marker in DISPLACERS:
+        if marker in DISPLACERS and marker not in seen:
+            seen.add(marker)
             errors.append(
                 f"{source}={marker}; generic prior, summary, or constraint displaced the operation"
             )
+            restored = restore_displacer(operation, named, marker)
+            if restored.get("status") == "restore_operation":
+                action = restored["restoration"]
+                if action not in restorations:
+                    restorations.append(action)
     return errors, restorations
 
 
