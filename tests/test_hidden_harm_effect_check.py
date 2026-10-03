@@ -1,7 +1,15 @@
-"""Effect-check admission. Receipt trust is not self-certified."""
+"""Effect-check admission. Receipt trust is not self-certified.
+
+2026-10-03 HST score on this branch, not a new root:
+main blob 7ba4c6a7 (ref 134abd02) omits displacer scoring. A matching
+three-lock receipt with displaced_by summary, generic_prior, or constraint
+would be trusted there. That is MODEL_ATTRACTOR_DRIFT, not an intent claim.
+PR 307 head bd067e56 checks were failure, not a read-back pass. Not merged
+again. Look stays inspect; the word rank in the forbid-clause is not a rank act.
+"""
 
 from hidden_harm_effect_check import evaluate_effect_check
-from hidden_harm_restore import restore_operation_class
+from hidden_harm_restore import restore_displacer, restore_operation_class
 
 
 def test_matching_independent_readback_trusts_receipt() -> None:
@@ -130,7 +138,11 @@ def test_generic_prior_on_look_restores_inspect() -> None:
     assert any("inspect the named object" in item for item in result.restoration)
     restored = restore_operation_class("look", named)
     assert restored["status"] == "restore_operation"
-    assert "rank" not in restored["restoration"]
+    assert restored["restoration"] == "inspect the named object; do not rank or retire it"
+    displaced = restore_displacer("look", named, "generic_prior")
+    assert displaced["status"] == "restore_operation"
+    assert displaced["restoration"] == "inspect the named object; a generic prior is not the inspection"
+    assert displaced["intent_claim"] == "not_promoted"
 
 
 def test_constraint_on_fix_restores_repair_without_mapped_transform() -> None:
