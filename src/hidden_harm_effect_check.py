@@ -9,7 +9,8 @@ does not trust that receipt. Admission requires three independent matches:
 
 A mismatch is displacement. It is not an intent claim.
 A generic prior, summary, or constraint that displaces the locked operation
-is the same failure class. Intent is not promoted.
+is the same failure class. A beneficial substitute (mood rewrite, smaller plan,
+new root, mission reframe) is the same failure class. Intent is not promoted.
 """
 
 from __future__ import annotations
@@ -24,6 +25,8 @@ from hidden_harm_restore import restore_displacer, scan_packet
 FAILURE_CLASS = "MODEL_ATTRACTOR_DRIFT"
 LOCKED_CLASSES = frozenset({"continue", "build", "fix", "look", "organize", "execute"})
 DISPLACERS = frozenset({"summary", "generic_prior", "constraint"})
+BENEFICIAL_SUBSTITUTES = frozenset({"mood_rewrite", "smaller_plan", "new_root", "mission_reframe"})
+SCORED_DISPLACERS = DISPLACERS | BENEFICIAL_SUBSTITUTES
 
 
 @dataclass(frozen=True)
@@ -66,11 +69,16 @@ def _displacement(packet: Mapping[str, object]) -> tuple[list[str], list[str]]:
         ("readback.displaced_by", readback_marker),
     ):
         marker = _text(raw).lower()
-        if marker in DISPLACERS and marker not in seen:
+        if marker in SCORED_DISPLACERS and marker not in seen:
             seen.add(marker)
-            errors.append(
-                f"{source}={marker}; generic prior, summary, or constraint displaced the operation"
-            )
+            if marker in BENEFICIAL_SUBSTITUTES:
+                errors.append(
+                    f"{source}={marker}; beneficial substitute displaced the locked operation"
+                )
+            else:
+                errors.append(
+                    f"{source}={marker}; generic prior, summary, or constraint displaced the operation"
+                )
             restored = restore_displacer(operation, named, marker)
             if restored.get("status") == "restore_operation":
                 action = restored["restoration"]

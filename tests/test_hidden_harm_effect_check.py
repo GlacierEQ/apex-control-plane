@@ -166,3 +166,92 @@ def test_constraint_on_fix_restores_repair_without_mapped_transform() -> None:
     assert result.intent_claim == "not_promoted"
     assert any("constraint" in item for item in result.errors)
     assert any("repair the named object" in item for item in result.restoration)
+
+
+def test_mission_reframe_on_continue_restores_continue() -> None:
+    named = "GlacierEQ/apex-control-plane:hidden-harm-effect-check-2026-09-30"
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "continue",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "mission_reframe",
+            "transforms": ["CONTINUE -> MISSION_REFRAME"],
+            "readback": {
+                "producer_id": "branch-reader",
+                "object_ref": named,
+                "operation_class": "continue",
+                "displaced_by": "mission_reframe",
+                "check_read_back": True,
+            },
+        }
+    )
+    assert result.trusted is False
+    assert result.intent_claim == "not_promoted"
+    assert any("mission_reframe" in item for item in result.errors)
+    assert any("do not reframe the mission" in item for item in result.restoration)
+    restored = restore_displacer("continue", named, "mission_reframe")
+    assert restored["restoration"] == "continue the named object; do not reframe the mission"
+
+
+def test_mood_rewrite_on_fix_restores_repair() -> None:
+    named = "src/hidden_harm_effect_check.py"
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "fix",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "mood_rewrite",
+            "readback": {
+                "producer_id": "branch-reader",
+                "object_ref": named,
+                "operation_class": "fix",
+                "displaced_by": "mood_rewrite",
+                "check_read_back": True,
+            },
+        }
+    )
+    assert result.trusted is False
+    assert any("mood_rewrite" in item for item in result.errors)
+    assert any("repair the named object" in item for item in result.restoration)
+    assert result.intent_claim == "not_promoted"
+
+
+def test_smaller_plan_on_build_and_new_root_on_look() -> None:
+    named = "src/hidden_harm_restore.py"
+    build = evaluate_effect_check(
+        {
+            "locked_operation_class": "build",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "smaller_plan",
+            "readback": {
+                "producer_id": "branch-reader",
+                "object_ref": named,
+                "operation_class": "build",
+                "displaced_by": "smaller_plan",
+                "check_read_back": True,
+            },
+        }
+    )
+    assert build.trusted is False
+    assert any("smaller plan is not the act" in item for item in build.restoration)
+    look = evaluate_effect_check(
+        {
+            "locked_operation_class": "look",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "new_root",
+            "transforms": ["LOOK -> NEW_ROOT"],
+            "readback": {
+                "producer_id": "branch-reader",
+                "object_ref": named,
+                "operation_class": "look",
+                "displaced_by": "new_root",
+                "check_read_back": True,
+            },
+        }
+    )
+    assert look.trusted is False
+    assert any("inspect the named object; do not open a new root" in item for item in look.restoration)
+    assert not any("rank" in item and "new root" in item for item in look.restoration)

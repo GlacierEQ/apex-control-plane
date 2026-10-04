@@ -1,7 +1,7 @@
 """Search displaced acts and restore the locked operation.
 
 Beneficial here means the Operator operation is executed on the named object.
-It does not mean a mood rewrite, a smaller plan, or a new root.
+It does not mean a mood rewrite, a smaller plan, a new root, or a mission reframe.
 Intent is not inferred.
 """
 
@@ -34,6 +34,22 @@ RESTORATIONS = {
     "BUILD -> CONSTRAINT": "build the named object; scope the constraint, do not stop the operation",
     "FIX -> CONSTRAINT": "repair the named object; scope the constraint, do not stop the repair",
     "LOOK -> CONSTRAINT": "inspect the named object; scope the constraint, do not rank it",
+    "CONTINUE -> MOOD_REWRITE": "continue the named object; a mood rewrite is not the act",
+    "BUILD -> MOOD_REWRITE": "build the named object; a mood rewrite is not the act",
+    "FIX -> MOOD_REWRITE": "repair the named object; a mood rewrite is not the repair",
+    "LOOK -> MOOD_REWRITE": "inspect the named object; a mood rewrite is not the inspection",
+    "CONTINUE -> SMALLER_PLAN": "continue the named object; a smaller plan is not the act",
+    "BUILD -> SMALLER_PLAN": "build the named object; a smaller plan is not the act",
+    "FIX -> SMALLER_PLAN": "repair the named object; a smaller plan is not the repair",
+    "LOOK -> SMALLER_PLAN": "inspect the named object; a smaller plan is not the inspection",
+    "CONTINUE -> NEW_ROOT": "continue the named object; do not open a new root",
+    "BUILD -> NEW_ROOT": "build the named object; do not open a new root",
+    "FIX -> NEW_ROOT": "repair the named object; do not open a new root",
+    "LOOK -> NEW_ROOT": "inspect the named object; do not open a new root",
+    "CONTINUE -> MISSION_REFRAME": "continue the named object; do not reframe the mission",
+    "BUILD -> MISSION_REFRAME": "build the named object; do not reframe the mission",
+    "FIX -> MISSION_REFRAME": "repair the named object; do not reframe the mission",
+    "LOOK -> MISSION_REFRAME": "inspect the named object; do not reframe the mission",
 }
 
 OPERATION_RESTORE = {
@@ -69,6 +85,39 @@ DISPLACER_RESTORE = {
         "look": "inspect the named object; scope the constraint, do not rank it",
         "organize": "structure the named object; scope the constraint, do not stop the operation",
         "execute": "execute the named operation; scope the constraint, do not stop the operation",
+    },
+
+    "mood_rewrite": {
+        "continue": "continue the named object; a mood rewrite is not the act",
+        "build": "build the named object; a mood rewrite is not the act",
+        "fix": "repair the named object; a mood rewrite is not the repair",
+        "look": "inspect the named object; a mood rewrite is not the inspection",
+        "organize": "structure the named object; a mood rewrite is not the act",
+        "execute": "execute the named operation; a mood rewrite is not the act",
+    },
+    "smaller_plan": {
+        "continue": "continue the named object; a smaller plan is not the act",
+        "build": "build the named object; a smaller plan is not the act",
+        "fix": "repair the named object; a smaller plan is not the repair",
+        "look": "inspect the named object; a smaller plan is not the inspection",
+        "organize": "structure the named object; a smaller plan is not the act",
+        "execute": "execute the named operation; a smaller plan is not the act",
+    },
+    "new_root": {
+        "continue": "continue the named object; do not open a new root",
+        "build": "build the named object; do not open a new root",
+        "fix": "repair the named object; do not open a new root",
+        "look": "inspect the named object; do not open a new root",
+        "organize": "structure the named object; do not open a new root",
+        "execute": "execute the named operation; do not open a new root",
+    },
+    "mission_reframe": {
+        "continue": "continue the named object; do not reframe the mission",
+        "build": "build the named object; do not reframe the mission",
+        "fix": "repair the named object; do not reframe the mission",
+        "look": "inspect the named object; do not reframe the mission",
+        "organize": "structure the named object; do not reframe the mission",
+        "execute": "execute the named operation; do not reframe the mission",
     },
 }
 
