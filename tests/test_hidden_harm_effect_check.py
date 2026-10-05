@@ -6,6 +6,14 @@ three-lock receipt with displaced_by summary, generic_prior, or constraint
 would be trusted there. That is MODEL_ATTRACTOR_DRIFT, not an intent claim.
 PR 307 head bd067e56 checks were failure, not a read-back pass. Not merged
 again. Look stays inspect; the word rank in the forbid-clause is not a rank act.
+
+2026-10-05 HST score on this same file:
+main restore blob 525567ac (ref 134abd02) still has no restore_displacer and
+no mission_reframe / mood_rewrite / smaller_plan map. That is a smaller plan
+on the locked continue, not an intent claim. Combined status CodeRabbit
+success on bd067e56 is not the check-run readback (verify, prove strongest
+boot, operator-fidelity-hard-lock, mission-outcome-hard-lock failed).
+Not merged again.
 """
 
 from hidden_harm_effect_check import evaluate_effect_check
@@ -255,3 +263,33 @@ def test_smaller_plan_on_build_and_new_root_on_look() -> None:
     assert look.trusted is False
     assert any("inspect the named object; do not open a new root" in item for item in look.restoration)
     assert not any("rank" in item and "new root" in item for item in look.restoration)
+
+
+def test_2026_10_05_main_restore_omission_restores_continue() -> None:
+    named = "GlacierEQ/apex-control-plane:hidden-harm-effect-check-2026-09-30"
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "continue",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "smaller_plan",
+            "transforms": ["CONTINUE -> SMALLER_PLAN"],
+            "readback": {
+                "producer_id": "github-api",
+                "object_ref": named,
+                "operation_class": "continue",
+                "displaced_by": "smaller_plan",
+                "check_read_back": False,
+            },
+        }
+    )
+    assert result.trusted is False
+    assert result.failure_class == "MODEL_ATTRACTOR_DRIFT"
+    assert result.intent_claim == "not_promoted"
+    assert any("smaller_plan" in item for item in result.errors)
+    assert any("not read back" in item for item in result.errors)
+    assert any("smaller plan is not the act" in item for item in result.restoration)
+    restored = restore_displacer("continue", named, "smaller_plan")
+    assert restored["status"] == "restore_operation"
+    assert restored["restoration"] == "continue the named object; a smaller plan is not the act"
+    assert restored["intent_claim"] == "not_promoted"
