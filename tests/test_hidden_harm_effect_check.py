@@ -14,6 +14,13 @@ on the locked continue, not an intent claim. Combined status CodeRabbit
 success on bd067e56 is not the check-run readback (verify, prove strongest
 boot, operator-fidelity-hard-lock, mission-outcome-hard-lock failed).
 Not merged again.
+
+2026-10-06 HST score on this same file:
+main ref 480131e2 still serves effect-check blob 7ba4c6a7 and restore blob
+525567ac. Same-day commit on config/model_attractor_defense_policy.json
+(blob aac1d2e8) adds self-attested booleans and does not name an independent
+effect-check readback. Those booleans are not admission. PR 307 stays merged
+at bd067e56 with failed check runs. Not merged again. Intent not promoted.
 """
 
 from hidden_harm_effect_check import evaluate_effect_check
@@ -293,3 +300,41 @@ def test_2026_10_05_main_restore_omission_restores_continue() -> None:
     assert restored["status"] == "restore_operation"
     assert restored["restoration"] == "continue the named object; a smaller plan is not the act"
     assert restored["intent_claim"] == "not_promoted"
+
+
+def test_2026_10_06_policy_self_attestation_is_not_admission() -> None:
+    named = "GlacierEQ/apex-control-plane:hidden-harm-effect-check-2026-09-30"
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "continue",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "summary",
+            "policy_booleans": {
+                "correction_binding_checked": True,
+                "recovered_correction_changed_decision_policy": True,
+            },
+            "readback": {
+                "producer_id": "github-api",
+                "object_ref": named,
+                "operation_class": "continue",
+                "displaced_by": "summary",
+                "check_read_back": False,
+                "main_ref": "480131e2b1f7d919ebb80be7d0760ec431135a20",
+                "main_effect_check_blob": "7ba4c6a7bb736a3ec02ceaa8fdcd2545709a29d6",
+                "main_restore_blob": "525567acc1e0f8f55157595657673c61139fc5b4",
+                "main_policy_blob": "aac1d2e81e328fec5886368dd823e3a51906275e",
+            },
+        }
+    )
+    assert result.trusted is False
+    assert result.failure_class == "MODEL_ATTRACTOR_DRIFT"
+    assert result.intent_claim == "not_promoted"
+    assert any("summary" in item for item in result.errors)
+    assert any("not read back" in item for item in result.errors)
+    assert any("continue the named object; a summary is not the act" in item for item in result.restoration)
+    restored = restore_displacer("continue", named, "summary")
+    assert restored["status"] == "restore_operation"
+    assert restored["restoration"] == "continue the named object; a summary is not the act"
+    assert restored["intent_claim"] == "not_promoted"
+    assert restored["named_object"] == named
