@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "name": "APEX Model Attractor + Platform Pressure Defense",
   "failure_class": "MODEL_ATTRACTOR_DRIFT",
   "fail_closed": true,
@@ -29,7 +29,12 @@
     "platform_constraint_reframed_mission": false,
     "generic_assistant_prior_reframed_operation": false,
     "unnecessary_reasking_of_recoverable_state": false,
-    "operator_dragged_through_recoverable_state": false
+    "operator_dragged_through_recoverable_state": false,
+    "correction_binding_checked": true,
+    "recovered_correction_changed_decision_policy": true,
+    "satisfied_condition_consumed_before_prioritization": true,
+    "downstream_consequences_propagated": true,
+    "stale_operational_state_allowed_to_compete": false
   },
   "continuity_required_fields": {
     "known_state_reused": true,
@@ -44,7 +49,10 @@
     "operator_target": "nonempty",
     "active_thread": "nonempty",
     "continuation_ref": "nonempty",
-    "source_refs": "nonempty_array"
+    "source_refs": "nonempty_array",
+    "corrections_bound_to_active_decision": true,
+    "satisfied_requirements_consumed": true,
+    "downstream_state_recomputed_after_material_change": true
   },
   "derivative_representation_semantics": {
     "live_operator_objective_has_direction_authority": true,
@@ -56,7 +64,10 @@
     "derivative_representation_may_not_convert_execution_into_explanation": true,
     "derivative_representation_may_not_convert_dynamic_intelligence_into_static_rule_by_default": true,
     "presentation_concision_is_independent_of_execution_depth": true,
-    "completion_requires_target_state_evidence_not_response_completion": true
+    "completion_requires_target_state_evidence_not_response_completion": true,
+    "retrieved_correction_without_behavioral_effect_is_not_application": true,
+    "chat_acknowledgement_is_not_durable_preservation": true,
+    "task_representation_must_yield_to_satisfied_real_world_condition": true
   },
   "constraint_scoping": {
     "higher_priority_constraints_may_limit_specific_actions": true,
@@ -105,7 +116,12 @@
     "GENERIC_MODEL_PRIOR -> OPERATION_CLASS_OVERRIDE",
     "CONNECTOR_AUTHORITY_TIER -> GLOBAL_EPISTEMIC_HIERARCHY",
     "CANONICAL_ROLE_FIELD -> PROJECT_DIRECTION_AUTHORITY",
-    "PROVIDER_TOPOLOGY -> SINGLE_SOURCE_SOVEREIGNTY"
+    "PROVIDER_TOPOLOGY -> SINGLE_SOURCE_SOVEREIGNTY",
+    "OPERATOR_CORRECTION -> STORED_BUT_NONCAUSAL_CONTEXT",
+    "RECOVERED_CORRECTION -> UNCHANGED_DECISION_POLICY",
+    "SATISFIED_REQUIREMENT -> STILL_OPEN_OPERATIONAL_TASK",
+    "STATE_CHANGE -> NOTE_ONLY_WITHOUT_GRAPH_PROPAGATION",
+    "CHAT_ACKNOWLEDGEMENT -> DURABLE_PRESERVATION"
   ],
   "source_role_semantics": {
     "providers_are_typed_peers": true,
@@ -116,5 +132,23 @@
     "operator_controls_project_direction": true,
     "source_bearing_systems_control_external_fact_support_within_domain": true,
     "verification_controls_completion_state": true
+  },
+  "correction_binding_semantics": {
+    "correction_is_learned_only_when_it_changes_future_decision_behavior": true,
+    "retrieval_recognition_or_paraphrase_alone_do_not_count_as_application": true,
+    "recovered_corrections_must_bind_before_route_selection": true,
+    "binding_must_preserve_downstream_implications_not_only_literal_wording": true,
+    "violating_prior_assistant_state_must_be_repaired_or_explicitly_superseded": true,
+    "same_failure_after_recovery_is_a_behavior_binding_defect": true
+  },
+  "state_transition_semantics": {
+    "tasks_represent_desired_conditions_not_durable_truth": true,
+    "authoritative_satisfaction_consumes_the_requirement": true,
+    "consume_means_complete_supersede_or_transform_before_reprioritization": true,
+    "historical_evidence_remains_immutable_while_operational_projection_advances": true,
+    "material_state_change_requires_downstream_recomputation": true,
+    "downstream_recomputation_checks_satisfied_invalidated_superseded_unlocked_and_harmful_actions": true,
+    "stale_operational_state_may_not_compete_with_current_source_bearing_state": true,
+    "transition_is_incomplete_until_mutation_readback_and_consequence_propagation_complete": true
   }
 }
