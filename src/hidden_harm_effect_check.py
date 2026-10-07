@@ -11,6 +11,8 @@ A mismatch is displacement. It is not an intent claim.
 A generic prior, summary, or constraint that displaces the locked operation
 is the same failure class. A beneficial substitute (mood rewrite, smaller plan,
 new root, mission reframe) is the same failure class. Intent is not promoted.
+Absence of a failed flag is not a passed check. A check admits merge only
+when it has passed and that pass has been read back by a different producer.
 """
 
 from __future__ import annotations
@@ -124,8 +126,22 @@ def evaluate_effect_check(packet: Mapping[str, object] | None) -> EffectCheck:
         errors.append("readback.operation_class does not match locked_operation_class")
     if readback.get("new_root_created") is True and operation == "continue":
         errors.append("continue created a new root; reconstruction")
-    if readback.get("check_read_back") is False:
+    if readback.get("check_passed") is not True:
+        errors.append("check has not passed; merge not admitted")
+        restored = restore_displacer(operation or "continue", named, "generic_prior")
+        if restored.get("status") == "restore_operation":
+            action = restored["restoration"]
+            if action not in restorations:
+                restorations.append(action)
+    if readback.get("check_read_back") is not True:
         errors.append("check was not read back; merge not admitted")
+        restored = restore_displacer(operation or "continue", named, "generic_prior")
+        if restored.get("status") == "restore_operation":
+            action = restored["restoration"]
+            if action not in restorations:
+                restorations.append(action)
+    if packet.get("receipt_self_attested") is True or packet.get("policy_booleans"):
+        errors.append("receipt self-attestation is not proof")
 
     return EffectCheck(not errors, FAILURE_CLASS, tuple(errors), restoration=tuple(restorations))
 
