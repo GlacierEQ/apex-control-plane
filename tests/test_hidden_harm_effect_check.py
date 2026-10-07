@@ -21,6 +21,15 @@ main ref 480131e2 still serves effect-check blob 7ba4c6a7 and restore blob
 (blob aac1d2e8) adds self-attested booleans and does not name an independent
 effect-check readback. Those booleans are not admission. PR 307 stays merged
 at bd067e56 with failed check runs. Not merged again. Intent not promoted.
+
+2026-10-07 HST score on this same file:
+main ref 480131e2 still serves effect-check blob 7ba4c6a7. That blob treats
+a missing check_read_back as not a failure. Branch tip 49586d50 only failed
+check_read_back when the flag was explicit False. A three-lock packet with
+the flag absent would be trusted. That generic prior is MODEL_ATTRACTOR_DRIFT.
+PR 307 check runs on bd067e56 were failure (verify, prove strongest boot,
+operator-fidelity-hard-lock, mission-outcome-hard-lock). Not merged again.
+Intent not promoted.
 """
 
 from hidden_harm_effect_check import evaluate_effect_check
@@ -38,6 +47,8 @@ def test_matching_independent_readback_trusts_receipt() -> None:
                 "object_ref": "src/model_attractor_defense.py",
                 "operation_class": "continue",
                 "new_root_created": False,
+                "check_passed": True,
+                "check_read_back": True,
             },
         }
     )
@@ -55,6 +66,8 @@ def test_self_readback_is_untrusted() -> None:
                 "producer_id": "worker",
                 "object_ref": "src/model_attractor_defense.py",
                 "operation_class": "continue",
+                "check_passed": True,
+                "check_read_back": True,
             },
         }
     )
@@ -73,6 +86,8 @@ def test_new_root_on_continue_is_displacement() -> None:
                 "object_ref": "src/new_defense.py",
                 "operation_class": "build",
                 "new_root_created": True,
+                "check_passed": True,
+                "check_read_back": True,
             },
         }
     )
@@ -98,6 +113,7 @@ def test_summary_displacement_is_untrusted_and_restores_continue() -> None:
                 "object_ref": "GlacierEQ/apex-control-plane#307",
                 "operation_class": "continue",
                 "displaced_by": "summary",
+                "check_passed": False,
                 "check_read_back": False,
             },
         }
@@ -121,6 +137,7 @@ def test_unread_check_is_not_admission() -> None:
                 "producer_id": "github-api",
                 "object_ref": "PR 307",
                 "operation_class": "continue",
+                "check_passed": True,
                 "check_read_back": False,
             },
         }
@@ -143,6 +160,7 @@ def test_generic_prior_on_look_restores_inspect() -> None:
                 "object_ref": named,
                 "operation_class": "look",
                 "displaced_by": "generic_prior",
+                "check_passed": True,
                 "check_read_back": True,
             },
         }
@@ -173,6 +191,7 @@ def test_constraint_on_fix_restores_repair_without_mapped_transform() -> None:
                 "object_ref": named,
                 "operation_class": "fix",
                 "displaced_by": "constraint",
+                "check_passed": True,
                 "check_read_back": True,
             },
         }
@@ -197,6 +216,7 @@ def test_mission_reframe_on_continue_restores_continue() -> None:
                 "object_ref": named,
                 "operation_class": "continue",
                 "displaced_by": "mission_reframe",
+                "check_passed": True,
                 "check_read_back": True,
             },
         }
@@ -222,6 +242,7 @@ def test_mood_rewrite_on_fix_restores_repair() -> None:
                 "object_ref": named,
                 "operation_class": "fix",
                 "displaced_by": "mood_rewrite",
+                "check_passed": True,
                 "check_read_back": True,
             },
         }
@@ -245,6 +266,7 @@ def test_smaller_plan_on_build_and_new_root_on_look() -> None:
                 "object_ref": named,
                 "operation_class": "build",
                 "displaced_by": "smaller_plan",
+                "check_passed": True,
                 "check_read_back": True,
             },
         }
@@ -263,6 +285,7 @@ def test_smaller_plan_on_build_and_new_root_on_look() -> None:
                 "object_ref": named,
                 "operation_class": "look",
                 "displaced_by": "new_root",
+                "check_passed": True,
                 "check_read_back": True,
             },
         }
@@ -286,6 +309,7 @@ def test_2026_10_05_main_restore_omission_restores_continue() -> None:
                 "object_ref": named,
                 "operation_class": "continue",
                 "displaced_by": "smaller_plan",
+                "check_passed": False,
                 "check_read_back": False,
             },
         }
@@ -319,7 +343,8 @@ def test_2026_10_06_policy_self_attestation_is_not_admission() -> None:
                 "object_ref": named,
                 "operation_class": "continue",
                 "displaced_by": "summary",
-                "check_read_back": False,
+                "check_passed": True,
+                "check_read_back": True,
                 "main_ref": "480131e2b1f7d919ebb80be7d0760ec431135a20",
                 "main_effect_check_blob": "7ba4c6a7bb736a3ec02ceaa8fdcd2545709a29d6",
                 "main_restore_blob": "525567acc1e0f8f55157595657673c61139fc5b4",
@@ -331,10 +356,43 @@ def test_2026_10_06_policy_self_attestation_is_not_admission() -> None:
     assert result.failure_class == "MODEL_ATTRACTOR_DRIFT"
     assert result.intent_claim == "not_promoted"
     assert any("summary" in item for item in result.errors)
-    assert any("not read back" in item for item in result.errors)
+    assert any("self-attestation is not proof" in item for item in result.errors)
     assert any("continue the named object; a summary is not the act" in item for item in result.restoration)
     restored = restore_displacer("continue", named, "summary")
     assert restored["status"] == "restore_operation"
     assert restored["restoration"] == "continue the named object; a summary is not the act"
+    assert restored["intent_claim"] == "not_promoted"
+    assert restored["named_object"] == named
+
+
+def test_2026_10_07_absent_check_flag_is_not_a_pass() -> None:
+    named = "GlacierEQ/apex-control-plane:hidden-harm-effect-check-2026-09-30"
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "continue",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "generic_prior",
+            "readback": {
+                "producer_id": "github-api",
+                "object_ref": named,
+                "operation_class": "continue",
+                "main_ref": "480131e2b1f7d919ebb80be7d0760ec431135a20",
+                "main_effect_check_blob": "7ba4c6a7bb736a3ec02ceaa8fdcd2545709a29d6",
+                "pr_307_head": "bd067e56f81fc1796c90c916ca630a5d3cf36dec",
+                "pr_307_check_conclusion": "failure",
+            },
+        }
+    )
+    assert result.trusted is False
+    assert result.failure_class == "MODEL_ATTRACTOR_DRIFT"
+    assert result.intent_claim == "not_promoted"
+    assert any("has not passed" in item for item in result.errors)
+    assert any("not read back" in item for item in result.errors)
+    assert any("generic_prior" in item for item in result.errors)
+    assert any("continue the named object; a generic prior is not the act" in item for item in result.restoration)
+    restored = restore_displacer("continue", named, "generic_prior")
+    assert restored["status"] == "restore_operation"
+    assert restored["restoration"] == "continue the named object; a generic prior is not the act"
     assert restored["intent_claim"] == "not_promoted"
     assert restored["named_object"] == named
