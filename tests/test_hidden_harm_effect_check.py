@@ -30,6 +30,13 @@ the flag absent would be trusted. That generic prior is MODEL_ATTRACTOR_DRIFT.
 PR 307 check runs on bd067e56 were failure (verify, prove strongest boot,
 operator-fidelity-hard-lock, mission-outcome-hard-lock). Not merged again.
 Intent not promoted.
+
+2026-10-08 HST score on this same file:
+main ref 480131e2 still serves effect-check blob 7ba4c6a7 and restore blob
+525567ac. PR 307 remains merged at bd067e56 with check conclusion failure.
+verify job 110333384628 log readback is HTTP 404. A missing log is not a pass
+and a merged flag is not an independent readback. That summary is
+MODEL_ATTRACTOR_DRIFT. Not merged again. Intent not promoted.
 """
 
 from hidden_harm_effect_check import evaluate_effect_check
@@ -394,5 +401,46 @@ def test_2026_10_07_absent_check_flag_is_not_a_pass() -> None:
     restored = restore_displacer("continue", named, "generic_prior")
     assert restored["status"] == "restore_operation"
     assert restored["restoration"] == "continue the named object; a generic prior is not the act"
+    assert restored["intent_claim"] == "not_promoted"
+    assert restored["named_object"] == named
+
+def test_2026_10_08_missing_verify_log_is_not_a_pass() -> None:
+    named = "GlacierEQ/apex-control-plane:hidden-harm-effect-check-2026-09-30"
+    result = evaluate_effect_check(
+        {
+            "locked_operation_class": "continue",
+            "named_object": named,
+            "receipt_producer_id": "worker",
+            "displaced_by": "summary",
+            "receipt_self_attested": True,
+            "readback": {
+                "producer_id": "github-api",
+                "object_ref": named,
+                "operation_class": "continue",
+                "displaced_by": "summary",
+                "check_passed": False,
+                "check_read_back": False,
+                "verify_job_id": 110333384628,
+                "verify_log": "HTTP 404",
+                "main_ref": "480131e2b1f7d919ebb80be7d0760ec431135a20",
+                "main_effect_check_blob": "7ba4c6a7bb736a3ec02ceaa8fdcd2545709a29d6",
+                "main_restore_blob": "525567acc1e0f8f55157595657673c61139fc5b4",
+                "pr_307_head": "bd067e56f81fc1796c90c916ca630a5d3cf36dec",
+                "pr_307_merged": True,
+                "pr_307_check_conclusion": "failure",
+            },
+        }
+    )
+    assert result.trusted is False
+    assert result.failure_class == "MODEL_ATTRACTOR_DRIFT"
+    assert result.intent_claim == "not_promoted"
+    assert any("summary" in item for item in result.errors)
+    assert any("has not passed" in item for item in result.errors)
+    assert any("not read back" in item for item in result.errors)
+    assert any("self-attestation is not proof" in item for item in result.errors)
+    assert any("continue the named object; a summary is not the act" in item for item in result.restoration)
+    restored = restore_displacer("continue", named, "summary")
+    assert restored["status"] == "restore_operation"
+    assert restored["restoration"] == "continue the named object; a summary is not the act"
     assert restored["intent_claim"] == "not_promoted"
     assert restored["named_object"] == named
