@@ -136,3 +136,52 @@ def test_unavailable_provider_only_blocks_affected_route(tmp_path):
     assert store.resume('agent-c', mixed)['task_id'] == 'parallel'
     assert store.task_state('offline') == 'READY'
     assert store.task_state('parallel') == 'IN_FLIGHT'
+
+
+
+def test_stale_readback_cannot_reclassify_another_workers_new_claim(tmp_path):
+    """Worker A reads READY; B claims; A must not convert B's live claim to NEEDS_PROOF."""
+    native = NativeProvider(tmp_path / "provider.db")
+    native.act("smoke:verified")
+    first = MissionCheckpointStore(tmp_path / "state.db")
+    second = MissionCheckpointStore(tmp_path / "state.db")
+    first.initialize(**mission())
+    interleaved = []
+
+    def delayed_readback(key, expected):
+        if key == "smoke:interrupted" and not interleaved:
+            reserved = second.resume("worker-b", native.lookup)
+            interleaved.append(reserved)
+        return native.lookup(key, expected)
+
+    first.resume("worker-a", delayed_readback)
+    assert interleaved[0]["task_id"] == "interrupted"
+    assert second.task_state("interrupted") == "IN_FLIGHT"
+    with sqlite3.connect(tmp_path / "state.db") as db:
+        assert db.execute(
+            "SELECT claimed_by FROM tasks WHERE task_id='interrupted'"
+        ).fetchone()[0] == "worker-b"
+    assert native.attempts("smoke:interrupted") == 0
+
+
+def test_parallel_resumers_atomically_reserve_only_one_worker(tmp_path):
+    """Two independent store objects racing to claim a READY action never both win."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    native = NativeProvider(tmp_path / "provider.db")
+    native.act("smoke:verified")
+    db_path = tmp_path / "state.db"
+    MissionCheckpointStore(db_path).initialize(**mission())
+
+    def recover(agent):
+        return MissionCheckpointStore(db_path).resume(agent, native.lookup)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(recover, ("worker-a", "worker-b")))
+    claimed = [r for r in results if r is not None]
+    assert len(claimed) == 1
+    assert claimed[0]["task_id"] == "interrupted"
+    assert MissionCheckpointStore(db_path).task_state("interrupted") in {
+        "IN_FLIGHT", "NEEDS_PROOF"
+    }
+    assert native.attempts("smoke:interrupted") == 0
