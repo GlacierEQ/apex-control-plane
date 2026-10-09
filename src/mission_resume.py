@@ -211,6 +211,7 @@ class MissionCheckpointStore:
     def rearm_after_provider_guarantee(
         self, task_id: str, *, provider_idempotency_ref: str,
         readback: Callable[[str, str], str | None],
+        idempotency_verifier: Callable[[str, str, str], Mapping[str, Any]] | None = None,
     ) -> str:
         """Rearm an uncertain claim only under an externally verified replay guarantee.
 
@@ -235,6 +236,25 @@ class MissionCheckpointStore:
                 raise ResumeError("unknown task")
             if row["state"] != "NEEDS_PROOF":
                 raise ResumeError("only an ambiguous NEEDS_PROOF claim can be rearmed")
+        if idempotency_verifier is None:
+            raise ResumeError("independent provider idempotency verifier required")
+        # The provider-specific adapter (NOT the agent's prose or reference
+        # string) must attest that this exact operation key is replay-safe.
+        try:
+            evidence = idempotency_verifier(
+                row["provider"], row["key"], provider_idempotency_ref
+            )
+        except Exception as exc:
+            raise ResumeError("provider idempotency attestation unavailable") from exc
+        if not isinstance(evidence, Mapping) or not (
+            evidence.get("provider") == row["provider"] and
+            evidence.get("idempotency_key") == row["key"] and
+            evidence.get("reference") == provider_idempotency_ref and
+            evidence.get("native_enforced") is True and
+            isinstance(evidence.get("evidence"), str) and
+            bool(evidence["evidence"].strip())
+        ):
+            raise ResumeError("provider guarantee mismatch or missing native evidence")
         try:
             native_receipt = readback(row["key"], row["expected"])
         except Exception as exc:
@@ -266,6 +286,7 @@ class MissionCheckpointStore:
                         {"key": row["key"],
                          "provider": row["provider"],
                          "provider_idempotency_ref": provider_idempotency_ref,
+                         "provider_guarantee_evidence": evidence["evidence"],
                          "native_readback": "no_receipt",
                          "warning": "absence alone is not proof of nonexecution"})
             return "READY"
