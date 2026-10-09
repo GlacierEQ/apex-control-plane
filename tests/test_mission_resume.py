@@ -281,3 +281,47 @@ def test_rearm_finds_late_native_receipt_instead_of_reexecuting(tmp_path):
     assert store.resume("agent-c", native.lookup)["task_id"] == "continue"
     assert native.attempts("smoke:interrupted") == 1
     assert store.mission_state() == "ACTIVE"
+
+
+
+@pytest.mark.parametrize("provider_error", [False, True])
+def test_aba_same_owner_reclaim_rejects_stale_readback(tmp_path, provider_error):
+    """A→NEEDS_PROOF→READY→A must not make an old readback valid again.
+
+    Covers both ordinary no-receipt and provider-error reconciliation branches.
+    """
+    native = NativeProvider(tmp_path / "provider.db")
+    native.act("smoke:verified")
+    path = tmp_path / "checkpoint.db"
+    store = MissionCheckpointStore(path)
+    store.initialize(**mission())
+    assert store.resume("worker-a", native.lookup)["task_id"] == "interrupted"
+    intervened = False
+
+    def delayed(key, expected):
+        nonlocal intervened
+        if key == "smoke:interrupted" and not intervened:
+            intervened = True
+            other = MissionCheckpointStore(path)
+            assert other.resume("worker-b", native.lookup) is None
+            assert other.task_state("interrupted") == "NEEDS_PROOF"
+            assert other.rearm_after_provider_guarantee(
+                "interrupted",
+                provider_idempotency_ref="provider-native:fixture/idempotency-key-enforced",
+                readback=native.lookup,
+                idempotency_verifier=native.verify_idempotency,
+            ) == "READY"
+            assert other.resume("worker-a", native.lookup)["task_id"] == "interrupted"
+            if provider_error:
+                raise ConnectionError("delayed old readback unavailable")
+        return native.lookup(key, expected)
+
+    # This observer's snapshot is already stale even though owner+state are equal.
+    store.resume("observer", delayed)
+    assert intervened
+    assert store.task_state("interrupted") == "IN_FLIGHT"
+    assert native.attempts("smoke:interrupted") == 0
+    with sqlite3.connect(path) as db:
+        assert db.execute(
+            "SELECT claimed_by FROM tasks WHERE task_id='interrupted'"
+        ).fetchone()[0] == "worker-a"
