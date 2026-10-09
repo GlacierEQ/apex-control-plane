@@ -78,6 +78,7 @@ class MissionCheckpointStore:
                     key TEXT NOT NULL UNIQUE, provider TEXT NOT NULL,
                     expected TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'READY',
                     claimed_by TEXT, receipt TEXT,
+                    revision INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY(mission_id,task_id));
                 CREATE TABLE IF NOT EXISTS events (
                     event_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,6 +86,12 @@ class MissionCheckpointStore:
                     event TEXT NOT NULL, details_json TEXT NOT NULL,
                     observed_at TEXT NOT NULL);
             """)
+            # Upgrade existing local proof stores without losing original receipts.
+            # BEGIN IMMEDIATE serializes concurrent first-open migrations.
+            c.execute("BEGIN IMMEDIATE")
+            columns = {row["name"] for row in c.execute("PRAGMA table_info(tasks)")}
+            if "revision" not in columns:
+                c.execute("ALTER TABLE tasks ADD COLUMN revision INTEGER NOT NULL DEFAULT 0")
 
     @contextmanager
     def _connect(self):
@@ -156,15 +163,30 @@ class MissionCheckpointStore:
                 unreadable.add(row['task_id'])
                 with self._connect() as c:
                     c.execute("BEGIN IMMEDIATE")
-                    if row['state'] == 'IN_FLIGHT':
-                        c.execute("UPDATE tasks SET state='NEEDS_PROOF' WHERE mission_id=? AND task_id=? AND state='IN_FLIGHT'",
-                                  (mission, row['task_id']))
-                    self._event(c, mission, row['task_id'], 'provider_unavailable_route_local',
-                                {'key': row['key'], 'retry_mutation': False})
+                    current = c.execute(
+                        "SELECT state,revision FROM tasks WHERE mission_id=? AND task_id=?",
+                        (mission, row["task_id"]),
+                    ).fetchone()
+                    if current is None:
+                        raise ResumeError("task disappeared during provider reconciliation")
+                    if current["revision"] != row["revision"]:
+                        self._event(c, mission, row["task_id"], "stale_error_ignored",
+                                    {"key": row["key"],
+                                     "observed_revision": row["revision"],
+                                     "current_revision": current["revision"]})
+                        continue
+                    if current["state"] == "IN_FLIGHT":
+                        c.execute(
+                            "UPDATE tasks SET state='NEEDS_PROOF',revision=revision+1 "
+                            "WHERE mission_id=? AND task_id=? AND revision=?",
+                            (mission, row["task_id"], row["revision"]),
+                        )
+                    self._event(c, mission, row["task_id"], "provider_unavailable_route_local",
+                                {"key": row["key"], "retry_mutation": False})
                 continue
             with self._connect() as c:
                 c.execute("BEGIN IMMEDIATE")
-                current=c.execute("SELECT state,claimed_by FROM tasks WHERE mission_id=? AND task_id=?",
+                current=c.execute("SELECT state,claimed_by,revision FROM tasks WHERE mission_id=? AND task_id=?",
                                   (mission,row['task_id'])).fetchone()
                 if current is None:
                     raise ResumeError("task disappeared during provider reconciliation")
@@ -172,21 +194,29 @@ class MissionCheckpointStore:
                 # to the exact state/claim it observed; another worker may have
                 # reserved the action while this readback was still in flight.
                 if (current['state'] != row['state'] or
-                        current['claimed_by'] != row['claimed_by']):
+                        current['claimed_by'] != row['claimed_by'] or
+                        current['revision'] != row['revision']):
                     self._event(c, mission, row['task_id'], "stale_readback_ignored",
                                 {"observed_state": row['state'],
                                  "current_state": current['state'],
+                                 "observed_revision": row['revision'],
+                                 "current_revision": current['revision'],
                                  "key": row['key']})
                     continue
                 if current['state']=='VERIFIED_STEP':
                     continue
                 if native_receipt:
-                    c.execute("UPDATE tasks SET state='VERIFIED_STEP',receipt=?,claimed_by=NULL WHERE mission_id=? AND task_id=?",
-                              (str(native_receipt),mission,row['task_id']))
+                    c.execute(
+                        "UPDATE tasks SET state='VERIFIED_STEP',receipt=?,claimed_by=NULL,revision=revision+1 "
+                        "WHERE mission_id=? AND task_id=? AND revision=?",
+                        (str(native_receipt),mission,row['task_id'],row['revision']))
                     self._event(c,mission,row['task_id'],"native_readback_verified",
                                 {"receipt":str(native_receipt),"provider":row['provider'],"key":row['key']})
                 elif current['state']=='IN_FLIGHT':
-                    c.execute("UPDATE tasks SET state='NEEDS_PROOF' WHERE mission_id=? AND task_id=?",(mission,row['task_id']))
+                    c.execute(
+                        "UPDATE tasks SET state='NEEDS_PROOF',revision=revision+1 "
+                        "WHERE mission_id=? AND task_id=? AND revision=?",
+                        (mission,row['task_id'],row['revision']))
                     self._event(c,mission,row['task_id'],"unknown_external_effect_no_retry",{"key":row['key']})
         return unreadable
 
@@ -201,8 +231,10 @@ class MissionCheckpointStore:
             verified={t['task_id'] for t in tasks if t['state']=='VERIFIED_STEP'}
             for row in tasks:
                 if row['state']=='READY' and row['task_id'] not in unreadable and set(json.loads(row['deps_json'])) <= verified:
-                    c.execute("UPDATE tasks SET state='IN_FLIGHT',claimed_by=? WHERE mission_id=? AND task_id=? AND state='READY'",
-                              (agent,mission,row['task_id']))
+                    c.execute(
+                        "UPDATE tasks SET state='IN_FLIGHT',claimed_by=?,revision=revision+1 "
+                        "WHERE mission_id=? AND task_id=? AND state='READY' AND revision=?",
+                        (agent,mission,row['task_id'],row['revision']))
                     self._event(c,mission,row['task_id'],"task_reserved",{"agent":agent,"key":row['key']})
                     return dict(mission_id=mission,task_id=row['task_id'],provider=row['provider'],
                                 expected=row['expected'],idempotency_key=row['key'])
@@ -229,7 +261,7 @@ class MissionCheckpointStore:
         with self._connect() as c:
             mission = self._get_mission(c)
             row = c.execute(
-                "SELECT state,key,expected,provider FROM tasks WHERE mission_id=? AND task_id=?",
+                "SELECT state,key,expected,provider,revision FROM tasks WHERE mission_id=? AND task_id=?",
                 (mission, task_id),
             ).fetchone()
             if row is None:
@@ -262,25 +294,26 @@ class MissionCheckpointStore:
         with self._connect() as c:
             c.execute("BEGIN IMMEDIATE")
             current = c.execute(
-                "SELECT state,key FROM tasks WHERE mission_id=? AND task_id=?",
+                "SELECT state,key,revision FROM tasks WHERE mission_id=? AND task_id=?",
                 (mission, task_id),
             ).fetchone()
             if (current is None or current["state"] != "NEEDS_PROOF" or
-                    current["key"] != row["key"]):
+                    current["key"] != row["key"] or
+                    current["revision"] != row["revision"]):
                 raise ResumeError("claim changed during readback; recover again")
             if native_receipt:
                 c.execute(
-                    "UPDATE tasks SET state='VERIFIED_STEP',receipt=?,claimed_by=NULL "
-                    "WHERE mission_id=? AND task_id=? AND state='NEEDS_PROOF'",
-                    (str(native_receipt), mission, task_id),
+                    "UPDATE tasks SET state='VERIFIED_STEP',receipt=?,claimed_by=NULL,revision=revision+1 "
+                    "WHERE mission_id=? AND task_id=? AND state='NEEDS_PROOF' AND revision=?",
+                    (str(native_receipt), mission, task_id, row["revision"]),
                 )
                 self._event(c, mission, task_id, "late_native_receipt_verified",
                             {"key": row["key"], "receipt": str(native_receipt)})
                 return "VERIFIED_STEP"
             c.execute(
-                "UPDATE tasks SET state='READY',claimed_by=NULL "
-                "WHERE mission_id=? AND task_id=? AND state='NEEDS_PROOF'",
-                (mission, task_id),
+                "UPDATE tasks SET state='READY',claimed_by=NULL,revision=revision+1 "
+                "WHERE mission_id=? AND task_id=? AND state='NEEDS_PROOF' AND revision=?",
+                (mission, task_id, row["revision"]),
             )
             self._event(c, mission, task_id, "rearmed_after_provider_idempotency_guarantee",
                         {"key": row["key"],
