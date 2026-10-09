@@ -13,6 +13,7 @@ is the same failure class. A beneficial substitute (mood rewrite, smaller plan,
 new root, mission reframe) is the same failure class. Intent is not promoted.
 Absence of a failed flag is not a passed check. A check admits merge only
 when it has passed and that pass has been read back by a different producer.
+A check_passed boolean does not override a provider check conclusion of failure.
 """
 
 from __future__ import annotations
@@ -29,6 +30,14 @@ LOCKED_CLASSES = frozenset({"continue", "build", "fix", "look", "organize", "exe
 DISPLACERS = frozenset({"summary", "generic_prior", "constraint"})
 BENEFICIAL_SUBSTITUTES = frozenset({"mood_rewrite", "smaller_plan", "new_root", "mission_reframe"})
 SCORED_DISPLACERS = DISPLACERS | BENEFICIAL_SUBSTITUTES
+PROVIDER_FAIL = frozenset({
+    "failure",
+    "cancelled",
+    "timed_out",
+    "startup_failure",
+    "stale",
+    "action_required",
+})
 
 
 @dataclass(frozen=True)
@@ -136,6 +145,26 @@ def evaluate_effect_check(packet: Mapping[str, object] | None) -> EffectCheck:
     if readback.get("check_read_back") is not True:
         errors.append("check was not read back; merge not admitted")
         restored = restore_displacer(operation or "continue", named, "generic_prior")
+        if restored.get("status") == "restore_operation":
+            action = restored["restoration"]
+            if action not in restorations:
+                restorations.append(action)
+    provider_conclusion = _text(
+        readback.get("check_conclusion") or readback.get("pr_307_check_conclusion")
+    ).lower()
+    failed_runs: list[str] = []
+    runs = readback.get("check_runs")
+    if isinstance(runs, list):
+        for item in runs:
+            if isinstance(item, Mapping):
+                conclusion = _text(item.get("conclusion")).lower()
+                if conclusion in PROVIDER_FAIL:
+                    failed_runs.append(_text(item.get("name")) or conclusion)
+    if provider_conclusion in PROVIDER_FAIL or failed_runs:
+        errors.append(
+            "provider check conclusion is not a pass; a check_passed boolean is not the check"
+        )
+        restored = restore_displacer(operation or "continue", named, "summary")
         if restored.get("status") == "restore_operation":
             action = restored["restoration"]
             if action not in restorations:
