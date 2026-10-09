@@ -61,8 +61,11 @@ class MissionCheckpointStore:
     provider remains the truth; a local claims table is not a native receipt.
     """
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, *, mission_id: str | None = None):
         self.path = str(path)
+        if mission_id is not None and not mission_id.strip():
+            raise ResumeError("mission_id must be nonblank when specified")
+        self.mission_id = mission_id
         with self._connect() as c:
             c.executescript("""
                 CREATE TABLE IF NOT EXISTS missions (
@@ -105,6 +108,8 @@ class MissionCheckpointStore:
     def initialize(self, *, mission_id: str, operator_objective: str,
                    desired_outcome: str, tasks: list[Mapping[str, Any]]) -> None:
         _check_plan(tasks)
+        if self.mission_id is not None and self.mission_id != mission_id:
+            raise ResumeError("mission selection and initialization mission_id mismatch")
         if not mission_id or not operator_objective or not desired_outcome:
             raise ResumeError("mission id, original objective and outcome required")
         material = dict(mission_id=mission_id, objective=operator_objective,
@@ -125,6 +130,12 @@ class MissionCheckpointStore:
             self._event(c,mission_id,None,"mission_recovered",{"plan_sha256":digest})
 
     def _get_mission(self, c):
+        if self.mission_id is not None:
+            row = c.execute("SELECT mission_id FROM missions WHERE mission_id=?",
+                            (self.mission_id,)).fetchone()
+            if row is None:
+                raise ResumeError("selected mission not present in checkpoint store")
+            return row["mission_id"]
         rows=c.execute("SELECT mission_id FROM missions ORDER BY mission_id").fetchall()
         if len(rows) != 1:
             raise ResumeError("explicit mission selection required for multi-mission stores")
@@ -197,16 +208,82 @@ class MissionCheckpointStore:
                                 expected=row['expected'],idempotency_key=row['key'])
         return None
 
+    def rearm_after_provider_guarantee(
+        self, task_id: str, *, provider_idempotency_ref: str,
+        readback: Callable[[str, str], str | None],
+    ) -> str:
+        """Rearm an uncertain claim only under an externally verified replay guarantee.
+
+        The caller must establish that the native provider actually enforces the
+        same idempotency key on repeated requests. This method validates the
+        presence of an attributable provider reference; it cannot independently
+        prove the guarantee or authorize an external mutation. It re-reads native
+        state immediately before any durable cursor change.
+        """
+        if not isinstance(provider_idempotency_ref, str) or not (
+            provider_idempotency_ref.startswith("provider-native:") and
+            provider_idempotency_ref.strip() != "provider-native:"
+        ):
+            raise ResumeError("provider-native idempotency guarantee reference required")
+        with self._connect() as c:
+            mission = self._get_mission(c)
+            row = c.execute(
+                "SELECT state,key,expected,provider FROM tasks WHERE mission_id=? AND task_id=?",
+                (mission, task_id),
+            ).fetchone()
+            if row is None:
+                raise ResumeError("unknown task")
+            if row["state"] != "NEEDS_PROOF":
+                raise ResumeError("only an ambiguous NEEDS_PROOF claim can be rearmed")
+        try:
+            native_receipt = readback(row["key"], row["expected"])
+        except Exception as exc:
+            raise ResumeError("provider readback unavailable: ambiguous claim unchanged") from exc
+        with self._connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            current = c.execute(
+                "SELECT state,key FROM tasks WHERE mission_id=? AND task_id=?",
+                (mission, task_id),
+            ).fetchone()
+            if (current is None or current["state"] != "NEEDS_PROOF" or
+                    current["key"] != row["key"]):
+                raise ResumeError("claim changed during readback; recover again")
+            if native_receipt:
+                c.execute(
+                    "UPDATE tasks SET state='VERIFIED_STEP',receipt=?,claimed_by=NULL "
+                    "WHERE mission_id=? AND task_id=? AND state='NEEDS_PROOF'",
+                    (str(native_receipt), mission, task_id),
+                )
+                self._event(c, mission, task_id, "late_native_receipt_verified",
+                            {"key": row["key"], "receipt": str(native_receipt)})
+                return "VERIFIED_STEP"
+            c.execute(
+                "UPDATE tasks SET state='READY',claimed_by=NULL "
+                "WHERE mission_id=? AND task_id=? AND state='NEEDS_PROOF'",
+                (mission, task_id),
+            )
+            self._event(c, mission, task_id, "rearmed_after_provider_idempotency_guarantee",
+                        {"key": row["key"],
+                         "provider": row["provider"],
+                         "provider_idempotency_ref": provider_idempotency_ref,
+                         "native_readback": "no_receipt",
+                         "warning": "absence alone is not proof of nonexecution"})
+            return "READY"
+
     def task_state(self, task_id: str) -> str:
         with self._connect() as c:
-            row=c.execute("SELECT state FROM tasks WHERE task_id=?",(task_id,)).fetchone()
+            mission = self._get_mission(c)
+            row=c.execute("SELECT state FROM tasks WHERE mission_id=? AND task_id=?",
+                          (mission, task_id)).fetchone()
         if row is None:
             raise ResumeError("unknown task")
         return row['state']
 
     def task_receipt(self, task_id: str) -> str | None:
         with self._connect() as c:
-            row=c.execute("SELECT receipt FROM tasks WHERE task_id=?",(task_id,)).fetchone()
+            mission = self._get_mission(c)
+            row=c.execute("SELECT receipt FROM tasks WHERE mission_id=? AND task_id=?",
+                          (mission, task_id)).fetchone()
         if row is None:
             raise ResumeError("unknown task")
         return row['receipt']
