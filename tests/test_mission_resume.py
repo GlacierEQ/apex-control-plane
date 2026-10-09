@@ -35,6 +35,14 @@ class NativeProvider:
             row = db.execute("SELECT receipt FROM effects WHERE key=?", (key,)).fetchone()
         return row[0] if row else None
 
+    def verify_idempotency(self, provider, key, ref):
+        """Native-fixture proof that the same key maps to one provider effect."""
+        with sqlite3.connect(self.path) as db:
+            pk = any(col[1] == "key" and col[5] == 1 for col in db.execute("PRAGMA table_info(effects)"))
+        return dict(provider=provider, idempotency_key=key,
+                    reference=ref, native_enforced=pk and provider == "fixture",
+                    evidence="sqlite:effects.key PRIMARY KEY")
+
     def attempts(self, key):
         with sqlite3.connect(self.path) as db:
             return db.execute("SELECT COUNT(*) FROM attempts WHERE key=?", (key,)).fetchone()[0]
@@ -229,10 +237,27 @@ def test_ambiguous_claim_requires_native_idempotency_guarantee_before_rearm(tmp_
             "interrupted", provider_idempotency_ref="", readback=native.lookup
         )
     assert store.task_state("interrupted") == "NEEDS_PROOF"
+    with pytest.raises(ResumeError, match="independent provider idempotency verifier"):
+        store.rearm_after_provider_guarantee(
+            "interrupted",
+            provider_idempotency_ref="provider-native:fixture/idempotency-key-enforced",
+            readback=native.lookup,
+        )
+    with pytest.raises(ResumeError, match="provider guarantee mismatch"):
+        store.rearm_after_provider_guarantee(
+            "interrupted",
+            provider_idempotency_ref="provider-native:fixture/idempotency-key-enforced",
+            readback=native.lookup,
+            idempotency_verifier=lambda p, k, r: {
+                "provider": p, "idempotency_key": "wrong-key",
+                "reference": r, "native_enforced": True,
+            },
+        )
+    assert store.task_state("interrupted") == "NEEDS_PROOF"
     assert store.rearm_after_provider_guarantee(
         "interrupted",
         provider_idempotency_ref="provider-native:fixture/idempotency-key-enforced",
-        readback=native.lookup,
+        readback=native.lookup, idempotency_verifier=native.verify_idempotency,
     ) == "READY"
     assert store.resume("agent-b", native.lookup)["task_id"] == "interrupted"
     assert native.attempts("smoke:interrupted") == 0
@@ -251,7 +276,7 @@ def test_rearm_finds_late_native_receipt_instead_of_reexecuting(tmp_path):
     assert store.rearm_after_provider_guarantee(
         "interrupted",
         provider_idempotency_ref="provider-native:fixture/idempotency-key-enforced",
-        readback=native.lookup,
+        readback=native.lookup, idempotency_verifier=native.verify_idempotency,
     ) == "VERIFIED_STEP"
     assert store.resume("agent-c", native.lookup)["task_id"] == "continue"
     assert native.attempts("smoke:interrupted") == 1
