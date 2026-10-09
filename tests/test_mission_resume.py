@@ -185,3 +185,74 @@ def test_parallel_resumers_atomically_reserve_only_one_worker(tmp_path):
         "IN_FLIGHT", "NEEDS_PROOF"
     }
     assert native.attempts("smoke:interrupted") == 0
+
+
+
+def test_two_missions_share_store_but_require_exact_source_scope(tmp_path):
+    """Shared checkpoint backend cannot accidentally move another mission's cursor."""
+    path = tmp_path / "state.db"
+    first_plan = mission()
+    second_plan = mission()
+    second_plan["mission_id"] = "HI-157:other-front"
+    for task in second_plan["tasks"]:
+        task["id"] = "other-" + task["id"]
+        task["key"] = "other-" + task["key"]
+        task["deps"] = ["other-" + dep for dep in task["deps"]]
+    MissionCheckpointStore(path).initialize(**first_plan)
+    MissionCheckpointStore(path).initialize(**second_plan)
+    native = NativeProvider(tmp_path / "provider.db")
+    native.act("smoke:verified")
+    with pytest.raises(ResumeError, match="explicit mission selection"):
+        MissionCheckpointStore(path).resume("unspecified-agent", native.lookup)
+    scoped_first = MissionCheckpointStore(path, mission_id=first_plan["mission_id"])
+    scoped_second = MissionCheckpointStore(path, mission_id=second_plan["mission_id"])
+    assert scoped_first.resume("agent-a", native.lookup)["task_id"] == "interrupted"
+    assert scoped_second.resume("agent-b", native.lookup)["task_id"] == "other-verified"
+    assert scoped_first.task_state("interrupted") == "IN_FLIGHT"
+    assert scoped_second.task_state("other-verified") == "IN_FLIGHT"
+    with pytest.raises(ResumeError, match="unknown task"):
+        scoped_first.task_state("other-verified")
+
+
+def test_ambiguous_claim_requires_native_idempotency_guarantee_before_rearm(tmp_path):
+    """Recover a confirmed retry-safe task while keeping blind retries impossible."""
+    db = tmp_path / "state.db"
+    native = NativeProvider(tmp_path / "provider.db")
+    native.act("smoke:verified")
+    store = MissionCheckpointStore(db)
+    store.initialize(**mission())
+    assert store.resume("agent-a", native.lookup)["task_id"] == "interrupted"
+    assert store.resume("agent-b", native.lookup) is None
+    assert store.task_state("interrupted") == "NEEDS_PROOF"
+    with pytest.raises(ResumeError, match="idempotency"):
+        store.rearm_after_provider_guarantee(
+            "interrupted", provider_idempotency_ref="", readback=native.lookup
+        )
+    assert store.task_state("interrupted") == "NEEDS_PROOF"
+    assert store.rearm_after_provider_guarantee(
+        "interrupted",
+        provider_idempotency_ref="provider-native:fixture/idempotency-key-enforced",
+        readback=native.lookup,
+    ) == "READY"
+    assert store.resume("agent-b", native.lookup)["task_id"] == "interrupted"
+    assert native.attempts("smoke:interrupted") == 0
+
+
+def test_rearm_finds_late_native_receipt_instead_of_reexecuting(tmp_path):
+    """If the old worker finally completed, repair the cursor without a second call."""
+    native = NativeProvider(tmp_path / "provider.db")
+    native.act("smoke:verified")
+    store = MissionCheckpointStore(tmp_path / "state.db")
+    store.initialize(**mission())
+    store.resume("agent-a", native.lookup)
+    store.resume("agent-b", native.lookup)
+    assert store.task_state("interrupted") == "NEEDS_PROOF"
+    native.act("smoke:interrupted")
+    assert store.rearm_after_provider_guarantee(
+        "interrupted",
+        provider_idempotency_ref="provider-native:fixture/idempotency-key-enforced",
+        readback=native.lookup,
+    ) == "VERIFIED_STEP"
+    assert store.resume("agent-c", native.lookup)["task_id"] == "continue"
+    assert native.attempts("smoke:interrupted") == 1
+    assert store.mission_state() == "ACTIVE"
