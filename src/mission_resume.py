@@ -100,7 +100,7 @@ class MissionCheckpointStore:
     @staticmethod
     def _event(c, mission_id: str, task_id: str | None, event: str, details: Mapping[str, Any]):
         c.execute("INSERT INTO events(mission_id,task_id,event,details_json,observed_at) VALUES (?,?,?,?,?)",
-                  (mission_id, task_id, event, _canonical(details),datetime.now(timezone.utc).isoformat()))
+                  (mission_id, task_id, event, _canonical(details), datetime.now(timezone.utc).isoformat()))
 
     def initialize(self, *, mission_id: str, operator_objective: str,
                    desired_outcome: str, tasks: list[Mapping[str, Any]]) -> None:
@@ -153,8 +153,20 @@ class MissionCheckpointStore:
                 continue
             with self._connect() as c:
                 c.execute("BEGIN IMMEDIATE")
-                current=c.execute("SELECT state FROM tasks WHERE mission_id=? AND task_id=?",
+                current=c.execute("SELECT state,claimed_by FROM tasks WHERE mission_id=? AND task_id=?",
                                   (mission,row['task_id'])).fetchone()
+                if current is None:
+                    raise ResumeError("task disappeared during provider reconciliation")
+                # The provider read ran outside the DB transaction. Only apply it
+                # to the exact state/claim it observed; another worker may have
+                # reserved the action while this readback was still in flight.
+                if (current['state'] != row['state'] or
+                        current['claimed_by'] != row['claimed_by']):
+                    self._event(c, mission, row['task_id'], "stale_readback_ignored",
+                                {"observed_state": row['state'],
+                                 "current_state": current['state'],
+                                 "key": row['key']})
+                    continue
                 if current['state']=='VERIFIED_STEP':
                     continue
                 if native_receipt:
