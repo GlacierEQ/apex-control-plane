@@ -67,6 +67,38 @@ class ChatHandoffTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recover_existing_chat_session(bad, "chat-A")
 
+    def test_empty_mission_identity_refuses_untrusted_binding(self):
+        bogus = FakeJournal()
+        bogus.mission_id = ""
+        bogus.events = (
+            {"seq": 1, "kind": "mission", "data": {"mission_id": ""}, "sha256": "a" * 64},
+        )
+        with self.assertRaises(ValueError):
+            recover_existing_chat_session(bogus, "chat-empty-mission")
+
+    def test_whitespace_source_fact_cannot_be_admitted(self):
+        bogus = FakeJournal()
+        bogus.fact = lambda _: {"key": "application", "source": "  ", "value": "received"}
+        with self.assertRaises(ValueError):
+            recover_existing_chat_session(bogus, "chat-bad-source", fact_keys=("application",))
+
+    def test_missing_cursor_refused_but_fresh_unstarted_mission_allowed(self):
+        bogus = FakeJournal()
+        bogus.cursor = None
+        with self.assertRaises(ValueError):
+            recover_existing_chat_session(bogus, "chat-no-cursor")
+        bogus.cursor = ""
+        recovered = recover_existing_chat_session(bogus, "chat-initial-state")
+        self.assertEqual(recovered.cursor, "")
+
+    def test_invalid_head_hash_rejected_independently_of_identity(self):
+        bogus = FakeJournal()
+        bogus.events = (
+            {"seq": 1, "kind": "mission", "data": {"mission_id": bogus.mission_id}, "sha256": "Z" * 64},
+        )
+        with self.assertRaises(ValueError):
+            recover_existing_chat_session(bogus, "chat-invalid-head")
+
     def test_cannot_apply_boot_proof_after_execution_begins(self):
         recovered = recover_existing_chat_session(FakeJournal(), "chat-A")
         kernel = FakeApexKernel()
