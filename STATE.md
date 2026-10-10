@@ -155,3 +155,12 @@ Never commit or place in a boot receipt:
 This file records runtime state. It is not original evidence and does not replace source-native verification when current/exact external state materially matters.
 
 **KNOWN STATE → MATERIAL DELTA HYDRATION → CONTINUATION → OPERATOR INTENT → MAXIMUM COHERENT EXECUTION → VERIFY → PRESERVE ⊕ VERIFIED_GAIN.**
+
+## Dated blocker 2026-10-10 HST — MODEL_ATTRACTOR_DRIFT on PR 307
+
+Read branch hidden-harm-effect-check-2026-09-30 and PR 307.
+Provider check conclusions include failure (verify, operator-fidelity-hard-lock, mission-outcome-hard-lock, prove strongest boot, apex-non-regression). A check_passed boolean does not override. Receipt self-attestation is not proof.
+Full displacer restore (summary, generic_prior, constraint, mood_rewrite, smaller_plan, new_root, mission_reframe) present on branch in src/hidden_harm_effect_check.py and src/hidden_harm_restore.py; partial on main.
+Displacement scored: merge admitted without passed independent readback.
+Restoration: continue the named object (branch/PR); do not open a new root; scope the constraint; do not stop the operation. Intent not promoted.
+Next executable check: independent readback of a passing provider check conclusion on the named object before any merge admission. Do not file, send, or mix case roots.
