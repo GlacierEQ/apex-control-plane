@@ -105,10 +105,12 @@ def test_strong_boot_runs_exact_observation_sequence_and_creates_kernel(monkeypa
     assert session.status == "complete"
     assert session.gates == EXPECTED_GATES
     assert session.runtime_id == "runtime-proof"
-    assert session.uplift_findings == ()
-    assert session.uplift_required is False
+    # A passing assistant preflight without an independently verified effect
+    # packet is an explicit uplift, NEVER proof of continuity application.
+    assert any("effect packet missing" in item for item in session.uplift_findings)
+    assert session.uplift_required is True
     assert get_in_process_strong_boot() is session
-    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete"
+    assert boot.os.environ["GLACIEREQ_STRONG_BOOT_STATUS"] == "complete_with_uplift"
 
 
 def test_model_attractor_failure_becomes_uplift_and_kernel_still_exists(monkeypatch) -> None:
