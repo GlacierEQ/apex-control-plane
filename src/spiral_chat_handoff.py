@@ -42,6 +42,12 @@ def recover_existing_chat_session(
     for field in ("mission_id", "objective", "terminal_outcome", "events", "cursor", "corrections", "fact"):
         if not hasattr(journal, field):
             raise ValueError(f"existing Spiral journal missing required field: {field}")
+    if not isinstance(journal.mission_id, str) or not journal.mission_id.strip():
+        raise ValueError("existing mission identity must be nonempty")
+    if not isinstance(journal.cursor, str):
+        raise ValueError("existing continuation cursor must be a string")
+    # An empty cursor is meaningful for a genuinely new, not-yet-checkpointed
+    # mission. Do not invent a checkpoint merely to satisfy a schema.
     events = journal.events
     if not isinstance(events, (tuple, list)) or not events:
         raise ValueError("no verifiable stored mission history")
@@ -62,7 +68,9 @@ def recover_existing_chat_session(
             raise ValueError("requested fact key cannot be empty")
         source_fact = journal.fact(key)
         if source_fact is not None:
-            if not isinstance(source_fact, dict) or not source_fact.get("source"):
+            if (not isinstance(source_fact, dict)
+                    or not isinstance(source_fact.get("source"), str)
+                    or not source_fact["source"].strip()):
                 raise ValueError(f"unsourced fact cannot be admitted: {key}")
             facts[key] = deepcopy(source_fact)
     return ChatRecovery(
