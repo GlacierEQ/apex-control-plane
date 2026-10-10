@@ -92,5 +92,6 @@ def test_strong_boot_runs_model_attractor_when_frontier_is_resolved(monkeypatch)
 
     monkeypatch.setattr(boot, "automatic_model_attractor_defense", automatic)
     boot._run_model_attractor_preflight(findings)
-    assert findings == []
+    assert any("effect packet missing" in item for item in findings)
+    assert any("self-filled receipt is not admission" in item for item in findings)
     assert calls == ["model-attractor"]
