@@ -11,9 +11,12 @@ on:
       - 'src/spiral_chat_handoff.py'
       - 'tests/test_spiral_chat_handoff.py'
       - '.github/workflows/spiral-chat-handoff.yml'
+permissions:
+  contents: read
 jobs:
   cross-chat-handoff:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
