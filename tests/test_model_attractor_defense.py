@@ -176,6 +176,11 @@ def _continuity_receipt() -> dict:
             "generic_assistant_prior_reframed_operation": False,
             "unnecessary_reasking_of_recoverable_state": False,
             "operator_dragged_through_recoverable_state": False,
+            "correction_binding_checked": True,
+            "recovered_correction_changed_decision_policy": True,
+            "satisfied_condition_consumed_before_prioritization": True,
+            "downstream_consequences_propagated": True,
+            "stale_operational_state_allowed_to_compete": False,
             **_SOURCE_ROLE_SEMANTICS,
             "source_role_evidence": _source_role_evidence(),
             "platform_constraint_scope": "none",
@@ -198,8 +203,21 @@ def _continuity_receipt() -> dict:
             "polycentric_state_preserved": True,
             "provenance_preserved": True,
             "contradictions_preserved_or_explicitly_resolved": True,
+            "corrections_bound_to_active_decision": True,
+            "satisfied_requirements_consumed": True,
+            "downstream_state_recomputed_after_material_change": True,
         },
     }
+
+
+def test_new_chat_correction_causality_is_an_enforced_boolean_not_acknowledgement() -> None:
+    policy = load_model_attractor_policy()
+    assert policy["derivative_representation_semantics"]["chat_acknowledgement_is_not_durable_preservation"] is True
+    receipt = _continuity_receipt()
+    assert validate_model_attractor_receipt(policy, receipt) == ()
+    receipt["model_attractor_defense"]["recovered_correction_changed_decision_policy"] = False
+    errors = validate_model_attractor_receipt(policy, receipt)
+    assert any("recovered_correction_changed_decision_policy" in error for error in errors)
 
 
 def test_valid_continuity_receipt_passes() -> None:

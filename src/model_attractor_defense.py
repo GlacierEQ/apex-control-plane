@@ -54,6 +54,9 @@ DERIVATIVE_REPRESENTATION_SEMANTIC_KEYS = frozenset(
         "derivative_representation_may_not_convert_dynamic_intelligence_into_static_rule_by_default",
         "presentation_concision_is_independent_of_execution_depth",
         "completion_requires_target_state_evidence_not_response_completion",
+        "retrieved_correction_without_behavioral_effect_is_not_application",
+        "chat_acknowledgement_is_not_durable_preservation",
+        "task_representation_must_yield_to_satisfied_real_world_condition",
     }
 )
 _SOURCE_ROLE_VERIFICATION_STATE = "verified"
