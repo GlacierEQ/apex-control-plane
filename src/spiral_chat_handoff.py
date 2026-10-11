@@ -82,7 +82,7 @@ def recover_existing_chat_session(
         cursor=journal.cursor,
         corrections=tuple(journal.corrections),
         facts=facts,
-        material_context_found=len(events) > 1,
+        material_context_found=bool(len(events) > 1 or journal.cursor.strip() or journal.corrections or facts),
     )
 
 
