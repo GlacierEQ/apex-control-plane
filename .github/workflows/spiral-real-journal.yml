@@ -3,12 +3,16 @@ on:
   pull_request:
     paths:
       - 'src/spiral_live_journal.py'
+      - 'src/spiral_chat_handoff.py'
+      - 'src/apex_runtime_kernel.py'
       - 'tests/test_spiral_live_journal.py'
       - '.github/workflows/spiral-real-journal.yml'
   push:
     branches: [main]
     paths:
       - 'src/spiral_live_journal.py'
+      - 'src/spiral_chat_handoff.py'
+      - 'src/apex_runtime_kernel.py'
       - 'tests/test_spiral_live_journal.py'
       - '.github/workflows/spiral-real-journal.yml'
 permissions:
