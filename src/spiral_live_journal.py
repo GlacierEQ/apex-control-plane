@@ -121,6 +121,7 @@ def open_authenticated_chat(
         journal = upstream.ContinuityJournal(
             path, mission_id, objective,
             terminal_outcome=terminal_outcome, integrity_key=integrity_key,
+            require_existing=True,
         )
         events = journal.events
         if not events:
