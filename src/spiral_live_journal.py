@@ -14,7 +14,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Sequence
 import importlib.util
+import os
+import stat
 import sys
+
+try:
+    import fcntl
+except ImportError:  # fail closed if safe shared file locks unavailable
+    fcntl = None
 
 from spiral_chat_handoff import (
     ChatRecovery, apply_recovery_to_apex, recover_existing_chat_session,
@@ -91,28 +98,55 @@ def open_authenticated_chat(
         path = Path(journal_path)
     except (TypeError, ValueError) as exc:
         raise SpiralChatAdmissionError("existing provider journal path is required") from exc
-    if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
-        raise SpiralChatAdmissionError("mission journal is missing, empty or a symlink; refuse recreation")
+    if (fcntl is None or not hasattr(os, "O_NOFOLLOW")):
+        raise SpiralChatAdmissionError("safe journal locking and no-follow open not supported on host")
+    if path.is_symlink():
+        raise SpiralChatAdmissionError("symbolic-link journal rejected")
+    # Open first with O_NOFOLLOW and hold a shared lock for the entire validated
+    # read. Spiral's writer takes exclusive locks, so cooperative appends wait.
+    # Recheck device/inode/mtime/length after loading to detect path swaps.
+    fd = None
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        fcntl.flock(fd, fcntl.LOCK_SH)
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size == 0:
+            raise SpiralChatAdmissionError("existing journal is not a nonempty regular file")
+        name_before = os.stat(path, follow_symlinks=False)
+        if (name_before.st_dev, name_before.st_ino) != (before.st_dev, before.st_ino):
+            raise SpiralChatAdmissionError("journal replaced during source admission")
 
-    # No alternative local reimplementation: the installed Spiral codebase
-    # owns decoding, the full event sequence, HMAC, source and mission identity.
-    upstream = load_spiral_engine(spiral_source_root)
-    journal = upstream.ContinuityJournal(
-        path, mission_id, objective,
-        terminal_outcome=terminal_outcome, integrity_key=integrity_key,
-    )
-    head = journal.events[-1]["sha256"]
-    if head != expected_head:
-        raise SpiralChatAdmissionError(
-            "journal head differs from independently anchored revision: "
-            "refuse stale, truncated, diverged or unanchored continuation"
+        # The original Spiral implementation owns event-chain and HMAC validation.
+        upstream = load_spiral_engine(spiral_source_root)
+        journal = upstream.ContinuityJournal(
+            path, mission_id, objective,
+            terminal_outcome=terminal_outcome, integrity_key=integrity_key,
         )
-    recovery = recover_existing_chat_session(
-        journal, chat_session_id, fact_keys=fact_keys,
-    )
-    if recovery.source_ref != "spiral-journal:" + expected_head:
-        raise SpiralChatAdmissionError("recovered source identity differs from protected journal")
-    return journal, recovery
+        events = journal.events
+        if not events:
+            raise SpiralChatAdmissionError("empty journal must never be recreated")
+        after = os.stat(path, follow_symlinks=False)
+        if (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns) != (
+                before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns):
+            raise SpiralChatAdmissionError("journal changed during authenticated recovery")
+        head = events[-1]["sha256"]
+        if head != expected_head:
+            raise SpiralChatAdmissionError(
+                "journal head differs from independently anchored revision: "
+                "refuse stale, truncated, diverged or unanchored continuation"
+            )
+        recovery = recover_existing_chat_session(
+            journal, chat_session_id, fact_keys=fact_keys,
+        )
+        if recovery.source_ref != "spiral-journal:" + expected_head:
+            raise SpiralChatAdmissionError("recovered source differs from protected journal")
+        return journal, recovery
+    except (FileNotFoundError, NotADirectoryError, PermissionError, IsADirectoryError) as exc:
+        raise SpiralChatAdmissionError("pre-existing authorized journal is unavailable") from exc
+    finally:
+        if fd is not None:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
 
 
 def resume_authenticated_chat_in_apex(
