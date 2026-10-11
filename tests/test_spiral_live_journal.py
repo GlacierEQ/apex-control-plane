@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from apex_runtime_kernel import create_verified_runtime_kernel
 from spiral_live_journal import (
@@ -81,6 +82,34 @@ class RealCrossProcessChatTests(unittest.TestCase):
         with self.assertRaises(SpiralChatAdmissionError):
             self.opened()
 
+    def test_symlink_to_valid_signed_journal_fails_closed(self):
+        alias = self.path.parent / "linked-mission.jsonl"
+        alias.symlink_to(self.path)
+        with self.assertRaises(SpiralChatAdmissionError):
+            open_authenticated_chat(
+                alias, spiral_source_root=SOURCE_ROOT,
+                chat_session_id="chat-linked", mission_id=MISSION,
+                objective=OBJECTIVE, terminal_outcome=OUTCOME,
+                integrity_key=KEY, expected_head=self.head)
+
+    def test_path_swap_during_authenticated_open_fails(self):
+        saved = self.path.parent / "original.jsonl"
+        replacement = self.path.parent / "attacker.jsonl"
+        replacement.write_text(self.path.read_text())
+        def race(_):
+            self.path.rename(saved)
+            self.path.symlink_to(replacement)
+            return upstream
+        with patch("spiral_live_journal.load_spiral_engine", side_effect=race):
+            with self.assertRaises(SpiralChatAdmissionError):
+                self.opened()
+
+    def test_subprocess_key_is_never_in_command_line(self):
+        text = Path(__file__).read_text()
+        self.assertNotIn("KEY.hex(), session", text)
+        self.assertNotIn("self.head, KEY.hex()", text)
+        self.assertIn("SPIRAL_TEST_HMAC_KEY_HEX", text)
+
     def test_real_apex_kernel_receives_same_mission_and_source_proof(self):
         kernel = create_verified_runtime_kernel()
         journal, recovery = self.opened()
@@ -106,9 +135,10 @@ class RealCrossProcessChatTests(unittest.TestCase):
 
     def test_two_independent_python_sessions_recover_identical_source(self):
         env = dict(os.environ)
+        env["SPIRAL_TEST_HMAC_KEY_HEX"] = KEY.hex()
         command = [
             sys.executable, str(Path(__file__).resolve()), "--read-session",
-            str(self.path), self.head, KEY.hex()]
+            str(self.path), self.head]
         outputs = []
         for session in ("chat-A", "chat-B"):
             result = subprocess.run([*command, session], capture_output=True,
@@ -136,15 +166,17 @@ class RealCrossProcessChatTests(unittest.TestCase):
             integrity_key=KEY).events[-1]["sha256"]
         result = subprocess.run(
             [sys.executable, str(Path(__file__).resolve()), "--no-replay",
-             str(self.path), new_head, KEY.hex(), "chat-B"],
-            capture_output=True, text=True, check=True, timeout=15, env=dict(os.environ))
+             str(self.path), new_head, "chat-B"],
+            capture_output=True, text=True, check=True, timeout=15,
+            env={**os.environ, "SPIRAL_TEST_HMAC_KEY_HEX": KEY.hex()})
         out = json.loads(result.stdout)
         self.assertEqual(out["attempted"], [])
         self.assertFalse(out["mission_complete"])
 
 
 def _run_worker():
-    mode, path, head, key_hex, session = sys.argv[1:]
+    mode, path, head, session = sys.argv[1:]
+    key_hex = os.environ["SPIRAL_TEST_HMAC_KEY_HEX"]
     journal, recovery = open_authenticated_chat(
         path, spiral_source_root=SOURCE_ROOT, chat_session_id=session, mission_id=MISSION,
         objective=OBJECTIVE, terminal_outcome=OUTCOME,
