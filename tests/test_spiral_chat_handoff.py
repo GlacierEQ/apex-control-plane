@@ -54,6 +54,39 @@ class ChatHandoffTests(unittest.TestCase):
         self.assertEqual(kernel.calls[0][2]["resume_cursor"], "apply:next-provider")
         self.assertEqual(kernel.calls[0][2]["corrections"], ("Do not confuse drafted with submitted",))
 
+    def test_saved_correction_with_single_event_is_material(self):
+        journal = FakeJournal()
+        journal.events = journal.events[:1]
+        journal.cursor = ""
+        journal.corrections = ["Do not repeat already answered CVB inquiry"]
+        recovered = recover_existing_chat_session(journal, "chat-correction")
+        self.assertTrue(recovered.material_context_found)
+        with self.assertRaises(ValueError):
+            apply_recovery_to_apex(FakeApexKernel(), recovered, applied_to_action=False)
+
+    def test_saved_cursor_with_single_event_is_material(self):
+        journal = FakeJournal()
+        journal.events = journal.events[:1]
+        journal.corrections = []
+        recovered = recover_existing_chat_session(journal, "chat-cursor")
+        self.assertTrue(recovered.material_context_found)
+
+    def test_saved_sourced_fact_with_single_event_is_material(self):
+        journal = FakeJournal()
+        journal.events = journal.events[:1]
+        journal.cursor = ""
+        journal.corrections = []
+        recovered = recover_existing_chat_session(journal, "chat-fact", fact_keys=("application",))
+        self.assertTrue(recovered.material_context_found)
+
+    def test_truly_new_mission_with_one_event_remains_unblocked(self):
+        journal = FakeJournal()
+        journal.events = journal.events[:1]
+        journal.cursor = ""
+        journal.corrections = []
+        recovered = recover_existing_chat_session(journal, "chat-new")
+        self.assertFalse(recovered.material_context_found)
+
     def test_material_context_cannot_be_ignored(self):
         recovered = recover_existing_chat_session(FakeJournal(), "chat-A")
         with self.assertRaises(ValueError):
