@@ -1,0 +1,42 @@
+name: APEX + real Spiral cross-process continuity
+on:
+  pull_request:
+    paths:
+      - 'src/spiral_live_journal.py'
+      - 'tests/test_spiral_live_journal.py'
+      - '.github/workflows/spiral-real-journal.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/spiral_live_journal.py'
+      - 'tests/test_spiral_live_journal.py'
+      - '.github/workflows/spiral-real-journal.yml'
+permissions:
+  contents: read
+jobs:
+  real-upstream-spawned-sessions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Checkout real upstream Spiral from pinned audited revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: GlacierEQ/spiral-engine
+          ref: cd22557f997a2d82218f983d694ec7614f869b60
+          path: spiral-upstream
+          persist-credentials: false
+      - name: Verify upstream SHA and required source path
+        shell: bash
+        run: |
+          test "$(git -C spiral-upstream rev-parse HEAD)" = "cd22557f997a2d82218f983d694ec7614f869b60"
+          test -f spiral-upstream/src/continuity.py
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Compile, prove real journal, spawn fresh chat processes and execute APEX gate
+        run: |
+          PYTHONPATH=src:spiral-upstream:. python -m py_compile src/spiral_live_journal.py tests/test_spiral_live_journal.py
+          PYTHONPATH=src:spiral-upstream:. python -m unittest -v tests.test_spiral_live_journal
