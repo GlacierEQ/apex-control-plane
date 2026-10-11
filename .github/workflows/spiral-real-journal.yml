@@ -25,13 +25,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: GlacierEQ/spiral-engine
-          ref: cd22557f997a2d82218f983d694ec7614f869b60
+          ref: ef0d9cd80cf987acc0a864a553d72cec8fe1b9cd
           path: spiral-upstream
           persist-credentials: false
       - name: Verify upstream SHA and required source path
         shell: bash
         run: |
-          test "$(git -C spiral-upstream rev-parse HEAD)" = "cd22557f997a2d82218f983d694ec7614f869b60"
+          test "$(git -C spiral-upstream rev-parse HEAD)" = "ef0d9cd80cf987acc0a864a553d72cec8fe1b9cd"
           test -f spiral-upstream/src/continuity.py
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
