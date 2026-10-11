@@ -44,9 +44,14 @@ def execute_with_recovered_context(
         recovery = recover_existing_chat_session(
             journal, chat_session_id, fact_keys=fact_keys
         )
-        if not recovery.material_context_found:
-            raise ContextAdmissionDenied("no material prior context to apply")
-        apply_recovery_to_apex(kernel, recovery, applied_to_action=True)
+        # A legitimate new mission has no prior events to apply. Do not convert
+        # missing history into loss of authority to execute the first task.
+        # For continuations, the existing recovery gate still enforces application.
+        apply_recovery_to_apex(
+            kernel,
+            recovery,
+            applied_to_action=recovery.material_context_found,
+        )
         if getattr(getattr(kernel, "phase", None), "value", None) == "context_recovering":
             raise ContextAdmissionDenied("APEX remained in context recovery phase")
     except Exception as exc:
