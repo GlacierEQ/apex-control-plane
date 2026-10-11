@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Sequence
+import importlib.util
+import sys
 
 from spiral_chat_handoff import (
     ChatRecovery, apply_recovery_to_apex, recover_existing_chat_session,
@@ -23,9 +25,44 @@ class SpiralChatAdmissionError(ValueError):
     """The requested chat cannot safely inherit the named mission journal."""
 
 
+def load_spiral_engine(spiral_source_root: str | Path) -> Any:
+    """Load actual upstream Spiral in separate namespace, preserving both packages.
+
+    APEX has its own package called src. Direct import of src.continuity
+    would select the wrong repository. Require a trusted upstream checkout.
+    """
+    try:
+        package_path = (Path(spiral_source_root) / "src" / "__init__.py").resolve(strict=True)
+    except (TypeError, ValueError, OSError) as exc:
+        raise SpiralChatAdmissionError("a trusted upstream Spiral checkout is required") from exc
+    if not package_path.is_file():
+        raise SpiralChatAdmissionError("upstream Spiral Python package is absent")
+    name = "glaciereq_verified_spiral_upstream"
+    existing = sys.modules.get(name)
+    if existing is not None:
+        if Path(existing.__file__).resolve() != package_path:
+            raise SpiralChatAdmissionError("upstream Spiral package identity changed")
+        return existing
+    spec = importlib.util.spec_from_file_location(
+        name, str(package_path),
+        submodule_search_locations=[str(package_path.parent)],
+    )
+    if spec is None or spec.loader is None:
+        raise SpiralChatAdmissionError("could not load the original Spiral package")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
+    return module
+
+
 def open_authenticated_chat(
     journal_path: str | Path,
     *,
+    spiral_source_root: str | Path,
     chat_session_id: str,
     mission_id: str,
     objective: str,
@@ -59,14 +96,8 @@ def open_authenticated_chat(
 
     # No alternative local reimplementation: the installed Spiral codebase
     # owns decoding, the full event sequence, HMAC, source and mission identity.
-    try:
-        from src.continuity import ContinuityJournal
-    except ImportError as exc:
-        raise SpiralChatAdmissionError(
-            "the real Spiral Engine package must be installed in the invoking runtime"
-        ) from exc
-
-    journal = ContinuityJournal(
+    upstream = load_spiral_engine(spiral_source_root)
+    journal = upstream.ContinuityJournal(
         path, mission_id, objective,
         terminal_outcome=terminal_outcome, integrity_key=integrity_key,
     )
