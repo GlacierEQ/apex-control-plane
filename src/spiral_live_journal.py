@@ -23,9 +23,14 @@ try:
 except ImportError:  # fail closed if safe shared file locks unavailable
     fcntl = None
 
-from spiral_chat_handoff import (
-    ChatRecovery, apply_recovery_to_apex, recover_existing_chat_session,
-)
+try:
+    from .spiral_chat_handoff import (
+        ChatRecovery, apply_recovery_to_apex, recover_existing_chat_session,
+    )
+except ImportError:  # existing PYTHONPATH=src legacy module import
+    from spiral_chat_handoff import (
+        ChatRecovery, apply_recovery_to_apex, recover_existing_chat_session,
+    )
 
 
 class SpiralChatAdmissionError(ValueError):
