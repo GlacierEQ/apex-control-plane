@@ -105,10 +105,14 @@ class RealCrossProcessChatTests(unittest.TestCase):
                 self.opened()
 
     def test_subprocess_key_is_never_in_command_line(self):
-        text = Path(__file__).read_text()
-        self.assertNotIn("KEY.hex(), session", text)
-        self.assertNotIn("self.head, KEY.hex()", text)
-        self.assertIn("SPIRAL_TEST_HMAC_KEY_HEX", text)
+        # Observe the ACTUAL subprocess arguments instead of scanning text.
+        native_run = subprocess.run
+        with patch("subprocess.run", wraps=native_run) as spy:
+            self.test_two_independent_python_sessions_recover_identical_source()
+        self.assertEqual(spy.call_count, 2)
+        for call in spy.call_args_list:
+            self.assertNotIn(KEY.hex(), [str(arg) for arg in call.args[0]])
+            self.assertEqual(call.kwargs["env"]["SPIRAL_TEST_HMAC_KEY_HEX"], KEY.hex())
 
     def test_real_apex_kernel_receives_same_mission_and_source_proof(self):
         kernel = create_verified_runtime_kernel()
