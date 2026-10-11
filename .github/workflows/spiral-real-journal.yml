@@ -38,5 +38,5 @@ jobs:
           python-version: '3.12'
       - name: Compile, prove real journal, spawn fresh chat processes and execute APEX gate
         run: |
-          PYTHONPATH=src:spiral-upstream:. python -m py_compile src/spiral_live_journal.py tests/test_spiral_live_journal.py
-          PYTHONPATH=src:spiral-upstream:. python -m unittest -v tests.test_spiral_live_journal
+          PYTHONPATH=spiral-upstream:src:. python -m py_compile src/spiral_live_journal.py tests/test_spiral_live_journal.py
+          PYTHONPATH=spiral-upstream:src:. python -m unittest -v tests.test_spiral_live_journal
