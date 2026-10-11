@@ -13,13 +13,19 @@ import sys
 import tempfile
 import unittest
 
-from src.continuity import ContinuityJournal, JournalIntegrityError, MissionRunner, RouteResult
 from apex_runtime_kernel import create_verified_runtime_kernel
 from spiral_live_journal import (
-    open_authenticated_chat,
-    resume_authenticated_chat_in_apex,
-    SpiralChatAdmissionError,
+    open_authenticated_chat, resume_authenticated_chat_in_apex,
+    SpiralChatAdmissionError, load_spiral_engine,
 )
+
+SOURCE_ROOT = os.environ.get("SPIRAL_REAL_SOURCE_ROOT", "")
+if SOURCE_ROOT:
+    upstream = load_spiral_engine(SOURCE_ROOT)
+    ContinuityJournal = upstream.ContinuityJournal
+    JournalIntegrityError = upstream.JournalIntegrityError
+    MissionRunner = upstream.MissionRunner
+    RouteResult = upstream.RouteResult
 
 MISSION = "glaciereq-job"
 OBJECTIVE = "Obtain verified paid engineering employment"
@@ -27,6 +33,7 @@ OUTCOME = "PAID_EMPLOYMENT"
 KEY = b"independent-hmac-key-for-real-cross-process-test"
 
 
+@unittest.skipUnless(SOURCE_ROOT, "requires pinned real Spiral package checkout")
 class RealCrossProcessChatTests(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -44,7 +51,7 @@ class RealCrossProcessChatTests(unittest.TestCase):
 
     def opened(self, *, session="chat-A", head=None, key=KEY):
         return open_authenticated_chat(
-            self.path, chat_session_id=session, mission_id=MISSION,
+            self.path, spiral_source_root=SOURCE_ROOT, chat_session_id=session, mission_id=MISSION,
             objective=OBJECTIVE, terminal_outcome=OUTCOME,
             integrity_key=key, expected_head=self.head if head is None else head,
             fact_keys=("application",),
@@ -139,7 +146,7 @@ class RealCrossProcessChatTests(unittest.TestCase):
 def _run_worker():
     mode, path, head, key_hex, session = sys.argv[1:]
     journal, recovery = open_authenticated_chat(
-        path, chat_session_id=session, mission_id=MISSION,
+        path, spiral_source_root=SOURCE_ROOT, chat_session_id=session, mission_id=MISSION,
         objective=OBJECTIVE, terminal_outcome=OUTCOME,
         integrity_key=bytes.fromhex(key_hex), expected_head=head,
         fact_keys=("application",))
