@@ -16,6 +16,7 @@ Status (2026-10-12 HST): **proof slice, NOT automatic runtime deployment**.
 - Raw: `Review the Mem integration test on Friday.`
 - Original text SHA-256: `23837d5a3b86d879c9e45087655279815e354d3729b4fc8d521b91023265f2e0`
 - Date interpretation: Friday, 2026-10-16, all-day in `Pacific/Honolulu`; no clock time supplied.
+- If a bare weekday is captured on that same weekday, the due day is ambiguous and is intentionally left UNSCHEDULED rather than guessing today or next week.
 - One native TickTick task: `6acd437d8f086d8c22d09b15`, Inbox `inbox125380011`
 - Provider readback: active status 0, `isAllDay=true`, due date `2026-10-16T00:00:00-1000`, correlation key and source hash in native content.
 - `reminders=null`; notification scheduling is not proven.
