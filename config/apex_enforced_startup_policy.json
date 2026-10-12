@@ -243,5 +243,15 @@
     "memory_summary_is_not_identity_or_current_project_state": true,
     "state_reuse_does_not_prevent_source_native_verification_when_material": true,
     "standing_authority_persistence_does_not_create_ungranted_authority": true
+  },
+  "progressive_pyramid_source": {
+    "repository": "GlacierEQ/mega-skills",
+    "commit": "14c42591685098c88f530b52aeda2f9ccf3ef609",
+    "schema_id": "glaciereq.progressive-pyramid.contract.v1",
+    "sha256": {
+      "SKILL.md": "60669fa1e4f195c76516dd121c8031372c0e8114b347babed700562d94ba1d89",
+      "progressive_pyramid.contract.json": "22f05735bc93fc5c7b0079a183124028f58a60365bc780f4ebacaf6ee5980608",
+      "scripts/validate_run.py": "059b7b6279666d54d7b0297649ef2d7bf329edf67f4be475310863c817e18c77"
+    }
   }
 }

@@ -18,6 +18,7 @@ from typing import Any
 
 from auto_boot import EXIT_BOOT_BLOCKED, BootError
 from operator_working_model import load_operator_working_model, public_operator_model_projection
+from progressive_pyramid_source import resolve_pyramid_source
 from prime_directive_boot import receipt_from_environment
 
 DEFAULT_POLICY_PATH = (
@@ -176,6 +177,9 @@ def load_apex_policy(path: str | Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         if interlock.get(field_name) is not expected:
             raise BootError(f"APEX mutation_interlock.{field_name} must be {expected!r}")
 
+    pyramid = value.get('progressive_pyramid_source')
+    if not isinstance(pyramid, dict) or not pyramid.get('commit') or not isinstance(pyramid.get('sha256'), dict):
+        raise BootError('APEX requires canonical Progressive Pyramid source lock')
     load_operator_working_model(value)
     return value
 
@@ -270,6 +274,11 @@ def validate_apex_startup_receipt(
     row = receipt.get("apex_startup")
     if not isinstance(row, Mapping):
         return ("apex_startup must be an object",)
+
+    # A startup receipt is not an independent mission-outcome verifier.
+    # Completion must pass the locked Pyramid's provider-proof boundary.
+    if _norm(row.get("mission_status")) in {"mission_complete", "complete"}:
+        errors.append("MISSION_COMPLETE cannot be established by an APEX startup receipt")
 
     expected_authority = _norm(policy.get("authority"))
     if _norm(row.get("authority")) != expected_authority:
@@ -401,6 +410,7 @@ def validate_apex_startup_receipt(
 def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[str, Any]:
     operator_model = load_operator_working_model(policy)
     operator_model_path = str(policy.get("operator_working_model_path", "")).strip()
+    pyramid = resolve_pyramid_source(policy["progressive_pyramid_source"])
     return {
         "request_type": "apex_genesis_enforced_startup",
         "schema_version": policy.get("schema_version"),
@@ -410,7 +420,10 @@ def build_apex_startup_request(policy: Mapping[str, Any], *, task: str) -> dict[
         "objective": policy.get("objective"),
         "operator_working_model_ref": operator_model_path,
         "operator_working_model": public_operator_model_projection(operator_model),
+        "progressive_pyramid": pyramid,
         "requirements": {
+            "pyramid_required_for_mission_completion": True,
+            "pyramid_source_integrity_required": True,
             "load_operator_working_model_before_task_decomposition": True,
             "consult_relevant_memory_when_available": True,
             "reuse_known_state_before_rediscovery": True,
