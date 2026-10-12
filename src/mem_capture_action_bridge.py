@@ -72,6 +72,8 @@ def build_capture(value: Mapping[str, Any]) -> CaptureEnvelope:
     sensitivity = _required(value, "sensitivity").lower()
     account_key = _required(value, "account_key")
     timezone_name = _required(value, "timezone")
+    if value.get("source_version") is None:
+        raise CaptureRoutingError("source_version is required")
     try:
         version = int(value.get("source_version"))
         zone = ZoneInfo(timezone_name)
@@ -90,9 +92,10 @@ def build_capture(value: Mapping[str, Any]) -> CaptureEnvelope:
         categories = ("ACTION", "COMMITMENT")
         if match.group(3):
             offset = (WEEKDAYS[match.group(3).lower()] - local_day.weekday()) % 7
-            due_date = (local_day + timedelta(days=offset)).isoformat()
-            due_precision = "day"
-            categories += ("DEADLINE",)
+            if offset != 0:  # bare weekday on the same day is ambiguous
+                due_date = (local_day + timedelta(days=offset)).isoformat()
+                due_precision = "day"
+                categories += ("DEADLINE",)
     else:
         for prefix, kind in (("Decision:", "DECISION"), ("Correction:", "CORRECTION"),
                              ("Source:", "SOURCE"), ("Receipt:", "RECEIPT"),
