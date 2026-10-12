@@ -17,6 +17,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.spiral_live_journal import load_spiral_engine, open_authenticated_chat
+from src.spiral_chat_handoff import recover_existing_chat_session
 
 def fail(reason):
     raise ValueError(reason)
@@ -154,6 +155,12 @@ def main():
         integrity_key=secret, expected_head=anchor["head"]
     )
     if args.command == "recover":
+        verified_fact_keys = tuple(dict.fromkeys(
+            event["data"]["key"] for event in journal.events
+            if event["kind"] in ("verified_fact", "superseded_fact")
+        ))
+        recovery = recover_existing_chat_session(journal, args.session_id,
+                                                  fact_keys=verified_fact_keys)
         print(json.dumps({
             "status": "VERIFIED_EXISTING", "mission_id":recovery.mission_id,
             "objective":recovery.objective, "terminal_outcome":recovery.terminal_outcome,
