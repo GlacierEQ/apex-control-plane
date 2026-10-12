@@ -9,9 +9,10 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "chatgpt_context_bridge.py"
-UPSTREAM = Path(os.environ["SPIRAL_REAL_SOURCE_ROOT"])
+UPSTREAM = Path(os.environ["SPIRAL_REAL_SOURCE_ROOT"]) if os.environ.get("SPIRAL_REAL_SOURCE_ROOT") else None
 PYTHON = sys.executable
 
+@unittest.skipUnless(UPSTREAM, "requires real pinned Spiral source via SPIRAL_REAL_SOURCE_ROOT")
 class ChatGPTContextBridgeTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
