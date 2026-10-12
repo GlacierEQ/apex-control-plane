@@ -156,3 +156,17 @@ def test_bad_source_metadata_is_never_assumed_to_be_authoritative():
     ):
         with pytest.raises(CaptureRoutingError):
             build_capture({**CAPTURE, **variant})
+
+
+def test_same_weekday_without_explicit_this_or_next_is_not_scheduled():
+    item = build_capture({**CAPTURE, "observed_at": "2026-10-16T10:25:00-10:00"})
+    assert item.due_date is None
+    with pytest.raises(CaptureRoutingError, match="date-only deadline required"):
+        make_ticktick_task(item)
+
+
+def test_missing_source_version_provides_a_specific_error():
+    incomplete = dict(CAPTURE)
+    del incomplete["source_version"]
+    with pytest.raises(CaptureRoutingError, match="source_version is required"):
+        build_capture(incomplete)
