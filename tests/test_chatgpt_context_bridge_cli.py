@@ -84,6 +84,21 @@ class ChatGPTContextBridgeTests(unittest.TestCase):
         self.assertIn("Keep verified outcomes durable", recovered["corrections"])
         self.assertIn("Never replay uncertain provider writes", recovered["corrections"])
 
+    def test_symlinked_manifest_or_head_rejected_by_descriptor_open(self):
+        self.initialize()
+        anchor = next((self.store / "anchors").glob("*.json"))
+        original = anchor.with_suffix(".backup")
+        anchor.rename(original)
+        anchor.symlink_to(original)
+        self.cmd("recover", "--session-id", "next-chat", ok=False)
+
+    def test_symlinked_context_root_never_treated_as_mission_authority(self):
+        self.initialize()
+        original = self.store.with_name("original-store")
+        self.store.rename(original)
+        self.store.symlink_to(original, target_is_directory=True)
+        self.cmd("recover", "--session-id", "next-chat", ok=False)
+
     def test_no_secret_material_in_stdout_or_artifact_permissions(self):
         init = self.initialize()
         key = next((self.store / "keys").glob("*.key"))
