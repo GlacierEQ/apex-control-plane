@@ -27,6 +27,10 @@ class ChatGPTContextBridgeTests(unittest.TestCase):
             return json.loads(r.stdout)
         self.assertNotEqual(r.returncode, 0)
         return r
+    def require_one(self, directory, pattern):
+        matches = list(directory.glob(pattern))
+        self.assertEqual(len(matches), 1, f"Expected exactly one {pattern} file in {directory}")
+        return matches[0]
     def initialize(self):
         return self.cmd("init", "--objective", "Recover and apply exact mission context in ChatGPT",
                         "--outcome", "LIVE_CHATGPT_SESSION_RECOVERY_VERIFIED")
@@ -48,7 +52,7 @@ class ChatGPTContextBridgeTests(unittest.TestCase):
     def test_head_anchor_detects_rollback(self):
         self.initialize()
         self.cmd("checkpoint", "--cursor", "HOST/real-invocation")
-        p = next((self.store / "journals").glob("*.jsonl"))
+        p = self.require_one(self.store / "journals", "*.jsonl")
         lines = p.read_text().splitlines()
         p.write_text(lines[0]+"\n")
         self.cmd("recover", "--session-id", "new-chat", ok=False)
@@ -86,7 +90,7 @@ class ChatGPTContextBridgeTests(unittest.TestCase):
 
     def test_symlinked_manifest_or_head_rejected_by_descriptor_open(self):
         self.initialize()
-        anchor = next((self.store / "anchors").glob("*.json"))
+        anchor = self.require_one(self.store / "anchors", "*.json")
         original = anchor.with_suffix(".backup")
         anchor.rename(original)
         anchor.symlink_to(original)
@@ -101,10 +105,10 @@ class ChatGPTContextBridgeTests(unittest.TestCase):
 
     def test_no_secret_material_in_stdout_or_artifact_permissions(self):
         init = self.initialize()
-        key = next((self.store / "keys").glob("*.key"))
+        key = self.require_one(self.store / "keys", "*.key")
         self.assertEqual(key.stat().st_mode & 0o777, 0o600)
         self.assertNotIn(key.read_bytes().hex(), json.dumps(init))
-        self.assertEqual(next((self.store / "journals").glob("*.jsonl")).stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.require_one(self.store / "journals", "*.jsonl").stat().st_mode & 0o777, 0o600)
 
 if __name__ == "__main__":
     unittest.main()
