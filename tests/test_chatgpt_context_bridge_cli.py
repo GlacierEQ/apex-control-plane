@@ -60,6 +60,15 @@ class ChatGPTContextBridgeTests(unittest.TestCase):
         self.assertIn("Do not present skills as automatic ChatGPT hooks", result["corrections"])
         self.assertEqual(result["cursor"], "HOST/real-invocation")
         self.assertTrue(result["requires_actual_action_application"])
+    def test_source_bound_facts_are_recovered_not_silently_dropped(self):
+        self.initialize()
+        self.cmd("fact", "--key", "last_verified_result",
+                 "--value", "CI verified", "--source", "github:GlacierEQ/apex-control-plane@sha")
+        result = self.cmd("recover", "--session-id", "next-chat")
+        self.assertEqual(result["facts"]["last_verified_result"]["value"], "CI verified")
+        self.assertEqual(result["facts"]["last_verified_result"]["source"],
+                         "github:GlacierEQ/apex-control-plane@sha")
+
     def test_concurrent_corrections_do_not_lose_anchor(self):
         self.initialize()
         def run(text):
