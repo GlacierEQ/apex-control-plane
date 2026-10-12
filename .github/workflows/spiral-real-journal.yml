@@ -6,6 +6,8 @@ on:
       - 'src/spiral_chat_handoff.py'
       - 'src/apex_runtime_kernel.py'
       - 'tests/test_spiral_live_journal.py'
+      - 'scripts/chatgpt_context_bridge.py'
+      - 'tests/test_chatgpt_context_bridge_cli.py'
       - '.github/workflows/spiral-real-journal.yml'
   push:
     branches: [main]
@@ -14,6 +16,8 @@ on:
       - 'src/spiral_chat_handoff.py'
       - 'src/apex_runtime_kernel.py'
       - 'tests/test_spiral_live_journal.py'
+      - 'scripts/chatgpt_context_bridge.py'
+      - 'tests/test_chatgpt_context_bridge_cli.py'
       - '.github/workflows/spiral-real-journal.yml'
 permissions:
   contents: read
@@ -42,5 +46,5 @@ jobs:
           python-version: '3.12'
       - name: Compile, prove real journal, spawn fresh chat processes and execute APEX gate
         run: |
-          PYTHONPATH=src:. python -m py_compile src/spiral_live_journal.py tests/test_spiral_live_journal.py
-          SPIRAL_REAL_SOURCE_ROOT=spiral-upstream PYTHONPATH=src:. python -m unittest -v tests.test_spiral_live_journal
+          PYTHONPATH=src:. python -m py_compile src/spiral_live_journal.py scripts/chatgpt_context_bridge.py tests/test_spiral_live_journal.py tests/test_chatgpt_context_bridge_cli.py
+          SPIRAL_REAL_SOURCE_ROOT=spiral-upstream PYTHONPATH=src:. python -m unittest -v tests.test_spiral_live_journal tests.test_chatgpt_context_bridge_cli
