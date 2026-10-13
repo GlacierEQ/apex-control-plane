@@ -86,6 +86,7 @@ class ContextAdmissionTests(unittest.TestCase):
             execute_with_recovered_context(
                 journal=ExistingJournal(),
                 chat_session_id="chat-resumed",
+                expected_mission_id="authorized-new-mission",
                 kernel=RecordingKernel(),
                 fact_keys=("mission_frontier",),
                 execute=lambda receipt: effects.append(receipt.cursor),
@@ -103,6 +104,7 @@ class ContextAdmissionTests(unittest.TestCase):
         result = execute_with_recovered_context(
             journal=ExistingJournal(),
             chat_session_id="chat-resumed",
+            expected_mission_id="authorized-new-mission",
             kernel=kernel,
             fact_keys=("mission_frontier",),
             apply_context=applied,
@@ -140,12 +142,39 @@ class ContextAdmissionTests(unittest.TestCase):
                     execute_with_recovered_context(
                         journal=ExistingJournal(),
                         chat_session_id="chat-resumed",
+                        expected_mission_id="authorized-new-mission",
                         kernel=RecordingKernel(),
                         fact_keys=("mission_frontier",),
                         apply_context=lambda recovery, field=field: invalid_receipt(recovery, field),
                         execute=lambda receipt: called.append(receipt.cursor),
                     )
                 self.assertFalse(called)
+
+    def test_wrong_or_missing_mission_identity_never_applies_context(self):
+        class ExistingJournal(FreshJournal):
+            events = FreshJournal.events + (
+                {"kind": "checkpoint", "data": {"cursor": "apex-cursor"}, "sha256": "b" * 64},
+            )
+            cursor = "apex-cursor"
+            corrections = ("Preserve current mission identity",)
+
+        # Even a source-matched callback cannot justify attaching the wrong mission.
+        for expected in (None, "", "massive-daniel-mission", 123):
+            with self.subTest(expected=expected):
+                effects = []
+                kernel = RecordingKernel()
+                with self.assertRaises(ContextAdmissionDenied):
+                    execute_with_recovered_context(
+                        journal=ExistingJournal(),
+                        chat_session_id="chat-massive-daniel",
+                        expected_mission_id=expected,
+                        kernel=kernel,
+                        apply_context=lambda recovery: effects.append("applied"),
+                        execute=lambda receipt: effects.append("executed"),
+                    )
+                self.assertEqual(effects, [])
+                self.assertEqual(kernel.phase.value, "context_recovering")
+                self.assertEqual(kernel.receipts, [])
 
     def test_untrusted_journal_does_not_invoke_executor(self):
         kernel = RecordingKernel()
@@ -170,6 +199,178 @@ class ContextAdmissionTests(unittest.TestCase):
                 execute=lambda receipt: effects.append(receipt.mission_id),
             )
         self.assertFalse(effects)
+
+
+
+
+class KernelAdmissionConcurrencyTests(unittest.TestCase):
+    """Do not let callbacks from two missions contaminate the same kernel."""
+
+    @staticmethod
+    def _journal(mission):
+        class ExistingJournal(FreshJournal):
+            mission_id = mission
+            cursor = "checkpoint"
+            corrections = ("Honor mission identity",)
+            events = (
+                {"kind": "mission", "data": {"mission_id": mission}, "sha256": "a" * 64},
+                {"kind": "checkpoint", "data": {"cursor": "checkpoint"}, "sha256": "b" * 64},
+            )
+        return ExistingJournal()
+
+    @staticmethod
+    def _application(recovery):
+        return ContextApplication(
+            recovery.mission_id, recovery.source_ref, recovery.cursor,
+            recovery.corrections, tuple(recovery.facts), "host-application",
+        )
+
+    def test_specific_denial_reason_survives_admission_boundary(self):
+        kernel = RecordingKernel()
+        with self.assertRaisesRegex(
+            ContextAdmissionDenied, "recovered journal is not the requested mission"
+        ):
+            execute_with_recovered_context(
+                journal=self._journal("mission-A"), chat_session_id="chat-A",
+                kernel=kernel, expected_mission_id="mission-B",
+                execute=lambda _: self.fail("wrong mission executed"),
+            )
+        self.assertEqual(kernel.receipts, [])
+
+    def test_shared_kernel_serializes_application_without_cross_mission_writes(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Event
+
+        kernel = RecordingKernel()
+        applying = Event()
+        release = Event()
+        second_applied = Event()
+        effects = []
+        executions = []
+
+        def apply_first(recovery):
+            effects.append(recovery.mission_id)
+            applying.set()
+            if not release.wait(timeout=5):
+                raise TimeoutError("test could not release first application")
+            return self._application(recovery)
+
+        def apply_second(recovery):
+            effects.append(recovery.mission_id)
+            second_applied.set()
+            return self._application(recovery)
+
+        def run(mission, callback):
+            try:
+                return execute_with_recovered_context(
+                    journal=self._journal(mission), chat_session_id="chat-" + mission,
+                    kernel=kernel, expected_mission_id=mission,
+                    apply_context=callback, execute=lambda receipt: executions.append(receipt.mission_id),
+                )
+            except ContextAdmissionDenied:
+                return "denied"
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(run, "mission-A", apply_first)
+            self.assertTrue(applying.wait(timeout=4))
+            second = pool.submit(run, "mission-B", apply_second)
+            try:
+                self.assertFalse(second_applied.wait(timeout=0.3), "second mission applied before admission")
+            finally:
+                release.set()
+            self.assertIsNone(first.result(timeout=5))
+            self.assertEqual(second.result(timeout=5), "denied")
+        self.assertEqual(effects, ["mission-A"])
+        self.assertEqual(executions, ["mission-A"])
+        self.assertEqual([r[2]["mission_id"] for r in kernel.receipts], ["mission-A"])
+
+    def test_independent_kernels_can_apply_concurrently(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+
+        barrier = Barrier(2)
+
+        def run(mission):
+            return execute_with_recovered_context(
+                journal=self._journal(mission), chat_session_id="chat-" + mission,
+                kernel=RecordingKernel(), expected_mission_id=mission,
+                apply_context=lambda r: (barrier.wait(timeout=4), self._application(r))[1],
+                execute=lambda receipt: receipt.mission_id,
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            one = pool.submit(run, "mission-A")
+            two = pool.submit(run, "mission-B")
+            self.assertEqual({one.result(timeout=6), two.result(timeout=6)}, {"mission-A", "mission-B"})
+
+
+
+class AlternateRecoveryRouteTests(unittest.TestCase):
+    """The pre-existing APEX binding route must not bypass mission identity."""
+
+    @staticmethod
+    def _recovery(material=True):
+        from src.spiral_chat_handoff import recover_existing_chat_session
+
+        class Journal(FreshJournal):
+            events = FreshJournal.events + (
+                {"kind": "checkpoint", "data": {"cursor": "next"}, "sha256": "b" * 64},
+            ) if material else FreshJournal.events
+            cursor = "next" if material else ""
+
+        return recover_existing_chat_session(Journal(), "chat-alternate")
+
+    @staticmethod
+    def _kernel():
+        class BindingKernel(RecordingKernel):
+            def __init__(self):
+                super().__init__(phase="bootstrapped")
+                self.bindings = []
+
+            def bind_task(self, **kwargs):
+                self.bindings.append(kwargs)
+                self.phase.value = "context_recovering"
+
+        return BindingKernel()
+
+    def _bind(self, kernel, recovery, **kwargs):
+        from src.spiral_live_journal import resume_authenticated_chat_in_apex
+        return resume_authenticated_chat_in_apex(
+            kernel, recovery,
+            task_instruction="Resume authorized mission",
+            target_state="verified-result",
+            operation_class="resume_mission",
+            applied_to_action=True,
+            **kwargs,
+        )
+
+    def test_alternate_path_rejects_missing_invalid_and_wrong_identity_before_binding(self):
+        from src.spiral_live_journal import SpiralChatAdmissionError
+        recovery = self._recovery()
+        for expected in (None, "", "unrelated-daniel-case", 123):
+            with self.subTest(expected=expected):
+                kernel = self._kernel()
+                with self.assertRaises(SpiralChatAdmissionError):
+                    self._bind(kernel, recovery, expected_mission_id=expected)
+                self.assertEqual(kernel.bindings, [])
+                self.assertEqual(kernel.receipts, [])
+                self.assertEqual(kernel.phase.value, "bootstrapped")
+
+    def test_alternate_path_binds_only_exact_requested_mission(self):
+        recovery = self._recovery()
+        kernel = self._kernel()
+        self._bind(kernel, recovery, expected_mission_id=recovery.mission_id)
+        self.assertEqual(kernel.phase.value, "ready")
+        self.assertEqual(len(kernel.bindings), 1)
+        self.assertEqual(len(kernel.receipts), 1)
+        self.assertEqual(kernel.receipts[0][2]["mission_id"], recovery.mission_id)
+
+    def test_alternate_path_keeps_fresh_first_use_admissible(self):
+        recovery = self._recovery(material=False)
+        kernel = self._kernel()
+        self._bind(kernel, recovery)
+        self.assertEqual(kernel.phase.value, "ready")
+        self.assertEqual(len(kernel.bindings), 1)
 
 
 if __name__ == "__main__":

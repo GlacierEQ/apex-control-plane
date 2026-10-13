@@ -207,11 +207,72 @@ jobs:
 
   repository-security:
     name: Repository security
-    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-ci.yml@6757957d290878b1c0831da95328dc29f65d77c9
-    with:
-      repo_name: ${{ github.event.repository.name }}
-      language: python
-      run_tests: false
-      run_lint: false
-      run_security: true
-      run_build: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Verify checked-out source
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+      - name: Validate detectors and scan Git-tracked files for credential-shaped secrets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          import subprocess
+          from pathlib import Path
+
+          patterns = {
+              "github_classic": re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}"),
+              "github_fine_grained": re.compile(r"github_pat_[A-Za-z0-9_]{40,}"),
+              "stripe": re.compile(r"sk_live_[A-Za-z0-9]{16,}"),
+              "aws_access_key": re.compile(r"AKIA[0-9A-Z]{16}"),
+              "literal_password": re.compile(r"""password\s*=\s*(?:[A-Za-z0-9_!@#$%^&*.+:/?-]{8,}|["'][^"']{8,}["'])""", re.I),
+          }
+          fixtures = {
+              "github_classic": "ghp_" + "A" * 20,
+              "github_fine_grained": "github_pat_" + "B" * 40,
+              "stripe": "sk_live_" + "C" * 16,
+              "aws_access_key": "AKIA" + "D" * 16,
+              "literal_password": "password=" + "definitely-not-a-real-password",
+          }
+          for label, candidate in fixtures.items():
+              assert patterns[label].search(candidate), f"Credential scanner regression: {label}"
+          for candidate in ("ghp_", "sk_live_", "AKIA", "password=getenv('PASSWORD')"):
+              assert not any(p.search(candidate) for p in patterns.values()), "Scanner too broad"
+          tracked = subprocess.run(["git", "ls-files", "-z"], check=True, capture_output=True).stdout
+          matches = []
+          for item in tracked.split(b"\0"):
+              if not item:
+                  continue
+              path = Path(item.decode("utf-8", errors="surrogateescape"))
+              try:
+                  if not path.is_file() or path.stat().st_size > 5_000_000:
+                      continue
+                  lines = path.read_bytes().decode("utf-8", errors="replace").splitlines()
+              except OSError:
+                  continue
+              for number, line in enumerate(lines, 1):
+                  for label, detector in patterns.items():
+                      if detector.search(line):
+                          matches.append(f"{path}:{number}:{label}")
+          if matches:
+              print("Credential-shaped material detected at:", *matches[:50], sep="\n")
+              raise SystemExit(1)
+          print("PASS: detector fixtures and tracked-file credential scan")
+          PY
+      - name: Best-effort dependency vulnerability inventory
+        shell: bash
+        run: |
+          if [[ -f requirements.txt || -f pyproject.toml ]]; then
+            python -m pip install --disable-pip-version-check pip-audit && \
+              python -m pip_audit || echo "pip-audit unavailable or findings require review"
+          fi
+          if [[ -f package-lock.json ]]; then
+            npm audit --audit-level=high || echo "npm audit findings require review"
+          fi

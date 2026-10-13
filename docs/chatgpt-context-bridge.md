@@ -7,6 +7,10 @@ This is an **explicit, source-bound invocation surface** over the pre-existing A
 ## Source authority and security
 
 - One exact `mission-id` selects one immutable mission identity; an unrelated chat is not silently attached.
+- The APEX host admission wrapper requires `expected_mission_id` for recovered missions, rejecting absent or mismatched identity before the application callback or executor. The host must derive this ID from the current Operator mission, not from a recovered summary or whichever journal happened to open. First-use missions retain their prior no-history admission behavior.
+- Both the host callback admission (`execute_with_recovered_context`) and the existing task-binding entrypoint (`resume_authenticated_chat_in_apex`) validate `expected_mission_id` for material historical context before context application, binding, or execution. A wrong/blank identity fails before mutation; fresh first-use stays supported.
+- These entrypoints share an in-process per-kernel admission mutex, held across callback application and APEX state transition, preventing competing missions from applying context on the same runtime kernel. **This is not a cross-process lock or remote host interceptor.** Separate kernels remain concurrent, and the host must not asynchronously mutate context after reporting the application callback complete.
+- The exact denied identity reason remains available to host audit handling; generic upstream validation exceptions retain the existing masked admission error.
 - `init` is separate from `recover`; recovery never creates missing journals.
 - The journal is HMAC-authenticated with a random locally generated key stored in an owner-only file.
 - The independently stored expected head detects changed, truncated and rolled-back journals.

@@ -11,6 +11,7 @@ from typing import Any, Callable, Sequence
 from .spiral_chat_handoff import ChatRecovery
 
 from .spiral_chat_handoff import recover_existing_chat_session, apply_recovery_to_apex
+from .continuity_admission_guard import exclusive_kernel_admission
 
 
 class ContextAdmissionDenied(RuntimeError):
@@ -43,6 +44,7 @@ def execute_with_recovered_context(
     journal: Any,
     chat_session_id: str,
     kernel: Any,
+    expected_mission_id: str | None = None,
     execute: Callable[[AdmissionReceipt], Any],
     fact_keys: Sequence[str] = (),
     apply_context: Callable[[ChatRecovery], ContextApplication] | None = None,
@@ -55,15 +57,37 @@ def execute_with_recovered_context(
     external actions or silently create a replacement mission.
     Historical context requires an explicit source-matched host application
     callback before admission; mere retrieval cannot attest application.
+    The host must independently select the expected mission ID from the
+    current Operator request; an unrelated recovered journal cannot substitute.
     The callback's effect_ref is host testimony, not independently verified
     ChatGPT runtime enforcement or downstream provider readback.
     """
     if not callable(execute):
         raise TypeError("execute must be callable")
+    with exclusive_kernel_admission(kernel):
+        return _execute_under_exclusive_admission(
+            journal=journal, chat_session_id=chat_session_id, kernel=kernel,
+            expected_mission_id=expected_mission_id, execute=execute,
+            fact_keys=fact_keys, apply_context=apply_context,
+        )
+
+
+def _execute_under_exclusive_admission(
+    *, journal: Any, chat_session_id: str, kernel: Any,
+    expected_mission_id: str | None, execute: Callable[[AdmissionReceipt], Any],
+    fact_keys: Sequence[str],
+    apply_context: Callable[[ChatRecovery], ContextApplication] | None,
+) -> Any:
     try:
         recovery = recover_existing_chat_session(
             journal, chat_session_id, fact_keys=fact_keys
         )
+        if recovery.material_context_found and expected_mission_id is None:
+            raise ContextAdmissionDenied("existing mission requires explicit host mission identity")
+        if expected_mission_id is not None:
+            if (not isinstance(expected_mission_id, str) or not expected_mission_id.strip()
+                    or expected_mission_id != recovery.mission_id):
+                raise ContextAdmissionDenied("recovered journal is not the requested mission")
         if getattr(getattr(kernel, "phase", None), "value", None) != "context_recovering":
             raise ContextAdmissionDenied("APEX is not awaiting context recovery")
         application = None
@@ -89,6 +113,8 @@ def execute_with_recovered_context(
         )
         if getattr(getattr(kernel, "phase", None), "value", None) == "context_recovering":
             raise ContextAdmissionDenied("APEX remained in context recovery phase")
+    except ContextAdmissionDenied:
+        raise
     except Exception as exc:
         raise ContextAdmissionDenied("context admission failed") from exc
     receipt = AdmissionReceipt(

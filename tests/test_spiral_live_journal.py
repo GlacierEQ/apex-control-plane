@@ -120,7 +120,8 @@ class RealCrossProcessChatTests(unittest.TestCase):
         resume_authenticated_chat_in_apex(
             kernel, recovery,
             task_instruction=OBJECTIVE, target_state=OUTCOME,
-            operation_class="resume_mission", applied_to_action=True)
+            operation_class="resume_mission", applied_to_action=True,
+            expected_mission_id=MISSION)
         snapshot = kernel.snapshot()
         self.assertEqual(snapshot.phase, "ready")
         self.assertEqual(kernel.task.target_state, OUTCOME)
@@ -134,7 +135,8 @@ class RealCrossProcessChatTests(unittest.TestCase):
             resume_authenticated_chat_in_apex(
                 kernel, recovery,
                 task_instruction=OBJECTIVE, target_state=OUTCOME,
-                operation_class="resume_mission", applied_to_action=False)
+                operation_class="resume_mission", applied_to_action=False,
+                expected_mission_id=MISSION)
         self.assertNotEqual(kernel.snapshot().phase, "ready")
 
     def test_two_independent_python_sessions_recover_identical_source(self):
@@ -189,7 +191,8 @@ def _run_worker():
     kernel = create_verified_runtime_kernel()
     resume_authenticated_chat_in_apex(
         kernel, recovery, task_instruction=OBJECTIVE, target_state=OUTCOME,
-        operation_class="resume_mission", applied_to_action=True)
+        operation_class="resume_mission", applied_to_action=True,
+            expected_mission_id=MISSION)
     if mode == "--read-session":
         print(json.dumps({
             "session": session, "mission": recovery.mission_id,

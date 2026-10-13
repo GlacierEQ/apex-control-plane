@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -114,7 +114,7 @@ def test_registry_reports_duplicate_candidates():
 
 
 def test_required_identity_validation_and_full_name_fallback():
-    now = datetime(2026, 8, 8, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 8, tzinfo=UTC)
     entry = to_entry(repo(30, "fallback", full_name=None), now)
     assert entry["full_name"] == "GlacierEQ/fallback"
     with pytest.raises(ValueError, match="valid id"):
@@ -125,7 +125,7 @@ def test_required_identity_validation_and_full_name_fallback():
 
 def test_future_timestamp_has_nonnegative_age(monkeypatch):
     monkeypatch.setenv("REPO_STALE_DAYS", "180")
-    now = datetime(2026, 8, 8, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 8, tzinfo=UTC)
     future = repo(40, "future", pushed_at="2026-08-09T00:00:00Z")
     assert lifecycle(future, now) == "active"
     assert to_entry(future, now)["age_days"] == 0

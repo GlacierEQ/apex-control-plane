@@ -24,7 +24,7 @@ import tempfile
 import urllib.error
 import urllib.request
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -185,11 +185,11 @@ def _parse_repo_timestamp(value: Any) -> datetime | None:
     if not isinstance(value, str) or not value:
         return None
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError as error:
         raise ValueError(f"Invalid repository timestamp: {value}") from error
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+        parsed = parsed.replace(tzinfo=UTC)
     return parsed
 
 
@@ -259,7 +259,7 @@ def to_entry(repo: dict[str, Any], now: datetime) -> dict[str, Any]:
 
 
 def build_registry(repos: list[dict[str, Any]]) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     entries = sorted(
         (to_entry(repo, now) for repo in repos),
         key=lambda row: (CLASS_ORDER.index(row["class"]), row["full_name"].casefold()),
