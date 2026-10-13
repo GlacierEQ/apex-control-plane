@@ -170,3 +170,31 @@ def test_missing_source_version_provides_a_specific_error():
     del incomplete["source_version"]
     with pytest.raises(CaptureRoutingError, match="source_version is required"):
         build_capture(incomplete)
+
+
+def test_verbatim_mem_note_bytes_survive_capture_and_ingest_without_replaying_native_task():
+    from hashlib import sha256
+
+    original = build_capture(CAPTURE)
+    raw = " \n" + CAPTURE["raw_text"] + "\t\n"
+    captured = build_capture({**CAPTURE, "raw_text": raw})
+
+    # Source evidence must be byte-exact, not a normalized interpretation.
+    assert captured.raw_text == raw
+    assert captured.raw_sha256 == sha256(raw.encode("utf-8")).hexdigest()
+    rpc = make_ingest_rpc(captured)["args"]
+    assert rpc["p_body"] == raw
+    assert rpc["p_payload"]["raw_text"] == raw
+    assert rpc["p_payload"]["raw_sha256"] == captured.raw_sha256
+
+    # Behavioral idempotency stays compatible with older trimmed-text keys.
+    assert captured.categories == original.categories
+    assert captured.title == original.title
+    assert captured.due_date == original.due_date
+    assert captured.idempotency_key == original.idempotency_key
+
+
+def test_blank_mem_source_is_rejected_even_when_it_contains_whitespace():
+    for raw in ("", "  ", "\n\t"):
+        with pytest.raises(CaptureRoutingError, match="raw_text is required"):
+            build_capture({**CAPTURE, "raw_text": raw})

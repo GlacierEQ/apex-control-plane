@@ -66,7 +66,10 @@ def build_capture(value: Mapping[str, Any]) -> CaptureEnvelope:
     if provider != "mem":
         raise CaptureRoutingError("only native Mem captures are supported")
     source_id = _required(value, "source_id")
-    raw = _required(value, "raw_text")
+    # Preserve the provider's exact source text: only test a trimmed view for validity.
+    raw = value.get("raw_text")
+    if not isinstance(raw, str) or not raw.strip():
+        raise CaptureRoutingError("raw_text is required")
     observed = _required(value, "observed_at")
     project = _required(value, "project")
     sensitivity = _required(value, "sensitivity").lower()
@@ -104,9 +107,12 @@ def build_capture(value: Mapping[str, Any]) -> CaptureEnvelope:
                 categories = (kind,)
                 break
     raw_hash = sha256(raw.encode("utf-8")).hexdigest()
+    # Existing native owner task keys used the normalized text hash. Preserve
+    # that legacy identity on replay while source evidence now stays verbatim.
+    legacy_action_hash = sha256(raw.strip().encode("utf-8")).hexdigest()
     stable_input = json.dumps({
         "schema": SCHEMA, "source_provider": provider, "source_id": source_id,
-        "raw_sha256": raw_hash, "due_date": due_date, "project": project,
+        "raw_sha256": legacy_action_hash, "due_date": due_date, "project": project,
     }, sort_keys=True, separators=(",", ":"))
     action_key = "mem:" + sha256(stable_input.encode("utf-8")).hexdigest()
     return CaptureEnvelope(provider, source_id, version, raw, observed, project,
