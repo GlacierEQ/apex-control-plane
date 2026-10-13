@@ -202,6 +202,109 @@ class ContextAdmissionTests(unittest.TestCase):
 
 
 
+
+class KernelAdmissionConcurrencyTests(unittest.TestCase):
+    """Do not let callbacks from two missions contaminate the same kernel."""
+
+    @staticmethod
+    def _journal(mission):
+        class ExistingJournal(FreshJournal):
+            mission_id = mission
+            cursor = "checkpoint"
+            corrections = ("Honor mission identity",)
+            events = (
+                {"kind": "mission", "data": {"mission_id": mission}, "sha256": "a" * 64},
+                {"kind": "checkpoint", "data": {"cursor": "checkpoint"}, "sha256": "b" * 64},
+            )
+        return ExistingJournal()
+
+    @staticmethod
+    def _application(recovery):
+        return ContextApplication(
+            recovery.mission_id, recovery.source_ref, recovery.cursor,
+            recovery.corrections, tuple(recovery.facts), "host-application",
+        )
+
+    def test_specific_denial_reason_survives_admission_boundary(self):
+        kernel = RecordingKernel()
+        with self.assertRaisesRegex(
+            ContextAdmissionDenied, "recovered journal is not the requested mission"
+        ):
+            execute_with_recovered_context(
+                journal=self._journal("mission-A"), chat_session_id="chat-A",
+                kernel=kernel, expected_mission_id="mission-B",
+                execute=lambda _: self.fail("wrong mission executed"),
+            )
+        self.assertEqual(kernel.receipts, [])
+
+    def test_shared_kernel_serializes_application_without_cross_mission_writes(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Event
+
+        kernel = RecordingKernel()
+        applying = Event()
+        release = Event()
+        second_applied = Event()
+        effects = []
+        executions = []
+
+        def apply_first(recovery):
+            effects.append(recovery.mission_id)
+            applying.set()
+            if not release.wait(timeout=5):
+                raise TimeoutError("test could not release first application")
+            return self._application(recovery)
+
+        def apply_second(recovery):
+            effects.append(recovery.mission_id)
+            second_applied.set()
+            return self._application(recovery)
+
+        def run(mission, callback):
+            try:
+                return execute_with_recovered_context(
+                    journal=self._journal(mission), chat_session_id="chat-" + mission,
+                    kernel=kernel, expected_mission_id=mission,
+                    apply_context=callback, execute=lambda receipt: executions.append(receipt.mission_id),
+                )
+            except ContextAdmissionDenied:
+                return "denied"
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(run, "mission-A", apply_first)
+            self.assertTrue(applying.wait(timeout=4))
+            second = pool.submit(run, "mission-B", apply_second)
+            try:
+                self.assertFalse(second_applied.wait(timeout=0.3), "second mission applied before admission")
+            finally:
+                release.set()
+            self.assertIsNone(first.result(timeout=5))
+            self.assertEqual(second.result(timeout=5), "denied")
+        self.assertEqual(effects, ["mission-A"])
+        self.assertEqual(executions, ["mission-A"])
+        self.assertEqual([r[2]["mission_id"] for r in kernel.receipts], ["mission-A"])
+
+    def test_independent_kernels_can_apply_concurrently(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+
+        barrier = Barrier(2)
+
+        def run(mission):
+            return execute_with_recovered_context(
+                journal=self._journal(mission), chat_session_id="chat-" + mission,
+                kernel=RecordingKernel(), expected_mission_id=mission,
+                apply_context=lambda r: (barrier.wait(timeout=4), self._application(r))[1],
+                execute=lambda receipt: receipt.mission_id,
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            one = pool.submit(run, "mission-A")
+            two = pool.submit(run, "mission-B")
+            self.assertEqual({one.result(timeout=6), two.result(timeout=6)}, {"mission-A", "mission-B"})
+
+
+
 class AlternateRecoveryRouteTests(unittest.TestCase):
     """The pre-existing APEX binding route must not bypass mission identity."""
 
