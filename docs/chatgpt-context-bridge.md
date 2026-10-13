@@ -7,6 +7,7 @@ This is an **explicit, source-bound invocation surface** over the pre-existing A
 ## Source authority and security
 
 - One exact `mission-id` selects one immutable mission identity; an unrelated chat is not silently attached.
+- The APEX host admission wrapper requires `expected_mission_id` for recovered missions, rejecting absent or mismatched identity before the application callback or executor. The host must derive this ID from the current Operator mission, not from a recovered summary or whichever journal happened to open. First-use missions retain their prior no-history admission behavior.
 - `init` is separate from `recover`; recovery never creates missing journals.
 - The journal is HMAC-authenticated with a random locally generated key stored in an owner-only file.
 - The independently stored expected head detects changed, truncated and rolled-back journals.

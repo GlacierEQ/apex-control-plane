@@ -86,6 +86,7 @@ class ContextAdmissionTests(unittest.TestCase):
             execute_with_recovered_context(
                 journal=ExistingJournal(),
                 chat_session_id="chat-resumed",
+                expected_mission_id="authorized-new-mission",
                 kernel=RecordingKernel(),
                 fact_keys=("mission_frontier",),
                 execute=lambda receipt: effects.append(receipt.cursor),
@@ -103,6 +104,7 @@ class ContextAdmissionTests(unittest.TestCase):
         result = execute_with_recovered_context(
             journal=ExistingJournal(),
             chat_session_id="chat-resumed",
+            expected_mission_id="authorized-new-mission",
             kernel=kernel,
             fact_keys=("mission_frontier",),
             apply_context=applied,
@@ -140,12 +142,39 @@ class ContextAdmissionTests(unittest.TestCase):
                     execute_with_recovered_context(
                         journal=ExistingJournal(),
                         chat_session_id="chat-resumed",
+                        expected_mission_id="authorized-new-mission",
                         kernel=RecordingKernel(),
                         fact_keys=("mission_frontier",),
                         apply_context=lambda recovery, field=field: invalid_receipt(recovery, field),
                         execute=lambda receipt: called.append(receipt.cursor),
                     )
                 self.assertFalse(called)
+
+    def test_wrong_or_missing_mission_identity_never_applies_context(self):
+        class ExistingJournal(FreshJournal):
+            events = FreshJournal.events + (
+                {"kind": "checkpoint", "data": {"cursor": "apex-cursor"}, "sha256": "b" * 64},
+            )
+            cursor = "apex-cursor"
+            corrections = ("Preserve current mission identity",)
+
+        # Even a source-matched callback cannot justify attaching the wrong mission.
+        for expected in (None, "", "massive-daniel-mission", 123):
+            with self.subTest(expected=expected):
+                effects = []
+                kernel = RecordingKernel()
+                with self.assertRaises(ContextAdmissionDenied):
+                    execute_with_recovered_context(
+                        journal=ExistingJournal(),
+                        chat_session_id="chat-massive-daniel",
+                        expected_mission_id=expected,
+                        kernel=kernel,
+                        apply_context=lambda recovery: effects.append("applied"),
+                        execute=lambda receipt: effects.append("executed"),
+                    )
+                self.assertEqual(effects, [])
+                self.assertEqual(kernel.phase.value, "context_recovering")
+                self.assertEqual(kernel.receipts, [])
 
     def test_untrusted_journal_does_not_invoke_executor(self):
         kernel = RecordingKernel()
