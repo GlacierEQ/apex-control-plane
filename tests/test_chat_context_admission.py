@@ -201,5 +201,74 @@ class ContextAdmissionTests(unittest.TestCase):
         self.assertFalse(effects)
 
 
+
+class AlternateRecoveryRouteTests(unittest.TestCase):
+    """The pre-existing APEX binding route must not bypass mission identity."""
+
+    @staticmethod
+    def _recovery(material=True):
+        from src.spiral_chat_handoff import recover_existing_chat_session
+
+        class Journal(FreshJournal):
+            events = FreshJournal.events + (
+                {"kind": "checkpoint", "data": {"cursor": "next"}, "sha256": "b" * 64},
+            ) if material else FreshJournal.events
+            cursor = "next" if material else ""
+
+        return recover_existing_chat_session(Journal(), "chat-alternate")
+
+    @staticmethod
+    def _kernel():
+        class BindingKernel(RecordingKernel):
+            def __init__(self):
+                super().__init__(phase="bootstrapped")
+                self.bindings = []
+
+            def bind_task(self, **kwargs):
+                self.bindings.append(kwargs)
+                self.phase.value = "context_recovering"
+
+        return BindingKernel()
+
+    def _bind(self, kernel, recovery, **kwargs):
+        from src.spiral_live_journal import resume_authenticated_chat_in_apex
+        return resume_authenticated_chat_in_apex(
+            kernel, recovery,
+            task_instruction="Resume authorized mission",
+            target_state="verified-result",
+            operation_class="resume_mission",
+            applied_to_action=True,
+            **kwargs,
+        )
+
+    def test_alternate_path_rejects_missing_invalid_and_wrong_identity_before_binding(self):
+        from src.spiral_live_journal import SpiralChatAdmissionError
+        recovery = self._recovery()
+        for expected in (None, "", "unrelated-daniel-case", 123):
+            with self.subTest(expected=expected):
+                kernel = self._kernel()
+                with self.assertRaises(SpiralChatAdmissionError):
+                    self._bind(kernel, recovery, expected_mission_id=expected)
+                self.assertEqual(kernel.bindings, [])
+                self.assertEqual(kernel.receipts, [])
+                self.assertEqual(kernel.phase.value, "bootstrapped")
+
+    def test_alternate_path_binds_only_exact_requested_mission(self):
+        recovery = self._recovery()
+        kernel = self._kernel()
+        self._bind(kernel, recovery, expected_mission_id=recovery.mission_id)
+        self.assertEqual(kernel.phase.value, "ready")
+        self.assertEqual(len(kernel.bindings), 1)
+        self.assertEqual(len(kernel.receipts), 1)
+        self.assertEqual(kernel.receipts[0][2]["mission_id"], recovery.mission_id)
+
+    def test_alternate_path_keeps_fresh_first_use_admissible(self):
+        recovery = self._recovery(material=False)
+        kernel = self._kernel()
+        self._bind(kernel, recovery)
+        self.assertEqual(kernel.phase.value, "ready")
+        self.assertEqual(len(kernel.bindings), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
