@@ -91,6 +91,8 @@ known_relevant_state_consulted = true
 known_state_reused_where_usable = true
 material_delta_hydrated = true
 continuation_resolved = true
+dependency_ownership_classified = true
+operator_input_required_proven_or_not_applicable = true
 target_identity_resolved = true
 operator_intent_resolved = true
 operator_plan_authorized = true
@@ -102,6 +104,12 @@ verification_plan_bound = true
 ```
 
 Tool access is capability, not project authority. A fresh search is not a prerequisite when relevant usable state is already present; a search or source re-open is justified when it resolves a material unknown, change, contradiction, exact-byte requirement, or source-native verification need.
+
+## Dependency ownership state
+
+Before a worker reports an Operator blocker, it must classify the missing dependency as `WORKER_EXECUTABLE`, `RECOVERABLE_STATE`, `PROVIDER_OR_CUSTODIAN_CONTROLLED`, `OPERATOR_ONLY`, or `HARD_EXTERNAL`.
+
+Only `OPERATOR_ONLY` may legitimately require Casey to act. Provider/custodian records, internal identifiers, institutional bookkeeping, third-party responses, and machine-performable work do not become Casey's job because the worker lacks them. Any blocker remains local to the dependent transition; independent mission fronts continue.
 
 ## Truth boundaries
 
