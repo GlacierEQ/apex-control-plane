@@ -33,6 +33,13 @@ except ImportError:  # existing PYTHONPATH=src legacy module import
     )
 
 
+# Import through one canonical module name, including legacy top-level imports.
+try:
+    from src.continuity_admission_guard import exclusive_kernel_admission
+except ModuleNotFoundError:  # legacy PYTHONPATH=src without repository root
+    from continuity_admission_guard import exclusive_kernel_admission
+
+
 class SpiralChatAdmissionError(ValueError):
     """The requested chat cannot safely inherit the named mission journal."""
 
@@ -163,6 +170,7 @@ def resume_authenticated_chat_in_apex(
     target_state: str,
     operation_class: str,
     applied_to_action: bool,
+    expected_mission_id: str | None = None,
 ) -> Any:
     """Bind a REAL APEX kernel task and causally apply authenticated continuity.
 
@@ -171,6 +179,33 @@ def resume_authenticated_chat_in_apex(
     additional privileges. A recovering host must actually apply the returned
     corrections, established facts and cursor in its action selection.
     """
+    with exclusive_kernel_admission(kernel):
+        return _bind_recovery_under_exclusive_admission(
+            kernel, recovery, task_instruction=task_instruction,
+            target_state=target_state, operation_class=operation_class,
+            applied_to_action=applied_to_action,
+            expected_mission_id=expected_mission_id,
+        )
+
+
+def _bind_recovery_under_exclusive_admission(
+    kernel: Any,
+    recovery: ChatRecovery,
+    *,
+    task_instruction: str,
+    target_state: str,
+    operation_class: str,
+    applied_to_action: bool,
+    expected_mission_id: str | None,
+) -> Any:
+    if recovery.material_context_found and expected_mission_id is None:
+        raise SpiralChatAdmissionError("existing mission requires explicit host mission identity")
+    if expected_mission_id is not None and (
+        not isinstance(expected_mission_id, str)
+        or not expected_mission_id.strip()
+        or expected_mission_id != recovery.mission_id
+    ):
+        raise SpiralChatAdmissionError("recovered journal is not the requested mission")
     if recovery.material_context_found and applied_to_action is not True:
         raise ValueError("cannot falsely attest that recovered corrections affected action choice")
     phase = getattr(getattr(kernel, "phase", None), "value", None)
