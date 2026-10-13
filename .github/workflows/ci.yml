@@ -214,11 +214,11 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-          ref: \${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - name: Verify checked-out source
         shell: bash
         run: |
-          test "$(git rev-parse HEAD)" = "\${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
       - name: Validate detectors and scan Git-tracked files for credential-shaped secrets
         shell: bash
         run: |
