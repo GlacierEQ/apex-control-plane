@@ -11,6 +11,7 @@ from typing import Any, Callable, Sequence
 from .spiral_chat_handoff import ChatRecovery
 
 from .spiral_chat_handoff import recover_existing_chat_session, apply_recovery_to_apex
+from .continuity_admission_guard import exclusive_kernel_admission
 
 
 class ContextAdmissionDenied(RuntimeError):
@@ -63,6 +64,20 @@ def execute_with_recovered_context(
     """
     if not callable(execute):
         raise TypeError("execute must be callable")
+    with exclusive_kernel_admission(kernel):
+        return _execute_under_exclusive_admission(
+            journal=journal, chat_session_id=chat_session_id, kernel=kernel,
+            expected_mission_id=expected_mission_id, execute=execute,
+            fact_keys=fact_keys, apply_context=apply_context,
+        )
+
+
+def _execute_under_exclusive_admission(
+    *, journal: Any, chat_session_id: str, kernel: Any,
+    expected_mission_id: str | None, execute: Callable[[AdmissionReceipt], Any],
+    fact_keys: Sequence[str],
+    apply_context: Callable[[ChatRecovery], ContextApplication] | None,
+) -> Any:
     try:
         recovery = recover_existing_chat_session(
             journal, chat_session_id, fact_keys=fact_keys
@@ -98,6 +113,8 @@ def execute_with_recovered_context(
         )
         if getattr(getattr(kernel, "phase", None), "value", None) == "context_recovering":
             raise ContextAdmissionDenied("APEX remained in context recovery phase")
+    except ContextAdmissionDenied:
+        raise
     except Exception as exc:
         raise ContextAdmissionDenied("context admission failed") from exc
     receipt = AdmissionReceipt(
