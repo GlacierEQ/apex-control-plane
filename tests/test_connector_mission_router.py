@@ -78,6 +78,74 @@ class ConnectorMissionRouterTests(unittest.TestCase):
         self.assertEqual(len(keys), 1)
 
 
+    def test_unpersisted_success_must_be_rejected_before_effect(self):
+        """A provider readback alone cannot promote a mission to continued."""
+        reservations = []
+        actions = []
+        with self.assertRaisesRegex(AdmissionDenied, "continuation"):
+            dispatch_once(
+                self.mission, self.capability, "unrecorded-1",
+                lambda key: reservations.append(key) or True,
+                lambda: actions.append("provider-effect") or "native-42",
+                lambda _: True,
+            )
+        self.assertEqual(reservations, [])
+        self.assertEqual(actions, [])
+
+    def test_persistence_receipt_and_independent_readback_are_required(self):
+        """Durable continuation must be source-bound and checked before success."""
+        saved = {}
+        executions = []
+        def reserve(key):
+            if key in saved:
+                return False
+            saved[key] = {"reserved": True}
+            return True
+        def preserve(record):
+            self.assertEqual(record.mission_id, "case-A")
+            self.assertEqual(record.cursor, "cursor-7")
+            self.assertEqual(record.provider, "box")
+            self.assertEqual(record.native_result, {"native_id": "provider-42"})
+            checkpoint = {"key": record.operation_key, "next_cursor": "cursor-8"}
+            saved[record.operation_key]["checkpoint"] = checkpoint
+            return checkpoint
+        def verify(checkpoint):
+            return saved[checkpoint["key"]]["checkpoint"] == checkpoint
+        result = dispatch_once(
+            self.mission, self.capability, "recorded-1", reserve,
+            lambda: executions.append("sent") or {"native_id":"provider-42"},
+            lambda result: result["native_id"] == "provider-42",
+            persist_continuation=preserve,
+            verify_continuation=verify,
+        )
+        self.assertEqual(result, {"native_id": "provider-42"})
+        self.assertEqual(executions, ["sent"])
+        self.assertEqual(len(saved), 1)
+
+    def test_failed_checkpoint_readback_keeps_reservation_and_blocks_replay(self):
+        keys = set()
+        effect = []
+        def reserve(key):
+            if key in keys:
+                return False
+            keys.add(key)
+            return True
+        args = (self.mission, self.capability, "unknown-checkpoint", reserve,
+                lambda: effect.append("sent") or {"native_id":"provider-42"},
+                lambda _: True)
+        with self.assertRaisesRegex(AdmissionDenied, "continuation"):
+            dispatch_once(
+                *args, persist_continuation=lambda record: {"key": record.operation_key},
+                verify_continuation=lambda _: False,
+            )
+        with self.assertRaisesRegex(AdmissionDenied, "already reserved"):
+            dispatch_once(
+                *args, persist_continuation=lambda record: {"key": record.operation_key},
+                verify_continuation=lambda _: True,
+            )
+        self.assertEqual(effect, ["sent"])
+
+
 class ExistingJournal:
     mission_id = "case-A"
     objective = "Advance an existing private mission"
