@@ -16,6 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from hashlib import sha256
 import json
+import os
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 try:  # Package import under pytest / library consumers.
@@ -114,11 +116,27 @@ class ContinuousImpactSelector:
     history remains inspectable.
     """
 
-    def __init__(self, engine: AdaptiveIntelligenceEngine | None = None) -> None:
+    def __init__(
+        self,
+        engine: AdaptiveIntelligenceEngine | None = None,
+        *,
+        model_state_path: str | Path | None = None,
+    ) -> None:
         if engine is None:
-            weights = dict(DEFAULT_WEIGHTS)
-            weights.update(IMPACT_WEIGHTS)
-            engine = AdaptiveIntelligenceEngine(ranker=AdaptiveRanker(weights=weights))
+            # Runtime operators may bind one persistent path across workers.
+            # Without that explicit binding, legacy in-memory behavior remains.
+            configured = model_state_path or os.environ.get(
+                "GLACIEREQ_APEX_LEARNING_STATE_PATH"
+            )
+            if configured:
+                path = Path(configured)
+                engine = AdaptiveIntelligenceEngine(model_state_path=path)
+                if not path.exists():
+                    engine.ranker.weights.update(IMPACT_WEIGHTS)
+            else:
+                weights = dict(DEFAULT_WEIGHTS)
+                weights.update(IMPACT_WEIGHTS)
+                engine = AdaptiveIntelligenceEngine(ranker=AdaptiveRanker(weights=weights))
         self.engine = engine
         self._history: list[ImpactDecision] = []
 
@@ -225,6 +243,25 @@ class ContinuousImpactSelector:
             task_id=decision.task_id,
             candidate=self._to_adaptive(selected),
             reward=1.0 if success else -1.0,
+            reason=_required_text(reason, "reason"),
+            metadata={
+                "decision_sha256": decision.decision_sha256,
+                "state_version": decision.state_version,
+            },
+        )
+
+    def record_operator_correction(
+        self,
+        *,
+        decision: ImpactDecision,
+        candidates: Sequence[ImpactCandidate],
+        reason: str,
+    ) -> None:
+        """Apply the Operator's explicit failure feedback to future selection."""
+        selected = _candidate_by_id(candidates, decision.selected_candidate_id)
+        self.engine.record_operator_correction(
+            task_id=decision.task_id,
+            candidate=self._to_adaptive(selected),
             reason=_required_text(reason, "reason"),
             metadata={
                 "decision_sha256": decision.decision_sha256,

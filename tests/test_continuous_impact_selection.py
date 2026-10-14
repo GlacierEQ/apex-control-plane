@@ -207,3 +207,67 @@ def test_all_operation_class_rewrites_fail_closed() -> None:
         assert "no candidate preserves" in str(exc)
     else:
         raise AssertionError("operation-class rewrite must fail closed")
+
+
+def test_operator_correction_changes_persisted_selection_in_new_worker(tmp_path) -> None:
+    """Real feedback must alter the next selector even after re-instantiation."""
+    state_path = tmp_path / "shared-learning.json"
+    choices = (
+        _candidate(
+            "summarize-again", "repeat a summary instead of executing",
+            "no external state changes", mission_advancement=0.2,
+            state_change_value=0.1, correction_risk=1.0,
+        ),
+    )
+    first = ContinuousImpactSelector(model_state_path=state_path)
+    original = first.select(
+        task_id="operator-learning", mission="make durable learning control decisions",
+        operation_class="repair_runtime_selection",
+        state_version="feedback:before", candidates=choices,
+    )
+    first.record_operator_correction(
+        decision=original, candidates=choices,
+        reason="Operator rejected repetitive summaries instead of execution",
+    )
+    assert state_path.exists()
+    fresh = ContinuousImpactSelector(model_state_path=state_path)
+    after = fresh.select(
+        task_id="operator-learning", mission="make durable learning control decisions",
+        operation_class="repair_runtime_selection",
+        state_version="feedback:after", candidates=choices,
+    )
+    assert after.selected_candidate_id == original.selected_candidate_id
+    assert after.score < original.score
+    assert after.decision_sha256 != original.decision_sha256
+
+
+def test_default_runtime_selector_uses_configured_shared_learning_state(
+    tmp_path, monkeypatch
+) -> None:
+    path = tmp_path / "worker-state.json"
+    monkeypatch.setenv("GLACIEREQ_APEX_LEARNING_STATE_PATH", str(path))
+    worker_a = ContinuousImpactSelector()
+    assert worker_a.engine.model_state_path == path
+    original = worker_a.engine.ranker.score(
+        worker_a._to_adaptive(_candidate(
+            "repeat", "repeat prior failure", "no improvement",
+            correction_risk=1.0, mission_advancement=0.2,
+        ))
+    ).score
+    worker_a.engine.record_operator_correction(
+        task_id="configured-learning",
+        candidate=worker_a._to_adaptive(_candidate(
+            "repeat", "repeat prior failure", "no improvement",
+            correction_risk=1.0, mission_advancement=0.2,
+        )),
+        reason="recover and apply prior feedback",
+    )
+    worker_b = ContinuousImpactSelector()
+    assert worker_b.engine.model_state_path == path
+    updated = worker_b.engine.ranker.score(
+        worker_b._to_adaptive(_candidate(
+            "repeat", "repeat prior failure", "no improvement",
+            correction_risk=1.0, mission_advancement=0.2,
+        ))
+    ).score
+    assert updated < original

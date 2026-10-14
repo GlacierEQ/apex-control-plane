@@ -130,3 +130,89 @@ def test_semantic_enricher_is_pluggable() -> None:
     )
 
     assert enriched.features["semantic_relevance"] == 0.91
+
+
+def test_operator_correction_survives_engine_restart(tmp_path) -> None:
+    """A feedback update must shape the next worker, not only the current process."""
+    state_path = tmp_path / "operator-learning.json"
+    candidate = _candidate("scope-collapse", correction_risk=1.0, regression_risk=1.0)
+    worker_a = AdaptiveIntelligenceEngine(
+        ranker=AdaptiveRanker(learning_rate=0.5), model_state_path=state_path
+    )
+    prior = worker_a.ranker.score(candidate).score
+    correction = worker_a.record_operator_correction(
+        task_id="operator-turn-20261013",
+        candidate=candidate,
+        reason="answer-only response instead of durable learning",
+    )
+    assert state_path.exists()
+    assert correction.prediction_after < prior
+
+    worker_b = AdaptiveIntelligenceEngine(model_state_path=state_path)
+    assert worker_b.ranker.score(candidate).score == correction.prediction_after
+    assert worker_b.ranker.learning_rate == 0.5
+
+
+def test_separate_python_process_recovers_learned_state(tmp_path) -> None:
+    """A new Python interpreter must actually load the corrected behavior."""
+    import subprocess
+    import sys
+
+    state_path = tmp_path / "operator-learning.json"
+    candidate = _candidate("repeat-old-failure", correction_risk=1.0)
+    engine = AdaptiveIntelligenceEngine(model_state_path=state_path)
+    correction = engine.record_operator_correction(
+        task_id="cross-process", candidate=candidate, reason="repeated uncorrected behavior"
+    )
+    code = (
+        "from src.adaptive_intelligence import AdaptiveCandidate, AdaptiveIntelligenceEngine; "
+        "import sys; "
+        "engine=AdaptiveIntelligenceEngine(model_state_path=sys.argv[1]); "
+        "candidate=AdaptiveCandidate('repeat-old-failure','context',{'correction_risk':1.0}); "
+        "print(engine.ranker.score(candidate).score)"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", code, str(state_path)],
+        check=True, capture_output=True, text=True,
+    )
+    assert abs(float(proc.stdout.strip()) - correction.prediction_after) < 1e-12
+
+
+def test_stale_second_worker_does_not_erase_first_workers_learning(tmp_path) -> None:
+    """Each writer must rebase on the latest checkpoint while under the lock."""
+    state_path = tmp_path / "operator-learning.json"
+    candidate = _candidate("unsafe-default", correction_risk=1.0)
+    worker_a = AdaptiveIntelligenceEngine(model_state_path=state_path)
+    worker_b = AdaptiveIntelligenceEngine(model_state_path=state_path)
+    first = worker_a.record_operator_correction(
+        task_id="correction-1", candidate=candidate, reason="failed prior turn"
+    )
+    second = worker_b.record_operator_correction(
+        task_id="correction-2", candidate=candidate, reason="failure repeated"
+    )
+    assert second.prediction_before == first.prediction_after
+    resumed = AdaptiveIntelligenceEngine(model_state_path=state_path)
+    assert resumed.ranker.score(candidate).score == second.prediction_after
+
+
+def test_corrupt_persisted_learning_fails_closed_instead_of_resetting(tmp_path) -> None:
+    """Bad state must never silently restore the wrong default behavior."""
+    import pytest
+
+    path = tmp_path / "learning.json"
+    path.write_text("{broken", encoding="utf-8")
+    with pytest.raises((ValueError, json.JSONDecodeError)):
+        AdaptiveIntelligenceEngine(model_state_path=path)
+
+
+def test_explicit_ranker_cannot_silently_replace_prior_learned_state(tmp_path) -> None:
+    import pytest
+
+    path = tmp_path / "learning.json"
+    engine = AdaptiveIntelligenceEngine(model_state_path=path)
+    engine.record_operator_correction(
+        task_id="saved", candidate=_candidate("old", correction_risk=1),
+        reason="firsthand operator correction",
+    )
+    with pytest.raises(ValueError, match="persisted"):
+        AdaptiveIntelligenceEngine(model_state_path=path, ranker=AdaptiveRanker())
