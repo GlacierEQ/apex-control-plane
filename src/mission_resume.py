@@ -459,6 +459,31 @@ class MissionCheckpointStore:
             return False
         return self.load_connector_checkpoint(operation_key) == checkpoint
 
+    def recover_connector_checkpoint(
+        self, operation_key: str, provider_readback: Callable[[str, str], bool],
+    ) -> dict[str, Any] | None:
+        """Reauthorize historical checkpoint truth ONLY after fresh native readback.
+
+        Loading durable SQLite bytes proves persistence and checksum consistency,
+        not that the external provider still supports the underlying assertion.
+        A provider outage or contradictory response invalidates current promotion,
+        without erasing the historical record or releasing the operation key.
+        """
+        checkpoint = self.load_connector_checkpoint(operation_key)
+        if checkpoint is None:
+            return None
+        if not callable(provider_readback):
+            raise ResumeError("fresh provider readback callback required")
+        try:
+            confirmed = provider_readback(
+                checkpoint["provider"], checkpoint["receipt_ref"]
+            )
+        except Exception as exc:
+            raise ResumeError("provider readback unavailable: checkpoint preserved") from exc
+        if confirmed is not True:
+            raise ResumeError("provider readback unverified: checkpoint preserved")
+        return checkpoint
+
     def pending_connector_effects(self) -> list[str]:
         """Reserved-but-unconfirmed operations must be reconciled, never replayed."""
         with self._connect() as c:
