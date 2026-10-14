@@ -12,6 +12,8 @@ on:
       - "scripts/prepare_approved_connector_action.py"
       - "scripts/admit_session_connector_execution_receipts.py"
       - "tests/test_direct_connector_runtime_contract.py"
+      - "supabase/functions/apex-connector-tool-gateway/**"
+      - "supabase/functions/apex-direct-mcp-fabric/**"
       - ".github/workflows/direct-connector-runtime.yml"
   push:
     branches: [main]
