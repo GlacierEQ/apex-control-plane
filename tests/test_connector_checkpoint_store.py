@@ -33,17 +33,33 @@ class ConnectorContinuationSQLiteTests(unittest.TestCase):
                                         ("repair-1",), "spiral-journal:"+"a"*64)
         self.capability = ConnectorCapability("fixture", "create", True, True, True)
         self.key = "case-A:fixture:create:op-1"
+        self.provider_path = Path(self.tmp.name) / "provider.db"
+        with sqlite3.connect(self.provider_path) as db:
+            db.execute("CREATE TABLE effects (native_id TEXT PRIMARY KEY, operation_key TEXT NOT NULL)")
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def provider_effect(self):
+        with sqlite3.connect(self.provider_path) as db:
+            db.execute(
+                "INSERT OR IGNORE INTO effects VALUES (?,?)",
+                ("provider-10",self.key),
+            )
+        return {"native_id":"provider-10","private_data":"DO_NOT_PERSIST"}
+
+    def provider_readback(self, native_id):
+        with sqlite3.connect(self.provider_path) as db:
+            row = db.execute("SELECT operation_key FROM effects WHERE native_id=?", (native_id,)).fetchone()
+        return row is not None and row[0] == self.key
 
     def _run(self, store=None, operation="op-1"):
         ledger = store or self.store
         return dispatch_once(
             self.mission, self.capability, operation,
             ledger.reserve_connector_effect,
-            lambda: {"native_id":"provider-10", "private_data":"DO_NOT_PERSIST"},
-            lambda r: r["native_id"] == "provider-10",
+            self.provider_effect,
+            lambda r: self.provider_readback(r["native_id"]),
             persist_continuation=lambda record: ledger.persist_connector_continuation(
                 record, receipt_ref=record.native_result["native_id"],
                 next_cursor="cursor-8"),
@@ -54,14 +70,15 @@ class ConnectorContinuationSQLiteTests(unittest.TestCase):
         result = self._run()
         self.assertEqual(result["native_id"], "provider-10")
         script = (
-            "import json,sys;"
+            "import json,sqlite3,sys;"
             "from src.mission_resume import MissionCheckpointStore;"
             "s=MissionCheckpointStore(sys.argv[1],mission_id='case-A');"
-            "print(json.dumps(s.load_connector_checkpoint(sys.argv[2])))"
+            "def_read=lambda p,r: sqlite3.connect(sys.argv[3]).execute('SELECT 1 FROM effects WHERE native_id=?',(r,)).fetchone() is not None;"
+            "print(json.dumps(s.recover_connector_checkpoint(sys.argv[2],def_read)))"
         )
         root = Path(__file__).resolve().parents[1]
         proc = subprocess.run(
-            [sys.executable, "-c", script, str(self.path), self.key],
+            [sys.executable, "-c", script, str(self.path), self.key, str(self.provider_path)],
             cwd=root, capture_output=True, text=True,
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
@@ -106,6 +123,19 @@ class ConnectorContinuationSQLiteTests(unittest.TestCase):
             results=list(pool.map(reserve,range(8)))
         self.assertEqual(results.count(True), 1)
         self.assertEqual(results.count(False), 7)
+
+    def test_restart_cannot_promote_stale_or_unavailable_provider_claim(self):
+        self._run()
+        def unavailable(_provider,_ref):
+            raise ConnectionError("provider offline")
+        with self.assertRaisesRegex(ResumeError, "provider readback"):
+            self.store.recover_connector_checkpoint(self.key, unavailable)
+        with sqlite3.connect(self.provider_path) as db:
+            db.execute("DELETE FROM effects")
+        with self.assertRaisesRegex(ResumeError, "provider readback"):
+            self.store.recover_connector_checkpoint(self.key, lambda p, r: self.provider_readback(r))
+        self.assertIsNotNone(self.store.load_connector_checkpoint(self.key))
+        self.assertFalse(self.store.reserve_connector_effect(self.key))
 
     def test_checkpoint_tampering_is_not_validated(self):
         self._run()
