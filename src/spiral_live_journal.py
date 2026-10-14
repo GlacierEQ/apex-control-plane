@@ -12,7 +12,7 @@ into native ChatGPT conversations.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 import importlib.util
 import os
 import stat
@@ -171,6 +171,7 @@ def resume_authenticated_chat_in_apex(
     operation_class: str,
     applied_to_action: bool,
     expected_mission_id: str | None = None,
+    apply_context: Callable[[ChatRecovery], Any] | None = None,
 ) -> Any:
     """Bind a REAL APEX kernel task and causally apply authenticated continuity.
 
@@ -185,6 +186,7 @@ def resume_authenticated_chat_in_apex(
             target_state=target_state, operation_class=operation_class,
             applied_to_action=applied_to_action,
             expected_mission_id=expected_mission_id,
+            apply_context=apply_context,
         )
 
 
@@ -197,6 +199,7 @@ def _bind_recovery_under_exclusive_admission(
     operation_class: str,
     applied_to_action: bool,
     expected_mission_id: str | None,
+    apply_context: Callable[[ChatRecovery], Any] | None,
 ) -> Any:
     if recovery.material_context_found and expected_mission_id is None:
         raise SpiralChatAdmissionError("existing mission requires explicit host mission identity")
@@ -206,8 +209,23 @@ def _bind_recovery_under_exclusive_admission(
         or expected_mission_id != recovery.mission_id
     ):
         raise SpiralChatAdmissionError("recovered journal is not the requested mission")
-    if recovery.material_context_found and applied_to_action is not True:
-        raise ValueError("cannot falsely attest that recovered corrections affected action choice")
+    application = None
+    if recovery.material_context_found:
+        if not callable(apply_context):
+            raise SpiralChatAdmissionError("historical context requires host application callback")
+        from src.chat_context_admission import ContextApplication
+        application = apply_context(recovery)
+        if not isinstance(application, ContextApplication):
+            raise SpiralChatAdmissionError("invalid host context application receipt")
+        if (application.mission_id != recovery.mission_id
+            or application.source_ref != recovery.source_ref
+            or application.cursor != recovery.cursor
+            or application.corrections != recovery.corrections
+            or application.fact_keys != tuple(recovery.facts)
+            or not isinstance(application.effect_ref, str)
+            or not application.effect_ref.strip()):
+            raise SpiralChatAdmissionError("host application does not match recovered source")
+    applied_to_action = application is not None
     phase = getattr(getattr(kernel, "phase", None), "value", None)
     if phase != "bootstrapped":
         raise ValueError("APEX task binding requires a fresh bootstrapped kernel")
