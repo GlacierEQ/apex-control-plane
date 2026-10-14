@@ -213,7 +213,10 @@ def _bind_recovery_under_exclusive_admission(
     if recovery.material_context_found:
         if not callable(apply_context):
             raise SpiralChatAdmissionError("historical context requires host application callback")
-        from src.chat_context_admission import ContextApplication
+        try:
+            from src.chat_context_admission import ContextApplication
+        except ModuleNotFoundError:  # legacy PYTHONPATH=src without repo root
+            from chat_context_admission import ContextApplication
         application = apply_context(recovery)
         if not isinstance(application, ContextApplication):
             raise SpiralChatAdmissionError("invalid host context application receipt")
@@ -225,6 +228,10 @@ def _bind_recovery_under_exclusive_admission(
             or not isinstance(application.effect_ref, str)
             or not application.effect_ref.strip()):
             raise SpiralChatAdmissionError("host application does not match recovered source")
+    # Preserve the legacy caller's negative assertion: a callback cannot
+    # silently override an explicit claim that no application occurred.
+    if recovery.material_context_found and applied_to_action is not True:
+        raise SpiralChatAdmissionError("contradictory host application attestation")
     applied_to_action = application is not None
     phase = getattr(getattr(kernel, "phase", None), "value", None)
     if phase != "bootstrapped":
