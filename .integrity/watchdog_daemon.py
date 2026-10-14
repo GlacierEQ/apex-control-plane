@@ -33,8 +33,17 @@ class WatchdogDaemon:
         return {p: self.baseline.get(p) == h for p, h in cur.items()}
 
 if __name__ == "__main__":
+    import sys
     w = WatchdogDaemon()
-    w.update_baseline()
+    if "--update-baseline" in sys.argv:
+        w.update_baseline()
+        print(f"Baseline updated ({len(w.baseline)} files)")
+        sys.exit(0)
     r = w.verify()
     ok = all(r.values()) if r else True
     print("Integrity check:", "PASS" if ok else "FAIL", f"({len(r)} files)")
+    if not ok:
+        for path, matches in sorted(r.items()):
+            if not matches:
+                print(f"  DRIFT: {path}")
+        sys.exit(1)

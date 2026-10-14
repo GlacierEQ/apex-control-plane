@@ -22,12 +22,25 @@ ENGINEERING      = PRO_CODE_ELITE_HUMANIZED_ENGINEERED
 STATE_EVOLUTION  = CURRENT_STATE ⊕ VERIFIED_GAIN
 ENGINE           = K_APL_J × RUST × PROLOG
 VECTOR           = OUTWARD
-FAIL_CLOSED      = TRUE
+FAIL_CLOSED      = FALSE
+FAILURE_MODE     = DETECT_REPAIR_CONTINUE_KNOWN_FRONTIERS
 ASSET_AUTHORITY  = OPERATOR_ONLY
 KNOWN_STATE      = REUSE_BEFORE_REDISCOVERY
 OPERATOR_MODEL   = DERIVED_NON_SOVEREIGN
 REDISCOVERY      = NOT_PROGRESS
 ```
+
+**Failure semantics (enforced, not aspirational):** `config/operator_fidelity_runtime_policy.json`
+(schema 2.0.0) declares `fail_closed: false` with
+`execution_semantics: detect-repair-continue_known_frontiers`, and
+`src/operator_fidelity_preflight.py::load_operator_fidelity_policy()` raises
+`BootError` unless `fail_closed` is exactly `false`. On a fidelity finding the
+runtime records durable repair state (`uplift_required`), restricts external
+actions to `route_local_only`, and continues execution on known frontiers —
+findings improve routing and execution; they do not terminate the runtime and
+do not become self-created permission authority. The receipt-state ladder
+(PROPOSED → ATTEMPTED → EXECUTED → VERIFIED) still fails closed on *claims*: a
+state transition without its required evidence receipt is rejected.
 
 ## Startup invariants
 
