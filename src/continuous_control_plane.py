@@ -314,6 +314,36 @@ class JsonlControlStore:
         return events, work, receipts
 
 
+
+# A source-bound, imminent and irreversible deadline outranks routine work.
+# This affects only dispatch ordering; external mutation authorization is unchanged.
+DEADLINE_CRITICAL_ACTION_KINDS = frozenset({
+    "court_filing", "agency_filing", "appeal_submission",
+    "court_response", "preservation_notice",
+})
+
+
+def _deadline_priority_key(item: WorkItem, instant: datetime) -> tuple:
+    """Prioritize verified source-bound deadlines due in the next 24 hours."""
+    info = item.metadata
+    if (
+        info.get("action_kind") in DEADLINE_CRITICAL_ACTION_KINDS
+        and info.get("deadline_status") == "verified"
+        and isinstance(info.get("deadline_source_ref"), str)
+        and ":" in info["deadline_source_ref"]
+        and isinstance(info.get("deadline_at"), str)
+    ):
+        try:
+            due = _dt(info["deadline_at"])
+        except (TypeError, ValueError):
+            due = None
+        if due is not None:
+            seconds_left = (due - instant).total_seconds()
+            if 0 <= seconds_left <= 24 * 3600:
+                return (0, seconds_left, -item.priority, item.created_at, item.work_id)
+    return (1, 0, -item.priority, item.created_at, item.work_id)
+
+
 class ContinuousControlPlane:
     def __init__(
         self,
@@ -478,7 +508,7 @@ class ContinuousControlPlane:
             ]
             if not candidates:
                 return None
-            chosen = sorted(candidates, key=lambda item: (-item.priority, item.created_at, item.work_id))[0]
+            chosen = min(candidates, key=lambda item: _deadline_priority_key(item, instant))
             dispatched = replace(
                 chosen, state=WorkState.DISPATCHED, lease_owner=worker_id,
                 lease_expires_at=instant + timedelta(seconds=max(1, lease_seconds)),
