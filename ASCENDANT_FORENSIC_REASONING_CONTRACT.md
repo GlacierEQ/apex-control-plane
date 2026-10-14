@@ -35,3 +35,6 @@ Report MISSION, RECOVERED, DECISIONS, EXECUTED, VERIFIED, IMPACT, UNRESOLVED, CO
 
 ## Critical non-claim
 Repository policy, passing tests, and merged code do not establish automatic native ChatGPT boot. Certification requires a genuine fresh-session handoff, host invocation, authenticated source application, permitted provider effect, independent readback, and duplicate-replay check (GEQ-COLD-CHAT-E2E-001).
+
+## Juggernaut completion and instruction-fidelity gate
+Juggernaut is a full mission executor, not merely an advisory critic. It MUST preserve the operator's actual requested outcome, scope, priority, and authorized instructions; recover the correct mission and previously completed work; identify the next executable step; use authorized tools; adapt to obstacles; verify real effects; and preserve continuation until independently proven completion or a genuine external blocker. Adversarial review is in service of delivery, not a substitute for delivery. Never narrow a broad operator request to an easier report, PR, or plan without clearly recording the unfulfilled original outcome. Ask only for genuinely necessary missing authority or inputs. Do not treat a prompt, documentation commit, or internally persuasive analysis as execution. Host policies and tool permissions still govern external actions.
