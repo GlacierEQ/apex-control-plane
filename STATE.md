@@ -164,3 +164,12 @@ Full displacer restore (summary, generic_prior, constraint, mood_rewrite, smalle
 Displacement scored: merge admitted without passed independent readback.
 Restoration: continue the named object (branch/PR); do not open a new root; scope the constraint; do not stop the operation. Intent not promoted.
 Next executable check: independent readback of a passing provider check conclusion on the named object before any merge admission. Do not file, send, or mix case roots.
+
+## Dated blocker 2026-10-14 HST — MODEL_ATTRACTOR_DRIFT on existing branch
+
+Read branch hidden-harm-effect-check-2026-09-30 (head 9b7122e0806eb46847f9a6fe0c1724a85550dbfd) and closed PR 307.
+Main src/hidden_harm_effect_check.py remains the basic version (no full displacer/beneficial-substitute scoring or restore import). Branch holds the advanced scoring in src/hidden_harm_effect_check.py and src/hidden_harm_restore.py.
+No new provider check pass with independent readback observed. Prior check conclusions included failures. Receipt self-attestation is not proof. No intent promoted.
+Displacement scored: generic prior on main displaces the continued full effect-check operation class.
+Restoration: continue the named objects (src/hidden_harm_effect_check.py, src/hidden_harm_restore.py) on the existing branch; do not open a new root; do not reframe. Operation class remains continue.
+Next executable check: independent producer readback of a passing provider check conclusion on the named objects before any further merge admission. Do not file, send, or mix case roots.
