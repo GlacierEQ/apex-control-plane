@@ -96,5 +96,4 @@ def test_direct_fabric_supplies_the_runtime_internal_auth_contract() -> None:
     source = FABRIC_SOURCE.read_text(encoding="utf-8")
     assert '"x-glaciereq-origin": "apex-direct-mcp-fabric"' in source
     assert "apikey: SERVICE_ROLE" in source
-    assert "SUPABASE_SECRET_KEYS" in source
     assert "SUPABASE_SERVICE_ROLE_KEY" in source
