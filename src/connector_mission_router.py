@@ -30,6 +30,26 @@ class MissionAdmission:
     cursor: str
     correction_ids: tuple[str, ...]
 
+    # Populated only from a verified recovery receipt, never inferred from intent.
+    source_ref: str = ""
+
+
+@dataclass(frozen=True)
+class ContinuationRecord:
+    """Source-bound state passed to the host's durable continuation store.
+
+    A record object does not persist itself; the host must save and read it
+    back from its own authoritative durable store.
+    """
+    mission_id: str
+    source_ref: str
+    cursor: str
+    correction_ids: tuple[str, ...]
+    provider: str
+    action: str
+    operation_key: str
+    native_result: object
+
 
 def admit(mission: MissionAdmission, capability: ConnectorCapability) -> None:
     if not isinstance(mission.expected_mission_id, str) or not mission.expected_mission_id.strip():
@@ -58,26 +78,52 @@ def dispatch_once(
     reserve: Callable[[str], bool],
     execute: Callable[[], object],
     readback: Callable[[object], bool],
+    *,
+    persist_continuation: Callable[[ContinuationRecord], object] | None = None,
+    verify_continuation: Callable[[object], bool] | None = None,
 ) -> object:
-    """Reserve a durable key before an effect; do not replay uncertain outcomes.
+    """Recover -> reserve -> execute -> provider readback -> durable handoff.
 
-    reserve MUST be an atomic durable insert-if-absent owned by the host.
-    If execution or readback fails, keep the reservation for reconciliation.
+    Both persistence functions MUST be backed by the owning durable system.
+    Provider readback alone never certifies the next chat/worker can resume.
+    Reserve MUST be a durable atomic insert-if-absent. A failure at *any*
+    subsequent stage retains the reservation and requires reconciliation.
+    The returned native result is never by itself proof of human outcome.
     """
     admit(mission, capability)
     if not isinstance(operation_id, str) or not operation_id.strip():
         raise AdmissionDenied("missing stable operation identity")
-    # Reject ambiguous separators in the legacy key format; never alias two effects.
     if any(":" in value for value in (mission.expected_mission_id, capability.provider, capability.action, operation_id)):
         raise AdmissionDenied("ambiguous idempotency identity segment")
     if not all(callable(fn) for fn in (reserve, execute, readback)):
-        raise AdmissionDenied("durable reservation, execution and independent readback callbacks required")
+        raise AdmissionDenied("durable reservation, execution and independent provider readback callbacks required")
+    # The host must supply the handoff store before any external effect occurs.
+    if not callable(persist_continuation) or not callable(verify_continuation):
+        raise AdmissionDenied("durable continuation persistence and independent readback required")
     key = f"{mission.expected_mission_id}:{capability.provider}:{capability.action}:{operation_id}"
     if reserve(key) is not True:
         raise AdmissionDenied("operation already reserved; reconcile provider state before retry")
     result = execute()
     if readback(result) is not True:
         raise AdmissionDenied("provider effect not independently verified; reservation retained")
+    record = ContinuationRecord(
+        mission_id=mission.expected_mission_id,
+        source_ref=mission.source_ref,
+        cursor=mission.cursor,
+        correction_ids=mission.correction_ids,
+        provider=capability.provider,
+        action=capability.action,
+        operation_key=key,
+        native_result=result,
+    )
+    try:
+        checkpoint = persist_continuation(record)
+        if checkpoint is None or verify_continuation(checkpoint) is not True:
+            raise AdmissionDenied("continuation not independently verified; reservation retained")
+    except AdmissionDenied:
+        raise
+    except Exception as exc:
+        raise AdmissionDenied("continuation persistence/readback failed; reservation retained") from exc
     return result
 
 
@@ -92,6 +138,8 @@ def dispatch_recovered_once(
     reserve: Callable[[str], bool],
     execute: Callable[[], object],
     readback: Callable[[object], bool],
+    persist_continuation: Callable[[ContinuationRecord], object] | None = None,
+    verify_continuation: Callable[[object], bool] | None = None,
     fact_keys: Sequence[str] = (),
     apply_context: Callable[[Any], Any] | None = None,
 ) -> object:
@@ -119,8 +167,13 @@ def dispatch_recovered_once(
             context_applied=bool(receipt.application_ref) or not recovery.material_context_found,
             cursor=receipt.cursor,
             correction_ids=tuple(recovery.corrections),
+            source_ref=receipt.source_ref,
         )
-        return dispatch_once(admission, capability, operation_id, reserve, execute, readback)
+        return dispatch_once(
+            admission, capability, operation_id, reserve, execute, readback,
+            persist_continuation=persist_continuation,
+            verify_continuation=verify_continuation,
+        )
 
     return execute_with_recovered_context(
         journal=journal,
