@@ -40,9 +40,9 @@ class ConnectorMissionRouterTests(unittest.TestCase):
         def execute():
             effects.append("sent")
             return "receipt-1"
-        self.assertEqual(dispatch_once(self.mission, self.capability, "op-1", reserve, execute, lambda r: r == "receipt-1"), "receipt-1")
+        self.assertEqual(dispatch_once(self.mission, self.capability, "op-1", reserve, execute, lambda r: r == "receipt-1", persist_continuation=lambda record: record.operation_key, verify_continuation=lambda checkpoint: checkpoint in reserved), "receipt-1")
         with self.assertRaisesRegex(AdmissionDenied, "already reserved"):
-            dispatch_once(self.mission, self.capability, "op-1", reserve, execute, lambda _: True)
+            dispatch_once(self.mission, self.capability, "op-1", reserve, execute, lambda _: True, persist_continuation=lambda record: record.operation_key, verify_continuation=lambda _: True)
         self.assertEqual(effects, ["sent"])
 
     def test_failed_readback_keeps_reservation(self):
@@ -53,9 +53,9 @@ class ConnectorMissionRouterTests(unittest.TestCase):
             keys.add(key)
             return True
         with self.assertRaisesRegex(AdmissionDenied, "not independently verified"):
-            dispatch_once(self.mission, self.capability, "op-2", reserve, lambda: "unverified", lambda _: False)
+            dispatch_once(self.mission, self.capability, "op-2", reserve, lambda: "unverified", lambda _: False, persist_continuation=lambda record: record.operation_key, verify_continuation=lambda _: True)
         with self.assertRaisesRegex(AdmissionDenied, "already reserved"):
-            dispatch_once(self.mission, self.capability, "op-2", reserve, lambda: "retry", lambda _: True)
+            dispatch_once(self.mission, self.capability, "op-2", reserve, lambda: "retry", lambda _: True, persist_continuation=lambda record: record.operation_key, verify_continuation=lambda _: True)
 
     def test_fake_truthy_capability_rejected(self):
         with self.assertRaisesRegex(AdmissionDenied, "authentication"):
@@ -74,8 +74,76 @@ class ConnectorMissionRouterTests(unittest.TestCase):
     def test_truthy_nonboolean_provider_readback_is_not_verified(self):
         keys = []
         with self.assertRaisesRegex(AdmissionDenied, "not independently verified"):
-            dispatch_once(self.mission, self.capability, "op-3", lambda k: keys.append(k) or True, lambda: "receipt", lambda _: "yes")
+            dispatch_once(self.mission, self.capability, "op-3", lambda k: keys.append(k) or True, lambda: "receipt", lambda _: "yes", persist_continuation=lambda record: record.operation_key, verify_continuation=lambda _: True)
         self.assertEqual(len(keys), 1)
+
+
+    def test_unpersisted_success_must_be_rejected_before_effect(self):
+        """A provider readback alone cannot promote a mission to continued."""
+        reservations = []
+        actions = []
+        with self.assertRaisesRegex(AdmissionDenied, "continuation"):
+            dispatch_once(
+                self.mission, self.capability, "unrecorded-1",
+                lambda key: reservations.append(key) or True,
+                lambda: actions.append("provider-effect") or "native-42",
+                lambda _: True,
+            )
+        self.assertEqual(reservations, [])
+        self.assertEqual(actions, [])
+
+    def test_persistence_receipt_and_independent_readback_are_required(self):
+        """Durable continuation must be source-bound and checked before success."""
+        saved = {}
+        executions = []
+        def reserve(key):
+            if key in saved:
+                return False
+            saved[key] = {"reserved": True}
+            return True
+        def preserve(record):
+            self.assertEqual(record.mission_id, "case-A")
+            self.assertEqual(record.cursor, "cursor-7")
+            self.assertEqual(record.provider, "box")
+            self.assertEqual(record.native_result, {"native_id": "provider-42"})
+            checkpoint = {"key": record.operation_key, "next_cursor": "cursor-8"}
+            saved[record.operation_key]["checkpoint"] = checkpoint
+            return checkpoint
+        def verify(checkpoint):
+            return saved[checkpoint["key"]]["checkpoint"] == checkpoint
+        result = dispatch_once(
+            self.mission, self.capability, "recorded-1", reserve,
+            lambda: executions.append("sent") or {"native_id":"provider-42"},
+            lambda result: result["native_id"] == "provider-42",
+            persist_continuation=preserve,
+            verify_continuation=verify,
+        )
+        self.assertEqual(result, {"native_id": "provider-42"})
+        self.assertEqual(executions, ["sent"])
+        self.assertEqual(len(saved), 1)
+
+    def test_failed_checkpoint_readback_keeps_reservation_and_blocks_replay(self):
+        keys = set()
+        effect = []
+        def reserve(key):
+            if key in keys:
+                return False
+            keys.add(key)
+            return True
+        args = (self.mission, self.capability, "unknown-checkpoint", reserve,
+                lambda: effect.append("sent") or {"native_id":"provider-42"},
+                lambda _: True)
+        with self.assertRaisesRegex(AdmissionDenied, "continuation"):
+            dispatch_once(
+                *args, persist_continuation=lambda record: {"key": record.operation_key},
+                verify_continuation=lambda _: False,
+            )
+        with self.assertRaisesRegex(AdmissionDenied, "already reserved"):
+            dispatch_once(
+                *args, persist_continuation=lambda record: {"key": record.operation_key},
+                verify_continuation=lambda _: True,
+            )
+        self.assertEqual(effect, ["sent"])
 
 
 class ExistingJournal:
@@ -106,6 +174,17 @@ class IntegratedConnectorTests(unittest.TestCase):
         self.capability = ConnectorCapability("box", "upload", True, True, True)
         self.keys = set()
         self.effects = []
+        self.continuations = {}
+
+    def persist(self, record):
+        checkpoint = {"key": record.operation_key, "mission": record.mission_id,
+                      "source": record.source_ref, "cursor": record.cursor,
+                      "corrections": record.correction_ids}
+        self.continuations[record.operation_key] = checkpoint
+        return checkpoint
+
+    def verify_persisted(self, checkpoint):
+        return self.continuations.get(checkpoint["key"]) == checkpoint
 
     def reserve(self, key):
         if key in self.keys:
@@ -132,6 +211,8 @@ class IntegratedConnectorTests(unittest.TestCase):
             reserve=self.reserve,
             execute=lambda: self.effects.append("native-effect") or {"native_id": "provider-10"},
             readback=lambda result: result.get("native_id") == "provider-10",
+            persist_continuation=self.persist,
+            verify_continuation=self.verify_persisted,
             fact_keys=("frontier",),
             apply_context=application,
         )
@@ -165,6 +246,8 @@ class IntegratedConnectorTests(unittest.TestCase):
         self.assertEqual(kernel.receipts[0][2]["resume_cursor"], "cursor-7")
         self.assertEqual(kernel.receipts[0][2]["corrections"], ExistingJournal.corrections)
         self.assertTrue(kernel.receipts[0][2]["material_context_applied"])
+        self.assertEqual(next(iter(self.continuations.values()))["source"], "spiral-journal:" + "b" * 64)
+        self.assertEqual(next(iter(self.continuations.values()))["corrections"], ExistingJournal.corrections)
 
 
 if __name__ == "__main__":
