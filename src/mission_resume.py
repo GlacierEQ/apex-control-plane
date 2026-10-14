@@ -85,6 +85,17 @@ class MissionCheckpointStore:
                     mission_id TEXT NOT NULL, task_id TEXT,
                     event TEXT NOT NULL, details_json TEXT NOT NULL,
                     observed_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS connector_effect_reservations (
+                    operation_key TEXT PRIMARY KEY,
+                    mission_id TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    state TEXT NOT NULL DEFAULT 'RESERVED'
+                        CHECK (state IN ('RESERVED','CHECKPOINTED')),
+                    checkpoint_json TEXT,
+                    checkpoint_sha256 TEXT,
+                    reserved_at TEXT NOT NULL
+                );
             """)
             # Upgrade existing local proof stores without losing original receipts.
             # BEGIN IMMEDIATE serializes concurrent first-open migrations.
@@ -323,6 +334,166 @@ class MissionCheckpointStore:
                          "native_readback": "no_receipt",
                          "warning": "absence alone is not proof of nonexecution"})
             return "READY"
+
+    def reserve_connector_effect(self, operation_key: str) -> bool:
+        """Reserve an exact provider operation atomically in this existing store.
+
+        A RESERVED effect remains reserved even after an uncertain crash.
+        This file must be shared by every worker executing the same mission.
+        """
+        if not isinstance(operation_key, str):
+            raise ResumeError("connector operation identity required")
+        parts = operation_key.split(":")
+        if len(parts) != 4 or any(not part.strip() for part in parts):
+            raise ResumeError("connector operation identity must use the admitted unambiguous key")
+        with self._connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            mission = self._get_mission(c)
+            if parts[0] != mission:
+                raise ResumeError("connector reservation mission identity mismatch")
+            row = c.execute(
+                "INSERT OR IGNORE INTO connector_effect_reservations "
+                "(operation_key,mission_id,provider,action,reserved_at) VALUES (?,?,?,?,?)",
+                (operation_key,mission,parts[1],parts[2],
+                 datetime.now(timezone.utc).isoformat())
+            )
+            return row.rowcount == 1
+
+    def persist_connector_continuation(
+        self, record: Any, *, receipt_ref: str, next_cursor: str,
+    ) -> dict[str, Any]:
+        """Commit a minimal source-bound handoff, never the raw provider payload.
+
+        The caller separately verifies the provider effect and supplies its
+        native receipt reference plus the actual next durable cursor.
+        This is NOT verification that the remote provider mutation occurred.
+        """
+        from .connector_mission_router import ContinuationRecord
+        if not isinstance(record, ContinuationRecord):
+            raise ResumeError("connector continuation record required")
+        if not isinstance(receipt_ref, str) or not receipt_ref.strip():
+            raise ResumeError("provider-native receipt reference required")
+        if not isinstance(next_cursor, str) or not next_cursor.strip():
+            raise ResumeError("explicit next continuation cursor required")
+        if not isinstance(record.source_ref, str) or not record.source_ref.strip():
+            raise ResumeError("source-bound continuation requires a recovery reference")
+        if not isinstance(record.cursor, str) or not record.cursor.strip():
+            raise ResumeError("source-bound continuation requires the recovered cursor")
+        parts = (record.mission_id,record.provider,record.action)
+        if any(not isinstance(part,str) or not part.strip() or ":" in part for part in parts):
+            raise ResumeError("ambiguous connector record identity")
+        if record.operation_key != f"{record.mission_id}:{record.provider}:{record.action}:{record.operation_key.rsplit(':',1)[-1]}":
+            raise ResumeError("connector record operation identity mismatch")
+        checkpoint = {
+            "schema":"glaciereq.apex.connector-continuation.v1",
+            "mission_id":record.mission_id,
+            "source_ref":record.source_ref,
+            "cursor":record.cursor,
+            "next_cursor":next_cursor,
+            "correction_ids":list(record.correction_ids),
+            "provider":record.provider,
+            "action":record.action,
+            "operation_key":record.operation_key,
+            "receipt_ref":receipt_ref,
+        }
+        encoded = _canonical(checkpoint)
+        digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+        with self._connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            mission = self._get_mission(c)
+            if mission != record.mission_id:
+                raise ResumeError("continuation mission mismatch")
+            row = c.execute(
+                "SELECT mission_id,provider,action,state,checkpoint_sha256 "
+                "FROM connector_effect_reservations WHERE operation_key=?",
+                (record.operation_key,)
+            ).fetchone()
+            if (row is None or row["mission_id"] != mission or
+                    row["provider"] != record.provider or row["action"] != record.action):
+                raise ResumeError("no matching durable connector reservation")
+            if row["state"] == "CHECKPOINTED":
+                if row["checkpoint_sha256"] != digest:
+                    raise ResumeError("prior connector checkpoint conflict")
+                return checkpoint
+            c.execute(
+                "UPDATE connector_effect_reservations "
+                "SET state='CHECKPOINTED',checkpoint_json=?,checkpoint_sha256=? "
+                "WHERE operation_key=? AND state='RESERVED'",
+                (encoded,digest,record.operation_key)
+            )
+        return checkpoint
+
+    def load_connector_checkpoint(self, operation_key: str) -> dict[str, Any] | None:
+        """Open a persisted checkpoint with integrity checks in a NEW transaction."""
+        with self._connect() as c:
+            mission = self._get_mission(c)
+            row = c.execute(
+                "SELECT mission_id,state,checkpoint_json,checkpoint_sha256 "
+                "FROM connector_effect_reservations WHERE operation_key=?",
+                (operation_key,)
+            ).fetchone()
+        if row is None:
+            return None
+        if row["mission_id"] != mission:
+            raise ResumeError("cross-mission checkpoint read denied")
+        if row["state"] != "CHECKPOINTED":
+            return None
+        raw, digest = row["checkpoint_json"], row["checkpoint_sha256"]
+        if not raw or not digest or hashlib.sha256(raw.encode("utf-8")).hexdigest() != digest:
+            raise ResumeError("connector checkpoint integrity mismatch")
+        try:
+            value = json.loads(raw)
+        except (TypeError, ValueError) as exc:
+            raise ResumeError("connector checkpoint integrity mismatch") from exc
+        if (not isinstance(value,dict) or value.get("mission_id") != mission
+                or value.get("operation_key") != operation_key):
+            raise ResumeError("connector checkpoint integrity mismatch")
+        return value
+
+    def verify_connector_continuation(self, checkpoint: object) -> bool:
+        """Read back exact committed bytes, not the writer's acknowledgment."""
+        if not isinstance(checkpoint, dict):
+            return False
+        operation_key = checkpoint.get("operation_key")
+        if not isinstance(operation_key,str) or not operation_key:
+            return False
+        return self.load_connector_checkpoint(operation_key) == checkpoint
+
+    def recover_connector_checkpoint(
+        self, operation_key: str, provider_readback: Callable[[str, str], bool],
+    ) -> dict[str, Any] | None:
+        """Reauthorize historical checkpoint truth ONLY after fresh native readback.
+
+        Loading durable SQLite bytes proves persistence and checksum consistency,
+        not that the external provider still supports the underlying assertion.
+        A provider outage or contradictory response invalidates current promotion,
+        without erasing the historical record or releasing the operation key.
+        """
+        checkpoint = self.load_connector_checkpoint(operation_key)
+        if checkpoint is None:
+            return None
+        if not callable(provider_readback):
+            raise ResumeError("fresh provider readback callback required")
+        try:
+            confirmed = provider_readback(
+                checkpoint["provider"], checkpoint["receipt_ref"]
+            )
+        except Exception as exc:
+            raise ResumeError("provider readback unavailable: checkpoint preserved") from exc
+        if confirmed is not True:
+            raise ResumeError("provider readback unverified: checkpoint preserved")
+        return checkpoint
+
+    def pending_connector_effects(self) -> list[str]:
+        """Reserved-but-unconfirmed operations must be reconciled, never replayed."""
+        with self._connect() as c:
+            mission = self._get_mission(c)
+            rows = c.execute(
+                "SELECT operation_key FROM connector_effect_reservations "
+                "WHERE mission_id=? AND state='RESERVED' ORDER BY operation_key",
+                (mission,)
+            ).fetchall()
+        return [row["operation_key"] for row in rows]
 
     def task_state(self, task_id: str) -> str:
         with self._connect() as c:

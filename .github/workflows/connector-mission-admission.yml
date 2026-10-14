@@ -3,20 +3,24 @@ on:
   pull_request:
     paths:
       - 'src/connector_mission_router.py'
+      - 'src/mission_resume.py'
       - 'src/chat_context_admission.py'
       - 'src/spiral_chat_handoff.py'
       - 'src/continuity_admission_guard.py'
       - 'tests/test_connector_mission_router.py'
+      - 'tests/test_connector_checkpoint_store.py'
       - 'tests/test_chat_context_admission.py'
       - '.github/workflows/connector-mission-admission.yml'
   push:
     branches: [main]
     paths:
       - 'src/connector_mission_router.py'
+      - 'src/mission_resume.py'
       - 'src/chat_context_admission.py'
       - 'src/spiral_chat_handoff.py'
       - 'src/continuity_admission_guard.py'
       - 'tests/test_connector_mission_router.py'
+      - 'tests/test_connector_checkpoint_store.py'
       - 'tests/test_chat_context_admission.py'
       - '.github/workflows/connector-mission-admission.yml'
 permissions:
@@ -37,13 +41,16 @@ jobs:
         run: |
           PYTHONPATH=. python -m py_compile \
             src/connector_mission_router.py \
+            src/mission_resume.py \
             src/chat_context_admission.py \
             src/spiral_chat_handoff.py \
             src/continuity_admission_guard.py \
             tests/test_connector_mission_router.py \
+            tests/test_connector_checkpoint_store.py \
             tests/test_chat_context_admission.py
       - name: Prove authentic context admission precedes provider effects
         run: |
           PYTHONPATH=. python -m unittest -v \
             tests.test_connector_mission_router \
+            tests.test_connector_checkpoint_store \
             tests.test_chat_context_admission
