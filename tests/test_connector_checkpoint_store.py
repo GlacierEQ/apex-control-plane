@@ -45,7 +45,8 @@ class ConnectorContinuationSQLiteTests(unittest.TestCase):
             lambda: {"native_id":"provider-10", "private_data":"DO_NOT_PERSIST"},
             lambda r: r["native_id"] == "provider-10",
             persist_continuation=lambda record: ledger.persist_connector_continuation(
-                record, receipt_ref=record.native_result["native_id"]),
+                record, receipt_ref=record.native_result["native_id"],
+                next_cursor="cursor-8"),
             verify_continuation=ledger.verify_connector_continuation,
         )
 
@@ -66,6 +67,7 @@ class ConnectorContinuationSQLiteTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         checkpoint = json.loads(proc.stdout)
         self.assertEqual(checkpoint["cursor"], "cursor-7")
+        self.assertEqual(checkpoint["next_cursor"], "cursor-8")
         self.assertEqual(checkpoint["correction_ids"], ["repair-1"])
         self.assertEqual(checkpoint["source_ref"], self.mission.source_ref)
         self.assertEqual(checkpoint["receipt_ref"], "provider-10")
