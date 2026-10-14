@@ -1,0 +1,143 @@
+{
+  "schema": "glaciereq.connector-runtime-auth-boundary-receipt.v1",
+  "recorded_at": "2026-10-14T13:10:00Z",
+  "repository": "GlacierEQ/apex-control-plane",
+  "branch": "repair/connector-runtime-auth-boundary-20261014",
+  "objective": "Close the privileged connector runtime's reliance on Supabase verify_jwt compatibility behavior without breaking the recovered apex-direct-mcp-fabric caller.",
+  "research_basis": {
+    "supabase_docs": [
+      "Edge Functions authorization headers: verify_jwt accepts publishable/secret API keys for migration compatibility; handler authorization is still required.",
+      "Securing Edge Functions: service-to-service secret-key auth belongs in the handler and verify_jwt should be false for secret/custom service auth.",
+      "Migrating API keys: hosted Edge Functions expose SUPABASE_SECRET_KEYS while legacy SUPABASE_SERVICE_ROLE_KEY remains available during migration."
+    ],
+    "implementation_strategy": "Accept any hosted modern secret-key value plus the legacy service-role value during migration; require exact internal fabric origin and matching apikey before URL parsing, route listing, status readback, or enqueue."
+  },
+  "source_recovery": {
+    "base_revision": "77caf81fc70ce38ed9c2d4f2a1aa159b421adbec",
+    "live_provider_donor": {
+      "function": "apex-connector-tool-gateway",
+      "version": 3,
+      "provider_bundle_sha256": "e7c5d6b09c24416bc865bd39097a8c2b03bbf69c73a791aa584dfdc4e817576c",
+      "reason": "Provider v3 contained stronger active-mission authority semantics than the stale tracked 2.0.0 source."
+    },
+    "displaced_source_preserved_at": "legacy/supabase/functions/apex-connector-tool-gateway/index-pre-provider-sync-20261014.ts"
+  },
+  "source_under_test": {
+    "revision": "dde375f4e4282a2535180195bfd6903461e87bf9",
+    "gateway_blob_sha": "0d3996a982145c11565cde2eec41fe42bab62c27",
+    "deno_blob_sha": "61b0a7ec5b0d32c20de4d6398d5a057cfdd9d614"
+  },
+  "auth_contract": {
+    "caller_origin": "apex-direct-mcp-fabric",
+    "key_header": "apikey",
+    "accepted_key_sources": [
+      "SUPABASE_SECRET_KEYS values",
+      "SUPABASE_SERVICE_ROLE_KEY legacy fallback"
+    ],
+    "platform_verify_jwt": false,
+    "authorization_order": "in-handler authorization precedes URL parsing and every route/job operation",
+    "unauthorized_result": {
+      "status": 403,
+      "error": "internal_runtime_unauthorized"
+    },
+    "raw_credentials_persisted": false
+  },
+  "test_evidence": {
+    "red": {
+      "revision": "f2688acdae2a6471865a426e3f1fff176f66b45e",
+      "workflow_run_id": 38568023001,
+      "job_id": 115865616102,
+      "result": "FAILURE_EXPECTED",
+      "tests": {
+        "passed": 6,
+        "failed": 3
+      }
+    },
+    "green": {
+      "revision": "dde375f4e4282a2535180195bfd6903461e87bf9",
+      "workflow_run_id": 38568726566,
+      "job_id": 115867992609,
+      "result": "SUCCESS",
+      "tests": {
+        "passed": 9,
+        "failed": 0
+      }
+    },
+    "broader_gates_observed_green": [
+      "CI",
+      "APEX Control Plane Non-Regression",
+      "CASEBRAIN Pro-Code Gates",
+      "Secret Leakage Scanner",
+      "universal"
+    ],
+    "codeql_status_at_receipt": "in_progress"
+  },
+  "provider_deployment": {
+    "project_ref": "dyhprklicgewmrimecey",
+    "project_name": "supabase-backend-ops",
+    "function": "apex-connector-tool-gateway",
+    "deployed_version": 4,
+    "status": "ACTIVE",
+    "verify_jwt": false,
+    "provider_bundle_sha256": "b3a77e5b4bec11c2b1510a546094c8056bc7a209b39129bb94925065b7952970",
+    "source_exact_match_to_tested_git_blob": true
+  },
+  "external_readback": {
+    "anonymous_probe": {
+      "endpoint_operation": "routes",
+      "observed_status": 403,
+      "observed_body": {
+        "ok": false,
+        "error": "internal_runtime_unauthorized"
+      },
+      "independent_fetch": "Firecrawl live fetch maxAge=0",
+      "provider_logs": [
+        {
+          "request_id": "01a13a84-b16c-7962-b9a1-6d796513d47a",
+          "status": 403,
+          "version": 4
+        },
+        {
+          "request_id": "01a13a84-b3f1-7f12-a4a0-e82d98066876",
+          "status": 403,
+          "version": 4
+        },
+        {
+          "request_id": "01a13a84-b650-778f-8e63-54d9e4fed95c",
+          "status": 403,
+          "version": 4
+        }
+      ]
+    },
+    "authorized_baseline_before_v4": {
+      "state": "VERIFIED_PROVIDER_LOG_BASELINE",
+      "observations": [
+        {
+          "timestamp": "2026-10-14T11:37:39.773Z",
+          "runtime_version": 3,
+          "status": 200,
+          "apikey_role": "service_role",
+          "authorization_role": "service_role"
+        },
+        {
+          "timestamp": "2026-10-14T11:39:08.840Z",
+          "runtime_version": 3,
+          "status": 200,
+          "apikey_role": "service_role",
+          "authorization_role": "service_role"
+        }
+      ],
+      "paired_parent": "apex-direct-mcp-fabric v8 returned 200 in the same execution windows"
+    },
+    "authorized_after_v4": {
+      "state": "UNVERIFIED_NO_POST_DEPLOYMENT_CALL_OBSERVED",
+      "reason": "No legitimate apex-direct-mcp-fabric invocation reached runtime v4 during the verification window. No privileged key was extracted or synthetic auth bypass created solely for the test."
+    }
+  },
+  "unresolved": [
+    "Observe one legitimate apex-direct-mcp-fabric -> apex-connector-tool-gateway v4 request returning 200, then append that provider log receipt.",
+    "Migrate parent fabric from legacy service_role to a named modern Supabase secret key in a separate reversible change after caller inventory and provider compatibility testing.",
+    "Reconcile the much stronger live apex-direct-mcp-fabric v8 source back into its canonical owning repository without regressing unique live capabilities."
+  ],
+  "completion_boundary": "DEPLOYED_AND_NEGATIVE_AUTH_VERIFIED; POSITIVE_V4_CALL_PENDING"
+}
