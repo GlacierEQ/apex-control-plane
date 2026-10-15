@@ -33,6 +33,21 @@ Repository labels, registries, historical `canonical` classifications, governanc
 
 The enforced startup contract is [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STARTUP.md).
 
+## Source-bound session gateway
+
+An APEX-controlled model host can enforce the source-bound session lifecycle
+through [`src/apex_session_gateway.py`](src/apex_session_gateway.py) and
+the owner-private, cross-process
+[`src/apex_session_gateway_store.py`](src/apex_session_gateway_store.py).
+See [APEX Session Gateway Host Integration](docs/APEX_SESSION_GATEWAY_HOST_INTEGRATION.md)
+for invocation requirements, original-speaker integrity, memory-candidate
+quarantine, reservation-before-model semantics, and the durable readback gate.
+
+**Proof boundary:** passing gateway and SQLite tests does not install a native
+ChatGPT automatic-session hook or control ChatGPT account-level memory
+consolidation. A real host must invoke the gateway before every model call.
+Native ChatGPT startup/memory control remains unverified.
+
 ## Enforced startup
 
 `python src/control_plane.py` is the explicit fail-closed wrapper. The composed startup/strong-boot path protects the preserved runtime in `src/control_plane_runtime.py` with these proof boundaries:
