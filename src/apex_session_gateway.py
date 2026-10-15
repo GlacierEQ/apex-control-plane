@@ -63,10 +63,20 @@ class ContinuationEnvelope:
     attributions: tuple[SourceAssertion, ...]
     memory_proposals: tuple[MemoryProposal, ...]
     digest: str
+    # Explicitly mark model-authored output and non-authoritative memory candidates.
+    # A downstream consumer must never interpret either as Operator-authored fact.
+    response_author: str = "assistant"
+    memory_authority: str = "SOURCE_CANDIDATE_ONLY"
 
 
 _USER_AUTHORITY_KINDS = frozenset({
     "user_instruction", "user_fact", "user_correction", "user_preference",
+})
+_MANUAL_ADOPTION_KINDS = frozenset({
+    "user_instruction", "user_fact", "user_preference",
+})
+_AUTOMATIC_SOURCE_CANDIDATE_KINDS = frozenset({
+    "user_correction", "source_quote", "assistant_inference",
 })
 
 
@@ -138,8 +148,18 @@ def _validate_output(
             _verify_assertion(proposal.source, resolve_source)
         if proposal.kind in _USER_AUTHORITY_KINDS and proposal.source.speaker != "user":
             raise GatewayDenied("user-originated source required for user direction or memory")
-        # A proposal is still only a candidate. The host's memory authority
-        # policy must decide persistence; no internal ChatGPT memory is changed.
+        if proposal.kind in _MANUAL_ADOPTION_KINDS:
+            # A quote from the user is NOT authority for an LLM to infer that it
+            # is an instruction/fact/preference. In particular, a negated
+            # correction must never be inverted into an adopted direction.
+            # An explicitly authenticated Operator adoption path is required.
+            raise GatewayDenied("explicit authority required for memory classification")
+        if proposal.kind not in _AUTOMATIC_SOURCE_CANDIDATE_KINDS:
+            raise GatewayDenied("unsupported memory kind; use source-only candidate")
+        if proposal.kind == "assistant_inference" and proposal.source.speaker != "assistant":
+            raise GatewayDenied("assistant inference must have assistant provenance")
+        # All proposals remain untrusted, source-only candidates. No model-authored
+        # proposal is a governing user instruction or an accepted factual memory.
 
 
 def _snapshot(envelope: ContinuationEnvelope) -> dict[str, Any]:
@@ -151,6 +171,8 @@ def _snapshot(envelope: ContinuationEnvelope) -> dict[str, Any]:
         "cursor": envelope.cursor,
         "corrections": list(envelope.corrections),
         "response_text": envelope.response_text,
+        "response_author": envelope.response_author,
+        "memory_authority": envelope.memory_authority,
         "attributions": [vars(item) for item in envelope.attributions],
         "memory_proposals": [
             {"kind": item.kind, "source": vars(item.source)}
@@ -180,7 +202,7 @@ def run_admitted_session(
     persist: Callable[[ContinuationEnvelope], Any],
     readback: Callable[[Any], ContinuationEnvelope],
 ) -> GatewayModelOutput:
-    """Admit -> invoke -> validate -> reserve -> persist -> independent readback.
+    """Admit -> reserve -> invoke -> validate -> persist -> independent readback.
 
     Host-provided callbacks are not authenticated automatically. This gateway
     only certifies equivalence to the supplied original-source resolver/store;
@@ -201,9 +223,18 @@ def run_admitted_session(
         raise GatewayDenied("ambiguous operation identity component")
 
     def after_admission(receipt: AdmissionReceipt) -> GatewayModelOutput:
+        # Reservation occurs BEFORE any potentially effectful model callback.
+        # On failure the reservation stays reserved: a host must reconcile
+        # provider state before retrying an uncertain invocation.
+        key = ":".join((mission, "model", session, turn))
+        try:
+            reserved = reserve(key)
+        except Exception as exc:
+            raise GatewayDenied("durable reservation unavailable") from exc
+        if reserved is not True:
+            raise GatewayDenied("operation already reserved; reconcile before replay")
         output = invoke_model(receipt)
         _validate_output(output, receipt, resolve_source)
-        key = ":".join((mission, "model", session, turn))
         envelope = ContinuationEnvelope(
             operation_key=key,
             chat_session_id=receipt.chat_session_id,
@@ -218,12 +249,6 @@ def run_admitted_session(
         )
         from dataclasses import replace
         envelope = replace(envelope, digest=_envelope_digest(envelope))
-        try:
-            reserved = reserve(key)
-        except Exception as exc:
-            raise GatewayDenied("durable reservation unavailable") from exc
-        if reserved is not True:
-            raise GatewayDenied("operation already reserved; reconcile before replay")
         try:
             checkpoint = persist(envelope)
             if checkpoint is None:
