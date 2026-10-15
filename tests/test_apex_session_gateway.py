@@ -92,13 +92,15 @@ class SessionGatewayTests(unittest.TestCase):
     def test_valid_source_matched_correction_precedes_model_and_durable_readback(self):
         output = self.invoke()
         self.assertEqual(output.text, "The user explicitly corrected the assistant interpretation.")
-        self.assertEqual(self.events, ["apply", "model", "reserve", "persist", "readback"])
+        self.assertEqual(self.events, ["apply", "reserve", "model", "persist", "readback"])
         checkpoint = next(iter(self.saved.values()))
         self.assertEqual(checkpoint.mission_id, "case-A")
         self.assertEqual(checkpoint.cursor, "cursor-7")
         self.assertEqual(checkpoint.corrections, ("preserve the complete mission scope",))
         self.assertEqual(checkpoint.memory_proposals[0].source.speaker, "user")
         self.assertTrue(checkpoint.digest.startswith("sha256:"))
+        self.assertEqual(checkpoint.response_author, "assistant")
+        self.assertEqual(checkpoint.memory_authority, "SOURCE_CANDIDATE_ONLY")
 
     def test_assistant_opening_can_never_be_promoted_to_user_instruction(self):
         impersonation = assertion("original:assistant:first", "user", ASSISTANT_FIRST)
@@ -112,7 +114,7 @@ class SessionGatewayTests(unittest.TestCase):
         with self.assertRaisesRegex(GatewayDenied, "speaker"):
             self.invoke(model=model)
         self.assertEqual(self.saved, {})
-        self.assertEqual(self.reservations, set())
+        self.assertEqual(len(self.reservations), 1)
 
     def test_assistant_source_with_honest_speaker_cannot_be_saved_as_user_direction(self):
         def model(receipt):
@@ -123,7 +125,7 @@ class SessionGatewayTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(GatewayDenied, "user-originated"):
             self.invoke(model=model)
-        self.assertEqual(self.reservations, set())
+        self.assertEqual(len(self.reservations), 1)
 
     def test_lost_middle_correction_rejected_before_persistence(self):
         def model(receipt):
@@ -132,21 +134,21 @@ class SessionGatewayTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(GatewayDenied, "corrections"):
             self.invoke(model=model)
-        self.assertEqual(self.reservations, set())
+        self.assertEqual(len(self.reservations), 1)
 
     def test_summary_is_not_allowed_as_original_user_message(self):
         def fake_resolve(ref):
             return OriginRecord("memory_summary", USER_MIDDLE.encode())
         with self.assertRaisesRegex(GatewayDenied, "source speaker"):
             self.invoke(resolve_source=fake_resolve)
-        self.assertEqual(self.reservations, set())
+        self.assertEqual(len(self.reservations), 1)
 
     def test_mismatched_original_bytes_denied(self):
         def fake_resolve(ref):
             return OriginRecord("user", b"Another statement")
         with self.assertRaisesRegex(GatewayDenied, "digest"):
             self.invoke(resolve_source=fake_resolve)
-        self.assertEqual(self.reservations, set())
+        self.assertEqual(len(self.reservations), 1)
 
     def test_false_readback_does_not_count_as_checkpoint(self):
         def unverified(key):
@@ -169,7 +171,7 @@ class SessionGatewayTests(unittest.TestCase):
         self.events.clear()
         with self.assertRaisesRegex(GatewayDenied, "reserved"):
             self.invoke()
-        self.assertEqual(self.events, ["apply", "model", "reserve"])
+        self.assertEqual(self.events, ["apply", "reserve"])
         self.assertEqual(len(self.saved), 1)
 
     def test_wrong_mission_never_runs_model(self):
@@ -200,8 +202,47 @@ class SessionGatewayTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(GatewayDenied, "user-originated"):
             self.invoke(model=model)
-        self.assertEqual(self.reservations, set())
+        self.assertEqual(len(self.reservations), 1)
 
+
+
+    def test_user_negation_cannot_be_memory_classified_as_an_instruction(self):
+        # Exact user words and a valid hash do NOT prove that the user issued
+        # the opposite of their correction. Source identity is necessary, not sufficient.
+        def model(receipt):
+            return GatewayModelOutput(
+                "Misread correction",
+                (self.user_assertion,),
+                (MemoryProposal("user_instruction", self.user_assertion),),
+                receipt.recovery.corrections,
+            )
+        with self.assertRaisesRegex(GatewayDenied, "explicit authority"):
+            self.invoke(model=model)
+        self.assertEqual(self.saved, {})
+        self.assertEqual(len(self.reservations), 1)
+
+    def test_unknown_memory_kind_cannot_bypass_authority_filter(self):
+        def model(receipt):
+            return GatewayModelOutput(
+                "Suspicious derived kind", (self.user_assertion,),
+                (MemoryProposal("operator_instruction", self.user_assertion),),
+                receipt.recovery.corrections,
+            )
+        with self.assertRaisesRegex(GatewayDenied, "unsupported memory kind"):
+            self.invoke(model=model)
+        self.assertEqual(self.saved, {})
+
+    def test_failing_model_retains_reservation_and_cannot_replay(self):
+        def raises(receipt):
+            self.events.append("model")
+            raise RuntimeError("model failed after invocation")
+        with self.assertRaisesRegex(RuntimeError, "model failed"):
+            self.invoke(model=raises)
+        self.assertEqual(self.events, ["apply", "reserve", "model"])
+        self.assertEqual(self.saved, {})
+        with self.assertRaisesRegex(GatewayDenied, "reserved"):
+            self.invoke()
+        self.assertEqual(self.events, ["apply", "reserve", "model", "apply", "reserve"])
 
 if __name__ == "__main__":
     unittest.main()
