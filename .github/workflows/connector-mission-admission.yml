@@ -6,13 +6,11 @@ on:
       - 'src/mission_resume.py'
       - 'src/chat_context_admission.py'
       - 'src/apex_session_gateway.py'
-      - 'src/apex_session_gateway.py'
       - 'src/spiral_chat_handoff.py'
       - 'src/continuity_admission_guard.py'
       - 'tests/test_connector_mission_router.py'
       - 'tests/test_connector_checkpoint_store.py'
       - 'tests/test_chat_context_admission.py'
-      - 'tests/test_apex_session_gateway.py'
       - 'tests/test_apex_session_gateway.py'
       - '.github/workflows/connector-mission-admission.yml'
   push:
@@ -21,11 +19,13 @@ on:
       - 'src/connector_mission_router.py'
       - 'src/mission_resume.py'
       - 'src/chat_context_admission.py'
+      - 'src/apex_session_gateway.py'
       - 'src/spiral_chat_handoff.py'
       - 'src/continuity_admission_guard.py'
       - 'tests/test_connector_mission_router.py'
       - 'tests/test_connector_checkpoint_store.py'
       - 'tests/test_chat_context_admission.py'
+      - 'tests/test_apex_session_gateway.py'
       - '.github/workflows/connector-mission-admission.yml'
 permissions:
   contents: read
