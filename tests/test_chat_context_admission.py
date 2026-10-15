@@ -359,7 +359,19 @@ class AlternateRecoveryRouteTests(unittest.TestCase):
     def test_alternate_path_binds_only_exact_requested_mission(self):
         recovery = self._recovery()
         kernel = self._kernel()
-        self._bind(kernel, recovery, expected_mission_id=recovery.mission_id)
+        def apply_verified_source(rec):
+            return ContextApplication(
+                mission_id=rec.mission_id,
+                source_ref=rec.source_ref,
+                cursor=rec.cursor,
+                corrections=rec.corrections,
+                fact_keys=tuple(rec.facts),
+                effect_ref="test-host:alternate-path-applied",
+            )
+        self._bind(
+            kernel, recovery, expected_mission_id=recovery.mission_id,
+            apply_context=apply_verified_source,
+        )
         self.assertEqual(kernel.phase.value, "ready")
         self.assertEqual(len(kernel.bindings), 1)
         self.assertEqual(len(kernel.receipts), 1)
