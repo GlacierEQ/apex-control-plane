@@ -426,3 +426,86 @@ def test_verified_outcomes_require_native_readback_not_artifact_claims():
         after_state_ref="source:version2",
     )
     valid.verify_claim()
+
+
+# Stage-continuation regression: a native stage-A receipt is not mission completion.
+# Distinct transition AND effect identity are mandatory; ambiguous replays fail closed.
+def _stage_candidate(transition_id: str, effect_id: str):
+    from dataclasses import replace
+    candidate = _guarded("multi-stage-case", source="source:original")
+    return replace(candidate, metadata={
+        **candidate.metadata, "transition_id": transition_id, "effect_id": effect_id,
+    })
+
+
+def _stage_attempt(stage="INTERMEDIATE", transition_id="stage-A", effect_id="effect-A"):
+    from dataclasses import replace
+    return replace(
+        _attempt("multi-stage-case", source="source:original", stage=stage),
+        source_class="source_native", provider_ref="provider:stage-A",
+        after_state_ref="source:stage-A", readback_ref="provider:stage-A-readback",
+        transition_id=transition_id, effect_id=effect_id,
+    )
+
+
+def test_distinct_verified_intermediate_stage_can_advance_same_source_and_method():
+    decision = _choose(
+        (_stage_candidate("stage-B", "effect-B"),),
+        (_stage_attempt(),),
+    )
+    assert decision.selected_candidate_id == "multi-stage-case"
+
+
+def test_distinct_stage_after_material_delta_is_not_whole_mission_completion():
+    decision = _choose(
+        (_stage_candidate("stage-B", "effect-B"),),
+        (_stage_attempt(stage="VERIFIED_MATERIAL_DELTA"),),
+    )
+    assert decision.selected_candidate_id == "multi-stage-case"
+
+
+def test_exact_stage_or_effect_replay_is_still_rejected():
+    for transition_id, effect_id in (("stage-A", "effect-B"),
+                                     ("stage-B", "effect-A"),
+                                     ("stage-A", "effect-A")):
+        try:
+            _choose((_stage_candidate(transition_id, effect_id),), (_stage_attempt(),))
+        except ImpactSelectionViolation as exc:
+            assert "no fresh authorized" in str(exc)
+        else:
+            raise AssertionError("same transition/effect replay was selected")
+
+
+def test_legacy_or_unverified_intermediate_cannot_open_distinct_stage():
+    from dataclasses import replace
+    for prior in (_attempt("multi-stage-case", stage="INTERMEDIATE"),
+                  replace(_stage_attempt(), readback_ref=None),
+                  replace(_stage_attempt(), source_class="provider")):
+        try:
+            _choose((_stage_candidate("stage-B", "effect-B"),), (prior,))
+        except ImpactSelectionViolation as exc:
+            assert "no fresh authorized" in str(exc)
+        else:
+            raise AssertionError("unverified historical stage unlocked execution")
+
+
+def test_uncertain_attempt_blocks_new_stage_without_reconciliation():
+    from dataclasses import replace
+    prior = replace(_stage_attempt(), stage="ATTEMPTED", readback_ref=None)
+    try:
+        _choose((_stage_candidate("stage-B", "effect-B"),), (prior,))
+    except ImpactSelectionViolation as exc:
+        assert "no fresh authorized" in str(exc)
+    else:
+        raise AssertionError("uncertain provider effect must remain reserved")
+
+
+def test_stage_replay_checks_all_prior_receipts_not_only_last():
+    receipts = (_stage_attempt(transition_id="stage-A", effect_id="effect-A"),
+                _stage_attempt(transition_id="stage-B", effect_id="effect-B"))
+    try:
+        _choose((_stage_candidate("stage-C", "effect-A"),), receipts)
+    except ImpactSelectionViolation as exc:
+        assert "no fresh authorized" in str(exc)
+    else:
+        raise AssertionError("older effect identity was overwritten by newer receipt")
