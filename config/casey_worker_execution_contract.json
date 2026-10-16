@@ -32,7 +32,15 @@
     "material_state_change_invalidates_prior_action_selection": true,
     "reweight_after_material_state_change": true,
     "rules_frameworks_and_memories_are_inputs_to_judgment_not_default_actions": true,
-    "do_not_add_rule_when_existing_state_already_encodes_the_lesson": true
+    "do_not_add_rule_when_existing_state_already_encodes_the_lesson": true,
+    "authenticated_mission_receipts_required_for_resumed_selection": true,
+    "canonical_selector_uses_prior_attempts_and_require_authenticated_frontier": true,
+    "never_replay_unchanged_blocked_or_no_delta_action": true,
+    "completed_work_is_not_an_open_action": true,
+    "reselect_other_authorized_high_benefit_frontier_on_route_block": true,
+    "external_effect_requires_distinct_operator_authorization": true,
+    "material_outcome_requires_provider_native_readback": true,
+    "no_fresh_candidate_does_not_prove_mission_completion": true
   },
   "continuous_maintenance_execution": {
     "contract_path": "config/continuous_maintenance_execution_contract.json",
