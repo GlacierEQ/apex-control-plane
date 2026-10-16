@@ -105,6 +105,54 @@ class ImpactDecision:
     pressure_score: float = 0.0
     pressure_reasons: tuple[str, ...] = ()
     prosecution_eligible: bool = False
+    rejection_reasons: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class ImpactAttempt:
+    """Owning-provider receipt for a previous attempted action.
+
+    An authenticated APEX/Spiral journal, not an assistant summary, must supply
+    these receipts in a resumed worker. This is a replay/eligibility check, not
+    another action ranker or storage system.
+    """
+    mission_sha256: str
+    candidate_id: str
+    method_id: str
+    source_state_ref: str
+    stage: str
+    provider_ref: str
+    after_state_ref: str | None = None
+    readback_ref: str | None = None
+    source_class: str = "provider"
+
+    def verify_claim(self) -> None:
+        if not isinstance(self.mission_sha256, str) or len(self.mission_sha256) != 64:
+            raise ImpactSelectionViolation("attempt requires exact mission SHA256")
+        if not all(char in "0123456789abcdef" for char in self.mission_sha256):
+            raise ImpactSelectionViolation("attempt mission digest must be hexadecimal")
+        for name in ("candidate_id", "method_id", "source_state_ref", "provider_ref"):
+            value = _required_text(getattr(self, name), name)
+            if name.endswith("_ref") and (":" not in value or
+                                          not all(value.split(":", 1))):
+                raise ImpactSelectionViolation(f"{name} must be kind:locator")
+        stages = {"BLOCKED", "NO_DELTA", "ATTEMPTED", "INTERMEDIATE",
+                  "VERIFIED_MATERIAL_DELTA", "HUMAN_OUTCOME"}
+        if self.stage not in stages:
+            raise ImpactSelectionViolation(f"unknown provider stage: {self.stage}")
+        if self.stage in {"VERIFIED_MATERIAL_DELTA", "HUMAN_OUTCOME"}:
+            if self.source_class != "source_native":
+                raise ImpactSelectionViolation("native source proof required for outcome")
+            if not self.readback_ref or not self.after_state_ref:
+                raise ImpactSelectionViolation("native independent readback and after-state required")
+            if self.after_state_ref == self.source_state_ref:
+                raise ImpactSelectionViolation("no mission state delta: not a verified outcome")
+            for ref in (self.provider_ref, self.readback_ref):
+                kind, sep, locator = ref.partition(":")
+                if not sep or not locator or kind in {
+                    "assistant", "report", "summary", "matrix", "artifact", "plan", "ledger"
+                }:
+                    raise ImpactSelectionViolation("native provider receipts, not assistant artifacts, required")
 
 
 class ContinuousImpactSelector:
@@ -149,6 +197,8 @@ class ContinuousImpactSelector:
         state_version: str,
         candidates: Sequence[ImpactCandidate],
         pressure: ProsecutionPressure | None = None,
+        prior_attempts: Sequence[ImpactAttempt] = (),
+        require_authenticated_frontier: bool = False,
     ) -> ImpactDecision:
         task = _required_text(task_id, "task_id")
         mission_text = _required_text(mission, "mission")
@@ -157,9 +207,22 @@ class ContinuousImpactSelector:
         if not candidates:
             raise ImpactSelectionViolation("at least one candidate operation is required")
 
+        active_mission_sha = _digest(mission_text)
+        attempts: dict[tuple[str, str, str], ImpactAttempt] = {}
+        for attempt in prior_attempts:
+            attempt.verify_claim()
+            if attempt.mission_sha256 != active_mission_sha:
+                raise ImpactSelectionViolation(
+                    "recovered attempt belongs to a different mission; do not replay"
+                )
+            attempts[(attempt.candidate_id, attempt.method_id, attempt.source_state_ref)] = attempt
+        # Source-/authority-bound selection is mandatory for continuity workers
+        # that assert require_authenticated_frontier. Legacy callers stay compatible.
+        guard = require_authenticated_frontier or bool(prior_attempts)
         seen: set[str] = set()
         eligible: list[ImpactCandidate] = []
         rejected: list[str] = []
+        rejection_reasons: dict[str, str] = {}
         for candidate in candidates:
             candidate_id = _required_text(candidate.candidate_id, "candidate_id")
             if candidate_id in seen:
@@ -172,12 +235,59 @@ class ContinuousImpactSelector:
             )
             if candidate_class != bound_operation:
                 rejected.append(candidate_id)
+                rejection_reasons[candidate_id] = "operation class differs from Operator-bound task"
+                continue
+            meta = candidate.metadata
+            if guard:
+                source_ref = meta.get("source_state_ref")
+                method_id = meta.get("method_id")
+                flags = ("authorized", "external_effect",
+                         "external_effect_authorized", "already_completed")
+                if (
+                    not isinstance(source_ref, str)
+                    or ":" not in source_ref
+                    or not all(source_ref.split(":", 1))
+                    or not isinstance(method_id, str)
+                    or not method_id.strip()
+                    or any(type(meta.get(name)) is not bool for name in flags)
+                ):
+                    rejected.append(candidate_id)
+                    rejection_reasons[candidate_id] = "missing authenticated source/method/authorization metadata"
+                    continue
+                if meta["already_completed"]:
+                    rejected.append(candidate_id)
+                    rejection_reasons[candidate_id] = "completed work is not a fresh frontier"
+                    continue
+                if not meta["authorized"]:
+                    rejected.append(candidate_id)
+                    rejection_reasons[candidate_id] = "no explicit or standing Operator authorization"
+                    continue
+                if meta["external_effect"] and not meta["external_effect_authorized"]:
+                    rejected.append(candidate_id)
+                    rejection_reasons[candidate_id] = "external effect requires distinct Operator authorization"
+                    continue
+                key = candidate_id, method_id, source_ref
+                if key in attempts:
+                    rejected.append(candidate_id)
+                    rejection_reasons[candidate_id] = (
+                        "unchanged previous " + attempts[key].stage.lower()
+                        + " action/method/source; reroute or recover a material delta"
+                    )
+                    continue
+            elif meta.get("external_effect") is True and meta.get("external_effect_authorized") is not True:
+                # Safety invariant even for legacy callers: a marked external
+                # effect cannot be elevated through impact score alone.
+                rejected.append(candidate_id)
+                rejection_reasons[candidate_id] = "external effect requires distinct Operator authorization"
                 continue
             eligible.append(candidate)
 
         if not eligible:
             raise ImpactSelectionViolation(
-                "no candidate preserves the bound Operator operation class"
+                "no fresh authorized candidate for this mission; "
+                "preserve exact blockers and discover another lawful route. "
+                "Exhaustion of candidate routes is not mission completion "
+                "(legacy: no candidate preserves the bound Operator operation class)"
             )
 
         ranking = self.engine.rank(
@@ -200,6 +310,7 @@ class ContinuousImpactSelector:
             "contributions": dict(sorted(selected_rank.contributions.items())),
             "ranked_candidate_ids": [row.candidate.candidate_id for row in ranking],
             "rejected_candidate_ids": rejected,
+            "rejection_reasons": dict(sorted(rejection_reasons.items())),
             "evidence_refs": list(selected.evidence_refs),
             "pressure_level": pressure.level.value if pressure is not None else "normal",
             "pressure_score": pressure.score if pressure is not None else 0.0,
@@ -226,6 +337,7 @@ class ContinuousImpactSelector:
             pressure_score=decision_payload["pressure_score"],
             pressure_reasons=tuple(decision_payload["pressure_reasons"]),
             prosecution_eligible=decision_payload["prosecution_eligible"],
+            rejection_reasons=dict(sorted(rejection_reasons.items())),
         )
         self._history.append(decision)
         return decision
