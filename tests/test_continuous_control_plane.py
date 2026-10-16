@@ -211,3 +211,77 @@ def test_provider_receipt_dedupe_is_scoped_by_source_system(tmp_path):
     cp.record_receipt(first)
     cp.record_receipt(second)
     assert {r.source_system for r in cp.receipts.values()} >= {"github","buildkite"}
+
+
+def test_imminent_filing_preempts_forensic_worker(tmp_path):
+    cp = plane(tmp_path)
+    forensic = cp.submit_work(
+        mission_id="case-deadline", correlation_id="corr-urgent",
+        domain="case", capability="case.worker", objective="Forensic hashes",
+        idempotency_key="forensic-job", priority=100,
+        metadata={"action_kind": "forensic_hash"},
+    )
+    filing = cp.submit_work(
+        mission_id="case-deadline", correlation_id="corr-urgent",
+        domain="case", capability="case.worker", objective="Submit filing",
+        idempotency_key="filing-job", priority=1,
+        metadata={"action_kind": "court_filing", "deadline_status": "verified",
+                  "deadline_at": (NOW + timedelta(hours=1)).isoformat(),
+                  "deadline_source_ref": "court:verified-case-deadline"},
+    )
+    compile_work(cp, forensic.work_id)
+    compile_work(cp, filing.work_id)
+    chosen = cp.claim_next(worker_id="worker", capabilities=["case.worker"], now=NOW)
+    assert chosen is not None
+    assert chosen.work_id == filing.work_id
+
+
+def test_unverified_or_expired_deadline_cannot_preempt(tmp_path):
+    cp = plane(tmp_path)
+    baseline = cp.submit_work(
+        mission_id="case-deadline", correlation_id="corr-ordinary",
+        domain="case", capability="case.worker", objective="Higher priority",
+        idempotency_key="ordinary-priority", priority=70,
+    )
+    unverified = cp.submit_work(
+        mission_id="case-deadline", correlation_id="corr-ordinary",
+        domain="case", capability="case.worker", objective="Unverified claim",
+        idempotency_key="unverified-claim", priority=1,
+        metadata={"action_kind": "court_filing", "deadline_status": "unknown",
+                  "deadline_at": (NOW + timedelta(hours=1)).isoformat(),
+                  "deadline_source_ref": "court:unverified"},
+    )
+    expired = cp.submit_work(
+        mission_id="case-deadline", correlation_id="corr-ordinary",
+        domain="case", capability="case.worker", objective="Expired filing window",
+        idempotency_key="expired-filing", priority=1,
+        metadata={"action_kind": "court_filing", "deadline_status": "verified",
+                  "deadline_at": (NOW - timedelta(days=1)).isoformat(),
+                  "deadline_source_ref": "court:past-cutoff"},
+    )
+    for item in (baseline, unverified, expired):
+        compile_work(cp, item.work_id)
+    chosen = cp.claim_next(worker_id="worker", capabilities=["case.worker"], now=NOW)
+    assert chosen is not None
+    assert chosen.work_id == baseline.work_id
+
+
+def test_deadline_preemption_does_not_authorize_mutation(tmp_path):
+    cp = plane(tmp_path)
+    filing = cp.submit_work(
+        mission_id="case-deadline", correlation_id="corr-auth",
+        domain="case", capability="case.worker", objective="File complaint",
+        idempotency_key="filing-with-auth", priority=1, external_action=True,
+        metadata={"action_kind": "court_filing", "deadline_status": "verified",
+                  "deadline_at": (NOW + timedelta(hours=1)).isoformat(),
+                  "deadline_source_ref": "court:filing-cutoff"},
+    )
+    compile_work(cp, filing.work_id)
+    claimed = cp.claim_next(worker_id="worker", capabilities=["case.worker"], now=NOW)
+    assert claimed is not None
+    assert claimed.work_id == filing.work_id
+    cp.transition(filing.work_id, WorkState.EXECUTING, reason="execute")
+    cp.transition(filing.work_id, WorkState.RECONCILING, reason="reconcile")
+    cp.transition(filing.work_id, WorkState.CHANGESET_READY, reason="ready")
+    with pytest.raises(PermissionError, match="authorization"):
+        cp.transition(filing.work_id, WorkState.MUTATING, reason="not-authorized")

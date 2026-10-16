@@ -2,13 +2,52 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const MCP_PROTOCOL_VERSION = "2025-06-18";
-if (!SUPABASE_URL || !SERVICE_ROLE_KEY) throw new Error("Supabase runtime credentials unavailable");
+const INTERNAL_ORIGIN = "apex-direct-mcp-fabric";
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+function runtimeServiceKeys(): string[] {
+  const keys: string[] = [];
+  const modern = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (modern) {
+    try {
+      const parsed = JSON.parse(modern);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        for (const value of Object.values(parsed as Record<string, unknown>)) {
+          if (typeof value === "string" && value.trim()) keys.push(value.trim());
+        }
+      }
+    } catch {
+      // A malformed modern-key dictionary is ignored; legacy compatibility remains below.
+    }
+  }
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (legacy) keys.push(legacy);
+  return [...new Set(keys)];
+}
+
+const SERVICE_KEYS = runtimeServiceKeys();
+if (!SUPABASE_URL || SERVICE_KEYS.length === 0) throw new Error("service_key_unavailable");
+const ADMIN_KEY = SERVICE_KEYS[0];
+
+const supabase = createClient(SUPABASE_URL, ADMIN_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+
+function constantTimeEqual(left: string, right: string): boolean {
+  const encoder = new TextEncoder();
+  const a = encoder.encode(left);
+  const b = encoder.encode(right);
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let index = 0; index < a.length; index += 1) mismatch |= a[index] ^ b[index];
+  return mismatch === 0;
+}
+
+function authorizeInternalRuntimeRequest(req: Request): boolean {
+  const apiKey = req.headers.get("apikey")?.trim() || "";
+  const origin = req.headers.get("x-glaciereq-origin")?.trim() || "";
+  return origin === INTERNAL_ORIGIN && SERVICE_KEYS.some((candidate) => constantTimeEqual(apiKey, candidate));
+}
 
 type Json = Record<string, unknown>;
 type RpcId = string | number | null;
@@ -110,6 +149,7 @@ async function enqueueRoute(route: Route, body: Json) {
     throw new Error("arguments must be a JSON object");
   }
 
+  const approvalRequired = route.approval_required === true;
   const { data, error } = await supabase.rpc("enqueue_connector_execution_job_v3", {
     p_connector_key: route.connector_key,
     p_tool_name: route.tool_name,
@@ -118,7 +158,7 @@ async function enqueueRoute(route: Route, body: Json) {
     p_logical_scope: text(body.logical_scope, "logical_scope", false),
     p_priority: int(body.priority, "priority", 0, 100, route.priority ?? 50),
     p_idempotency_key: text(body.idempotency_key, "idempotency_key", false),
-    p_approval_required: route.mutation_class !== "read" || route.approval_required === true,
+    p_approval_required: approvalRequired,
     p_notion_request_id: text(body.notion_request_id, "notion_request_id", false),
     p_linear_issue_id: text(body.linear_issue_id, "linear_issue_id", false),
   });
@@ -131,7 +171,8 @@ async function enqueueRoute(route: Route, body: Json) {
       tool_name: route.tool_name,
       capability: route.capability,
       mutation_class: route.mutation_class,
-      approval_required: route.mutation_class !== "read" || route.approval_required === true,
+      approval_required: approvalRequired,
+      authority_mode: approvalRequired ? "scoped_consequence_authority" : "active_mission_authority",
       policy_version: route.policy_version,
     },
     enqueue: data,
@@ -165,9 +206,10 @@ function routeToolName(routeKey: string): string {
 
 function routeToMcpTool(route: Route): Json {
   const readOnly = route.mutation_class === "read";
+  const approvalRequired = route.approval_required === true;
   return {
     name: routeToolName(route.route_key),
-    description: `Direct governed connector route ${route.route_key}: ${route.connector_key} / ${route.tool_name} / ${route.capability}. ${readOnly ? "Read-only." : "Mutation; execution remains approval-gated when policy requires it."}`,
+    description: `Direct governed connector route ${route.route_key}: ${route.connector_key} / ${route.tool_name} / ${route.capability}. ${readOnly ? "Read-only." : approvalRequired ? "Consequence-sensitive mutation; scoped authority required." : "Recoverable mutation; active mission authority applies."}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -183,7 +225,7 @@ function routeToMcpTool(route: Route): Json {
     },
     annotations: {
       readOnlyHint: readOnly,
-      destructiveHint: false,
+      destructiveHint: route.mutation_class === "destructive",
       idempotentHint: true,
     },
     _meta: {
@@ -192,7 +234,8 @@ function routeToMcpTool(route: Route): Json {
       provider_tool: route.tool_name,
       capability: route.capability,
       mutation_class: route.mutation_class,
-      approval_required: route.mutation_class !== "read" || route.approval_required === true,
+      approval_required: approvalRequired,
+      authority_mode: approvalRequired ? "scoped_consequence_authority" : "active_mission_authority",
       policy_version: route.policy_version,
     },
   };
@@ -228,8 +271,8 @@ async function handleMcp(rpc: Json) {
     return result({
       protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: { tools: { listChanged: true } },
-      serverInfo: { name: "glaciereq-connector-runtime", version: "2.0.0" },
-      instructions: "MCP-native GlacierEQ connector execution gateway. Enabled non-Smithery route policies become MCP tools automatically. Calls enqueue into the durable connector execution runtime; mutation approval, retries, idempotency, budgets, circuit state, and receipts remain authoritative downstream.",
+      serverInfo: { name: "glaciereq-connector-runtime", version: "2.1.0" },
+      instructions: "MCP-native GlacierEQ connector execution gateway. Enabled non-Smithery route policies become MCP tools automatically. Recoverable mutations inherit active mission authority; consequence-specific approval, retries, idempotency, budgets, circuit state, and receipts remain authoritative downstream.",
     });
   }
   if (method === "notifications/initialized") return new Response(null, { status: 204 });
@@ -256,6 +299,10 @@ async function handleMcp(rpc: Json) {
 }
 
 Deno.serve(async (req: Request) => {
+  if (!authorizeInternalRuntimeRequest(req)) {
+    return json({ ok: false, error: "internal_runtime_unauthorized" }, 403);
+  }
+
   try {
     const url = new URL(req.url);
     if (req.method === "GET") {

@@ -64,3 +64,36 @@ def test_transport_resolves_before_capability_and_reports_active_mission_authori
     assert result["permission_union_allowed"] is False
     assert result["authority_mode_for_routine_recoverable_write"] == "active_mission_authority"
     assert result["terminal_readback_required"] is True
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+GATEWAY_SOURCE = REPO_ROOT / "supabase/functions/apex-connector-tool-gateway/index.ts"
+FABRIC_SOURCE = REPO_ROOT / "supabase/functions/apex-direct-mcp-fabric/index.ts"
+
+
+def test_connector_runtime_requires_explicit_internal_auth_before_any_route_or_job_access() -> None:
+    source = GATEWAY_SOURCE.read_text(encoding="utf-8")
+    assert "authorizeInternalRuntimeRequest(req)" in source
+    assert "const url = new URL(req.url)" in source
+    auth_index = source.index("authorizeInternalRuntimeRequest(req)")
+    url_index = source.index("const url = new URL(req.url)")
+    assert auth_index < url_index
+    assert 'req.headers.get("apikey")' in source
+    assert 'req.headers.get("x-glaciereq-origin")' in source
+    assert '"apex-direct-mcp-fabric"' in source
+    assert "SUPABASE_SECRET_KEYS" in source
+    assert "SUPABASE_SERVICE_ROLE_KEY" in source
+
+
+def test_connector_runtime_does_not_treat_platform_jwt_check_as_authorization() -> None:
+    source = GATEWAY_SOURCE.read_text(encoding="utf-8")
+    assert "authorizeInternalRuntimeRequest" in source
+    assert "internal_runtime_unauthorized" in source
+    assert "service_key_unavailable" in source
+
+
+def test_direct_fabric_supplies_the_runtime_internal_auth_contract() -> None:
+    source = FABRIC_SOURCE.read_text(encoding="utf-8")
+    assert '"x-glaciereq-origin": "apex-direct-mcp-fabric"' in source
+    assert "apikey: SERVICE_ROLE" in source
+    assert "SUPABASE_SERVICE_ROLE_KEY" in source

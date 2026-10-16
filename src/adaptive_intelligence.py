@@ -13,6 +13,9 @@ mutation interlocks remain controlling.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from contextlib import contextmanager
+import os
+import tempfile
 from datetime import datetime, timezone
 import json
 import math
@@ -182,6 +185,71 @@ class AdaptiveRanker:
         )
 
 
+@contextmanager
+def _exclusive_learning_state(path: Path):
+    """Serialize read/modify/write across concurrent Python workers."""
+    lock_path = path.with_name(path.name + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+b") as lock:
+        if os.name == "nt":
+            import msvcrt
+            lock.seek(0)
+            if not lock.read(1):
+                lock.write(b"0")
+                lock.flush()
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                lock.seek(0)
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
+def _read_learning_state(path: Path) -> AdaptiveRanker:
+    """Reject incompatible or damaged state instead of silently losing learning."""
+    state = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(state, dict) or state.get("version") != 1:
+        raise ValueError("persisted learning schema is missing or incompatible")
+    weights = state.get("weights")
+    if not isinstance(weights, dict) or not weights:
+        raise ValueError("persisted learning weights are missing")
+    try:
+        ranker = AdaptiveRanker.from_state(state)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("persisted learning values are invalid") from exc
+    if not all(math.isfinite(value) for value in ranker.weights.values()):
+        raise ValueError("persisted learning weights must be finite")
+    if not all(math.isfinite(v) and v > 0 for v in (ranker.learning_rate, ranker.weight_limit)):
+        raise ValueError("persisted learning parameters must be finite and positive")
+    if not math.isfinite(ranker.bias):
+        raise ValueError("persisted learning bias must be finite")
+    return ranker
+
+
+def _write_learning_state(path: Path, ranker: AdaptiveRanker) -> None:
+    """Atomically replace the checkpoint; an interrupted write keeps the old one."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp = tempfile.mkstemp(prefix="." + path.name + ".", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(ranker.export_state(), stream, indent=2, sort_keys=True, allow_nan=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp, path)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+
+
 SemanticEnricher = Callable[[str, str], float]
 
 
@@ -194,9 +262,19 @@ class AdaptiveIntelligenceEngine:
         ranker: AdaptiveRanker | None = None,
         feedback_path: str | Path | None = None,
         semantic_enricher: SemanticEnricher | None = None,
+        model_state_path: str | Path | None = None,
     ) -> None:
-        self.ranker = ranker or AdaptiveRanker()
+        self.model_state_path = Path(model_state_path) if model_state_path else None
         self.feedback_path = Path(feedback_path) if feedback_path else None
+        if self.model_state_path is not None:
+            if self.feedback_path == self.model_state_path:
+                raise ValueError("feedback log and persisted model must have distinct paths")
+            with _exclusive_learning_state(self.model_state_path):
+                if self.model_state_path.exists():
+                    if ranker is not None:
+                        raise ValueError("explicit ranker cannot replace persisted learning")
+                    ranker = _read_learning_state(self.model_state_path)
+        self.ranker = ranker or AdaptiveRanker()
         self.semantic_enricher = semantic_enricher
 
     def enrich_semantic_score(
@@ -223,6 +301,32 @@ class AdaptiveIntelligenceEngine:
         return self.ranker.rank(candidates)
 
     def record_outcome(
+        self,
+        *,
+        task_id: str,
+        candidate: AdaptiveCandidate,
+        reward: float,
+        reason: str,
+        metadata: Mapping[str, object] | None = None,
+    ) -> FeedbackEvent:
+        if self.model_state_path is None:
+            return self._record_outcome_unlocked(
+                task_id=task_id, candidate=candidate, reward=reward,
+                reason=reason, metadata=metadata,
+            )
+        with _exclusive_learning_state(self.model_state_path):
+            # Always rebase on the persisted state while holding the lock.
+            # This prevents another active worker from overwriting corrections.
+            if self.model_state_path.exists():
+                self.ranker = _read_learning_state(self.model_state_path)
+            event = self._record_outcome_unlocked(
+                task_id=task_id, candidate=candidate, reward=reward,
+                reason=reason, metadata=metadata,
+            )
+            _write_learning_state(self.model_state_path, self.ranker)
+            return event
+
+    def _record_outcome_unlocked(
         self,
         *,
         task_id: str,
