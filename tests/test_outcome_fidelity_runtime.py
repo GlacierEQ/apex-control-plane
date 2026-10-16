@@ -270,3 +270,52 @@ def test_observation_tasks_are_not_forced_to_fake_progress(monkeypatch) -> None:
     assert final.phase == "complete"
     assert kernel.outcome_state()["recorded"] is False
     assert kernel.outcome_state()["uplift_required"] is False
+
+
+def test_forward_frontier_restores_owning_mission_and_reroutes_blocker(monkeypatch) -> None:
+    from mission_forward_progress import ForwardAction, ForwardReceipt, ForwardLedger
+
+    kernel = _arm(monkeypatch)
+    _bind_mutation(kernel)
+    ledger = ForwardLedger("mission:EXAMPLE")
+    ledger.record(ForwardReceipt(
+        "blocked-write", "original", "state:version-1", "BLOCKED",
+        "provider-error:blocked",
+    ))
+    snapshot = kernel.restore_forward_frontier(
+        ledger.snapshot(), expected_mission_id="mission:EXAMPLE"
+    )
+    assert snapshot["mission_id"] == "mission:EXAMPLE"
+    next_action = kernel.select_forward_frontier((
+        ForwardAction("blocked-write", "original", "state:version-1", 8, 5, authorized=True),
+        ForwardAction("unresolved-review", "original", "state:version-1", 10, 9, authorized=True),
+    ))
+    assert next_action.action_id == "unresolved-review"
+    assert "blocked-write" in next_action.suppressed
+
+    updated = kernel.record_forward_receipt(ForwardReceipt(
+        "unresolved-review", "original", "state:version-1",
+        "INTERMEDIATE", "github:accepted", readback_ref="github:readback",
+    ))
+    assert updated["receipts"][-1]["stage"] == "INTERMEDIATE"
+    assert kernel.outcome_state()["forward_frontier_attached"] is True
+    assert kernel.outcome_state()["forward_human_outcomes_in_attached_journal"] == 0
+    assert kernel.outcome_state()["recorded"] is False
+
+
+def test_forward_frontier_rejects_wrong_mission_and_unloaded_history(monkeypatch) -> None:
+    import pytest
+    from mission_forward_progress import ForwardAction, ForwardLedger
+    from outcome_fidelity_runtime import OutcomeFidelityViolation
+
+    kernel = _arm(monkeypatch)
+    _bind_mutation(kernel)
+    with pytest.raises(OutcomeFidelityViolation):
+        kernel.select_forward_frontier((
+            ForwardAction("some-work", "original", "state:v1", 5, 5, authorized=True),
+        ))
+    with pytest.raises(ValueError, match="mission"):
+        kernel.restore_forward_frontier(
+            ForwardLedger("mission:OTHER").snapshot(),
+            expected_mission_id="mission:EXAMPLE",
+        )
