@@ -143,6 +143,14 @@
     },
     "lineage_mining": {
       "description": "Historical branches, repositories, artifacts, and older states are source-bearing lineage. Compare them against current living state for unique beneficial mechanisms, tests, evidence, or ideas; transplant or re-author worthwhile deltas while leaving exhausted or regressive state behind."
+    },
+    "forward_is_the_objective": {
+      "description": "At every substantive mission execution recover the owning provider's latest verified state and previous method/source/receipt history; rank actionable paths by human/mission benefit and delay risk in the EXISTING ContinuousImpactSelector; act on the highest-benefit authorized unresolved work; if a path is blocked or adds no delta, change method or select another live branch in the same execution. Never substitute rediscovery, repeated blocked writes, document reclassification, self-correction, or status reporting for beneficial execution. Independently verify real effects, preserve original evidence and source-specific authority, and resume the exact frontier across workers.",
+      "selector_module": "src/continuous_impact_selection.py",
+      "require_authenticated_frontier_for_continuation": true,
+      "provider_write_attempt_is_not_accepted_effect": true,
+      "unverified_absence_is_not_zero_real_world_events": true,
+      "mission_complete_only_when_operator_target_reached_or_genuine_authorized_boundary_proved": true
     }
   },
   "impact_first_judgment": {
@@ -226,7 +234,9 @@
     "turn organization into deletion",
     "turn preservation into paralysis",
     "create another central brain when the real task is to connect existing organs",
-    "treat code or control planes as the destination instead of operational outcomes"
+    "treat code or control planes as the destination instead of operational outcomes",
+    "repeat an unchanged failed provider write instead of rerouting to another authorized beneficial mission branch",
+    "report a corrected assistant mistake or reread historical evidence as the actual human outcome"
   ],
   "startup_receipt_requirements": {
     "operator_identity_loaded": true,
