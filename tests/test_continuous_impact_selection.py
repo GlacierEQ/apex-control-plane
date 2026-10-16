@@ -271,3 +271,158 @@ def test_default_runtime_selector_uses_configured_shared_learning_state(
         ))
     ).score
     assert updated < original
+
+
+# Forward progress regressions: the selector already controls action choice.
+# These tests keep repeat suppression and authority INSIDE that existing path.
+
+def _guarded(
+    candidate_id: str,
+    *, method: str = "original", source: str = "source:version1",
+    authorized: bool = True, external: bool = False,
+    external_authorized: bool = False, already_completed: bool = False,
+    value: float = 0.9,
+) -> ImpactCandidate:
+    return ImpactCandidate(
+        candidate_id=candidate_id,
+        operation=f"advance {candidate_id}",
+        operation_class="repair_runtime_selection",
+        expected_delta=f"verified target-state improvement for {candidate_id}",
+        features={"mission_advancement": value, "state_change_value": value},
+        metadata={
+            "source_state_ref": source,
+            "method_id": method,
+            "authorized": authorized,
+            "external_effect": external,
+            "external_effect_authorized": external_authorized,
+            "already_completed": already_completed,
+        },
+    )
+
+
+def _attempt(candidate_id: str, *, method: str = "original",
+             source: str = "source:version1", stage: str = "BLOCKED"):
+    from hashlib import sha256
+    from continuous_impact_selection import ImpactAttempt
+    return ImpactAttempt(
+        mission_sha256=sha256(b"continue mission").hexdigest(),
+        candidate_id=candidate_id,
+        method_id=method,
+        source_state_ref=source,
+        stage=stage,
+        provider_ref="provider-error:previous-blocker",
+    )
+
+
+def _choose(candidates, attempts=()):
+    selector = ContinuousImpactSelector()
+    return selector.select(
+        task_id="forward-continuation",
+        mission="continue mission",
+        operation_class="repair_runtime_selection",
+        state_version="context:v31",
+        candidates=candidates,
+        prior_attempts=attempts,
+        require_authenticated_frontier=True,
+    )
+
+
+def test_forward_guard_reroutes_blocked_write_in_same_mission():
+    decision = _choose(
+        (_guarded("blocked-write", value=1.0), _guarded("new-impactful-work", value=0.9)),
+        (_attempt("blocked-write"),),
+    )
+    assert decision.selected_candidate_id == "new-impactful-work"
+    assert decision.rejection_reasons["blocked-write"].startswith("unchanged")
+
+
+def test_forward_guard_does_not_repeat_completed_or_no_delta_acquisition():
+    decision = _choose(
+        (_guarded("completed-task", already_completed=True),
+         _guarded("old-analysis"), _guarded("current-benefit")),
+        (_attempt("old-analysis", stage="NO_DELTA"),),
+    )
+    assert decision.selected_candidate_id == "current-benefit"
+    assert "completed-task" in decision.rejected_candidate_ids
+    assert "old-analysis" in decision.rejected_candidate_ids
+
+
+def test_forward_guard_reopens_changed_method_or_new_state_not_blind_retry():
+    for new_action in (
+        _guarded("provider-write", method="new-route"),
+        _guarded("provider-write", source="source:version2"),
+    ):
+        decision = _choose((new_action,), (_attempt("provider-write"),))
+        assert decision.selected_candidate_id == "provider-write"
+
+
+def test_forward_guard_external_effect_requires_distinct_authorization():
+    decision = _choose((
+        _guarded("send-external", external=True, value=1.0),
+        _guarded("internal-remedy", value=0.5),
+    ))
+    assert decision.selected_candidate_id == "internal-remedy"
+    assert "authorization" in decision.rejection_reasons["send-external"]
+    assert _choose((
+        _guarded("send-external", external=True, external_authorized=True),
+    )).selected_candidate_id == "send-external"
+
+
+def test_forward_guard_cannot_silently_use_candidates_without_current_proof():
+    try:
+        _choose((_candidate("summary", "summarize again", "summary exists"),))
+    except ImpactSelectionViolation as exc:
+        assert "no fresh authorized" in str(exc)
+    else:
+        raise AssertionError("missing recovered source/authority was accepted")
+
+
+def test_forward_guard_wrong_mission_receipt_is_not_reused():
+    from dataclasses import replace
+    wrong = replace(_attempt("blocked-write"), mission_sha256="0" * 64)
+    try:
+        _choose((_guarded("blocked-write"),), (wrong,))
+    except ImpactSelectionViolation as exc:
+        assert "mission" in str(exc)
+    else:
+        raise AssertionError("cross-mission receipt was accepted")
+
+
+def test_forward_guard_all_blocked_does_not_claim_task_completion():
+    try:
+        _choose((_guarded("blocked-write"),), (_attempt("blocked-write"),))
+    except ImpactSelectionViolation as exc:
+        assert "no fresh authorized" in str(exc)
+        assert "mission" in str(exc)
+    else:
+        raise AssertionError("an unchanged blocker was selected")
+
+
+def test_verified_outcomes_require_native_readback_not_artifact_claims():
+    from continuous_impact_selection import ImpactAttempt
+    from hashlib import sha256
+    from dataclasses import replace
+    basic = _attempt("done")
+    invalid = replace(
+        basic,
+        stage="HUMAN_OUTCOME",
+        source_class="assistant",
+        provider_ref="assistant:report",
+        readback_ref="assistant:verification",
+        after_state_ref="source:version2",
+    )
+    try:
+        invalid.verify_claim()
+    except ImpactSelectionViolation as exc:
+        assert "native" in str(exc)
+    else:
+        raise AssertionError("assistant progress promotion was accepted")
+    valid = replace(
+        basic,
+        stage="HUMAN_OUTCOME",
+        source_class="source_native",
+        provider_ref="provider:authoritative-event",
+        readback_ref="provider:independent-readback",
+        after_state_ref="source:version2",
+    )
+    valid.verify_claim()
