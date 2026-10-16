@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from apex_runtime_kernel import ApexRuntimeKernel, RuntimePhase, RuntimeViolation, TaskMode
-from mission_forward_progress import ForwardAction, ForwardChoice, ForwardLedger, ForwardReceipt
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -124,7 +123,6 @@ class OutcomeFidelityRuntime:
         self._outcome_kind: str | None = None
         self._outcome_reference: str | None = None
         self._outcome_findings: list[str] = []
-        self._forward_ledger: ForwardLedger | None = None
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._kernel, name)
@@ -142,7 +140,6 @@ class OutcomeFidelityRuntime:
         self._outcome_kind = None
         self._outcome_reference = None
         self._outcome_findings.clear()
-        self._forward_ledger = None  # Do not leak mission history across task identities.
         return self._kernel.bind_task(**kwargs)
 
     def _finding(
@@ -332,60 +329,6 @@ class OutcomeFidelityRuntime:
             details=details,
         )
 
-    def restore_forward_frontier(
-        self,
-        journal_snapshot: Mapping[str, Any],
-        *,
-        expected_mission_id: str,
-    ) -> dict[str, Any]:
-        """Attach a previously authenticated APEX/Spiral mission journal.
-
-        The caller must have recovered/applied context before this method.
-        A wrong-mission snapshot is rejected, never treated as an empty ledger.
-        """
-        ledger = ForwardLedger.from_snapshot(
-            journal_snapshot, expected_mission_id=expected_mission_id
-        )
-        self._forward_ledger = ledger
-        return ledger.snapshot()
-
-    def select_forward_frontier(
-        self, candidates: Sequence[ForwardAction],
-    ) -> ForwardChoice:
-        """Choose fresh authorized work instead of repeating blocked routes."""
-        if self._forward_ledger is None:
-            raise OutcomeFidelityViolation(
-                "recover/apply authenticated mission frontier before selecting work"
-            )
-        selection = self._forward_ledger.choose(candidates)
-        if selection.action_id is None:
-            self._finding(
-                "no fresh authorized route in supplied mission tree; "
-                "discover another meaningful route, not mission completion"
-            )
-        return selection
-
-    def record_forward_receipt(self, receipt: ForwardReceipt) -> dict[str, Any]:
-        """Project a source-classified receipt for provider-journal persistence.
-
-        Host remains responsible for independently verifying the native receipt
-        and saving/readback of this snapshot in the owning journal. An attached
-        receipt alone does not promote a mission outcome in APEX.
-        """
-        if self._forward_ledger is None:
-            raise OutcomeFidelityViolation(
-                "cannot record forward receipt without matched mission journal"
-            )
-        self._forward_ledger.record(receipt)
-        return self._forward_ledger.snapshot()
-
-    def forward_frontier_snapshot(self) -> dict[str, Any]:
-        if self._forward_ledger is None:
-            raise OutcomeFidelityViolation(
-                "no authenticated forward-frontier journal attached"
-            )
-        return self._forward_ledger.snapshot()
-
     def outcome_state(self) -> dict[str, Any]:
         return {
             "recorded": self._outcome_recorded,
@@ -393,11 +336,6 @@ class OutcomeFidelityRuntime:
             "reference": self._outcome_reference,
             "uplift_required": bool(self._outcome_findings),
             "findings": tuple(self._outcome_findings),
-            "forward_frontier_attached": self._forward_ledger is not None,
-            "forward_human_outcomes_in_attached_journal": (
-                self._forward_ledger.human_outcomes
-                if self._forward_ledger is not None else None
-            ),
         }
 
 
