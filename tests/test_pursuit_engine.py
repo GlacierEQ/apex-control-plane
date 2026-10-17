@@ -156,6 +156,15 @@ class PursuitTests(unittest.TestCase):
         with self.assertRaises(PursuitViolation):
             next_pursuit_step(finding(), h)
 
+    def test_escalation_receipt_transitions_to_tracking_not_repeat_escalation(self):
+        h = PursuitHistory(challenge_receipt='gmail:sent', response_window_elapsed=True,
+            response_window_source='policy:elapsed', escalation_route='review:independent-office',
+            escalation_authorized=True, independent_review_receipt='review:accepted-intake')
+        step = next_pursuit_step(finding(), h)
+        self.assertEqual(step.stage, PursuitStage.VERIFY_DISPOSITION)
+        self.assertIn('review:accepted-intake', step.evidence_refs)
+        self.assertFalse(step.outcome_verified)
+
     def test_no_unauthorized_effect_from_unverified_or_complete_step(self):
         step = next_pursuit_step(finding(observation_authenticated=False), PursuitHistory())
         admission = MissionAdmission('test-case-A','test-case-A',True,'cursor-1',())
