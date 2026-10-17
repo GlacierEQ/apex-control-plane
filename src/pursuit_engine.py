@@ -163,9 +163,12 @@ def next_pursuit_step(finding: PursuitFinding, history: PursuitHistory) -> Pursu
         finding_id=finding.finding_id,
         actor_id=finding.actor_id,
         stage=stage,
-        position=f"Authenticated observation: {finding.observation}. "
-                 "Any distinct asserted review remains uncredited unless supported; "
-                 "the observed fact survives all counterclaims.",
+        position=(f"Authenticated observation: {finding.observation}. "
+                  "Any distinct asserted review remains uncredited unless supported; "
+                  "the observed fact survives all counterclaims."
+                  if finding.observation_authenticated else
+                  f"Claimed observation awaiting authentication: {finding.observation}. "
+                  "Do not advance this as an established source fact."),
         evidence_refs=tuple(dict.fromkeys(refs)),
         adverse_claims_pending=unsupported,
         target=finding.target,
