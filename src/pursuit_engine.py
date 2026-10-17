@@ -72,6 +72,7 @@ class PursuitHistory:
     response_window_source: str = ""
     escalation_route: str = ""
     escalation_authorized: bool = False
+    independent_review_receipt: str = ""
     target_result_ref: str = ""
     target_result_readback: str = ""
     target_result_verified: bool = False
@@ -123,13 +124,16 @@ def next_pursuit_step(finding: PursuitFinding, history: PursuitHistory) -> Pursu
         raise PursuitViolation("authenticated fact requires native source reference and SHA256")
     if finding.duty_verified and (not finding.duty_id or not _source_ref(finding.duty_ref)):
         raise PursuitViolation("verified duty requires duty identity and source")
+    if history.independent_review_receipt and not _source_ref(history.independent_review_receipt):
+        raise PursuitViolation("independent review receipt must be provider-native")
     if history.target_result_verified and (
         not _source_ref(history.target_result_ref) or
         not _source_ref(history.target_result_readback)):
         raise PursuitViolation("verified outcome requires native result and independent readback")
     refs = tuple(r for r in (finding.observation_ref, finding.duty_ref,
                              history.challenge_receipt, history.agency_ack,
-                             history.response_window_source) if _source_ref(r))
+                             history.response_window_source,
+                             history.independent_review_receipt) if _source_ref(r))
     unsupported = tuple(c.proposition for c in finding.counterclaims if not c.evidence_backed)
     supported = tuple(c for c in finding.counterclaims if c.evidence_backed and
                       c.asserted_by == finding.actor_id and
@@ -151,6 +155,8 @@ def next_pursuit_step(finding: PursuitFinding, history: PursuitHistory) -> Pursu
         stage = PursuitStage.REASSESS
     elif not history.challenge_receipt:
         stage = PursuitStage.REQUEST_ACCOUNT
+    elif history.independent_review_receipt:
+        stage = PursuitStage.VERIFY_DISPOSITION
     elif history.response_window_elapsed and _source_ref(history.response_window_source):
         stage = (PursuitStage.INDEPENDENT_REVIEW if
                  history.escalation_authorized and _source_ref(history.escalation_route)
