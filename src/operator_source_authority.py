@@ -89,6 +89,7 @@ def enforce_operator_source_authority() -> dict[str, Any]:
     source_state = policy.get("source_state")
     source_identity = policy.get("source_identity")
     intent_provenance = policy.get("intent_provenance")
+    user_supplied_material = policy.get("user_supplied_material")
     organization = policy.get("organization")
     for name, value in {
         "personalization": personalization,
@@ -97,6 +98,7 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "source_state": source_state,
         "source_identity": source_identity,
         "intent_provenance": intent_provenance,
+        "user_supplied_material": user_supplied_material,
         "organization": organization,
     }.items():
         if not isinstance(value, Mapping):
@@ -196,6 +198,38 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         _require(intent_provenance, key, expected, scope="intent_provenance")
 
     for key, expected in {
+        "style_may_prove_authorship": False,
+        "external_ai_paste_is_operator_authored": False,
+        "external_ai_proposal_requires_evaluation": True,
+        "explicit_adoption_requires_separate_operator_source": True,
+        "explicit_adoption_is_scoped_not_wholesale": True,
+        "user_authored_polished_text_remains_possible": True,
+        "short_or_typo_text_does_not_establish_operator_authorship": True,
+        "mixed_origin_spans_must_remain_separate": True,
+        "operator_original_words_and_decisions_outweigh_pasted_draft_as_direction": True,
+        "external_proposal_is_not_automatically_rejected": True,
+        "hidden_harms_must_be_tested": True,
+        "no_harms_flagged_does_not_prove_no_harms": True,
+        "historical_persona_summaries_may_not_replace_operator_record": True,
+        "review_only_is_not_adoption": True,
+        "unknown_origin_is_not_mission_stop": True,
+    }.items():
+        _require(user_supplied_material, key, expected, scope="user_supplied_material")
+
+    required_harms = {
+        "AUTHORSHIP_LAUNDERING", "SUMMARY_AUTHORITY_INVERSION",
+        "SCOPE_REDUCTION", "LOSS_OF_UNIQUE_PRIOR_WORK", "EXTRA_APPROVAL_GATE",
+        "UNSUPPORTED_LAW_OR_TECHNICAL_CLAIM", "OWNING_SOURCE_MISMATCH",
+        "STALE_STATUS_OR_FALSE_COMPLETION", "UNAUTHORIZED_PROVIDER_EFFECT",
+        "PRIVACY_SPILL", "ADVISOR_ORACLE_DEPENDENCY", "PREMATURE_DISPOSITION",
+    }
+    harm_classes = user_supplied_material.get("hidden_harm_categories")
+    if not isinstance(harm_classes, list) or not required_harms.issubset(set(harm_classes)):
+        raise OperatorSourceAuthorityError(
+            "user_supplied_material.hidden_harm_categories must retain all required classes"
+        )
+
+    for key, expected in {
         "evidence_integrity_controls": True,
         "beneficial_reorganization_allowed": True,
         "old_path_is_not_immutable_authority": True,
@@ -206,3 +240,70 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         _require(organization, key, expected, scope="organization")
 
     return policy
+
+
+def assess_supplied_material(
+    *,
+    declared_origin: str,
+    intended_use: str,
+    historical_source_ref: str,
+    adoption_source_ref: str | None = None,
+    adopted_scope: str | None = None,
+    style_cues: list[str] | None = None,
+    material_hidden_harms: list[str] | None = None,
+) -> dict[str, Any]:
+    """Return evidence-bounded triage, not a stylistic author detector.
+
+    declared_origin must be attributed by the trusted caller from the original
+    message/source span or a separate explicit user statement. It must NEVER
+    be chosen solely by prose length, typo frequency, or apparent fluency.
+    This function does not audit the material content on its own: harm flags
+    are review inputs, not proof that the review was exhaustive.
+    """
+    enforce_operator_source_authority()
+    if declared_origin not in {"OPERATOR_AUTHORED", "EXTERNAL_AI", "UNKNOWN"}:
+        raise OperatorSourceAuthorityError("declared_origin must be attributable")
+    if intended_use not in {"DIRECT", "EVALUATE", "ADOPT"}:
+        raise OperatorSourceAuthorityError("intended_use unsupported")
+    if not isinstance(historical_source_ref, str) or not historical_source_ref.strip():
+        raise OperatorSourceAuthorityError("historical_source_ref is required")
+
+    adoption_ref = adoption_source_ref.strip() if isinstance(adoption_source_ref, str) else ""
+    scope = adopted_scope.strip() if isinstance(adopted_scope, str) else ""
+    if intended_use == "ADOPT":
+        if not adoption_ref or adoption_ref == historical_source_ref:
+            raise OperatorSourceAuthorityError("adoption_source_ref must be a separate explicit Operator source")
+        if not scope:
+            raise OperatorSourceAuthorityError("adopted_scope must identify the exact adopted portion")
+    if intended_use != "ADOPT" and (adoption_ref or scope):
+        raise OperatorSourceAuthorityError("adoption metadata requires intended_use ADOPT")
+
+    if intended_use == "ADOPT":
+        status = "ADOPTED_WITH_OPERATOR_SOURCE"
+        direction = True
+    elif declared_origin == "OPERATOR_AUTHORED" and intended_use == "DIRECT":
+        status = "DIRECT_OPERATOR_INSTRUCTION"
+        direction = True
+    elif declared_origin == "EXTERNAL_AI":
+        status = "PROPOSAL_FOR_REVIEW"
+        direction = False
+    else:
+        status = "ORIGIN_UNVERIFIED_REVIEW"
+        direction = False
+
+    harms = list(material_hidden_harms or [])
+    if not all(isinstance(v, str) and v.strip() for v in harms):
+        raise OperatorSourceAuthorityError("material_hidden_harms must contain nonempty labels")
+    return {
+        "status": status,
+        "declared_origin": declared_origin,
+        "operator_authorship_proven": declared_origin == "OPERATOR_AUTHORED",
+        "controlling_operator_direction": direction,
+        "historical_source_ref": historical_source_ref,
+        "adoption_source_ref": adoption_ref or None,
+        "adopted_scope": scope or None,
+        "style_cues_are_evidence_of_authorship": False,
+        "style_cues_recorded": list(style_cues or []),
+        "hidden_harms": harms,
+        "hidden_harm_review": "FLAGS_SUPPLIED_NOT_INDEPENDENTLY_AUDITED",
+    }
