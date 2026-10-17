@@ -89,6 +89,7 @@ def enforce_operator_source_authority() -> dict[str, Any]:
     source_state = policy.get("source_state")
     source_identity = policy.get("source_identity")
     intent_provenance = policy.get("intent_provenance")
+    evidence_state_integrity = policy.get("evidence_state_integrity")
     organization = policy.get("organization")
     for name, value in {
         "personalization": personalization,
@@ -97,6 +98,7 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "source_state": source_state,
         "source_identity": source_identity,
         "intent_provenance": intent_provenance,
+        "evidence_state_integrity": evidence_state_integrity,
         "organization": organization,
     }.items():
         if not isinstance(value, Mapping):
@@ -194,6 +196,22 @@ def enforce_operator_source_authority() -> dict[str, Any]:
         "absence_of_operator_objection_is_not_adoption": True,
     }.items():
         _require(intent_provenance, key, expected, scope="intent_provenance")
+
+    for key, expected in {
+        "historical_truth_separate_from_current_readback": True,
+        "historical_truth_separate_from_operational_authority": True,
+        "retrieval_failure_may_demote_historical_truth": False,
+        "projection_omission_may_demote_historical_truth": False,
+        "derivative_artifact_may_demote_stronger_parent": False,
+        "newer_artifact_automatically_outranks_older_source": False,
+        "contradiction_requires_branch_not_overwrite": True,
+        "falsification_required_for_truth_demotion": True,
+        "unresolved_state_must_be_dimension_scoped": True,
+        "shared_root_lineage_counts_as_independent_corroboration": False,
+        "derived_conclusion_requires_parent_lineage": True,
+        "downstream_conclusions_must_be_recomputable": True,
+    }.items():
+        _require(evidence_state_integrity, key, expected, scope="evidence_state_integrity")
 
     for key, expected in {
         "evidence_integrity_controls": True,

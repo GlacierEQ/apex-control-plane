@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.5.0",
+  "schema_version": "1.6.0",
   "name": "APEX Operator Source Authority Contract",
   "fail_closed": true,
   "personalization": {
@@ -118,6 +118,27 @@
     "empty scaffold represented as completed organization",
     "verbatim request answered from summary without source rehydration",
     "paraphrase substituted for requested verbatim Operator words",
-    "assistant-generated wording presented as an exact Operator quote"
-  ]
+    "assistant-generated wording presented as an exact Operator quote",
+    "current retrieval or readback failure silently demotes previously verified historical truth",
+    "later projection omission interpreted as proof that prior verification never occurred",
+    "newer derivative artifact outranks stronger native or provider source merely because it is newer",
+    "contradiction overwrites prior lineage instead of branching the conflict",
+    "repeated derivatives sharing one root source counted as independent corroboration",
+    "unresolved status applied to an entire proposition when only one state dimension is unresolved",
+    "derived conclusion persisted without parent lineage needed to recompute it"
+  ],
+  "evidence_state_integrity": {
+    "historical_truth_separate_from_current_readback": true,
+    "historical_truth_separate_from_operational_authority": true,
+    "retrieval_failure_may_demote_historical_truth": false,
+    "projection_omission_may_demote_historical_truth": false,
+    "derivative_artifact_may_demote_stronger_parent": false,
+    "newer_artifact_automatically_outranks_older_source": false,
+    "contradiction_requires_branch_not_overwrite": true,
+    "falsification_required_for_truth_demotion": true,
+    "unresolved_state_must_be_dimension_scoped": true,
+    "shared_root_lineage_counts_as_independent_corroboration": false,
+    "derived_conclusion_requires_parent_lineage": true,
+    "downstream_conclusions_must_be_recomputable": true
+  }
 }

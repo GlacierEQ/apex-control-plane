@@ -6,9 +6,10 @@ from frontier authorization by requiring independently resolved source spans
 plus an independently resolved entailment artifact.
 
 When a frontier depends on prior execution claims, those claim identities are
-part of the frontier identity and each claim must reacquire present authority
-through execution-evidence lineage reconciliation. Historical VERIFIED state is
-never accepted as a substitute for current provider readback.
+part of the frontier identity and each claim must reacquire present execution
+authority through execution-evidence lineage reconciliation. A current readback
+gap may block a new dependent action, but it does not erase a previously
+provider-verified historical proposition.
 
 The receipt never supplies authoritative source bytes. Callers provide a
 resolver that returns bytes for source references; validation recomputes every
@@ -145,7 +146,7 @@ def _validate_execution_dependencies(
             resolved_ids.append(result.execution_claim_id)
         if not result.authoritative:
             errors.append(
-                f"{prefix} is not currently authoritative: {result.truth_state}"
+                f"{prefix} is not currently authoritative: {result.authority_state}"
             )
             errors.extend(f"{prefix}: {error}" for error in result.errors)
 

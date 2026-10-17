@@ -112,3 +112,29 @@ def test_knowledge_state_cannot_silently_become_use_direction(monkeypatch, tmp_p
     monkeypatch.setattr(module, "POLICY_PATH", _write_policy(tmp_path, policy))
     with pytest.raises(OperatorSourceAuthorityError, match="knowledge_state_alone_does_not_choose_use"):
         module.enforce_operator_source_authority()
+
+
+def test_evidence_state_integrity_preserves_prior_verified_truth_across_projection_gaps() -> None:
+    policy = enforce_operator_source_authority()
+    integrity = policy["evidence_state_integrity"]
+    assert integrity["historical_truth_separate_from_current_readback"] is True
+    assert integrity["historical_truth_separate_from_operational_authority"] is True
+    assert integrity["retrieval_failure_may_demote_historical_truth"] is False
+    assert integrity["projection_omission_may_demote_historical_truth"] is False
+    assert integrity["derivative_artifact_may_demote_stronger_parent"] is False
+    assert integrity["newer_artifact_automatically_outranks_older_source"] is False
+    assert integrity["contradiction_requires_branch_not_overwrite"] is True
+    assert integrity["falsification_required_for_truth_demotion"] is True
+    assert integrity["unresolved_state_must_be_dimension_scoped"] is True
+    assert integrity["shared_root_lineage_counts_as_independent_corroboration"] is False
+    assert integrity["derived_conclusion_requires_parent_lineage"] is True
+    assert integrity["downstream_conclusions_must_be_recomputable"] is True
+
+
+def test_evidence_state_integrity_fails_closed_if_projection_can_demote(monkeypatch, tmp_path: Path) -> None:
+    policy = json.loads((ROOT / "config" / "operator_source_authority_contract.json").read_text(encoding="utf-8"))
+    policy["evidence_state_integrity"]["projection_omission_may_demote_historical_truth"] = True
+    import src.operator_source_authority as module
+    monkeypatch.setattr(module, "POLICY_PATH", _write_policy(tmp_path, policy))
+    with pytest.raises(OperatorSourceAuthorityError, match="projection_omission_may_demote_historical_truth"):
+        module.enforce_operator_source_authority()
