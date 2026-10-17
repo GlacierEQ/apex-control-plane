@@ -7,7 +7,7 @@ import unittest
 from types import SimpleNamespace
 
 from src.connector_mission_router import ConnectorCapability, dispatch_recovered_once
-from src.context_recovery import ContextApplication
+from src.chat_context_admission import ContextApplication
 
 
 class Journal:
