@@ -15,6 +15,7 @@ import unittest
 from unittest.mock import patch
 
 from apex_runtime_kernel import create_verified_runtime_kernel
+from src.chat_context_admission import ContextApplication
 from spiral_live_journal import (
     open_authenticated_chat, resume_authenticated_chat_in_apex,
     SpiralChatAdmissionError, load_spiral_engine,
@@ -32,6 +33,18 @@ MISSION = "glaciereq-job"
 OBJECTIVE = "Obtain verified paid engineering employment"
 OUTCOME = "PAID_EMPLOYMENT"
 KEY = b"independent-hmac-key-for-real-cross-process-test"
+
+
+def apply_source_matched_context(recovery):
+    """Explicit host testimony only; independent provider effect is a separate gate."""
+    return ContextApplication(
+        mission_id=recovery.mission_id,
+        source_ref=recovery.source_ref,
+        cursor=recovery.cursor,
+        corrections=recovery.corrections,
+        fact_keys=tuple(recovery.facts),
+        effect_ref="test-host:source-matched-context",
+    )
 
 
 @unittest.skipUnless(SOURCE_ROOT, "requires pinned real Spiral package checkout")
@@ -121,7 +134,8 @@ class RealCrossProcessChatTests(unittest.TestCase):
             kernel, recovery,
             task_instruction=OBJECTIVE, target_state=OUTCOME,
             operation_class="resume_mission", applied_to_action=True,
-            expected_mission_id=MISSION)
+            expected_mission_id=MISSION,
+            apply_context=apply_source_matched_context)
         snapshot = kernel.snapshot()
         self.assertEqual(snapshot.phase, "ready")
         self.assertEqual(kernel.task.target_state, OUTCOME)
@@ -131,13 +145,47 @@ class RealCrossProcessChatTests(unittest.TestCase):
     def test_real_apex_rejects_unapplied_material_corrections(self):
         kernel = create_verified_runtime_kernel()
         _, recovery = self.opened()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(SpiralChatAdmissionError):
             resume_authenticated_chat_in_apex(
                 kernel, recovery,
                 task_instruction=OBJECTIVE, target_state=OUTCOME,
                 operation_class="resume_mission", applied_to_action=False,
-                expected_mission_id=MISSION)
+                expected_mission_id=MISSION,
+            apply_context=apply_source_matched_context)
         self.assertNotEqual(kernel.snapshot().phase, "ready")
+
+    def test_material_context_rejects_boolean_only_attestation(self):
+        kernel = create_verified_runtime_kernel()
+        _, recovery = self.opened()
+        with self.assertRaises(SpiralChatAdmissionError):
+            resume_authenticated_chat_in_apex(
+                kernel, recovery, task_instruction=OBJECTIVE,
+                target_state=OUTCOME, operation_class="resume_mission",
+                applied_to_action=True, expected_mission_id=MISSION)
+        self.assertNotEqual(kernel.snapshot().phase, "ready")
+
+    def test_material_context_rejects_mismatched_application_fields(self):
+        from dataclasses import replace
+        _, recovery = self.opened()
+        for field, invalid in (
+            ("mission_id", "other-mission"),
+            ("source_ref", "spiral-journal:wrong"),
+            ("cursor", "JOB/stale"),
+            ("corrections", ("obsolete correction",)),
+            ("fact_keys", ("different_fact",)),
+            ("effect_ref", ""),
+        ):
+            with self.subTest(field=field):
+                kernel = create_verified_runtime_kernel()
+                def mismatched(r, field=field, invalid=invalid):
+                    return replace(apply_source_matched_context(r), **{field: invalid})
+                with self.assertRaises(SpiralChatAdmissionError):
+                    resume_authenticated_chat_in_apex(
+                        kernel, recovery, task_instruction=OBJECTIVE,
+                        target_state=OUTCOME, operation_class="resume_mission",
+                        applied_to_action=True, expected_mission_id=MISSION,
+                        apply_context=mismatched)
+                self.assertNotEqual(kernel.snapshot().phase, "ready")
 
     def test_two_independent_python_sessions_recover_identical_source(self):
         env = dict(os.environ)
@@ -192,7 +240,8 @@ def _run_worker():
     resume_authenticated_chat_in_apex(
         kernel, recovery, task_instruction=OBJECTIVE, target_state=OUTCOME,
         operation_class="resume_mission", applied_to_action=True,
-            expected_mission_id=MISSION)
+            expected_mission_id=MISSION,
+            apply_context=apply_source_matched_context)
     if mode == "--read-session":
         print(json.dumps({
             "session": session, "mission": recovery.mission_id,
