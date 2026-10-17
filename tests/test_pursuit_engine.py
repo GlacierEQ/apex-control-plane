@@ -3,7 +3,7 @@ import unittest
 from dataclasses import replace
 from src.pursuit_engine import (
     PursuitFinding, Counterclaim, PursuitHistory, PursuitStage,
-    next_pursuit_step, dispatch_pursuit_step, PursuitViolation,
+    next_pursuit_step, pursuit_impact_candidate, dispatch_pursuit_step, PursuitViolation,
 )
 from src.connector_mission_router import ConnectorCapability, MissionAdmission, AdmissionDenied
 
@@ -106,6 +106,29 @@ class PursuitTests(unittest.TestCase):
             dispatch_pursuit_step(step, admission=replace(admitted, expected_mission_id='OTHER'), capability=cap,
                 reserve=lambda x: True, execute=lambda: None, readback=lambda r: True,
                 persist_continuation=lambda r:r, verify_continuation=lambda r:True)
+
+    def test_pursuit_step_becomes_source_bound_apex_impact_candidate(self):
+        from src.continuous_impact_selection import ImpactCandidate
+        step = next_pursuit_step(finding(), PursuitHistory())
+        candidate = pursuit_impact_candidate(step)
+        self.assertIsInstance(candidate, ImpactCandidate)
+        self.assertEqual(candidate.operation_class, 'CASE_EXECUTION')
+        self.assertEqual(candidate.metadata['route_kind'], 'execution')
+        self.assertEqual(candidate.metadata['actor_id'], 'watanabe')
+        self.assertIn('viewer:event-123', candidate.evidence_refs)
+        self.assertEqual(candidate.candidate_id, step.operation_id)
+        with self.assertRaises(PursuitViolation):
+            pursuit_impact_candidate(next_pursuit_step(
+                finding(), PursuitHistory(target_result_ref='agency:order',
+                target_result_readback='agency:confirmed', target_result_verified=True)))
+
+    def test_independent_review_maps_to_escalation_not_prosecution(self):
+        h = PursuitHistory(challenge_receipt='gmail:sent', response_window_elapsed=True,
+                           response_window_source='policy:deadline',
+                           escalation_route='navy-ig:review', escalation_authorized=True)
+        candidate = pursuit_impact_candidate(next_pursuit_step(finding(), h))
+        self.assertEqual(candidate.metadata['route_kind'], 'escalation')
+        self.assertNotEqual(candidate.metadata['route_kind'], 'prosecution')
 
     def test_no_unauthorized_effect_from_unverified_or_complete_step(self):
         step = next_pursuit_step(finding(observation_authenticated=False), PursuitHistory())
