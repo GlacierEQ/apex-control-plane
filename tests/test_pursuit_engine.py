@@ -10,12 +10,12 @@ from src.connector_mission_router import ConnectorCapability, MissionAdmission, 
 
 def finding(**changes):
     base = PursuitFinding(
-        mission_id='NEX-JBPHH-2026-08-14', finding_id='OIG-H01', actor_id='watanabe',
+        mission_id='test-case-A', finding_id='FINDING-01', actor_id='reviewer-A',
         observation='recorded session lasted 12 seconds',
-        observation_ref='viewer:event-123', observation_sha256='a' * 64,
-        observation_authenticated=True, duty_id='OIG-REVIEW',
-        duty_ref='policy:review-2026', duty_verified=True,
-        target='lawful procedural disposition',
+        observation_ref='test-viewer:event-123', observation_sha256='a' * 64,
+        observation_authenticated=True, duty_id='TEST-PROCEDURE',
+        duty_ref='policy:sample-1', duty_verified=True,
+        target='documented lawful disposition',
     )
     return replace(base, **changes)
 
@@ -24,19 +24,19 @@ class PursuitTests(unittest.TestCase):
     def test_initial_challenge_uses_sourced_fact_and_duty(self):
         step = next_pursuit_step(finding(), PursuitHistory())
         self.assertEqual(step.stage, PursuitStage.REQUEST_ACCOUNT)
-        self.assertIn('viewer:event-123', step.evidence_refs)
-        self.assertEqual(step.actor_id, 'watanabe')
+        self.assertIn('test-viewer:event-123', step.evidence_refs)
+        self.assertEqual(step.actor_id, 'reviewer-A')
         self.assertFalse(step.outcome_verified)
 
     def test_unsubstantiated_print_story_cannot_erase_short_session(self):
-        f = finding(counterclaims=(Counterclaim('later printed', 'watanabe'),))
+        f = finding(counterclaims=(Counterclaim('later printed', 'reviewer-A'),))
         step = next_pursuit_step(f, PursuitHistory())
         self.assertEqual(step.stage, PursuitStage.REQUEST_ACCOUNT)
         self.assertEqual(step.adverse_claims_pending, ('later printed',))
         self.assertIn('12 seconds', step.position)
 
     def test_substantiated_counterclaim_requires_targeted_reassessment(self):
-        f = finding(counterclaims=(Counterclaim('later printed', 'watanabe',
+        f = finding(counterclaims=(Counterclaim('later printed', 'reviewer-A',
             supporting_refs=('print:job-1',), independently_verified=True),))
         step = next_pursuit_step(f, PursuitHistory())
         self.assertEqual(step.stage, PursuitStage.REASSESS)
@@ -44,13 +44,17 @@ class PursuitTests(unittest.TestCase):
         self.assertIn('12 seconds', step.position)
 
     def test_another_actor_counterclaim_does_not_count_as_this_actors_review(self):
-        f = finding(counterclaims=(Counterclaim('another agent reviewed', 'steele',
+        f = finding(counterclaims=(Counterclaim('another agent reviewed', 'reviewer-B',
             supporting_refs=('agency:other-review',), independently_verified=True),))
         self.assertEqual(next_pursuit_step(f, PursuitHistory()).stage, PursuitStage.REQUEST_ACCOUNT)
 
     def test_missing_source_routes_to_authentication_not_an_accusation(self):
         f = finding(observation_authenticated=False)
         self.assertEqual(next_pursuit_step(f, PursuitHistory()).stage, PursuitStage.AUTHENTICATE)
+
+    def test_unsourced_observation_does_not_claim_authentication(self):
+        step = next_pursuit_step(finding(observation_authenticated=False), PursuitHistory())
+        self.assertNotIn('Authenticated observation:', step.position)
 
     def test_missing_duty_or_actor_moves_to_specific_acquisition(self):
         self.assertEqual(next_pursuit_step(finding(duty_verified=False), PursuitHistory()).stage, PursuitStage.ESTABLISH_DUTY)
@@ -59,7 +63,7 @@ class PursuitTests(unittest.TestCase):
     def test_after_challenge_unanswered_independent_route_escalates(self):
         h = PursuitHistory(challenge_receipt='gmail:native-sent-id', response_window_elapsed=True,
                            response_window_source='policy:deadline',
-                           escalation_route='navy-ig:review', escalation_authorized=True)
+                           escalation_route='review:independent-office', escalation_authorized=True)
         step = next_pursuit_step(finding(), h)
         self.assertEqual(step.stage, PursuitStage.INDEPENDENT_REVIEW)
         self.assertFalse(step.outcome_verified)
@@ -72,7 +76,7 @@ class PursuitTests(unittest.TestCase):
 
     def test_unverified_elapsed_time_does_not_trigger_escalation(self):
         h = PursuitHistory(challenge_receipt='gmail:sent', response_window_elapsed=True,
-                           escalation_route='navy-ig:review', escalation_authorized=True)
+                           escalation_route='review:independent-office', escalation_authorized=True)
         self.assertEqual(next_pursuit_step(finding(), h).stage, PursuitStage.VERIFY_DISPOSITION)
 
     def test_agency_ack_does_not_complete_target(self):
@@ -91,7 +95,7 @@ class PursuitTests(unittest.TestCase):
 
     def test_outbound_uses_existing_context_reservation_readback_and_handoff_gate(self):
         step = next_pursuit_step(finding(), PursuitHistory())
-        admitted = MissionAdmission('NEX-JBPHH-2026-08-14','NEX-JBPHH-2026-08-14',True,'cursor-1',())
+        admitted = MissionAdmission('test-case-A','test-case-A',True,'cursor-1',())
         cap = ConnectorCapability('gmail','send',True,True,True)
         used = []
         out = dispatch_pursuit_step(step, admission=admitted, capability=cap,
@@ -114,8 +118,8 @@ class PursuitTests(unittest.TestCase):
         self.assertIsInstance(candidate, ImpactCandidate)
         self.assertEqual(candidate.operation_class, 'CASE_EXECUTION')
         self.assertEqual(candidate.metadata['route_kind'], 'execution')
-        self.assertEqual(candidate.metadata['actor_id'], 'watanabe')
-        self.assertIn('viewer:event-123', candidate.evidence_refs)
+        self.assertEqual(candidate.metadata['actor_id'], 'reviewer-A')
+        self.assertIn('test-viewer:event-123', candidate.evidence_refs)
         self.assertEqual(candidate.candidate_id, step.operation_id)
         with self.assertRaises(PursuitViolation):
             pursuit_impact_candidate(next_pursuit_step(
@@ -125,14 +129,14 @@ class PursuitTests(unittest.TestCase):
     def test_independent_review_maps_to_escalation_not_prosecution(self):
         h = PursuitHistory(challenge_receipt='gmail:sent', response_window_elapsed=True,
                            response_window_source='policy:deadline',
-                           escalation_route='navy-ig:review', escalation_authorized=True)
+                           escalation_route='review:independent-office', escalation_authorized=True)
         candidate = pursuit_impact_candidate(next_pursuit_step(finding(), h))
         self.assertEqual(candidate.metadata['route_kind'], 'escalation')
         self.assertNotEqual(candidate.metadata['route_kind'], 'prosecution')
 
     def test_no_unauthorized_effect_from_unverified_or_complete_step(self):
         step = next_pursuit_step(finding(observation_authenticated=False), PursuitHistory())
-        admission = MissionAdmission('NEX-JBPHH-2026-08-14','NEX-JBPHH-2026-08-14',True,'cursor-1',())
+        admission = MissionAdmission('test-case-A','test-case-A',True,'cursor-1',())
         cap = ConnectorCapability('gmail','send',True,True,True)
         with self.assertRaises(PursuitViolation):
             dispatch_pursuit_step(step, admission=admission, capability=cap, reserve=lambda k:True,
