@@ -209,6 +209,16 @@ def _bind_recovery_under_exclusive_admission(
         or expected_mission_id != recovery.mission_id
     ):
         raise SpiralChatAdmissionError("recovered journal is not the requested mission")
+    # Validate caller attestation, kernel phase and task scope BEFORE the
+    # host application callback, which may perform irreversible host effects.
+    if recovery.material_context_found and applied_to_action is not True:
+        raise SpiralChatAdmissionError("contradictory host application attestation")
+    phase = getattr(getattr(kernel, "phase", None), "value", None)
+    if phase != "bootstrapped":
+        raise ValueError("APEX task binding requires a fresh bootstrapped kernel")
+    if not all(isinstance(v, str) and v.strip()
+               for v in (task_instruction, target_state, operation_class)):
+        raise ValueError("task instruction, exact target state and operation class required")
     application = None
     if recovery.material_context_found:
         if not callable(apply_context):
@@ -228,17 +238,7 @@ def _bind_recovery_under_exclusive_admission(
             or not isinstance(application.effect_ref, str)
             or not application.effect_ref.strip()):
             raise SpiralChatAdmissionError("host application does not match recovered source")
-    # Preserve the legacy caller's negative assertion: a callback cannot
-    # silently override an explicit claim that no application occurred.
-    if recovery.material_context_found and applied_to_action is not True:
-        raise SpiralChatAdmissionError("contradictory host application attestation")
     applied_to_action = application is not None
-    phase = getattr(getattr(kernel, "phase", None), "value", None)
-    if phase != "bootstrapped":
-        raise ValueError("APEX task binding requires a fresh bootstrapped kernel")
-    if not all(isinstance(v, str) and v.strip()
-               for v in (task_instruction, target_state, operation_class)):
-        raise ValueError("task instruction, exact target state and operation class required")
     kernel.bind_task(
         literal_instruction=task_instruction,
         target_state=target_state,
