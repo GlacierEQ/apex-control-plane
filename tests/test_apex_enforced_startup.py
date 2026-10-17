@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
+from auto_boot import BootError
 from apex_enforced_startup import (
     build_apex_startup_request,
     load_apex_policy,
@@ -137,6 +140,65 @@ def test_operator_working_model_carries_identity_estate_scope_and_worker_contrac
     assert worker["merge_semantics"]["queued_checks_do_not_reopen_merge_decision"] is True
     assert worker["progress_semantics"]["worker_activity_is_progress"] is False
     assert worker["progress_semantics"]["progress_requires_material_target_state_change"] is True
+
+
+
+def test_branch_lifecycle_distinguishes_contribution_from_completion() -> None:
+    worker = load_operator_working_model(load_apex_policy())["worker_execution_contract"]
+    merge = worker["merge_semantics"]
+    progress = worker["progress_semantics"]
+    for field in (
+        "branch_is_mutable_contribution_surface",
+        "donor_branch_label_does_not_mean_read_only",
+        "reconcile_unique_gains_into_owning_default_branch",
+        "preserve_donor_lineage_and_unresolved_frontier",
+        "avoid_blind_merge_or_bulk_deletion",
+        "post_merge_owner_default_branch_readback_required",
+        "post_merge_consumer_path_verification_when_applicable",
+    ):
+        assert merge[field] is True
+    for field in (
+        "branch_is_completion",
+        "pull_request_is_completion",
+        "green_checks_alone_prove_mission_completion",
+        "merge_alone_proves_underlying_mission_completion",
+        "default_branch_readback_proves_external_outcome",
+    ):
+        assert progress[field] is False
+    assert progress["mission_completion_requires_verified_target_state"] is True
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "wrong_value"),
+    [
+        ("progress_semantics", "branch_is_completion", True),
+        ("progress_semantics", "pull_request_is_completion", True),
+        ("progress_semantics", "green_checks_alone_prove_mission_completion", True),
+        ("progress_semantics", "merge_alone_proves_underlying_mission_completion", True),
+        ("progress_semantics", "default_branch_readback_proves_external_outcome", True),
+        ("progress_semantics", "mission_completion_requires_verified_target_state", False),
+        ("merge_semantics", "branch_is_mutable_contribution_surface", False),
+        ("merge_semantics", "donor_branch_label_does_not_mean_read_only", False),
+        ("merge_semantics", "reconcile_unique_gains_into_owning_default_branch", False),
+        ("merge_semantics", "preserve_donor_lineage_and_unresolved_frontier", False),
+        ("merge_semantics", "avoid_blind_merge_or_bulk_deletion", False),
+        ("merge_semantics", "post_merge_owner_default_branch_readback_required", False),
+        ("merge_semantics", "post_merge_consumer_path_verification_when_applicable", False),
+    ],
+)
+def test_worker_branch_lifecycle_cannot_regress_silently(
+    monkeypatch, tmp_path, section: str, field: str, wrong_value: bool,
+) -> None:
+    import operator_working_model as module
+
+    worker = load_operator_working_model(load_apex_policy())["worker_execution_contract"]
+    worker[section][field] = wrong_value
+    (tmp_path / "worker.json").write_text(json.dumps(worker), encoding="utf-8")
+    monkeypatch.setattr(module, "_REPO_ROOT", tmp_path)
+    with pytest.raises(BootError, match=field):
+        module.load_worker_execution_contract(
+            {"worker_execution_contract_path": "worker.json"}
+        )
 
 
 def test_startup_request_projects_full_operator_and_worker_state() -> None:
