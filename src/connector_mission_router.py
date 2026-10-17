@@ -142,6 +142,8 @@ def dispatch_recovered_once(
     verify_continuation: Callable[[object], bool] | None = None,
     fact_keys: Sequence[str] = (),
     apply_context: Callable[[Any], Any] | None = None,
+    mission_scope: dict | None = None,
+    execution_evidence: dict | None = None,
 ) -> object:
     """Pass the existing Spiral->APEX source-matched gate before a native effect.
 
@@ -169,6 +171,20 @@ def dispatch_recovered_once(
             correction_ids=tuple(recovery.corrections),
             source_ref=receipt.source_ref,
         )
+        if mission_scope is not None or execution_evidence is not None:
+            if mission_scope is None or execution_evidence is None:
+                raise AdmissionDenied("mission fidelity requires both intent and execution evidence")
+            from .mission_fidelity_admission import assess_mission_fidelity, FidelityViolation
+            try:
+                fidelity = assess_mission_fidelity(mission_scope, execution_evidence)
+            except FidelityViolation as exc:
+                raise AdmissionDenied("mission fidelity rejected: " + str(exc)) from exc
+            if fidelity["status"] != "COMPLETE":
+                raise AdmissionDenied("mission fidelity incomplete: " + ", ".join(fidelity["remaining_lanes"]))
+            if fidelity["mission_id"] != expected_mission_id or fidelity["cursor"] != receipt.cursor:
+                raise AdmissionDenied("mission fidelity does not match recovered context")
+            if not set(receipt.recovery.corrections).issubset(set(fidelity["applied_correction_ids"])):
+                raise AdmissionDenied("recovered corrections not applied in mission fidelity evidence")
         return dispatch_once(
             admission, capability, operation_id, reserve, execute, readback,
             persist_continuation=persist_continuation,
