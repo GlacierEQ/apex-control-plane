@@ -117,6 +117,13 @@ def load_worker_execution_contract(policy: Mapping[str, Any]) -> dict[str, Any]:
         "merge_conflicts_are_execution_problems_not_authorization_questions",
         "merge_immediately_when_authorized_route_permits",
         "destination_readback_required_before_merge_completion",
+        "branch_is_mutable_contribution_surface",
+        "donor_branch_label_does_not_mean_read_only",
+        "reconcile_unique_gains_into_owning_default_branch",
+        "preserve_donor_lineage_and_unresolved_frontier",
+        "avoid_blind_merge_or_bulk_deletion",
+        "post_merge_owner_default_branch_readback_required",
+        "post_merge_consumer_path_verification_when_applicable",
     ):
         _require_flag(merge, field, True, prefix="worker_execution_contract.merge_semantics")
 
@@ -132,12 +139,18 @@ def load_worker_execution_contract(policy: Mapping[str, Any]) -> dict[str, Any]:
         "pull_request_is_progress",
         "review_is_progress",
         "tool_invocation_is_progress",
+        "branch_is_completion",
+        "pull_request_is_completion",
+        "green_checks_alone_prove_mission_completion",
+        "merge_alone_proves_underlying_mission_completion",
+        "default_branch_readback_proves_external_outcome",
     ):
         _require_flag(progress, field, False, prefix="worker_execution_contract.progress_semantics")
     for field in (
         "progress_requires_material_target_state_change",
         "intermediate_artifacts_are_not_destination",
         "intermediate_state_must_be_reported_as_intermediate",
+        "mission_completion_requires_verified_target_state",
     ):
         _require_flag(progress, field, True, prefix="worker_execution_contract.progress_semantics")
 
