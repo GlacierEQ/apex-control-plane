@@ -176,6 +176,61 @@ def next_pursuit_step(finding: PursuitFinding, history: PursuitHistory) -> Pursu
     )
 
 
+
+def pursuit_impact_candidate(step: PursuitStep):
+    """Expose a pursued duty/actor/evidence transition to APEX's existing ranker.
+
+    This returns an ImpactCandidate, NOT permission to contact an external party.
+    The native connector gate remains the only outbound-effect path. A completed
+    matter cannot generate more action candidates merely to increase pressure.
+    """
+    from .continuous_impact_selection import ImpactCandidate
+
+    if step.stage is PursuitStage.COMPLETE or step.outcome_verified:
+        raise PursuitViolation("verified target has no new pursuit candidate")
+    if not step.finding_id or not step.mission_id:
+        raise PursuitViolation("source-bound mission/finding required")
+    kind = ("escalation" if step.stage is PursuitStage.INDEPENDENT_REVIEW
+            else "analysis" if step.stage is PursuitStage.REASSESS
+            else "execution")
+    if kind == "escalation" and not step.authorized_route:
+        raise PursuitViolation("unsupported escalation route")
+    return ImpactCandidate(
+        candidate_id=step.operation_id,
+        operation=step.stage.value,
+        operation_class="CASE_EXECUTION",
+        expected_delta=f"{step.finding_id}: {step.stage.value} toward {step.target}",
+        features={
+            "mission_advancement": 0.78,
+            "state_change_value": 0.72,
+            "success_impact": 0.65,
+            "failure_risk": 0.18,
+            "delay_cost": 0.60,
+            "reversibility": 0.85,
+            "second_order_value": 0.70,
+            "prior_gain_preservation": 1.0,
+            "execution_proximity": 0.72,
+            "verification_strength": 0.80 if step.observation_authenticated else 0.15,
+            "already_done_risk": 0.05,
+            "meta_substitution_risk": 0.05,
+            "rediscovery_risk": 0.05,
+            "rule_accretion_risk": 0.05,
+            "unsupported_claim_risk": 0.08 if step.duty_verified else 0.45,
+            "scope_drift_risk": 0.05,
+            "regression_risk": 0.05,
+        },
+        evidence_refs=step.evidence_refs,
+        metadata={
+            "mission_id": step.mission_id,
+            "finding_id": step.finding_id,
+            "actor_id": step.actor_id,
+            "route_kind": kind,
+            "stage": step.stage.value,
+            "external_action_authorized": False,
+            "pending_counterclaims": step.adverse_claims_pending,
+        },
+    )
+
 def dispatch_pursuit_step(
     step: PursuitStep, *, admission: MissionAdmission,
     capability: ConnectorCapability,
