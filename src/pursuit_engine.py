@@ -43,7 +43,7 @@ class Counterclaim:
 
     @property
     def evidence_backed(self) -> bool:
-        return bool(self.supporting_refs and self.independently_verified)
+        return bool(self.supporting_refs and self.independently_verified and\n                    all(_source_ref(ref) for ref in self.supporting_refs))
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,12 +97,12 @@ class PursuitStep:
     def operation_id(self) -> str:
         """Deterministic replay identity; stable within a finding and stage."""
         raw = "\x1f".join((self.mission_id, self.finding_id,
-                             self.actor_id, self.stage.value, self.authorized_route))
+                             self.actor_id, self.stage.value, self.authorized_route,\n                             self.target, *sorted(self.evidence_refs)))
         return "pursuit-" + sha256(raw.encode("utf-8")).hexdigest()[:32]
 
 
 def _source_ref(value: str) -> bool:
-    return isinstance(value, str) and ":" in value and all(value.split(":", 1))
+    return (isinstance(value, str) and ":" in value and all(value.split(":", 1))\n            and value.split(":", 1)[0].lower() not in\n            {"assistant", "summary", "report", "matrix", "plan", "artifact", "ledger"})
 
 
 def next_pursuit_step(finding: PursuitFinding, history: PursuitHistory) -> PursuitStep:
