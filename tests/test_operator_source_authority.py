@@ -112,3 +112,86 @@ def test_knowledge_state_cannot_silently_become_use_direction(monkeypatch, tmp_p
     monkeypatch.setattr(module, "POLICY_PATH", _write_policy(tmp_path, policy))
     with pytest.raises(OperatorSourceAuthorityError, match="knowledge_state_alone_does_not_choose_use"):
         module.enforce_operator_source_authority()
+
+
+def test_external_ai_draft_stays_evaluation_input_without_operator_adoption() -> None:
+    from src import operator_source_authority as module
+    result = module.assess_supplied_material(
+        declared_origin="EXTERNAL_AI",
+        intended_use="EVALUATE",
+        historical_source_ref="conversation:external-ai-paste",
+        adoption_source_ref=None,
+        adopted_scope=None,
+        style_cues=["long polished structure"],
+        material_hidden_harms=["EXTRA_APPROVAL_GATE", "SCOPE_REDUCTION"],
+    )
+    assert result["status"] == "PROPOSAL_FOR_REVIEW"
+    assert result["controlling_operator_direction"] is False
+    assert result["operator_authorship_proven"] is False
+    assert result["hidden_harms"] == ["EXTRA_APPROVAL_GATE", "SCOPE_REDUCTION"]
+
+
+def test_external_ai_draft_requires_separate_explicit_scoped_adoption() -> None:
+    from src import operator_source_authority as module
+    adopted = module.assess_supplied_material(
+        declared_origin="EXTERNAL_AI", intended_use="ADOPT",
+        historical_source_ref="kimi:draft:42",
+        adoption_source_ref="operator:message:43",
+        adopted_scope="non-gating advisor and provenance only",
+    )
+    assert adopted["status"] == "ADOPTED_WITH_OPERATOR_SOURCE"
+    assert adopted["controlling_operator_direction"] is True
+    assert adopted["operator_authorship_proven"] is False
+    assert adopted["adopted_scope"] == "non-gating advisor and provenance only"
+    with pytest.raises(OperatorSourceAuthorityError, match="adoption_source_ref"):
+        module.assess_supplied_material(
+            declared_origin="EXTERNAL_AI", intended_use="ADOPT",
+            historical_source_ref="kimi:draft:42",
+            adoption_source_ref=None,
+            adopted_scope="everything",
+        )
+
+
+def test_style_does_not_prove_authorship_or_authority() -> None:
+    from src import operator_source_authority as module
+    long_text = module.assess_supplied_material(
+        declared_origin="UNKNOWN", intended_use="EVALUATE",
+        historical_source_ref="conversation:long-text",
+        style_cues=["polished", "no typos", "long paragraphs"],
+    )
+    short_text = module.assess_supplied_material(
+        declared_origin="UNKNOWN", intended_use="EVALUATE",
+        historical_source_ref="conversation:short-text",
+        style_cues=["short", "typos", "meandering"],
+    )
+    for result in (long_text, short_text):
+        assert result["status"] == "ORIGIN_UNVERIFIED_REVIEW"
+        assert result["controlling_operator_direction"] is False
+        assert result["operator_authorship_proven"] is False
+
+
+def test_operator_directive_does_not_lose_authority_because_style_is_polished() -> None:
+    from src import operator_source_authority as module
+    result = module.assess_supplied_material(
+        declared_origin="OPERATOR_AUTHORED",
+        intended_use="DIRECT",
+        historical_source_ref="operator:message:19",
+        style_cues=["polished", "long"],
+    )
+    assert result["controlling_operator_direction"] is True
+    assert result["operator_authorship_proven"] is True
+
+
+def test_material_policy_structurally_blocks_laundering_and_requires_harm_audit(monkeypatch, tmp_path: Path) -> None:
+    import src.operator_source_authority as module
+    policy = module.enforce_operator_source_authority()
+    surface = policy["user_supplied_material"]
+    assert surface["style_may_prove_authorship"] is False
+    assert surface["external_ai_paste_is_operator_authored"] is False
+    assert surface["external_ai_proposal_requires_evaluation"] is True
+    assert surface["explicit_adoption_requires_separate_operator_source"] is True
+    assert surface["hidden_harms_must_be_tested"] is True
+    policy["user_supplied_material"]["style_may_prove_authorship"] = True
+    monkeypatch.setattr(module, "POLICY_PATH", _write_policy(tmp_path, policy))
+    with pytest.raises(OperatorSourceAuthorityError, match="style_may_prove_authorship"):
+        module.enforce_operator_source_authority()
