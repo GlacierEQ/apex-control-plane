@@ -139,8 +139,8 @@ def test_external_ai_draft_requires_separate_explicit_scoped_adoption() -> None:
         adoption_source_ref="operator:message:43",
         adopted_scope="non-gating advisor and provenance only",
     )
-    assert adopted["status"] == "ADOPTED_WITH_OPERATOR_SOURCE"
-    assert adopted["controlling_operator_direction"] is True
+    assert adopted["status"] == "ADOPTION_CLAIM_PENDING_SOURCE_VERIFICATION"
+    assert adopted["controlling_operator_direction"] is False
     assert adopted["operator_authorship_proven"] is False
     assert adopted["adopted_scope"] == "non-gating advisor and provenance only"
     with pytest.raises(OperatorSourceAuthorityError, match="adoption_source_ref"):
@@ -178,8 +178,9 @@ def test_operator_directive_does_not_lose_authority_because_style_is_polished() 
         historical_source_ref="operator:message:19",
         style_cues=["polished", "long"],
     )
-    assert result["controlling_operator_direction"] is True
-    assert result["operator_authorship_proven"] is True
+    assert result["controlling_operator_direction"] is False
+    assert result["status"] == "DECLARED_OPERATOR_DIRECTION_PENDING_SOURCE_VERIFICATION"
+    assert result["operator_authorship_proven"] is False
 
 
 def test_material_policy_structurally_blocks_laundering_and_requires_harm_audit(monkeypatch, tmp_path: Path) -> None:
