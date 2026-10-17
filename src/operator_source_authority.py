@@ -279,11 +279,16 @@ def assess_supplied_material(
         raise OperatorSourceAuthorityError("adoption metadata requires intended_use ADOPT")
 
     if intended_use == "ADOPT":
-        status = "ADOPTED_WITH_OPERATOR_SOURCE"
-        direction = True
+        # A plausible ref is not original-source readback or semantic verification.
+        # The existing Operator source-binding mechanism must verify the separate
+        # adoption instruction before any controlling effect is inferred.
+        status = "ADOPTION_CLAIM_PENDING_SOURCE_VERIFICATION"
+        direction = False
     elif declared_origin == "OPERATOR_AUTHORED" and intended_use == "DIRECT":
-        status = "DIRECT_OPERATOR_INSTRUCTION"
-        direction = True
+        # This function is triage only. Actual directives remain governed by
+        # verified original Operator spans in the existing APEX source gate.
+        status = "DECLARED_OPERATOR_DIRECTION_PENDING_SOURCE_VERIFICATION"
+        direction = False
     elif declared_origin == "EXTERNAL_AI":
         status = "PROPOSAL_FOR_REVIEW"
         direction = False
@@ -297,11 +302,13 @@ def assess_supplied_material(
     return {
         "status": status,
         "declared_origin": declared_origin,
-        "operator_authorship_proven": declared_origin == "OPERATOR_AUTHORED",
+        "operator_authorship_proven": False,
+        "declared_origin_is_not_independent_authorship_proof": True,
         "controlling_operator_direction": direction,
         "historical_source_ref": historical_source_ref,
         "adoption_source_ref": adoption_ref or None,
         "adopted_scope": scope or None,
+        "requires_original_operator_source_verification": intended_use in {"DIRECT", "ADOPT"},
         "style_cues_are_evidence_of_authorship": False,
         "style_cues_recorded": list(style_cues or []),
         "hidden_harms": harms,
