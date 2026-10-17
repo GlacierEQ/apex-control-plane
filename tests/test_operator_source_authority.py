@@ -196,3 +196,15 @@ def test_material_policy_structurally_blocks_laundering_and_requires_harm_audit(
     monkeypatch.setattr(module, "POLICY_PATH", _write_policy(tmp_path, policy))
     with pytest.raises(OperatorSourceAuthorityError, match="style_may_prove_authorship"):
         module.enforce_operator_source_authority()
+
+
+def test_operator_authored_material_for_review_is_not_mislabeled_unknown() -> None:
+    from src import operator_source_authority as module
+    result = module.assess_supplied_material(
+        declared_origin="OPERATOR_AUTHORED",
+        intended_use="EVALUATE",
+        historical_source_ref="operator:message:review-17",
+        style_cues=["long polished passage"],
+    )
+    assert result["status"] == "OPERATOR_TEXT_FOR_EVALUATION"
+    assert result["controlling_operator_direction"] is False
