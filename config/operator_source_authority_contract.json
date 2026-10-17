@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.5.0",
+  "schema_version": "1.6.0",
   "name": "APEX Operator Source Authority Contract",
   "fail_closed": true,
   "personalization": {
@@ -118,6 +118,46 @@
     "empty scaffold represented as completed organization",
     "verbatim request answered from summary without source rehydration",
     "paraphrase substituted for requested verbatim Operator words",
-    "assistant-generated wording presented as an exact Operator quote"
-  ]
+    "assistant-generated wording presented as an exact Operator quote",
+    "external AI-generated paste treated as user-authored policy solely because the user submitted it",
+    "polished grammar or length used to conclusively determine authorship",
+    "typos or informal brevity used to conclusively determine authorship",
+    "pasted proposal silently adopted without a separate source-linked Operator decision",
+    "pasted proposal discarded merely because it was external AI-generated",
+    "no identified hidden harms misreported as a completed hidden-harms audit",
+    "derived personality summary substituted for the actual Operator decisions and source history"
+  ],
+  "user_supplied_material": {
+    "purpose": "Evaluate external-AI material supplied for critique against the Operator's actual source-linked mission and decisions. Never guess authorship from length, typo rate, fluency, formatting or meandering.",
+    "style_may_prove_authorship": false,
+    "external_ai_paste_is_operator_authored": false,
+    "external_ai_proposal_requires_evaluation": true,
+    "explicit_adoption_requires_separate_operator_source": true,
+    "explicit_adoption_is_scoped_not_wholesale": true,
+    "user_authored_polished_text_remains_possible": true,
+    "short_or_typo_text_does_not_establish_operator_authorship": true,
+    "mixed_origin_spans_must_remain_separate": true,
+    "operator_original_words_and_decisions_outweigh_pasted_draft_as_direction": true,
+    "external_proposal_is_not_automatically_rejected": true,
+    "hidden_harms_must_be_tested": true,
+    "no_harms_flagged_does_not_prove_no_harms": true,
+    "historical_persona_summaries_may_not_replace_operator_record": true,
+    "review_only_is_not_adoption": true,
+    "unknown_origin_is_not_mission_stop": true,
+    "hidden_harm_categories": [
+      "AUTHORSHIP_LAUNDERING",
+      "SUMMARY_AUTHORITY_INVERSION",
+      "SCOPE_REDUCTION",
+      "LOSS_OF_UNIQUE_PRIOR_WORK",
+      "EXTRA_APPROVAL_GATE",
+      "UNSUPPORTED_LAW_OR_TECHNICAL_CLAIM",
+      "OWNING_SOURCE_MISMATCH",
+      "STALE_STATUS_OR_FALSE_COMPLETION",
+      "UNAUTHORIZED_PROVIDER_EFFECT",
+      "PRIVACY_SPILL",
+      "ADVISOR_ORACLE_DEPENDENCY",
+      "PREMATURE_DISPOSITION"
+    ],
+    "repair": "Attribute each source span; compare proposal against actual operator decisions, existing capability and evidence; test hidden harms; apply only explicitly adopted scoped gains; repair verified safe defects through owning provider; preserve provenance and continue."
+  }
 }
