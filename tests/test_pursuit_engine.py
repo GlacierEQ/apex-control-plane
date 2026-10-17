@@ -134,6 +134,28 @@ class PursuitTests(unittest.TestCase):
         self.assertEqual(candidate.metadata['route_kind'], 'escalation')
         self.assertNotEqual(candidate.metadata['route_kind'], 'prosecution')
 
+    def test_new_source_changes_idempotency_key_but_same_source_does_not(self):
+        first = next_pursuit_step(finding(), PursuitHistory())
+        replay = next_pursuit_step(finding(), PursuitHistory())
+        additional = next_pursuit_step(finding(
+            observation_ref='test-viewer:event-456',
+            observation_sha256='b' * 64), PursuitHistory())
+        self.assertEqual(first.operation_id, replay.operation_id)
+        self.assertNotEqual(first.operation_id, additional.operation_id)
+
+    def test_unsourced_counterclaim_cannot_be_marked_evidence_backed(self):
+        f = finding(counterclaims=(Counterclaim('printed later', 'reviewer-A',
+            supporting_refs=('unsupported-plain-text',), independently_verified=True),))
+        step = next_pursuit_step(f, PursuitHistory())
+        self.assertEqual(step.stage, PursuitStage.REQUEST_ACCOUNT)
+        self.assertEqual(step.adverse_claims_pending, ('printed later',))
+
+    def test_derived_summary_cannot_mark_target_complete(self):
+        h = PursuitHistory(target_result_ref='summary:finished',
+            target_result_readback='summary:claimed', target_result_verified=True)
+        with self.assertRaises(PursuitViolation):
+            next_pursuit_step(finding(), h)
+
     def test_no_unauthorized_effect_from_unverified_or_complete_step(self):
         step = next_pursuit_step(finding(observation_authenticated=False), PursuitHistory())
         admission = MissionAdmission('test-case-A','test-case-A',True,'cursor-1',())
