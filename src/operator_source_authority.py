@@ -292,6 +292,9 @@ def assess_supplied_material(
     elif declared_origin == "EXTERNAL_AI":
         status = "PROPOSAL_FOR_REVIEW"
         direction = False
+    elif declared_origin == "OPERATOR_AUTHORED":
+        status = "OPERATOR_TEXT_FOR_EVALUATION"
+        direction = False
     else:
         status = "ORIGIN_UNVERIFIED_REVIEW"
         direction = False
