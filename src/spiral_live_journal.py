@@ -227,7 +227,11 @@ def _bind_recovery_under_exclusive_admission(
             from src.chat_context_admission import ContextApplication
         except ModuleNotFoundError:  # legacy PYTHONPATH=src without repo root
             from chat_context_admission import ContextApplication
-        application = apply_context(recovery)
+        try:
+            application = apply_context(recovery)
+        except Exception as exc:
+            # Callback failure is an admission failure; never bind the kernel.
+            raise SpiralChatAdmissionError("host context application callback failed") from exc
         if not isinstance(application, ContextApplication):
             raise SpiralChatAdmissionError("invalid host context application receipt")
         if (application.mission_id != recovery.mission_id
@@ -238,7 +242,8 @@ def _bind_recovery_under_exclusive_admission(
             or not isinstance(application.effect_ref, str)
             or not application.effect_ref.strip()):
             raise SpiralChatAdmissionError("host application does not match recovered source")
-    applied_to_action = application is not None
+    if recovery.material_context_found:
+        applied_to_action = application is not None
     kernel.bind_task(
         literal_instruction=task_instruction,
         target_state=target_state,
