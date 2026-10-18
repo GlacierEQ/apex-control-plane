@@ -310,6 +310,33 @@ UNIQUE_GAIN -> HARVEST / COMPOSE / PRESERVE
 
 Do not strand useful capability on a branch, but do not disable that branch as a working surface merely to simplify convergence.
 
+
+## 11B. BRANCHES ARE NOT COMPLETIONS — CONTRIBUTION AND PROOF LAW
+
+**A branch is an active, mutable contribution surface, not a finished mission, a competing framework, or a competing authority.** The GlacierEQ estate is one complementary system whose differentiated components have owning repositories and accepted default branches. Branches and pull requests carry potential changes toward those owning implementations. Never confuse where work is staged with whether the Operator's objective has actually been achieved.
+
+Distinct provider/source-proof states must remain distinct:
+
+| State | What it establishes | What it does not establish |
+| --- | --- | --- |
+| Branch created or updated | Durable working ref exists | Capability is integrated or mission complete |
+| PR opened or reviewed | A proposed change and review evidence exist | The owning default branch contains the improvement |
+| Tests / CI green | Named checks passed for the tested exact revision | Correct integration, deployment, human outcome, or exhaustive quality |
+| Merged | Accepted changes reached an owning default branch, subject to exact readback | Runtime adoption or the wider mission outcome |
+| Integration verified | Owning source, dependent consumers and relevant behavior were independently checked | An external provider outcome unless separately read back |
+| Mission target verified | The Operator-requested desired state is independently evidenced and outstanding required frontier resolved | Anything beyond the specific evidenced mission scope |
+
+**Required execution path:** recover actual repo/mission state and accepted default branch; inspect all material candidate branch deltas and dependencies; test and adversarially review; reconcile unique capabilities into the correct owner through an authorized, non-regressive route; verify the exact accepted head; read the owning default branch after integration; verify runtime/consumer/provider state where applicable; issue source-bound receipts; preserve the uncompleted frontier; continue.
+
+No worker may report "done" based on branch existence, a PR, green checks, a merge button, a merge response, a branch cleanup operation, or its own narration. **MERGED_SOURCE is not RUNTIME_VERIFIED; RUNTIME_VERIFIED is not automatically MISSION_COMPLETE.**
+
+**Donor branch law:** branches may be old, divergent, overlapping, parked, partially verified or already absorbed. This is a reconciliation problem, not permission to delete, freeze, pick one winner, merge everything, or mark all others obsolete. Compare lineage, unique commits, actual implementation, tests, dependencies and effects. Reuse the strongest coherent verified gains without losing valid prior work. Preserve ambiguous, unmerged, and unique source history until its disposition has evidentiary and Operator authority support. Equivalently implemented changes can be recognized through evidence rather than force-merged merely to close a PR.
+
+**No mechanical stop:** branch protection, unavailable review, a failed check, conflicts, provider readback uncertainty, or a temporary authorization limitation is an exact-scope execution frontier. Repair or reroute what is authorized; keep unrelated safe work moving. Never manufacture new approval gates or silently expand standing authorization. Report the precise incomplete state; carry the exact cursor forward.
+
+**Terminal condition:** only independent evidence that the originally requested target was reached (or a genuinely verified terminal external boundary at the applicable scope) supports a completion claim. A merged improvement is a real engineering contribution when proven, but it is not a substitute for that target.
+
+
 ## 12. VERIFICATION / REPAIR / INTEGRATION
 
 After execution:
