@@ -14,6 +14,10 @@ new root, mission reframe) is the same failure class. Intent is not promoted.
 Absence of a failed flag is not a passed check. A check admits merge only
 when it has passed and that pass has been read back by a different producer.
 A check_passed boolean does not override a provider check conclusion of failure.
+
+2026-10-18 re-read: restore mappings for locked classes (continue, build, fix,
+look, organize, execute) cover generic_prior, summary, constraint, and beneficial
+substitutes. No new displacement on the branch. Continue the named objects.
 """
 
 from __future__ import annotations
