@@ -15,9 +15,7 @@ Absence of a failed flag is not a passed check. A check admits merge only
 when it has passed and that pass has been read back by a different producer.
 A check_passed boolean does not override a provider check conclusion of failure.
 
-2026-10-18 re-read: restore mappings for locked classes (continue, build, fix,
-look, organize, execute) cover generic_prior, summary, constraint, and beneficial
-substitutes. No new displacement on the branch. Continue the named objects.
+2026-10-19 re-read: no new displacement on the branch. Restore mappings for locked classes (continue, build, fix, look, organize, execute) cover generic_prior, summary, constraint, and beneficial substitutes. Continue the named objects. Next executable check: independent readback of provider check runs on head commit. Checks not passed; merge not admitted. Intent not promoted.
 """
 
 from __future__ import annotations
