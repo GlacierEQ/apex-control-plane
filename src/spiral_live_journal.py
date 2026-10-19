@@ -219,6 +219,14 @@ def _bind_recovery_under_exclusive_admission(
     if not all(isinstance(v, str) and v.strip()
                for v in (task_instruction, target_state, operation_class)):
         raise ValueError("task instruction, exact target state and operation class required")
+    # Preflight required kernel interfaces before a potentially effectful host
+    # callback. Otherwise an incompatible kernel can cause an external host
+    # effect and only then fail task binding, leaving a false admission trail.
+    if recovery.material_context_found and (
+        not callable(getattr(kernel, "bind_task", None))
+        or not callable(getattr(kernel, "record_context_recovery", None))
+    ):
+        raise SpiralChatAdmissionError("APEX kernel lacks required admission interfaces")
     application = None
     if recovery.material_context_found:
         if not callable(apply_context):
