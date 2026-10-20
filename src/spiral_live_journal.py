@@ -11,6 +11,7 @@ into native ChatGPT conversations.
 """
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Sequence
 import importlib.util
@@ -246,7 +247,7 @@ def _bind_recovery_under_exclusive_admission(
             or application.source_ref != recovery.source_ref
             or application.cursor != recovery.cursor
             or application.corrections != recovery.corrections
-            or application.fact_keys != tuple(recovery.facts)
+            or Counter(application.fact_keys) != Counter(tuple(recovery.facts))
             or not isinstance(application.effect_ref, str)
             or not application.effect_ref.strip()):
             raise SpiralChatAdmissionError("host application does not match recovered source")
