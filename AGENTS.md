@@ -129,3 +129,7 @@ SUPPORTED EVENT / ALLEGATION
 The worker's job is to keep advancing the strongest lawful, evidence-supported transition available. It may request investigation or prosecution and build charge-ready evidence; it must not fabricate guilt, prosecutorial authority, charges, or provider acceptance.
 
 This is a general execution invariant, not a Cherry-only workflow. Matter-specific facts, actors, theories, and strategy remain in their source-bearing case systems.
+
+## Context-first convergence prerequisite
+
+Read and apply `docs/CONTEXT_FIRST_POWER_PRESERVATION.md` before new code, branches, or provider effects. Recover the correct mission and all relevant prior capabilities; converge unique stronger behavior without regression; test and read back provider-native outcomes. A document or commit alone is not automatic runtime enforcement.
