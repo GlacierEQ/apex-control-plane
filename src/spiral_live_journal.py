@@ -228,10 +228,27 @@ def _bind_recovery_under_exclusive_admission(
         or not callable(getattr(kernel, "record_context_recovery", None))
     ):
         raise SpiralChatAdmissionError("APEX kernel lacks required admission interfaces")
+    # Bind the verified task before any potentially effectful host callback.
+    # A kernel may reject binding despite exposing the required methods;
+    # that rejection must not leave external host effects behind.
+    if recovery.material_context_found and not callable(apply_context):
+        raise SpiralChatAdmissionError("historical context requires host application callback")
+    kernel.bind_task(
+        literal_instruction=task_instruction,
+        target_state=target_state,
+        operation_class=operation_class,
+        mode="observation",
+        action_scope="none",
+        source_refs=(recovery.source_ref,),
+        verification_plan=(
+            "recover previously verified source state, corrections and cursor",
+            "reconcile current provider facts and unresolved external attempts",
+            "verify action selection applied corrections and source authority",
+            "read back the persistent journal before an external operation",
+        ),
+    )
     application = None
     if recovery.material_context_found:
-        if not callable(apply_context):
-            raise SpiralChatAdmissionError("historical context requires host application callback")
         try:
             from src.chat_context_admission import ContextApplication
         except ModuleNotFoundError:  # legacy PYTHONPATH=src without repo root
@@ -251,22 +268,6 @@ def _bind_recovery_under_exclusive_admission(
             or not isinstance(application.effect_ref, str)
             or not application.effect_ref.strip()):
             raise SpiralChatAdmissionError("host application does not match recovered source")
-    if recovery.material_context_found:
-        applied_to_action = application is not None
-    kernel.bind_task(
-        literal_instruction=task_instruction,
-        target_state=target_state,
-        operation_class=operation_class,
-        mode="observation",
-        action_scope="none",
-        source_refs=(recovery.source_ref,),
-        verification_plan=(
-            "recover previously verified source state, corrections and cursor",
-            "reconcile current provider facts and unresolved external attempts",
-            "verify action selection applied corrections and source authority",
-            "read back the persistent journal before an external operation",
-        ),
-    )
     return apply_recovery_to_apex(
-        kernel, recovery, applied_to_action=applied_to_action,
+        kernel, recovery, applied_to_action=application is not None,
     )
