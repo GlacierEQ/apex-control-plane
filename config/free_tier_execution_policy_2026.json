@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-09-28",
+  "purpose": "Source-bounded ceiling and routing contract for maximizing zero-dollar Buildkite plus Oracle Cloud execution after trial expiry.",
+  "truth_boundary": {
+    "scope": "documented_free_tier_limits_plus_source_observed_estate_state",
+    "live_account_state_verified": false,
+    "rule": "Provider documentation defines plan ceilings; actual account quotas, agents, queues, capacity and eligibility still require authenticated provider readback."
+  },
+  "buildkite_free": {
+    "plan": "Free",
+    "active_users_max": 5,
+    "organization_concurrent_jobs_max": 10,
+    "clusters_max_default": 1,
+    "queues_per_cluster_max_default": 50,
+    "hosted_linux": {
+      "available": true,
+      "free_vcpu_minutes_per_month_max": 2000,
+      "vcpu_concurrency_max": 20,
+      "free_plan_shape": "LINUX_AMD64_2X4",
+      "shape_vcpu": 2,
+      "shape_memory_gb": 4,
+      "approx_small_job_minutes_per_month_if_only_free_allowance": 1000,
+      "routing_role": "burst_or_x86_fallback_not_routine_default"
+    },
+    "hosted_macos": {
+      "available": false
+    },
+    "self_hosted": {
+      "available": true,
+      "organization_job_concurrency_shared_max": 10,
+      "preferred_role": "primary_zero-dollar_execution_substrate"
+    },
+    "retention": {
+      "build_days": 30,
+      "artifact_days": 30,
+      "artifact_storage_gb_per_month": 50,
+      "artifact_download_gb_per_month": 250
+    },
+    "tests": {
+      "executions_per_month": 250000
+    },
+    "api_rate_limits_default": {
+      "organization_requests_per_minute": 200,
+      "user_requests_per_minute": 50
+    },
+    "source_urls": [
+      "https://buildkite.com/pricing/",
+      "https://buildkite.com/docs/platform/limits",
+      "https://buildkite.com/docs/agent/self-hosted",
+      "https://buildkite.com/docs/apis/rest-api/rate-limits"
+    ]
+  },
+  "oracle_always_free": {
+    "home_region_required": true,
+    "ampere_a1": {
+      "shape": "VM.Standard.A1.Flex",
+      "ocpu_hours_per_month": 1500,
+      "memory_gb_hours_per_month": 9000,
+      "equivalent_continuous_allocation": {
+        "ocpus": 2,
+        "memory_gb": 12,
+        "note": "Fits a 31-day month: 2*24*31=1488 OCPU-hours and 12*24*31=8928 GB-hours."
+      },
+      "instance_count_max_documented": 2,
+      "recommended_ci_topologies": [
+        "one 2-OCPU/12-GB worker for strongest single-job throughput",
+        "two 1-OCPU/6-GB workers for isolation and two-way concurrency"
+      ],
+      "historical_4_ocpu_24_gb_assumption": "STALE_NOT_ALWAYS_FREE_CURRENT"
+    },
+    "amd_micro": {
+      "shape": "VM.Standard.E2.1.Micro",
+      "instances_max": 2,
+      "ocpu_each": 0.125,
+      "memory_gb_each": 1,
+      "recommended_role": "lightweight control, monitoring or tiny compatibility work only"
+    },
+    "block_volume": {
+      "combined_boot_and_block_gb": 200,
+      "volume_backups": 5,
+      "minimum_boot_volume_gb": 50
+    },
+    "object_storage": {
+      "combined_gb": 20,
+      "api_requests_per_month": 50000
+    },
+    "outbound_data_transfer_tb_per_month": 10,
+    "idle_reclamation": {
+      "window_days": 7,
+      "conditions_all_required": [
+        "CPU 95th percentile utilization below 20 percent",
+        "network utilization below 20 percent",
+        "memory utilization below 20 percent for A1"
+      ],
+      "policy": "Do not generate synthetic load solely to evade reclamation; run useful workloads and treat reclamation as a provider lifecycle constraint."
+    },
+    "source_urls": [
+      "https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm",
+      "https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier.htm"
+    ]
+  },
+  "free_max_topology": {
+    "buildkite_clusters": 1,
+    "queue_model": [
+      {
+        "queue": "oracle-arm64",
+        "substrate": "OCI A1 self-hosted",
+        "cost_priority": 1,
+        "promotion_state": "candidate_until_live_exact-SHA_receipt"
+      },
+      {
+        "queue": "macos-self",
+        "substrate": "operator-owned macOS self-hosted",
+        "cost_priority": 2,
+        "role": "macOS-specific work and self-hosted fallback"
+      },
+      {
+        "queue": "linux-small",
+        "substrate": "Buildkite-hosted Small AMD64",
+        "cost_priority": 3,
+        "role": "bounded burst/x86 fallback consuming the monthly hosted allowance"
+      }
+    ],
+    "routing_law": [
+      "Use one Buildkite cluster and multiple queues; do not spend the Free plan's single-cluster allowance on topology duplication.",
+      "Prefer self-hosted compute for routine CI because it does not consume the 2000 hosted Linux vCPU-minute allowance.",
+      "Use hosted Linux only when self-hosted capacity is unavailable, incompatible or intentionally isolated.",
+      "Do not route to hosted macOS on Free because it is unavailable.",
+      "Never promote oracle-arm64 to authoritative default until a live exact-SHA Buildkite plus Oracle receipt and GitHub projection exist.",
+      "Persist durable receipts outside Buildkite because Free build and artifact retention is 30 days.",
+      "Keep total Buildkite concurrency at or below 10 jobs even when several queues are healthy."
+    ]
+  },
+  "estate_observations": {
+    "apex_control_plane": {
+      "buildkite_policy_portable_default": "linux-small",
+      "finding": "valid portable hosted rail but not zero-dollar-optimal as routine default because it consumes the finite hosted Linux allowance"
+    },
+    "genius_family_reconciler": {
+      "default_queue": "macos-self",
+      "finding": "self-hosted and therefore compatible with Free economics if the Mac agent is live"
+    },
+    "oracle_runner": {
+      "source": "GlacierEQ/apex-stack PR #4",
+      "queue": "oracle-arm64",
+      "state": "OPEN_EXECUTION_READY_LIVE_PROOF_MISSING",
+      "finding": "the intended zero-dollar Linux execution lane exists in source but was never promoted through a live provider receipt"
+    }
+  },
+  "next_state": {
+    "objective": "Make Buildkite a one-cluster scheduler over operator-owned compute, with Oracle A1 as the primary Linux worker once proven, macOS self-hosted for platform-specific work, and hosted Linux as metered free burst capacity.",
+    "required_live_readback": [
+      "current Buildkite plan and service quotas",
+      "single surviving cluster identity",
+      "queue inventory and hosted/self-hosted type",
+      "connected agent inventory and versions",
+      "current monthly hosted Linux vCPU-minute usage",
+      "OCI home region and current service-limit readback",
+      "existing A1 and E2 instance shapes, OCPUs, memory and lifecycle state",
+      "exact Oracle worker Buildkite registration and proof build"
+    ]
+  }
+}
