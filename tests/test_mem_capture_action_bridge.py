@@ -330,3 +330,21 @@ def test_executable_handoff_rejects_unrelated_readback_and_no_sensitive_projecti
             find_tasks=lambda _: [], create_task=lambda _: {},
             read_task=lambda _: {},
         )
+
+
+def test_native_readback_accepts_prior_exact_provider_source_label_not_loose_values():
+    item = build_capture(CAPTURE)
+    task = make_ticktick_task(item)["task"]
+    legacy = task["content"].replace(
+        f"GlacierEQ Mem source {item.source_id};",
+        f"Non-sensitive Mem test. Mem source note ID: {item.source_id};",
+    )
+    response = {**task, "id": "existing-provider-task", "content": legacy}
+    proof = verify_ticktick_readback(item, response)
+    assert proof["provider_ref"] == "existing-provider-task"
+    assert proof["mission_complete"] is False
+    with pytest.raises(CaptureRoutingError, match="exact source correlation"):
+        verify_ticktick_readback(item, {
+            **response,
+            "content": legacy.replace("Mem source note ID:", "unrelated_source:"),
+        })
