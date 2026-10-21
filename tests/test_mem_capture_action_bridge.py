@@ -348,3 +348,29 @@ def test_native_readback_accepts_prior_exact_provider_source_label_not_loose_val
             **response,
             "content": legacy.replace("Mem source note ID:", "unrelated_source:"),
         })
+
+
+def test_executable_handoff_understands_real_supabase_nested_rpc_receipt():
+    item = build_capture(CAPTURE)
+    expected = make_ticktick_task(item)["task"]
+    provider_rpc = {
+        "bound": False,
+        "ingest": {
+            "ingest_id": "9cb5208c-32d9-4756-b621-fef3c24d5e13",
+            "source_ref": f"mem:glaciereq:{item.source_id}:v2",
+            "binding_state": "unresolved",
+            "processing_state": "new",
+        },
+        "resolution": {"reason": "no_match", "auto_bind": False},
+    }
+    result = execute_authorized_capture(
+        CAPTURE,
+        authorize=lambda *_: True,
+        ingest_rpc=lambda *_: provider_rpc,
+        find_tasks=lambda _: [{"id": "existing-native"}],
+        create_task=lambda _: pytest.fail("must reuse provider task"),
+        read_task=lambda _: {**expected, "id": "existing-native"},
+    )
+    assert result["ingest_receipt"] == provider_rpc
+    assert result["task_receipt"]["provider_ref"] == "existing-native"
+    assert result["mission_complete"] is False
