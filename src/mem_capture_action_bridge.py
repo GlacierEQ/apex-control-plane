@@ -236,3 +236,63 @@ def verify_ticktick_readback(item: CaptureEnvelope, response: Mapping[str, Any])
         "completed": False,
         "mission_complete": False,
     }
+
+
+def execute_authorized_capture(
+    value: Mapping[str, Any],
+    *,
+    authorize: Any,
+    ingest_rpc: Any,
+    find_tasks: Any,
+    create_task: Any,
+    read_task: Any,
+) -> dict[str, Any]:
+    """Execute the existing Mem->APEX->TickTick route via native host callables.
+
+    The caller supplies authenticated providers; the adapter never manufactures
+    permission or receipts. Ambiguous writes are never retried blindly.
+    """
+    item = build_capture(value)
+    plan = make_ingest_rpc(item)  # refuses broad projection of restricted content
+    if authorize(item.source_id, "apex.ingest") is not True:
+        raise CaptureRoutingError("source-scoped APEX ingest authority required")
+    ingest = ingest_rpc(plan["rpc"], plan["args"])
+    if not isinstance(ingest, Mapping) or not (
+        ingest.get("id") or ingest.get("ingest_id") or ingest.get("receipt_id")
+    ):
+        raise CaptureRoutingError("APEX RPC returned no provider receipt")
+    result = {
+        "source_id": item.source_id,
+        "source_version": item.source_version,
+        "ingest_receipt": dict(ingest),
+        "mission_complete": False,
+    }
+    if item.title is None or item.due_date is None:
+        result["owner_status"] = "NO_DATE_ONLY_TASK"
+        return result
+    if authorize(item.source_id, "ticktick.task") is not True:
+        result["owner_status"] = "TASK_AUTHORITY_REQUIRED"
+        return result
+    task_plan = make_ticktick_task(item)
+    existing = find_tasks(item.idempotency_key)
+    if not isinstance(existing, list):
+        raise CaptureRoutingError("native task preflight must return a list")
+    if len(existing) > 1:
+        raise CaptureRoutingError("ambiguous duplicate tasks; reconcile before create")
+    if existing:
+        task_id = str(existing[0].get("id") or "").strip()
+        if not task_id:
+            raise CaptureRoutingError("preflight match lacks native task ID")
+        operation = "reused"
+    else:
+        created = create_task(task_plan["task"])
+        if not isinstance(created, Mapping) or not created.get("id"):
+            raise CaptureRoutingError("task create returned no native ID; reconcile before retry")
+        task_id = str(created["id"])
+        operation = "created"
+    # A separately fetched provider object is required, not the optimistic write response.
+    readback = read_task(task_id)
+    result["task_receipt"] = verify_ticktick_readback(item, readback)
+    result["owner_operation"] = operation
+    result["owner_status"] = "OWNER_NATIVE_READBACK_VERIFIED"
+    return result
