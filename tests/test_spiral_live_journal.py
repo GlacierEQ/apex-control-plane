@@ -17,7 +17,7 @@ from unittest.mock import patch
 from apex_runtime_kernel import create_verified_runtime_kernel
 from spiral_live_journal import (
     open_authenticated_chat, resume_authenticated_chat_in_apex,
-    SpiralChatAdmissionError, load_spiral_engine,
+    SpiralChatAdmissionError, load_spiral_engine, execute_recovered_capture_in_apex,
 )
 
 SOURCE_ROOT = os.environ.get("SPIRAL_REAL_SOURCE_ROOT", "")
@@ -145,6 +145,59 @@ class RealCrossProcessChatTests(unittest.TestCase):
         self.assertIn("context_recovery", kernel.snapshot().receipt_kinds)
         kernel.begin()
         self.assertEqual(kernel.snapshot().phase, "executing")
+
+    def test_actual_recovery_executes_native_capture_with_second_read_and_durable_receipt(self):
+        from mem_capture_action_bridge import build_capture, make_ticktick_task
+
+        capture = {
+            "source_provider": "mem",
+            "source_id": "3a0d2c6d-b452-52fa-8fd2-e70f6123d76f",
+            "source_version": 2,
+            "raw_text": "Review the Mem integration test on Friday.",
+            "observed_at": "2026-10-12T10:25:00-10:00",
+            "project": "GlacierEQ/Memory Federation Control Plane",
+            "sensitivity": "non-sensitive",
+            "account_key": "glaciereq",
+            "timezone": "Pacific/Honolulu",
+        }
+        item = build_capture(capture)
+        task = {**make_ticktick_task(item)["task"], "id": "native-owner-1"}
+        saved = {}
+        read_calls = []
+        kernel = create_verified_runtime_kernel()
+        _, recovery = self.opened()
+
+        def persist(payload):
+            saved["provider-receipt-1"] = dict(payload)
+            return {"id": "provider-receipt-1"}
+
+        def read_task(native_id):
+            read_calls.append(native_id)
+            return task
+
+        outcome = execute_recovered_capture_in_apex(
+            kernel, recovery, capture,
+            authorize=lambda source, route: source == item.source_id,
+            ingest_rpc=lambda rpc, args: {
+                "ingest": {"ingest_id": "apex-native-ingest-1"},
+                "bound": False,
+            },
+            find_tasks=lambda key: [{"id": "native-owner-1"}],
+            create_task=lambda payload: self.fail("existing owner task duplicated"),
+            read_task=read_task,
+            persist_result=persist,
+            read_persisted_result=lambda ref: dict(saved[ref]),
+        )
+        self.assertEqual(outcome["status"], "BOUND_NATIVE_HANDOFF_COMPLETE")
+        self.assertEqual(outcome["task_id"], "native-owner-1")
+        self.assertEqual(outcome["apex_phase"], "complete")
+        self.assertFalse(outcome["mission_complete"])
+        self.assertEqual(read_calls, ["native-owner-1", "native-owner-1"])
+        for kind in (
+            "context_recovery", "execution", "test", "adversarial_test",
+            "verification", "persistence", "readback",
+        ):
+            self.assertIn(kind, kernel.snapshot().receipt_kinds)
 
     def test_recovered_mission_consequence_sensitive_mutation_requires_scoped_authority(self):
         kernel = create_verified_runtime_kernel()
