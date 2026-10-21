@@ -128,6 +128,36 @@ class RealCrossProcessChatTests(unittest.TestCase):
         self.assertIn(recovery.source_ref, kernel.task.source_refs)
         self.assertIn("context_recovery", snapshot.receipt_kinds)
 
+    def test_recovered_mission_can_execute_real_authorized_mutation_not_observation_only(self):
+        kernel = create_verified_runtime_kernel()
+        _, recovery = self.opened()
+        resume_authenticated_chat_in_apex(
+            kernel, recovery, task_instruction="Submit paid-work application",
+            target_state="Employer provider receipt independently read back",
+            operation_class="submit_application", applied_to_action=True,
+            expected_mission_id=MISSION, mode="mutation", action_scope="external",
+            prior_state_ref=recovery.source_ref,
+        )
+        self.assertEqual(kernel.snapshot().phase, "ready")
+        self.assertEqual(kernel.snapshot().mode, "mutation")
+        self.assertEqual(kernel.snapshot().action_scope, "external")
+        self.assertIn(recovery.source_ref, kernel.task.source_refs)
+        self.assertIn("context_recovery", kernel.snapshot().receipt_kinds)
+        kernel.begin()
+        self.assertEqual(kernel.snapshot().phase, "executing")
+
+    def test_recovered_mission_consequence_sensitive_mutation_requires_scoped_authority(self):
+        kernel = create_verified_runtime_kernel()
+        _, recovery = self.opened()
+        with self.assertRaisesRegex(Exception, "scoped operator authority"):
+            resume_authenticated_chat_in_apex(
+                kernel, recovery, task_instruction="Delete evidence",
+                target_state="Deletion receipt", operation_class="delete_case_evidence",
+                applied_to_action=True, expected_mission_id=MISSION,
+                mode="mutation", action_scope="external",
+            )
+        self.assertNotEqual(kernel.snapshot().phase, "ready")
+
     def test_real_apex_rejects_unapplied_material_corrections(self):
         kernel = create_verified_runtime_kernel()
         _, recovery = self.opened()
