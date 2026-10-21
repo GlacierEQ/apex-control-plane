@@ -261,8 +261,13 @@ def execute_authorized_capture(
     if authorize(item.source_id, "apex.ingest") is not True:
         raise CaptureRoutingError("source-scoped APEX ingest authority required")
     ingest = ingest_rpc(plan["rpc"], plan["args"])
-    if not isinstance(ingest, Mapping) or not (
-        ingest.get("id") or ingest.get("ingest_id") or ingest.get("receipt_id")
+    # Native APEX RPC returns {"ingest": {"ingest_id": ...}, "bound": ...};
+    # preserve that exact provider envelope, rather than assuming a flat ID.
+    native_ingest = ingest.get("ingest") if isinstance(ingest, Mapping) else None
+    receipt_data = native_ingest if isinstance(native_ingest, Mapping) else ingest
+    if not isinstance(receipt_data, Mapping) or not (
+        receipt_data.get("id") or receipt_data.get("ingest_id")
+        or receipt_data.get("receipt_id")
     ):
         raise CaptureRoutingError("APEX RPC returned no provider receipt")
     result = {
