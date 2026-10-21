@@ -247,6 +247,12 @@ def _bind_recovery_under_exclusive_admission(
             "read back the persistent journal before an external operation",
         ),
     )
+    # A kernel can expose bind_task yet silently fail to enter the required
+    # recovery phase. Never invoke a potentially effectful host callback then.
+    if recovery.material_context_found and (
+        getattr(getattr(kernel, "phase", None), "value", None) != "context_recovering"
+    ):
+        raise SpiralChatAdmissionError("APEX kernel did not enter context recovery after task binding")
     application = None
     if recovery.material_context_found:
         try:
