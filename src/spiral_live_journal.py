@@ -171,12 +171,17 @@ def resume_authenticated_chat_in_apex(
     operation_class: str,
     applied_to_action: bool,
     expected_mission_id: str | None = None,
+    mode: str = "observation",
+    action_scope: str = "none",
+    operator_authorization_ref: str | None = None,
+    prior_state_ref: str | None = None,
 ) -> Any:
     """Bind a REAL APEX kernel task and causally apply authenticated continuity.
 
     Caller must have built this kernel via APEX's verified/strong-boot factory.
     The binding does not perform an external provider mutation or confer any
-    additional privileges. A recovering host must actually apply the returned
+    additional privileges. The APEX kernel validates execution mode, action
+    scope and scoped authority for consequence-sensitive operations. A recovering host must actually apply the returned
     corrections, established facts and cursor in its action selection.
     """
     with exclusive_kernel_admission(kernel):
@@ -185,6 +190,9 @@ def resume_authenticated_chat_in_apex(
             target_state=target_state, operation_class=operation_class,
             applied_to_action=applied_to_action,
             expected_mission_id=expected_mission_id,
+            mode=mode, action_scope=action_scope,
+            operator_authorization_ref=operator_authorization_ref,
+            prior_state_ref=prior_state_ref,
         )
 
 
@@ -197,6 +205,10 @@ def _bind_recovery_under_exclusive_admission(
     operation_class: str,
     applied_to_action: bool,
     expected_mission_id: str | None,
+    mode: str,
+    action_scope: str,
+    operator_authorization_ref: str | None,
+    prior_state_ref: str | None,
 ) -> Any:
     if recovery.material_context_found and expected_mission_id is None:
         raise SpiralChatAdmissionError("existing mission requires explicit host mission identity")
@@ -218,8 +230,10 @@ def _bind_recovery_under_exclusive_admission(
         literal_instruction=task_instruction,
         target_state=target_state,
         operation_class=operation_class,
-        mode="observation",
-        action_scope="none",
+        mode=mode,
+        action_scope=action_scope,
+        operator_authorization_ref=operator_authorization_ref,
+        prior_state_ref=prior_state_ref,
         source_refs=(recovery.source_ref,),
         verification_plan=(
             "recover previously verified source state, corrections and cursor",
