@@ -11,7 +11,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from mem_capture_action_bridge import (
     CaptureRoutingError, build_capture, make_ingest_rpc,
-    make_ticktick_task, verify_ticktick_readback,
+    make_ticktick_task, verify_ticktick_readback, execute_authorized_capture,
 )
 
 CAPTURE = {
@@ -218,3 +218,115 @@ def test_native_readback_rejects_substring_only_provenance_and_wrong_version():
             **provider,
             "content": expected["content"].replace("source_version=2;", "source_version=1;"),
         })
+
+
+def test_executable_handoff_reuses_provider_task_and_independently_reads_back():
+    item = build_capture(CAPTURE)
+    task = {**make_ticktick_task(item)["task"], "id": "native-existing", "status": 0}
+    events = []
+
+    def authorize(source, route):
+        events.append(("authority", source, route))
+        return True
+
+    def ingest_rpc(rpc, args):
+        events.append(("ingest", rpc, args["p_external_id"]))
+        return {"ingest_id": "provider-ingest-1"}
+
+    def find_tasks(key):
+        events.append(("find", key))
+        return [{"id": "native-existing"}]
+
+    def unexpected_create(payload):
+        pytest.fail("an existing source task must never be created twice")
+
+    def read_task(task_id):
+        events.append(("read", task_id))
+        return task
+
+    result = execute_authorized_capture(
+        CAPTURE, authorize=authorize, ingest_rpc=ingest_rpc,
+        find_tasks=find_tasks, create_task=unexpected_create, read_task=read_task,
+    )
+    assert result["owner_operation"] == "reused"
+    assert result["task_receipt"]["provider_ref"] == "native-existing"
+    assert result["mission_complete"] is False
+    assert events[-1] == ("read", "native-existing")
+
+
+def test_executable_handoff_creates_once_and_does_not_trust_write_response():
+    item = build_capture(CAPTURE)
+    expected = make_ticktick_task(item)["task"]
+    events = []
+
+    def create_task(payload):
+        events.append("create")
+        return {"id": "native-created", "status": 0, "content": "untrusted"}
+
+    def read_task(task_id):
+        events.append("read")
+        return {**expected, "id": task_id}
+
+    result = execute_authorized_capture(
+        CAPTURE, authorize=lambda *_: True,
+        ingest_rpc=lambda *_: {"id": "ingest-1"},
+        find_tasks=lambda _: [], create_task=create_task, read_task=read_task,
+    )
+    assert result["owner_operation"] == "created"
+    assert events == ["create", "read"]
+    assert result["task_receipt"]["provider_ref"] == "native-created"
+
+
+def test_executable_handoff_denies_without_authority_and_never_performs_write():
+    calls = []
+
+    def forbidden(*args):
+        calls.append(args)
+        raise AssertionError("unexpected provider write")
+
+    with pytest.raises(CaptureRoutingError, match="authority"):
+        execute_authorized_capture(
+            CAPTURE, authorize=lambda *_: False,
+            ingest_rpc=forbidden, find_tasks=forbidden,
+            create_task=forbidden, read_task=forbidden,
+        )
+    assert calls == []
+
+
+def test_executable_handoff_stops_ambiguous_matches_and_missing_receipts():
+    with pytest.raises(CaptureRoutingError, match="no provider receipt"):
+        execute_authorized_capture(
+            CAPTURE, authorize=lambda *_: True,
+            ingest_rpc=lambda *_: {}, find_tasks=lambda _: [],
+            create_task=lambda _: {"id": "should-not-exist"},
+            read_task=lambda _: {},
+        )
+    with pytest.raises(CaptureRoutingError, match="ambiguous duplicate"):
+        execute_authorized_capture(
+            CAPTURE, authorize=lambda *_: True,
+            ingest_rpc=lambda *_: {"id": "ingest-1"},
+            find_tasks=lambda _: [{"id": "a"}, {"id": "b"}],
+            create_task=lambda _: pytest.fail("duplicate write"),
+            read_task=lambda _: {},
+        )
+
+
+def test_executable_handoff_rejects_unrelated_readback_and_no_sensitive_projection():
+    item = build_capture(CAPTURE)
+    expected = make_ticktick_task(item)["task"]
+    with pytest.raises(CaptureRoutingError, match="exact source correlation"):
+        execute_authorized_capture(
+            CAPTURE, authorize=lambda *_: True,
+            ingest_rpc=lambda *_: {"id": "ingest-1"},
+            find_tasks=lambda _: [{"id": "native-1"}],
+            create_task=lambda _: pytest.fail("duplicate write"),
+            read_task=lambda _: {**expected, "id": "native-1", "content": "wrong"},
+        )
+    with pytest.raises(CaptureRoutingError, match="restricted or unclassified"):
+        execute_authorized_capture(
+            {**CAPTURE, "sensitivity": "restricted"},
+            authorize=lambda *_: True,
+            ingest_rpc=lambda *_: pytest.fail("sensitive data leaked"),
+            find_tasks=lambda _: [], create_task=lambda _: {},
+            read_task=lambda _: {},
+        )
