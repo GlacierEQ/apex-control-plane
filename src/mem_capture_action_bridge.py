@@ -204,13 +204,17 @@ def verify_ticktick_readback(item: CaptureEnvelope, response: Mapping[str, Any])
         raise CaptureRoutingError("owner ID or title mismatch")
     # Match complete provenance fields, not substrings of unrelated text.
     # A short source ID can otherwise appear inside a different ID or hash.
-    expected_markers = (
-        f"GlacierEQ Mem source {item.source_id};",
+    canonical_source = f"GlacierEQ Mem source {item.source_id};"
+    # Existing provider-native tasks used this explicit source label before
+    # the newer canonical template. Accept both exact field labels, not loose IDs.
+    legacy_source = f"Mem source note ID: {item.source_id};"
+    correlation_fields = (
         f"capture_key={item.idempotency_key};",
         f"source_sha256={item.raw_sha256};",
         f"source_version={item.source_version};",
     )
-    if not all(marker in content for marker in expected_markers):
+    if not ((canonical_source in content or legacy_source in content)
+            and all(marker in content for marker in correlation_fields)):
         raise CaptureRoutingError("provider task lacks exact source correlation")
     if response.get("isAllDay") is not True or response.get("timeZone") != item.timezone:
         raise CaptureRoutingError("provider task day precision/timezone conflict")
