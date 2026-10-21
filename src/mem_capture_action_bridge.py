@@ -202,8 +202,15 @@ def verify_ticktick_readback(item: CaptureEnvelope, response: Mapping[str, Any])
     content = str(response.get("content") or "")
     if not task_id or response.get("title") != expected["title"]:
         raise CaptureRoutingError("owner ID or title mismatch")
-    if not all(marker in content for marker in
-               (item.source_id, item.idempotency_key, item.raw_sha256)):
+    # Match complete provenance fields, not substrings of unrelated text.
+    # A short source ID can otherwise appear inside a different ID or hash.
+    expected_markers = (
+        f"GlacierEQ Mem source {item.source_id};",
+        f"capture_key={item.idempotency_key};",
+        f"source_sha256={item.raw_sha256};",
+        f"source_version={item.source_version};",
+    )
+    if not all(marker in content for marker in expected_markers):
         raise CaptureRoutingError("provider task lacks exact source correlation")
     if response.get("isAllDay") is not True or response.get("timeZone") != item.timezone:
         raise CaptureRoutingError("provider task day precision/timezone conflict")
