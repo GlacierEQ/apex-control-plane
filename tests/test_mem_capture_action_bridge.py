@@ -198,3 +198,23 @@ def test_blank_mem_source_is_rejected_even_when_it_contains_whitespace():
     for raw in ("", "  ", "\n\t"):
         with pytest.raises(CaptureRoutingError, match="raw_text is required"):
             build_capture({**CAPTURE, "raw_text": raw})
+
+
+def test_native_readback_rejects_substring_only_provenance_and_wrong_version():
+    item = build_capture(CAPTURE)
+    expected = make_ticktick_task(item)["task"]
+    provider = {**expected, "id": "task-source-correlation", "status": 0}
+    # Before the fix, these unrelated labels still contained all three raw
+    # provenance values, so substring checks incorrectly accepted the task.
+    false_positive = (
+        f"unrelated_source={item.source_id}; "
+        f"unrelated_key={item.idempotency_key}; "
+        f"unrelated_hash={item.raw_sha256};"
+    )
+    with pytest.raises(CaptureRoutingError, match="exact source correlation"):
+        verify_ticktick_readback(item, {**provider, "content": false_positive})
+    with pytest.raises(CaptureRoutingError, match="exact source correlation"):
+        verify_ticktick_readback(item, {
+            **provider,
+            "content": expected["content"].replace("source_version=2;", "source_version=1;"),
+        })
