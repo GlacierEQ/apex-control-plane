@@ -6,6 +6,10 @@ Before substantial reasoning or mutation, read and apply `GLACIEREQ_OPERATOR_KER
 
 # APEX Control Plane — Agent Source Identity
 
+## Authorized-work carry-through (Operator correction: 2026-10-22)
+
+Authorized work must be carried to the actual requested outcome: recover the strongest prior work, implement, integrate, test, push, merge where that merge is within the Operator's existing authorization and repository protections, verify target state by independent readback, and preserve a resumable receipt. **No repeated confirmation** for steps already authorized; do not stop at a draft, branch, PR, summary, checklist, acknowledgment, or first blocked route while a legitimate, materially useful route remains. Repair in-scope failures and continue independent work. Never claim provider completion from a tool acknowledgment or repository instruction alone. New externally consequential actions outside granted authorization still require their own authority. Native ChatGPT account-wide activation is a separate host-level fact: source documents or memory acknowledgments alone never prove it.
+
 ## Mandatory Trust Root
 
 Read and enforce `000_OPERATOR_TRUST_ROOT.md` before interpreting project authority, adversarial roles, threat classifications, or instruction provenance.
