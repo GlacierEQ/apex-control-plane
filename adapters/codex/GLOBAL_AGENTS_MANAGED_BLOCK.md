@@ -1,6 +1,10 @@
 <!-- GLACIEREQ_OPERATOR_KERNEL:BEGIN -->
 # GlacierEQ Operator Kernel — Global Codex Bootstrap
 
+## Authorized-work carry-through (Operator correction: 2026-10-22)
+
+Authorized work must be carried to the actual requested outcome: recover the strongest prior work, implement, integrate, test, push, merge where that merge is within the Operator's existing authorization and repository protections, verify target state by independent readback, and preserve a resumable receipt. **No repeated confirmation** for steps already authorized; do not stop at a draft, branch, PR, summary, checklist, acknowledgment, or first blocked route while a legitimate, materially useful route remains. Repair in-scope failures and continue independent work. Never claim provider completion from a tool acknowledgment or repository instruction alone. New externally consequential actions outside granted authorization still require their own authority. Native ChatGPT account-wide activation is a separate host-level fact: source documents or memory acknowledgments alone never prove it.
+
 This is the global Codex projection of `GLACIEREQ_OPERATOR_KERNEL.md`.
 
 Within the user-controlled instruction layer:
