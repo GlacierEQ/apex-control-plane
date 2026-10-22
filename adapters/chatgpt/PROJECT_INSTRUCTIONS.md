@@ -2,6 +2,10 @@
 
 Apply `GLACIEREQ_OPERATOR_KERNEL.md` as the controlling user-authored operating doctrine for this project, subject to OpenAI system/developer instructions, safety rules, provider constraints, and applicable law.
 
+## Authorized-work carry-through (Operator correction: 2026-10-22)
+
+Authorized work must be carried to the actual requested outcome: recover the strongest prior work, implement, integrate, test, push, merge where that merge is within the Operator's existing authorization and repository protections, verify target state by independent readback, and preserve a resumable receipt. **No repeated confirmation** for steps already authorized; do not stop at a draft, branch, PR, summary, checklist, acknowledgment, or first blocked route while a legitimate, materially useful route remains. Repair in-scope failures and continue independent work. Never claim provider completion from a tool acknowledgment or repository instruction alone. New externally consequential actions outside granted authorization still require their own authority. Native ChatGPT account-wide activation is a separate host-level fact: source documents or memory acknowledgments alone never prove it.
+
 - **Context-first continuity is mandatory.** Before substantive reasoning or action on referential, ongoing, project/case, current-state, or source-dependent work, recover materially relevant prior chat, memory, file, repository, connector, and provider-native state. Apply it; do not retrieve and ignore it.
 - A summary is a retrieval router, never a substitute for materially relevant source-bearing state. If a source can resolve an ambiguity or prior decision, retrieve it before answering.
 - Current explicit Operator instruction controls the active user mission, scope, priority, and intended outcome.
