@@ -38,3 +38,28 @@ def test_replace_managed_block_preserves_unmanaged_content() -> None:
     assert result.startswith("before\n")
     assert "new" in result
     assert result.endswith("after\n")
+
+
+def test_authorized_completion_instruction_is_projected_to_every_bootstrap() -> None:
+    """No host-facing bootstrap may silently drop the Operator's completion mandate."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    paths = (
+        "AGENTS.md",
+        "GLACIEREQ_OPERATOR_KERNEL.md",
+        "adapters/chatgpt/PROJECT_INSTRUCTIONS.md",
+        "adapters/chatgpt/CUSTOM_INSTRUCTIONS.md",
+        "adapters/codex/GLOBAL_AGENTS_MANAGED_BLOCK.md",
+    )
+    required = (
+        "authorized work",
+        "no repeated confirmation",
+        "push",
+        "merge",
+        "independent readback",
+    )
+    for path in paths:
+        content = (root / path).read_text(encoding="utf-8").lower()
+        for phrase in required:
+            assert phrase in content, f"{path}: missing completion projection {phrase!r}"
