@@ -178,6 +178,24 @@ def test_bad_source_metadata_is_never_assumed_to_be_authoritative():
             build_capture({**CAPTURE, **variant})
 
 
+@pytest.mark.parametrize("invalid_version", [
+    True, False, 2.9, 2.0, 0.0, "02", " 2 ", "2.0", "2e0", "+2",
+    {"revision": 2}, [], -1,
+])
+def test_mem_revision_identity_rejects_lossy_or_noncanonical_versions(invalid_version):
+    # APEX source_ref includes this revision: never silently map another
+    # representation or a fractional revision onto an existing note version.
+    with pytest.raises(CaptureRoutingError, match="source_version|positive source version"):
+        build_capture({**CAPTURE, "source_version": invalid_version})
+
+
+def test_mem_revision_identity_accepts_exact_integer_or_decimal_string():
+    numeric = build_capture({**CAPTURE, "source_version": 2})
+    decimal = build_capture({**CAPTURE, "source_version": "2"})
+    assert numeric.source_version == decimal.source_version == 2
+    assert make_ingest_rpc(numeric)["args"]["p_external_id"] == make_ingest_rpc(decimal)["args"]["p_external_id"]
+
+
 def test_same_weekday_without_explicit_this_or_next_is_not_scheduled():
     item = build_capture({**CAPTURE, "observed_at": "2026-10-16T10:25:00-10:00"})
     assert item.due_date is None
