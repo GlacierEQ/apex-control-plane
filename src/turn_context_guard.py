@@ -131,6 +131,19 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
             receipt_sha256=digest,
         )
 
+    # A consulted source with no material hit permits forward progress, but it
+    # must not be reported as applied context. Preserve the distinction for
+    # downstream receipt consumers and false-completion detection.
+    if not receipt.material_context_found:
+        return TurnContextDecision(
+            turn_id=turn_id,
+            next_action="EXECUTE_OPERATOR_ALIGNED_TURN",
+            mission_stopped=False,
+            confidence_mode="CONTEXT_CHECKED_NO_MATERIAL_HIT",
+            reason="an identifiable source was consulted but no material context was recovered or applied",
+            receipt_sha256=digest,
+        )
+
     return TurnContextDecision(
         turn_id=turn_id,
         next_action="EXECUTE_OPERATOR_ALIGNED_TURN",
