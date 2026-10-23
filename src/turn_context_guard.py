@@ -68,6 +68,39 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
             receipt_sha256=digest,
         )
 
+    # Attempted retrieval is not proof that a source was consulted.
+    # Keep the mission moving through recovery or reversible alternate work.
+    if not any(isinstance(source, str) and source.strip()
+               for source in receipt.sources_consulted):
+        if receipt.retrieval_available:
+            return TurnContextDecision(
+                turn_id=turn_id,
+                next_action="RETRIEVE_CONTEXT_THEN_CONTINUE",
+                mission_stopped=False,
+                confidence_mode="PENDING_CONTEXT_RECOVERY",
+                reason="retrieval attempted but no identifiable context source consulted",
+                receipt_sha256=digest,
+            )
+        return TurnContextDecision(
+            turn_id=turn_id,
+            next_action="CONTINUE_DEGRADED_REVERSIBLE_AND_TRY_ALTERNATE_CONTEXT_SOURCES",
+            mission_stopped=False,
+            confidence_mode="DEGRADED_CONTEXT_COVERAGE",
+            reason="no source consulted; pursue alternatives without stopping reversible progress",
+            receipt_sha256=digest,
+        )
+
+    # An applied flag without recovered material is contradictory testimony.
+    if receipt.material_context_applied and not receipt.material_context_found:
+        return TurnContextDecision(
+            turn_id=turn_id,
+            next_action="RETRIEVE_CONTEXT_THEN_CONTINUE",
+            mission_stopped=False,
+            confidence_mode="PENDING_CONTEXT_RECOVERY",
+            reason="context application claimed without recovered material",
+            receipt_sha256=digest,
+        )
+
     if receipt.material_context_found and not receipt.prior_corrections_checked:
         return TurnContextDecision(
             turn_id=turn_id,
