@@ -122,3 +122,46 @@ def test_malformed_source_unavailable_retrieval_preserves_reversible_progress():
         sources_consulted="provider:source", retrieval_available=False))
     assert decision.next_action == "CONTINUE_DEGRADED_REVERSIBLE_AND_TRY_ALTERNATE_CONTEXT_SOURCES"
     assert not decision.mission_stopped
+
+
+def test_opaque_malformed_source_does_not_crash_digest_or_certify_application():
+    # Connector envelopes may carry opaque objects despite type annotations.
+    decision = route_turn_context(_receipt(
+        sources_consulted=("provider:source", object()),
+    ))
+    assert decision.next_action == "RETRIEVE_CONTEXT_THEN_CONTINUE"
+    assert decision.confidence_mode == "PENDING_CONTEXT_RECOVERY"
+    assert len(decision.receipt_sha256) == 64
+    assert not decision.mission_stopped
+
+
+def test_malformed_conflicts_never_certify_conflict_free_context():
+    for conflicts in (None, {"conflict": True}, ("",), ["valid", None]):
+        decision = route_turn_context(_receipt(unresolved_conflicts=conflicts))
+        assert decision.next_action == "CONTINUE_WITH_CONFLICT_AWARE_RETRIEVAL_AND_REVERSIBLE_WORK"
+        assert decision.confidence_mode == "CONFLICT_RECEIPT_UNRESOLVED"
+        assert not decision.mission_stopped
+
+
+def test_truthy_non_boolean_flags_cannot_self_certify_recovery():
+    for field, value in (
+        ("retrieval_attempted", "true"),
+        ("prior_corrections_checked", 1),
+        ("material_context_found", "yes"),
+        ("material_context_applied", "true"),
+        ("retrieval_available", 1),
+    ):
+        decision = route_turn_context(_receipt(**{field: value}))
+        assert decision.next_action == "RETRIEVE_CONTEXT_THEN_CONTINUE"
+        assert decision.confidence_mode == "PENDING_CONTEXT_RECOVERY"
+        assert not decision.mission_stopped
+
+
+def test_malformed_turn_identifier_fails_explicitly():
+    for value in (None, 17, "", "   "):
+        try:
+            route_turn_context(_receipt(turn_id=value))
+        except ValueError as exc:
+            assert "turn_id" in str(exc)
+        else:
+            raise AssertionError("invalid turn_id admitted")
