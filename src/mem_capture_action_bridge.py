@@ -77,8 +77,17 @@ def build_capture(value: Mapping[str, Any]) -> CaptureEnvelope:
     timezone_name = _required(value, "timezone")
     if value.get("source_version") is None:
         raise CaptureRoutingError("source_version is required")
+    # Mem's revision is an exact positive integer identity. int() alone
+    # silently truncates floats and accepts bools or noncanonical strings,
+    # aliasing distinct source revisions before the APEX ingest identity gate.
+    raw_version = value["source_version"]
+    if type(raw_version) is int:
+        version = raw_version
+    elif isinstance(raw_version, str) and re.fullmatch(r"[1-9][0-9]*", raw_version):
+        version = int(raw_version)
+    else:
+        raise CaptureRoutingError("source_version must be an exact positive integer")
     try:
-        version = int(value.get("source_version"))
         zone = ZoneInfo(timezone_name)
         observed_at = datetime.fromisoformat(observed.replace("Z", "+00:00"))
     except (ValueError, TypeError, ZoneInfoNotFoundError) as exc:
