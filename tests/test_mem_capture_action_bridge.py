@@ -27,6 +27,26 @@ CAPTURE = {
 }
 
 
+def _native_ingest_receipt(capture=CAPTURE, **overrides):
+    """Native source-correlated APEX receipt used by isolated contract tests."""
+    args = make_ingest_rpc(build_capture(capture))["args"]
+    source_ref = ":".join((
+        args["p_source_system"], args["p_account_key"], args["p_external_id"],
+    ))
+    return {
+        "ingest": {
+            "ingest_id": "9cb5208c-32d9-4756-b621-fef3c24d5e13",
+            "source_ref": source_ref,
+            "payload_hash": "a" * 64,
+            "binding_state": "unresolved",
+            "processing_state": "new",
+            **overrides,
+        },
+        "bound": False,
+    }
+
+
+
 def test_capture_classifies_action_and_preserves_source_without_inventing_time():
     item = build_capture(CAPTURE)
     assert set(item.categories) == {"ACTION", "COMMITMENT", "DEADLINE"}
@@ -231,7 +251,7 @@ def test_executable_handoff_reuses_provider_task_and_independently_reads_back():
 
     def ingest_rpc(rpc, args):
         events.append(("ingest", rpc, args["p_external_id"]))
-        return {"ingest_id": "provider-ingest-1"}
+        return _native_ingest_receipt()
 
     def find_tasks(key):
         events.append(("find", key))
@@ -269,7 +289,7 @@ def test_executable_handoff_creates_once_and_does_not_trust_write_response():
 
     result = execute_authorized_capture(
         CAPTURE, authorize=lambda *_: True,
-        ingest_rpc=lambda *_: {"id": "ingest-1"},
+        ingest_rpc=lambda *_: _native_ingest_receipt(),
         find_tasks=lambda _: [], create_task=create_task, read_task=read_task,
     )
     assert result["owner_operation"] == "created"
@@ -294,7 +314,7 @@ def test_executable_handoff_denies_without_authority_and_never_performs_write():
 
 
 def test_executable_handoff_stops_ambiguous_matches_and_missing_receipts():
-    with pytest.raises(CaptureRoutingError, match="no provider receipt"):
+    with pytest.raises(CaptureRoutingError, match="no native ingest envelope"):
         execute_authorized_capture(
             CAPTURE, authorize=lambda *_: True,
             ingest_rpc=lambda *_: {}, find_tasks=lambda _: [],
@@ -304,7 +324,7 @@ def test_executable_handoff_stops_ambiguous_matches_and_missing_receipts():
     with pytest.raises(CaptureRoutingError, match="ambiguous duplicate"):
         execute_authorized_capture(
             CAPTURE, authorize=lambda *_: True,
-            ingest_rpc=lambda *_: {"id": "ingest-1"},
+            ingest_rpc=lambda *_: _native_ingest_receipt(),
             find_tasks=lambda _: [{"id": "a"}, {"id": "b"}],
             create_task=lambda _: pytest.fail("duplicate write"),
             read_task=lambda _: {},
@@ -317,7 +337,7 @@ def test_executable_handoff_rejects_unrelated_readback_and_no_sensitive_projecti
     with pytest.raises(CaptureRoutingError, match="exact source correlation"):
         execute_authorized_capture(
             CAPTURE, authorize=lambda *_: True,
-            ingest_rpc=lambda *_: {"id": "ingest-1"},
+            ingest_rpc=lambda *_: _native_ingest_receipt(),
             find_tasks=lambda _: [{"id": "native-1"}],
             create_task=lambda _: pytest.fail("duplicate write"),
             read_task=lambda _: {**expected, "id": "native-1", "content": "wrong"},
@@ -358,6 +378,7 @@ def test_executable_handoff_understands_real_supabase_nested_rpc_receipt():
         "ingest": {
             "ingest_id": "9cb5208c-32d9-4756-b621-fef3c24d5e13",
             "source_ref": f"mem:glaciereq:{item.source_id}:v2",
+            "payload_hash": "a" * 64,
             "binding_state": "unresolved",
             "processing_state": "new",
         },
@@ -374,3 +395,47 @@ def test_executable_handoff_understands_real_supabase_nested_rpc_receipt():
     assert result["ingest_receipt"] == provider_rpc
     assert result["task_receipt"]["provider_ref"] == "existing-native"
     assert result["mission_complete"] is False
+
+
+@pytest.mark.parametrize("native", [
+    {"source_ref": "mem:glaciereq:unrelated-note:v2"},
+    {"source_ref": f"mem:glaciereq:{CAPTURE['source_id']}:v1"},
+    {"payload_hash": None},
+    {"payload_hash": "not-a-hash"},
+    {"ingest_id": ""},
+])
+def test_wrong_ingest_identity_blocks_all_owner_actions(native):
+    calls = []
+
+    def forbidden(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("owner action must not run after invalid APEX receipt")
+
+    with pytest.raises(CaptureRoutingError, match="source identity or hash mismatch"):
+        execute_authorized_capture(
+            CAPTURE, authorize=lambda *_: True,
+            ingest_rpc=lambda *_: _native_ingest_receipt(**native),
+            find_tasks=forbidden, create_task=forbidden, read_task=forbidden,
+        )
+    assert calls == []
+
+
+@pytest.mark.parametrize("receipt", [
+    {"id": "flat-id"},
+    {"ingest_id": "flat-id"},
+    {"ingest": {"ingest_id": "nested-but-unbound"}},
+])
+def test_flat_or_unbound_ingest_receipt_blocks_owner_actions(receipt):
+    calls = []
+
+    def forbidden(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("owner action must not run after invalid APEX receipt")
+
+    with pytest.raises(CaptureRoutingError):
+        execute_authorized_capture(
+            CAPTURE, authorize=lambda *_: True,
+            ingest_rpc=lambda *_: receipt,
+            find_tasks=forbidden, create_task=forbidden, read_task=forbidden,
+        )
+    assert calls == []
