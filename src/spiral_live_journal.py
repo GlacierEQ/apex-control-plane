@@ -288,7 +288,9 @@ def _bind_recovery_under_exclusive_admission(
             or not application.effect_ref.strip()):
             raise SpiralChatAdmissionError("host application does not match recovered source")
     return apply_recovery_to_apex(
-        kernel, recovery, applied_to_action=application is not None,
+        kernel, recovery, applied_to_action=(
+            application is not None if recovery.material_context_found else applied_to_action
+        ),
     )
 
 def execute_recovered_capture_in_apex(
