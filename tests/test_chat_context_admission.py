@@ -408,6 +408,30 @@ class AlternateRecoveryRouteTests(unittest.TestCase):
             self._bind(kernel, recovery, expected_mission_id=123)
         self.assertEqual(kernel.bindings, [])
 
+    def test_nonmaterial_route_preserves_caller_attestation_into_existing_gate(self):
+        """Fresh admission must not silently replace a caller's true attestation."""
+        from unittest.mock import patch
+        from src import spiral_live_journal
+
+        recovery = self._recovery(material=False)
+        kernel = self._kernel()
+        native_gate = spiral_live_journal.apply_recovery_to_apex
+        observed = []
+
+        def observe_gate(bound_kernel, bound_recovery, *, applied_to_action):
+            observed.append(applied_to_action)
+            return native_gate(
+                bound_kernel, bound_recovery,
+                applied_to_action=applied_to_action,
+            )
+
+        with patch.object(
+            spiral_live_journal, "apply_recovery_to_apex", side_effect=observe_gate,
+        ):
+            self._bind(kernel, recovery)
+        self.assertEqual(observed, [True])
+        self.assertEqual(kernel.phase.value, "ready")
+
     def test_alternate_path_keeps_fresh_first_use_admissible(self):
         recovery = self._recovery(material=False)
         kernel = self._kernel()
