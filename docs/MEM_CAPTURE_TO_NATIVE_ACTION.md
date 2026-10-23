@@ -37,6 +37,12 @@ Status (2026-10-12 HST): **proof slice, NOT automatic runtime deployment**.
 7. Append provider IDs/status/evidence to the existing versioned Mem note via optimistic-version update, and independently read back.
 8. Reconcile the APEX provider receipt and the Spiral journal; preserve ambiguities, contradictions, denied permissions and continuation cursor. Timeout after write is UNKNOWN, not FAIL or SAFE_TO_RETRY.
 
+## Draft native recovered-capture handoff: host mission binding
+
+The optional integration entrypoint `execute_recovered_capture_in_apex` on draft PR #330 requires `expected_mission_id` as an explicit keyword-only argument. The host MUST derive this identifier independently from the Operator's current requested mission and authorization context, not from `recovery.mission_id`, a memory summary, or the recovered journal itself. The existing `resume_authenticated_chat_in_apex` validator rejects a mismatch before invoking `apply_context` or any APEX/owner-provider callback. This preserves the mission identity boundary even when the recovered source is authentic but belongs to another matter.
+
+Call shape: `execute_recovered_capture_in_apex(kernel, recovery, capture, expected_mission_id=host_selected_mission_id, apply_context=..., authorize=..., ingest_rpc=..., find_tasks=..., create_task=..., read_task=..., persist_result=..., read_persisted_result=...)`. Prior callers that omit the host-selected mission argument must be updated; copying the mission from `recovery` is not a valid migration. The negative regression `test_native_capture_rejects_host_mission_mismatch_before_any_effect` covers wrong-mission rejection with zero host/provider callbacks. The change is committed to a DRAFT/UNMERGED branch and is not proof of a native ChatGPT hook, CI passage, deployment, or a human-world outcome.
+
 ## Acceptance and limitations
 
 Focused tests: `python -m pytest -q tests/test_mem_capture_action_bridge.py`.
