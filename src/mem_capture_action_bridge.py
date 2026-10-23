@@ -261,15 +261,24 @@ def execute_authorized_capture(
     if authorize(item.source_id, "apex.ingest") is not True:
         raise CaptureRoutingError("source-scoped APEX ingest authority required")
     ingest = ingest_rpc(plan["rpc"], plan["args"])
-    # Native APEX RPC returns {"ingest": {"ingest_id": ...}, "bound": ...};
-    # preserve that exact provider envelope, rather than assuming a flat ID.
+    # APEX returns a native ingest envelope. A flat receipt or a receipt for
+    # another Mem note must not admit downstream owner actions.
     native_ingest = ingest.get("ingest") if isinstance(ingest, Mapping) else None
-    receipt_data = native_ingest if isinstance(native_ingest, Mapping) else ingest
-    if not isinstance(receipt_data, Mapping) or not (
-        receipt_data.get("id") or receipt_data.get("ingest_id")
-        or receipt_data.get("receipt_id")
-    ):
-        raise CaptureRoutingError("APEX RPC returned no provider receipt")
+    expected_ref = (
+        f"{plan['args']['p_source_system']}:"
+        f"{plan['args']['p_account_key']}:"
+        f"{plan['args']['p_external_id']}"
+    )
+    if not isinstance(native_ingest, Mapping):
+        raise CaptureRoutingError("APEX RPC returned no native ingest envelope")
+    native_id = native_ingest.get("ingest_id")
+    source_ref = native_ingest.get("source_ref")
+    payload_hash = native_ingest.get("payload_hash")
+    if (not isinstance(native_id, str) or not native_id.strip()
+            or source_ref != expected_ref
+            or not isinstance(payload_hash, str)
+            or re.fullmatch(r"[0-9a-f]{64}", payload_hash) is None):
+        raise CaptureRoutingError("APEX ingest receipt source identity or hash mismatch")
     result = {
         "source_id": item.source_id,
         "source_version": item.source_version,
