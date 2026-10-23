@@ -62,3 +62,20 @@ def test_real_applied_context_preserves_operator_aligned_execution():
     decision = route_turn_context(_receipt())
     assert decision.next_action == "EXECUTE_OPERATOR_ALIGNED_TURN"
     assert decision.confidence_mode == "CONTEXT_APPLIED"
+
+def test_no_material_hit_is_not_misreported_as_applied_context():
+    decision = route_turn_context(_receipt(
+        sources_consulted=("provider:source",),
+        prior_corrections_checked=False,
+        material_context_found=False,
+        material_context_applied=False,
+    ))
+    assert decision.next_action == "EXECUTE_OPERATOR_ALIGNED_TURN"
+    assert decision.confidence_mode == "CONTEXT_CHECKED_NO_MATERIAL_HIT"
+    assert "no material context" in decision.reason
+    assert not decision.mission_stopped
+
+
+def test_material_hit_still_requires_applied_context_receipt():
+    decision = route_turn_context(_receipt())
+    assert decision.confidence_mode == "CONTEXT_APPLIED"
