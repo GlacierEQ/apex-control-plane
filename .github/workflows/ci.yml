@@ -57,6 +57,13 @@ jobs:
             tests/test_operator_kernel_surfaces.py \
             tests/test_operator_source_authority.py
 
+      - name: Prove turn-context receipt anti-regression on exact PR head
+        run: |
+          python -m py_compile src/turn_context_guard.py
+          CASEY_AUTO_BOOT_TESTING=1 PYTHONPATH=src:. python -m pytest -q \
+            tests/test_turn_context_guard.py \
+            tests/test_turn_context_guard_receipt_source_regression.py
+
       - name: Prove unresolved fidelity uplifts without killing the runtime
         shell: bash
         run: |
