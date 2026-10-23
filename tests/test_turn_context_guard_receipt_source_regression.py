@@ -79,3 +79,34 @@ def test_no_material_hit_is_not_misreported_as_applied_context():
 def test_material_hit_still_requires_applied_context_receipt():
     decision = route_turn_context(_receipt())
     assert decision.confidence_mode == "CONTEXT_APPLIED"
+
+
+def test_malformed_source_shape_cannot_self_certify_context():
+    # JSON/deserialization can violate the dataclass type annotation at runtime.
+    # Bare strings and mappings iterate as source names in the old any() gate.
+    for sources in ("provider:source", {"provider:source": True},
+                    ("provider:source", ""), ("provider:source", 42)):
+        decision = route_turn_context(_receipt(sources_consulted=sources))
+        assert decision.next_action == "RETRIEVE_CONTEXT_THEN_CONTINUE"
+        assert decision.confidence_mode == "PENDING_CONTEXT_RECOVERY"
+        assert not decision.mission_stopped
+
+
+def test_missing_source_field_routes_to_recovery_instead_of_typeerror():
+    decision = route_turn_context(_receipt(sources_consulted=None))
+    assert decision.next_action == "RETRIEVE_CONTEXT_THEN_CONTINUE"
+    assert not decision.mission_stopped
+
+
+def test_valid_sequence_sources_preserve_context_application():
+    for sources in (("provider:source",), ["provider:source"]):
+        decision = route_turn_context(_receipt(sources_consulted=sources))
+        assert decision.confidence_mode == "CONTEXT_APPLIED"
+        assert decision.next_action == "EXECUTE_OPERATOR_ALIGNED_TURN"
+
+
+def test_malformed_source_unavailable_retrieval_preserves_reversible_progress():
+    decision = route_turn_context(_receipt(
+        sources_consulted="provider:source", retrieval_available=False))
+    assert decision.next_action == "CONTINUE_DEGRADED_REVERSIBLE_AND_TRY_ALTERNATE_CONTEXT_SOURCES"
+    assert not decision.mission_stopped
