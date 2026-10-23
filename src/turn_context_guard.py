@@ -104,13 +104,13 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
             receipt_sha256=digest,
         )
 
-    if receipt.material_context_found and not receipt.prior_corrections_checked:
+    if not receipt.prior_corrections_checked:
         return TurnContextDecision(
             turn_id=turn_id,
             next_action="RECONCILE_PRIOR_CORRECTIONS_THEN_CONTINUE",
             mission_stopped=False,
             confidence_mode="PENDING_CORRECTION_RECONCILIATION",
-            reason="material context exists but prior corrections were not reconciled before action selection",
+            reason="prior corrections were not checked; no material hit does not establish correction review",
             receipt_sha256=digest,
         )
 
