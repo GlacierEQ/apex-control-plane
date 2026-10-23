@@ -261,8 +261,8 @@ def _bind_recovery_under_exclusive_admission(
             from chat_context_admission import ContextApplication
         try:
             application = apply_context(recovery)
-        except Exception as exc:
-            # Callback failure is an admission failure; never bind the kernel.
+        except BaseException as exc:
+            # Even non-Exception host aborts must not bypass admission failure.
             raise SpiralChatAdmissionError("host context application callback failed") from exc
         if not isinstance(application, ContextApplication):
             raise SpiralChatAdmissionError("invalid host context application receipt")
