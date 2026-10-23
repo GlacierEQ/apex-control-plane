@@ -377,6 +377,37 @@ class AlternateRecoveryRouteTests(unittest.TestCase):
         self.assertEqual(len(kernel.receipts), 1)
         self.assertEqual(kernel.receipts[0][2]["mission_id"], recovery.mission_id)
 
+    def test_alternate_path_normalizes_baseexception_callback_and_releases_lock(self):
+        from src.spiral_live_journal import SpiralChatAdmissionError
+        from src import continuity_admission_guard as guard
+
+        recovery = self._recovery()
+        for exc in (SystemExit("host exited"), KeyboardInterrupt()):
+            with self.subTest(exception=type(exc).__name__):
+                kernel = self._kernel()
+                def fail_callback(_recovery, failure=exc):
+                    raise failure
+                with self.assertRaisesRegex(
+                    SpiralChatAdmissionError, "host context application callback failed"
+                ):
+                    self._bind(
+                        kernel, recovery, expected_mission_id=recovery.mission_id,
+                        apply_context=fail_callback,
+                    )
+                self.assertEqual(kernel.receipts, [])
+                self.assertNotEqual(kernel.phase.value, "ready")
+                self.assertEqual(guard._ACTIVE, {})
+                with guard.exclusive_kernel_admission(kernel):
+                    pass
+
+    def test_nonmaterial_recovery_rejects_nonstr_mission_identity(self):
+        from src.spiral_live_journal import SpiralChatAdmissionError
+        recovery = self._recovery(material=False)
+        kernel = self._kernel()
+        with self.assertRaises(SpiralChatAdmissionError):
+            self._bind(kernel, recovery, expected_mission_id=123)
+        self.assertEqual(kernel.bindings, [])
+
     def test_alternate_path_keeps_fresh_first_use_admissible(self):
         recovery = self._recovery(material=False)
         kernel = self._kernel()
