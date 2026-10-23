@@ -21,5 +21,26 @@ class KernelInterfacePreflightTests(unittest.TestCase):
                         apply_context=lambda r: effects.append(r.source_ref))
                 self.assertEqual(effects, [])
 
+    def test_bind_without_context_recovering_phase_cannot_trigger_callback(self):
+        recovery = SimpleNamespace(material_context_found=True, mission_id="m",
+            source_ref="spiral-journal:"+"a"*64, cursor="c", corrections=(), facts={})
+        effects = []
+        kernel = SimpleNamespace(
+            phase=SimpleNamespace(value="bootstrapped"),
+            bind_task=lambda **kw: effects.append("bind"),
+            record_context_recovery=lambda **kw: effects.append("record"),
+        )
+        with self.assertRaisesRegex(
+            SpiralChatAdmissionError, "did not enter context recovery"
+        ):
+            resume_authenticated_chat_in_apex(
+                kernel, recovery,
+                task_instruction="resume", target_state="verified",
+                operation_class="mission", applied_to_action=True,
+                expected_mission_id="m",
+                apply_context=lambda r: effects.append("callback"),
+            )
+        self.assertEqual(effects, ["bind"])
+
 if __name__ == "__main__":
     unittest.main()
