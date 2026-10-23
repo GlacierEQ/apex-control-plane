@@ -173,6 +173,10 @@ def resume_authenticated_chat_in_apex(
     applied_to_action: bool,
     expected_mission_id: str | None = None,
     apply_context: Callable[[ChatRecovery], Any] | None = None,
+    mode: str = "observation",
+    action_scope: str = "none",
+    operator_authorization_ref: str | None = None,
+    prior_state_ref: str | None = None,
 ) -> Any:
     """Bind a REAL APEX kernel task and causally apply authenticated continuity.
 
@@ -188,6 +192,9 @@ def resume_authenticated_chat_in_apex(
             applied_to_action=applied_to_action,
             expected_mission_id=expected_mission_id,
             apply_context=apply_context,
+            mode=mode, action_scope=action_scope,
+            operator_authorization_ref=operator_authorization_ref,
+            prior_state_ref=prior_state_ref,
         )
 
 
@@ -201,6 +208,10 @@ def _bind_recovery_under_exclusive_admission(
     applied_to_action: bool,
     expected_mission_id: str | None,
     apply_context: Callable[[ChatRecovery], Any] | None,
+    mode: str,
+    action_scope: str,
+    operator_authorization_ref: str | None,
+    prior_state_ref: str | None,
 ) -> Any:
     if recovery.material_context_found and expected_mission_id is None:
         raise SpiralChatAdmissionError("existing mission requires explicit host mission identity")
@@ -237,8 +248,10 @@ def _bind_recovery_under_exclusive_admission(
         literal_instruction=task_instruction,
         target_state=target_state,
         operation_class=operation_class,
-        mode="observation",
-        action_scope="none",
+        mode=mode,
+        action_scope=action_scope,
+        operator_authorization_ref=operator_authorization_ref,
+        prior_state_ref=prior_state_ref,
         source_refs=(recovery.source_ref,),
         verification_plan=(
             "recover previously verified source state, corrections and cursor",
@@ -277,3 +290,135 @@ def _bind_recovery_under_exclusive_admission(
     return apply_recovery_to_apex(
         kernel, recovery, applied_to_action=application is not None,
     )
+
+def execute_recovered_capture_in_apex(
+    kernel: Any,
+    recovery: ChatRecovery,
+    capture: dict[str, Any],
+    *,
+    apply_context: Callable[[ChatRecovery], Any],
+    authorize: Any,
+    ingest_rpc: Any,
+    find_tasks: Any,
+    create_task: Any,
+    read_task: Any,
+    persist_result: Any,
+    read_persisted_result: Any,
+) -> dict[str, Any]:
+    """One executable recovered-context -> native provider -> APEX receipt path.
+
+    A host supplies authenticated native connectors plus a durable continuation
+    writer/readback. A bounded handoff may finish without declaring the
+    underlying human mission complete. No global ChatGPT hook is implied.
+    """
+    try:
+        from .mem_capture_action_bridge import (
+            build_capture, execute_authorized_capture, verify_ticktick_readback,
+        )
+    except ImportError:
+        from mem_capture_action_bridge import (
+            build_capture, execute_authorized_capture, verify_ticktick_readback,
+        )
+    item = build_capture(capture)
+    if not recovery.mission_id or not recovery.source_ref:
+        raise SpiralChatAdmissionError("authenticated existing mission required")
+    resume_authenticated_chat_in_apex(
+        kernel, recovery,
+        task_instruction=(
+            f"Continue mission {recovery.mission_id} at cursor "
+            f"{recovery.cursor!r}; execute source-bound Mem capture {item.source_id}"
+        ),
+        target_state="APEX ingest and native owner task independently read back and persisted",
+        operation_class="mem_capture_native_handoff",
+        applied_to_action=True,
+        expected_mission_id=recovery.mission_id,
+        apply_context=apply_context,
+        mode="mutation",
+        action_scope="external",
+        prior_state_ref=recovery.source_ref,
+    )
+    kernel.begin()
+    try:
+        result = execute_authorized_capture(
+            capture, authorize=authorize, ingest_rpc=ingest_rpc,
+            find_tasks=find_tasks, create_task=create_task, read_task=read_task,
+        )
+        if result.get("owner_status") != "OWNER_NATIVE_READBACK_VERIFIED":
+            raise SpiralChatAdmissionError("owner-native task has not been verified")
+        owner = result["task_receipt"]
+        ingest = result["ingest_receipt"]
+        ingest_inner = ingest.get("ingest") if isinstance(ingest.get("ingest"), dict) else ingest
+        ingest_id = str(
+            ingest_inner.get("ingest_id") or ingest_inner.get("id")
+            or ingest_inner.get("receipt_id") or ""
+        )
+        task_id = str(owner["provider_ref"])
+        if not ingest_id or not task_id:
+            raise SpiralChatAdmissionError("native provider identities missing")
+        kernel.record_execution(
+            "apex-ingest:" + ingest_id,
+            details={"owner_ref": task_id, "source_ref": recovery.source_ref},
+        )
+        kernel.record_test(
+            "native-action-contract:" + item.idempotency_key,
+            passed=(owner["source_id"] == item.source_id
+                    and owner["source_version"] == item.source_version
+                    and result["mission_complete"] is False),
+        )
+        # A second owner-native read is required after execution, distinct from
+        # the one that validated the optimistic provider outcome.
+        second = verify_ticktick_readback(item, read_task(task_id))
+        kernel.record_adversarial_test(
+            "native-owner-second-read:" + task_id,
+            passed=(second["provider_ref"] == task_id
+                    and second["idempotency_key"] == item.idempotency_key),
+        )
+        kernel.record_verification(
+            "native-correlation:" + item.source_id,
+            passed=True,
+            verified_gain_refs=("apex-ingest:" + ingest_id, "ticktick-task:" + task_id),
+        )
+        bounded = {
+            "mission_id": recovery.mission_id,
+            "cursor": recovery.cursor,
+            "source_id": item.source_id,
+            "source_version": item.source_version,
+            "ingest_id": ingest_id,
+            "task_id": task_id,
+            "idempotency_key": item.idempotency_key,
+            "mission_complete": False,
+        }
+        kernel.begin_persistence()
+        saved = persist_result(bounded)
+        if not isinstance(saved, dict) or not saved.get("id"):
+            raise SpiralChatAdmissionError("durable continuation lacks provider receipt")
+        saved_id = str(saved["id"])
+        kernel.record_persistence("continuation:" + saved_id)
+        reread = read_persisted_result(saved_id)
+        matched = isinstance(reread, dict) and all(
+            reread.get(field) == value for field, value in bounded.items()
+        )
+        final = kernel.record_readback(
+            "continuation-readback:" + saved_id,
+            matches_expected_state=matched,
+            target_reached=matched,
+            details={"source_id": item.source_id, "owner_ref": task_id},
+        )
+        if final.phase != "complete":
+            raise SpiralChatAdmissionError("APEX bounded handoff did not complete")
+        return {
+            "status": "BOUND_NATIVE_HANDOFF_COMPLETE",
+            "source_id": item.source_id,
+            "ingest_id": ingest_id,
+            "task_id": task_id,
+            "continuation_ref": saved_id,
+            "apex_phase": final.phase,
+            "mission_complete": False,
+        }
+    except Exception as exc:
+        if kernel.phase.value not in {"blocked", "complete"}:
+            kernel.block(
+                "native capture route requires reconciliation",
+                reference="capture-route:" + item.source_id,
+            )
+        raise
