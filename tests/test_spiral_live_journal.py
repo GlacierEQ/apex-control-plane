@@ -134,8 +134,8 @@ class RealCrossProcessChatTests(unittest.TestCase):
             kernel, recovery,
             task_instruction=OBJECTIVE, target_state=OUTCOME,
             operation_class="resume_mission", applied_to_action=True,
-            expected_mission_id=MISSION,
-            apply_context=apply_source_matched_context)
+        expected_mission_id=MISSION,
+        apply_context=apply_source_matched_context)
         snapshot = kernel.snapshot()
         self.assertEqual(snapshot.phase, "ready")
         self.assertEqual(kernel.task.target_state, OUTCOME)
@@ -229,6 +229,8 @@ class RealCrossProcessChatTests(unittest.TestCase):
 
 
 def _run_worker():
+    if len(sys.argv) != 5:
+        raise SystemExit(f"worker requires exactly 4 arguments, got {len(sys.argv) - 1}")
     mode, path, head, session = sys.argv[1:]
     key_hex = os.environ["SPIRAL_TEST_HMAC_KEY_HEX"]
     journal, recovery = open_authenticated_chat(
