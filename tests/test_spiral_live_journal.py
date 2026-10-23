@@ -242,8 +242,8 @@ def _run_worker():
     resume_authenticated_chat_in_apex(
         kernel, recovery, task_instruction=OBJECTIVE, target_state=OUTCOME,
         operation_class="resume_mission", applied_to_action=True,
-            expected_mission_id=MISSION,
-            apply_context=apply_source_matched_context)
+        expected_mission_id=MISSION,
+        apply_context=apply_source_matched_context)
     if mode == "--read-session":
         print(json.dumps({
             "session": session, "mission": recovery.mission_id,
