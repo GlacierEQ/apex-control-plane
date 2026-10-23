@@ -173,6 +173,7 @@ class RealCrossProcessChatTests(unittest.TestCase):
 
         outcome = execute_recovered_capture_in_apex(
             kernel, recovery, capture,
+            expected_mission_id=MISSION,
             apply_context=apply_source_matched_context,
             authorize=lambda source, route: source == item.source_id,
             ingest_rpc=lambda rpc, args: {
@@ -242,12 +243,47 @@ class RealCrossProcessChatTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(SpiralChatAdmissionError, "does not match recovered source"):
             execute_recovered_capture_in_apex(
-                kernel, recovery, capture, apply_context=mismatch,
+                kernel, recovery, capture, expected_mission_id=MISSION,
+                apply_context=mismatch,
                 authorize=forbidden, ingest_rpc=forbidden, find_tasks=forbidden,
                 create_task=forbidden, read_task=forbidden,
                 persist_result=forbidden, read_persisted_result=forbidden,
             )
         self.assertEqual(touched, [])
+
+    def test_native_capture_rejects_host_mission_mismatch_before_any_effect(self):
+        # The expected mission must come from the host's current request,
+        # never from the recovered journal itself.
+        capture = {
+            "source_provider": "mem",
+            "source_id": "3a0d2c6d-b452-52fa-8fd2-e70f6123d76f",
+            "source_version": 2,
+            "raw_text": "Review the Mem integration test on Friday.",
+            "observed_at": "2026-10-12T10:25:00-10:00",
+            "project": "GlacierEQ/Memory Federation Control Plane",
+            "sensitivity": "non-sensitive",
+            "account_key": "glaciereq",
+            "timezone": "Pacific/Honolulu",
+        }
+        kernel = create_verified_runtime_kernel()
+        _, recovery = self.opened()
+        effects = []
+
+        def forbidden(*args, **kwargs):
+            effects.append("called")
+            raise AssertionError("host callback or provider ran before mission check")
+
+        with self.assertRaisesRegex(SpiralChatAdmissionError, "requested mission"):
+            execute_recovered_capture_in_apex(
+                kernel, recovery, capture,
+                expected_mission_id="glaciereq-cherry",
+                apply_context=forbidden, authorize=forbidden,
+                ingest_rpc=forbidden, find_tasks=forbidden,
+                create_task=forbidden, read_task=forbidden,
+                persist_result=forbidden, read_persisted_result=forbidden,
+            )
+        self.assertEqual(effects, [])
+        self.assertEqual(kernel.snapshot().phase, "bootstrapped")
 
     def test_real_apex_rejects_unapplied_material_corrections(self):
         kernel = create_verified_runtime_kernel()
