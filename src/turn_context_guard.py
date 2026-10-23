@@ -70,8 +70,11 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
 
     # Attempted retrieval is not proof that a source was consulted.
     # Keep the mission moving through recovery or reversible alternate work.
-    if not any(isinstance(source, str) and source.strip()
-               for source in receipt.sources_consulted):
+    sources = receipt.sources_consulted
+    # A scalar string or mapping can iterate as fake source references. Reject
+    # malformed receipts without blocking independent reversible mission work.
+    if not (isinstance(sources, (tuple, list)) and sources
+            and all(isinstance(source, str) and source.strip() for source in sources)):
         if receipt.retrieval_available:
             return TurnContextDecision(
                 turn_id=turn_id,
@@ -156,7 +159,10 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
 
 def _digest_receipt(receipt: TurnContextReceipt) -> str:
     payload: dict[str, Any] = asdict(receipt)
-    payload["sources_consulted"] = list(receipt.sources_consulted)
+    sources = receipt.sources_consulted
+    payload["sources_consulted"] = (list(sources) if isinstance(sources, (tuple, list))
+                                    else {"invalid_type": type(sources).__name__,
+                                          "raw_string": sources if isinstance(sources, str) else None})
     payload["unresolved_conflicts"] = list(receipt.unresolved_conflicts)
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return sha256(encoded.encode("utf-8")).hexdigest()
