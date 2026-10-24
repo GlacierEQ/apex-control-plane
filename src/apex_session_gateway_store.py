@@ -138,6 +138,10 @@ class GatewayCheckpointStore:
         self._validate_operation_key(envelope.operation_key)
         if envelope.mission_id != self.mission_id:
             raise GatewayStoreDenied("checkpoint mission mismatch")
+        # A valid digest does not bind a checkpoint to its reserved chat session.
+        # Reject cross-session attribution before writing the durable record.
+        if envelope.chat_session_id != envelope.operation_key.split(":")[2]:
+            raise GatewayStoreDenied("checkpoint session identity mismatches reservation")
         if envelope.response_author != "assistant":
             raise GatewayStoreDenied("model response cannot impersonate user authorship")
         if envelope.memory_authority != "SOURCE_CANDIDATE_ONLY":
@@ -218,6 +222,7 @@ class GatewayCheckpointStore:
                     or envelope.digest != row["envelope_digest"]
                     or envelope.digest != _envelope_digest(envelope)
                     or envelope.operation_key != operation_key
+                    or envelope.chat_session_id != operation_key.split(":")[2]
                     or envelope.mission_id != self.mission_id):
                 raise GatewayStoreDenied("checkpoint readback digest or authority mismatch")
             return envelope
