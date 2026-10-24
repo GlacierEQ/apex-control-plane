@@ -139,6 +139,73 @@ class SessionGatewayTests(unittest.TestCase):
                 self.assertEqual(self.reservations, set())
                 self.assertEqual(self.saved, {})
 
+    def test_fresh_mission_without_historical_context_does_not_require_application(self):
+        from src.apex_session_gateway import execute_with_recovered_context
+        fresh = Recovery("new-mission", "", "", (), (), False)
+        receipts = []
+        result = execute_with_recovered_context(
+            journal=fresh, chat_session_id="new-session", kernel=RecordingKernel(),
+            expected_mission_id="new-mission", apply_context=None,
+            execute=lambda receipt: receipts.append(receipt) or "admitted",
+        )
+        self.assertEqual(result, "admitted")
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(receipts[0].application_ref, "")
+        self.assertIsNone(receipts[0].application)
+
+    def test_fresh_mission_runs_full_gateway_and_persists_without_fake_application(self):
+        fresh = Recovery("new-mission", "", "", (), (), False)
+        result = run_admitted_session(
+            journal=fresh, chat_session_id="fresh-session", kernel=RecordingKernel(),
+            expected_mission_id="new-mission", invocation_id="fresh-turn",
+            apply_context=None,
+            invoke_model=lambda receipt: GatewayModelOutput("fresh response", (), (), ()),
+            resolve_source=self.sources.__getitem__, reserve=self.reserve,
+            persist=self.persist, readback=self.readback,
+        )
+        self.assertEqual(result.text, "fresh response")
+        self.assertEqual(self.events, ["reserve", "persist", "readback"])
+        checkpoint = next(iter(self.saved.values()))
+        self.assertEqual(checkpoint.mission_id, "new-mission")
+        self.assertEqual(checkpoint.corrections, ())
+
+    def test_recovered_correction_cannot_hide_behind_false_material_flag(self):
+        from src.apex_session_gateway import execute_with_recovered_context
+        mislabeled = Recovery("case-A", "original:user:middle", "cursor-7",
+                              ("preserve the complete mission scope",), (), False)
+        with self.assertRaisesRegex(GatewayDenied, "historical context application"):
+            execute_with_recovered_context(
+                journal=mislabeled, chat_session_id="new-session", kernel=RecordingKernel(),
+                expected_mission_id="case-A", apply_context=None,
+                execute=lambda _: self.fail("executor must not run"),
+            )
+
+    def test_recovered_context_without_application_denied_before_reservation(self):
+        with self.assertRaisesRegex(GatewayDenied, "historical context application"):
+            run_admitted_session(
+                journal=ExistingJournal(), chat_session_id="new-session-1",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                invocation_id="turn-1", apply_context=None,
+                invoke_model=self.model, resolve_source=self.sources.__getitem__,
+                reserve=self.reserve, persist=self.persist, readback=self.readback,
+            )
+        self.assertEqual(self.events, [])
+        self.assertEqual(self.reservations, set())
+        self.assertEqual(self.saved, {})
+
+    def test_recovered_source_or_cursor_cannot_hide_behind_false_material_flag(self):
+        from src.apex_session_gateway import execute_with_recovered_context
+        for source_ref, cursor in (("source:original", ""), ("", "cursor:known")):
+            with self.subTest(source_ref=source_ref, cursor=cursor):
+                recovery = Recovery("case-A", source_ref, cursor, (), (), False)
+                with self.assertRaisesRegex(GatewayDenied, "historical context application"):
+                    execute_with_recovered_context(
+                        journal=recovery, chat_session_id="new-session",
+                        kernel=RecordingKernel(), expected_mission_id="case-A",
+                        apply_context=None,
+                        execute=lambda _: self.fail("source-bearing context must be applied"),
+                    )
+
     def test_assistant_opening_can_never_be_promoted_to_user_instruction(self):
         impersonation = assertion("original:assistant:first", "user", ASSISTANT_FIRST)
         def model(receipt):
