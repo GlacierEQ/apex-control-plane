@@ -31,7 +31,7 @@ STATE_EVOLUTION  = CURRENT_STATE ⊕ VERIFIED_GAIN
 
 Repository labels, registries, historical `canonical` classifications, governance files, summaries, or assistant-generated doctrine are evidence and topology metadata. They do not become project-direction authority.
 
-The enforced startup contract is [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STARTUP.md).
+The proactive engine is [`src/apex_proactive.py`](src/apex_proactive.py); the overhaul note is [`OVERHAUL_NOTES.md`](OVERHAUL_NOTES.md). Enforced-startup references in older sections are superseded by the 2026-10-24 overhaul.
 
 ## Source-bound session gateway
 
@@ -120,13 +120,13 @@ Material state promotion requires the corresponding evidence. For example, attem
 ### Generate a connector request
 
 ```bash
-python src/auto_boot.py --profile legal_case --task "continue" --emit-request
+python src/control_plane.py
 ```
 
 ### Validate a provider receipt
 
 ```bash
-python src/auto_boot.py --profile legal_case --verify-receipt /path/to/receipt.json
+python -m pytest -q tests/test_apex_proactive.py
 ```
 
 ### Run the control plane
@@ -151,15 +151,11 @@ Request mode exposes the required proof contract without claiming a complete boo
 
 See:
 
-- [`APEX_ENFORCED_STARTUP.md`](APEX_ENFORCED_STARTUP.md)
 - [`docs/CASEY_AUTO_BOOT.md`](docs/CASEY_AUTO_BOOT.md)
-- [`docs/PRIME_DIRECTIVE_ENFORCER.md`](docs/PRIME_DIRECTIVE_ENFORCER.md)
 - [`docs/APEX_CONNECTOR_BRIDGE.md`](docs/APEX_CONNECTOR_BRIDGE.md)
-- [`config/apex_enforced_startup_policy.json`](config/apex_enforced_startup_policy.json)
+- [`config/continuous_control_plane.json`](config/continuous_control_plane.json)
 - [`config/casey_auto_boot_manifest.json`](config/casey_auto_boot_manifest.json)
 - [`config/notion_continuity_policy.json`](config/notion_continuity_policy.json)
-- [`config/prime_directive_policy.json`](config/prime_directive_policy.json)
-- [`config/outcome_fidelity_policy.json`](config/outcome_fidelity_policy.json)
 
 ## Native proof
 
@@ -168,14 +164,10 @@ Repository CI exercises startup, Operator fidelity, mission-outcome fidelity, re
 Core proof commands include:
 
 ```bash
-python -m pytest -q tests/test_apex_enforced_startup.py
+python -m pytest -q tests/test_apex_proactive.py
 python -m pytest -q tests/test_notion_continuity_gate.py
-python -m pytest -q tests/test_prime_directive_boot.py
-python -m pytest -q tests/test_prime_directive_enforcer.py
-python -m pytest -q tests/test_apex_strong_boot.py
-python -m pytest -q tests/test_outcome_fidelity_runtime.py
 python -m pytest -q tests/test_scan_repos.py
-python -m pytest -q tests/test_audit_hardening.py
+python -m pytest -q tests/test_apex_session_gateway.py
 ```
 
 CI also runs static/style/security checks where configured.
@@ -191,8 +183,7 @@ The smoke test is synthetic and performs no network or external action. Request 
 ## Federation and architecture references
 
 - Project-direction authority: **Operator intent**
-- APEX startup law: `APEX_ENFORCED_STARTUP.md`
-- Operator execution law: `OPERATOR_EXECUTION_LAW.md`
+- APEX proactive engine: `src/apex_proactive.py`
 - AKOS relationship: architecture/federation reference and dependency, not superior project authority
 - Adoption metadata: `AKOS_ADOPTION.yaml`
 - Runtime design: `docs/UNIFIED_CASEBRAIN.md`
@@ -224,12 +215,8 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 | Component | Purpose |
 |---|---|
 | `src/control_plane.py` | Explicit startup wrapper and runtime handoff |
-| `src/apex_enforced_startup.py` | APEX Genesis startup + state-transition enforcement |
+| `src/apex_proactive.py` | Proactive triggers, receipts, worker/grader separation, structured workflow |
 | `src/notion_continuity_gate.py` | Continuity and existing-work topology proof |
-| `src/prime_directive_boot.py` | Reuse/search-aware provider-backed startup receipt validation |
-| `src/prime_directive_enforcer.py` | Pre-gate response middleware with monotonic known-state reuse |
-| `src/apex_strong_boot.py` | Strong-boot composition |
-| `src/outcome_fidelity_runtime.py` | Mission-outcome postcondition hard lock |
 | `src/control_plane_runtime.py` | Preserved runtime |
 | `migrations/` | Relational state migrations |
 | `tests/` | Execution, continuity, proof, and regression tests |
@@ -245,5 +232,5 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 
 ```bash
 CASEY_AUTO_BOOT_MODE=request python3 src/control_plane.py
-python3 -m pytest -q tests/test_apex_enforced_startup.py
+python3 -m pytest -q tests/
 ```

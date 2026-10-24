@@ -155,7 +155,7 @@ def dispatch_recovered_once(
     """
     if not isinstance(expected_mission_id, str) or not expected_mission_id.strip():
         raise AdmissionDenied("missing host-derived expected mission identity")
-    from .chat_context_admission import execute_with_recovered_context
+    from .apex_session_gateway import execute_with_recovered_context
 
     def effect_after_application(receipt: Any) -> object:
         if receipt.mission_id != expected_mission_id:

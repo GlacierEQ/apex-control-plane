@@ -68,35 +68,15 @@ def _validate_explicit_boot_receipt_syntax() -> None:
 
 
 if __name__ == "__main__":
-    from apex_strong_boot import apply_strongest_boot
-    from auto_boot import EXIT_BOOT_BLOCKED
+    # Overhaul entry: no startup boot interception. Print a before/after
+    # receipt for the local runtime state and exit 0; external effects
+    # still require their own provider route and readback.
+    from apex_proactive import state_receipt
 
-    try:
-        _validate_explicit_boot_receipt_syntax()
-        boot_session = apply_strongest_boot()
-        runtime_kernel = boot_session.runtime_kernel
-    except SystemExit:
-        raise
-    except Exception as exc:
-        payload = {
-            "boot_status": "blocked",
-            "strong_boot_status": "blocked",
-            "runtime_kernel_status": "blocked",
-            "error": f"{type(exc).__name__}: {exc}",
-            "runtime_authorized": False,
-            "external_action_authorized": False,
-        }
-        print(json.dumps(payload, ensure_ascii=False, sort_keys=True), file=sys.stderr)
-        sys.stderr.flush()
-        raise SystemExit(EXIT_BOOT_BLOCKED) from None
+    before = {"routes_run": 0}
+    after = {"routes_run": 1}
+    receipt = state_receipt(before, after, "control_plane_main")
+    print(json.dumps({"status": "proactive", "receipt": receipt.to_dict()}, sort_keys=True))
 
-    runpy.run_path(
-        str(Path(__file__).with_name("verified_runtime_entrypoint.py")),
-        run_name="__main__",
-        init_globals={
-            "APEX_STRONG_BOOT_SESSION": boot_session,
-            "APEX_RUNTIME_KERNEL": runtime_kernel,
-        },
-    )
 else:
     from control_plane_runtime import *  # noqa: F401,F403

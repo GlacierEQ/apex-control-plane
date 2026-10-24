@@ -14,11 +14,19 @@ from src.apex_session_gateway import (
     GatewayModelOutput, MemoryProposal, run_admitted_session,
 )
 from src.apex_session_gateway_store import GatewayCheckpointStore, GatewayStoreDenied
-from src.chat_context_admission import ContextApplication
+from src.apex_session_gateway import ContextApplication, Recovery
 from tests.test_apex_session_gateway import (
     USER_MIDDLE, assertion,
 )
-from tests.test_connector_mission_router import ExistingJournal, RecordingKernel
+
+
+class ExistingJournal:
+    def recover(self, session, mission):
+        return Recovery(mission_id="case-A", source_ref="original:user:middle", cursor="cursor-7", corrections=("preserve the complete mission scope",), facts=(), material_context_found=True)
+
+
+class RecordingKernel:
+    pass
 
 
 class GatewaySQLiteIntegrationTests(unittest.TestCase):

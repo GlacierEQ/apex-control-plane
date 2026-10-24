@@ -10,8 +10,18 @@ from src.apex_session_gateway import (
     GatewayDenied, OriginRecord, SourceAssertion, MemoryProposal,
     GatewayModelOutput, ContinuationEnvelope, run_admitted_session,
 )
-from src.chat_context_admission import ContextApplication
-from tests.test_connector_mission_router import ExistingJournal, RecordingKernel
+from src.apex_session_gateway import ContextApplication, Recovery
+
+
+class ExistingJournal:
+    """Stub journal: always recovers case-A, so a wrong expected mission is denied before apply."""
+    def recover(self, session, mission):
+        return Recovery(mission_id="case-A", source_ref="original:user:middle", cursor="cursor-7", corrections=("preserve the complete mission scope",), facts=(), material_context_found=True)
+
+
+class RecordingKernel:
+    """Stub kernel: unused by the local recovery path, kept for call-site shape."""
+    pass
 
 
 USER_MIDDLE = "Correcting the record: I did not instruct the assistant to compromise ATS."

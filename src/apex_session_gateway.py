@@ -11,9 +11,82 @@ from hashlib import sha256
 import json
 from typing import Any, Callable
 
-from .chat_context_admission import (
-    AdmissionReceipt, ContextApplication, execute_with_recovered_context,
-)
+@dataclass(frozen=True)
+class Recovery:
+    """Recovered context for one mission, supplied by the host journal."""
+
+    mission_id: str
+    source_ref: str
+    cursor: str
+    corrections: tuple[str, ...] = ()
+    facts: tuple[str, ...] = ()
+    material_context_found: bool = False
+
+
+@dataclass(frozen=True)
+class ContextApplication:
+    mission_id: str
+    source_ref: str
+    cursor: str
+    corrections: tuple[str, ...]
+    facts: tuple[str, ...]
+    application_ref: str
+
+
+@dataclass(frozen=True)
+class AdmissionReceipt:
+    mission_id: str
+    chat_session_id: str
+    source_ref: str
+    cursor: str
+    recovery: Recovery
+    application_ref: str = ""
+    application: Any = None
+
+
+def execute_with_recovered_context(
+    *,
+    journal: Any,
+    chat_session_id: str,
+    kernel: Any,
+    expected_mission_id: str,
+    execute: Callable[[AdmissionReceipt], Any],
+    apply_context: Callable[[Any], ContextApplication],
+) -> Any:
+    """Recover, apply, then execute -- all from host-supplied objects.
+
+    The journal supplies recovery through a ``recover(session, mission)``
+    method, a ``recovery`` attribute, or by being a Recovery itself.
+    This replaces the deleted admission module with a local, minimal
+    equivalent; it does not resurrect that module.
+    """
+    if isinstance(journal, Recovery):
+        recovery = journal
+    elif hasattr(journal, "recover"):
+        recovery = journal.recover(chat_session_id, expected_mission_id)
+    elif hasattr(journal, "recovery"):
+        recovery = journal.recovery
+    else:
+        raise GatewayDenied("journal supplies no recoverable context")
+    if not isinstance(recovery, Recovery):
+        raise GatewayDenied("recovered context must be a Recovery")
+    if recovery.mission_id != expected_mission_id:
+        raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
+    if not callable(apply_context):
+        raise GatewayDenied("context application callback required")
+    application = apply_context(recovery)
+    if not isinstance(application, ContextApplication):
+        raise GatewayDenied("context application must be a ContextApplication")
+    receipt = AdmissionReceipt(
+        mission_id=recovery.mission_id,
+        chat_session_id=chat_session_id,
+        source_ref=recovery.source_ref,
+        cursor=recovery.cursor,
+        recovery=recovery,
+        application_ref=application.application_ref,
+        application=application,
+    )
+    return execute(receipt)
 
 
 class GatewayDenied(RuntimeError):

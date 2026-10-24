@@ -39,19 +39,18 @@ def test_buildkite_source_fidelity_covers_model_attractor_defense() -> None:
 
 
 def test_evidence_scripts_use_worker_local_verified_python_runtime() -> None:
+    # Overhaul 2026-10-24: the old 6-step resolver contract is superseded.
+    # The proactive pipeline is one step, uses python3 from PATH, verifies
+    # the exact commit, and emits a receipt + digest. No hard-coded
+    # python path, no resolver repetition, no deleted-file step.
     text = (ROOT / ".buildkite" / "pipeline.yml").read_text()
     assert "PYTHON_BIN: \"/usr/local/bin/python3.12\"" not in text
     assert "PYTHON_BIN: \"/opt/homebrew/bin/python3.12\"" not in text
-    resolver = 'PYTHON_BIN="$$(bash scripts/resolve_python312.sh)"'
-    assert text.count(resolver) == 6
-    critical_scripts = (
-        "scripts/reconcile_genius_buildkite.py",
-        "scripts/reconcile_mastermind_buildkite.py",
-        "scripts/verify_buildkite_evidence_chain.py",
-    )
-    for script in critical_scripts:
-        assert f'"$$PYTHON_BIN" {script}' in text
-        assert f"python3 {script}" not in text
+    assert 'git rev-parse HEAD' in text
+    assert "BUILDKITE_COMMIT" in text
+    assert "verified-ci-receipt.json" in text
+    assert "SHA256SUMS" in text
+    assert "python3 -m pytest -q tests/" in text
 
 
 def test_python_resolver_discovers_worker_capabilities_and_fails_typed() -> None:

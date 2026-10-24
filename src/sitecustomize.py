@@ -47,24 +47,9 @@ def _request_mode() -> bool:
 
 
 def _should_boot() -> bool:
-    entrypoint = _entrypoint_name()
-    if entrypoint in {
-        "auto_boot.py",
-        "apex_enforced_startup.py",
-        "apex_strong_boot.py",
-        "operator_fidelity_lock.py",
-        "operator_fidelity_preflight.py",
-        "operator_source_authority.py",
-        "notion_continuity_gate.py",
-        "prime_directive_boot.py",
-        "prime_directive_enforcer.py",
-    } or _is_pytest_startup():
-        return False
-
-    if os.getenv("CASEY_AUTO_BOOT", "0") == "1":
-        return True
-
-    return entrypoint in {"control_plane.py", "verified_runtime_entrypoint.py"}
+    # Overhaul: startup boot interception was deleted apparatus. No
+    # interpreter startup hook runs a boot session or terminates a process.
+    return False
 
 
 def _record_startup_uplift(exc: BaseException) -> None:

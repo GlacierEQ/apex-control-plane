@@ -4,13 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - "APEX_ENFORCED_STARTUP.md"
       - "jack/config/jack_relentless_contract.yaml"
       - "jack/portable/**"
       - ".github/workflows/juggernaut-jack-portability.yml"
   pull_request:
     paths:
-      - "APEX_ENFORCED_STARTUP.md"
       - "jack/config/jack_relentless_contract.yaml"
       - "jack/portable/**"
       - ".github/workflows/juggernaut-jack-portability.yml"
