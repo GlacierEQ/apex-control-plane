@@ -70,6 +70,24 @@ def execute_with_recovered_context(
         raise GatewayDenied("journal supplies no recoverable context")
     if not isinstance(recovery, Recovery):
         raise GatewayDenied("recovered context must be a Recovery")
+    # Python annotations and a frozen dataclass do not enforce immutable field
+    # values. Reject list-backed corrections/facts before any host callback can
+    # erase them and then attest to the altered recovery.
+    if (
+        not isinstance(recovery.mission_id, str)
+        or not isinstance(recovery.source_ref, str)
+        or not isinstance(recovery.cursor, str)
+        or type(recovery.material_context_found) is not bool
+        or not isinstance(recovery.corrections, tuple)
+        or not isinstance(recovery.facts, tuple)
+        or any(not isinstance(item, str) for item in recovery.corrections)
+        or any(not isinstance(item, str) for item in recovery.facts)
+    ):
+        raise GatewayDenied("recovered context must have immutable typed source bindings")
+    original_bindings = (
+        recovery.mission_id, recovery.source_ref, recovery.cursor,
+        recovery.corrections, recovery.facts, recovery.material_context_found,
+    )
     if recovery.mission_id != expected_mission_id:
         raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
     # A fresh mission has no historical source/cursor/corrections/facts to apply.
@@ -84,6 +102,13 @@ def execute_with_recovered_context(
         if not callable(apply_context):
             raise GatewayDenied("historical context application callback required")
         application = apply_context(recovery)
+        # Even a frozen dataclass can be modified through object.__setattr__.
+        # Do not compare a callback's attestation to a recovery it has changed.
+        if (
+            recovery.mission_id, recovery.source_ref, recovery.cursor,
+            recovery.corrections, recovery.facts, recovery.material_context_found,
+        ) != original_bindings:
+            raise GatewayDenied("context application callback mutated recovered source bindings")
         if not isinstance(application, ContextApplication):
             raise GatewayDenied("context application must be a ContextApplication")
         expected = (
