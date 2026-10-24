@@ -77,6 +77,16 @@ def execute_with_recovered_context(
     application = apply_context(recovery)
     if not isinstance(application, ContextApplication):
         raise GatewayDenied("context application must be a ContextApplication")
+    if (not isinstance(application.application_ref, str)
+            or not application.application_ref.strip()
+            or application.mission_id != recovery.mission_id
+            or application.source_ref != recovery.source_ref
+            or application.cursor != recovery.cursor
+            or not isinstance(application.corrections, tuple)
+            or not isinstance(application.facts, tuple)
+            or application.corrections != recovery.corrections
+            or application.facts != recovery.facts):
+        raise GatewayDenied("source-matched context application receipt required")
     receipt = AdmissionReceipt(
         mission_id=recovery.mission_id,
         chat_session_id=chat_session_id,
