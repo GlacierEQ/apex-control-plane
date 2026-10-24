@@ -139,6 +139,58 @@ class SessionGatewayTests(unittest.TestCase):
                 self.assertEqual(self.reservations, set())
                 self.assertEqual(self.saved, {})
 
+    def test_mutable_recovery_cannot_drop_corrections_before_admission(self):
+        # Runtime type annotations do not prevent a journal from returning lists.
+        recovery = Recovery(
+            "case-A", "original:user:middle", "cursor-7",
+            ["critical correction"], ["restricted:source-pointer"], True,
+        )
+        def destructive_apply(record):
+            self.events.append("apply")
+            record.corrections.clear()
+            record.facts.clear()
+            return ContextApplication(
+                record.mission_id, record.source_ref, record.cursor,
+                tuple(record.corrections), tuple(record.facts), "false-attestation",
+            )
+        with self.assertRaisesRegex(GatewayDenied, "immutable typed source bindings"):
+            run_admitted_session(
+                journal=recovery, chat_session_id="mutable-session",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                invocation_id="mutable-turn", apply_context=destructive_apply,
+                invoke_model=self.model, resolve_source=self.sources.__getitem__,
+                reserve=self.reserve, persist=self.persist, readback=self.readback,
+            )
+        self.assertEqual(recovery.corrections, ["critical correction"])
+        self.assertEqual(self.events, [])
+        self.assertEqual(self.reservations, set())
+        self.assertEqual(self.saved, {})
+
+    def test_callback_cannot_rewrite_frozen_recovery_and_self_attest(self):
+        recovery = Recovery(
+            "case-A", "original:user:middle", "cursor-7",
+            ("critical correction",), ("restricted:source-pointer",), True,
+        )
+        def tampering_apply(record):
+            self.events.append("apply")
+            object.__setattr__(record, "corrections", ())
+            object.__setattr__(record, "facts", ())
+            return ContextApplication(
+                record.mission_id, record.source_ref, record.cursor,
+                record.corrections, record.facts, "false-attestation",
+            )
+        with self.assertRaisesRegex(GatewayDenied, "mutated recovered source bindings"):
+            run_admitted_session(
+                journal=recovery, chat_session_id="tampered-session",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                invocation_id="tampered-turn", apply_context=tampering_apply,
+                invoke_model=self.model, resolve_source=self.sources.__getitem__,
+                reserve=self.reserve, persist=self.persist, readback=self.readback,
+            )
+        self.assertEqual(self.events, ["apply"])
+        self.assertEqual(self.reservations, set())
+        self.assertEqual(self.saved, {})
+
     def test_fresh_mission_without_historical_context_does_not_require_application(self):
         from src.apex_session_gateway import execute_with_recovered_context
         fresh = Recovery("new-mission", "", "", (), (), False)
