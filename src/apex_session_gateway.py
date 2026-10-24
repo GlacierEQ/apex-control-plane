@@ -51,7 +51,7 @@ def execute_with_recovered_context(
     kernel: Any,
     expected_mission_id: str,
     execute: Callable[[AdmissionReceipt], Any],
-    apply_context: Callable[[Any], ContextApplication],
+    apply_context: Callable[[Any], ContextApplication] | None,
 ) -> Any:
     """Recover, apply, then execute -- all from host-supplied objects.
 
@@ -72,33 +72,42 @@ def execute_with_recovered_context(
         raise GatewayDenied("recovered context must be a Recovery")
     if recovery.mission_id != expected_mission_id:
         raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
-    if not callable(apply_context):
-        raise GatewayDenied("context application callback required")
-    application = apply_context(recovery)
-    if not isinstance(application, ContextApplication):
-        raise GatewayDenied("context application must be a ContextApplication")
-    # A callback is host testimony, not permission to change the recovered
-    # source, mission, cursor, corrections or facts. This comparison restores
-    # the source-matched admission invariant lost during the gateway overhaul.
-    expected = (
-        recovery.mission_id, recovery.source_ref, recovery.cursor,
-        recovery.corrections, recovery.facts,
+    # A fresh mission has no historical source/cursor/corrections/facts to apply.
+    # Recovered source identity or cursor is material even if a host sets the
+    # material_context_found flag incorrectly. Never downgrade recovered history.
+    material = bool(
+        recovery.material_context_found or recovery.source_ref or recovery.cursor
+        or recovery.corrections or recovery.facts
     )
-    observed = (
-        application.mission_id, application.source_ref, application.cursor,
-        application.corrections, application.facts,
-    )
-    if observed != expected:
-        raise GatewayDenied("context application does not match recovered mission/source/cursor/corrections/facts")
-    if not isinstance(application.application_ref, str) or not application.application_ref.strip():
-        raise GatewayDenied("context application requires a nonempty host application reference")
+    application = None
+    if material:
+        if not callable(apply_context):
+            raise GatewayDenied("historical context application callback required")
+        application = apply_context(recovery)
+        if not isinstance(application, ContextApplication):
+            raise GatewayDenied("context application must be a ContextApplication")
+        expected = (
+            recovery.mission_id, recovery.source_ref, recovery.cursor,
+            recovery.corrections, recovery.facts,
+        )
+        observed = (
+            application.mission_id, application.source_ref, application.cursor,
+            application.corrections, application.facts,
+        )
+        if observed != expected:
+            raise GatewayDenied(
+                "context application does not match recovered mission/source/cursor/corrections/facts"
+            )
+        if (not isinstance(application.application_ref, str)
+                or not application.application_ref.strip()):
+            raise GatewayDenied("context application requires a nonempty host application reference")
     receipt = AdmissionReceipt(
         mission_id=recovery.mission_id,
         chat_session_id=chat_session_id,
         source_ref=recovery.source_ref,
         cursor=recovery.cursor,
         recovery=recovery,
-        application_ref=application.application_ref,
+        application_ref=application.application_ref if application else "",
         application=application,
     )
     return execute(receipt)
@@ -283,7 +292,7 @@ def run_admitted_session(
     kernel: Any,
     expected_mission_id: str,
     invocation_id: str,
-    apply_context: Callable[[Any], ContextApplication],
+    apply_context: Callable[[Any], ContextApplication] | None,
     invoke_model: Callable[[AdmissionReceipt], GatewayModelOutput],
     resolve_source: Callable[[str], OriginRecord],
     reserve: Callable[[str], bool],
@@ -298,7 +307,7 @@ def run_admitted_session(
     durable reservation, and an independent persistent-store readback.
     """
     for name, callback in {
-        "apply_context": apply_context, "invoke_model": invoke_model,
+        "invoke_model": invoke_model,
         "resolve_source": resolve_source, "reserve": reserve,
         "persist": persist, "readback": readback,
     }.items():
