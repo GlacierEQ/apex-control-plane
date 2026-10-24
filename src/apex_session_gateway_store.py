@@ -203,6 +203,10 @@ class GatewayCheckpointStore:
                 digest=payload["digest"],
                 response_author=payload["response_author"],
                 memory_authority=payload["memory_authority"],
+                # Old checkpoint JSON lacks these fields. Preserve its original
+                # digest while round-tripping new source-bound fingerprints.
+                recovered_facts_sha256=payload.get("recovered_facts_sha256", ""),
+                application_ref_sha256=payload.get("application_ref_sha256", ""),
             )
             if (_snapshot(envelope) != {k: v for k, v in payload.items() if k != "digest"}
                     or envelope.response_author != "assistant"
