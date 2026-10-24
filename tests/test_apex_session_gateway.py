@@ -99,6 +99,39 @@ class SessionGatewayTests(unittest.TestCase):
             readback=readback if readback is not None else self.readback,
         )
 
+    def test_context_application_must_match_recovered_source_before_reservation(self):
+        base = {
+            "mission_id": "case-A",
+            "source_ref": "original:user:middle",
+            "cursor": "cursor-7",
+            "corrections": ("preserve the complete mission scope",),
+            "facts": (),
+            "application_ref": "host:applied:source",
+        }
+        invalid = (
+            ("mission_id", "other-case"),
+            ("source_ref", "unrelated:assistant"),
+            ("cursor", "stale-cursor"),
+            ("corrections", ()),
+            ("facts", ("fabricated",)),
+            ("application_ref", ""),
+        )
+        for field, bad in invalid:
+            with self.subTest(field=field):
+                self.events.clear()
+                self.reservations.clear()
+                self.saved.clear()
+                values = dict(base)
+                values[field] = bad
+                def wrong_application(_recovery):
+                    self.events.append("apply")
+                    return ContextApplication(**values)
+                with self.assertRaisesRegex(GatewayDenied, "application|source|cursor|correction|fact"):
+                    self.invoke(apply=wrong_application)
+                self.assertEqual(self.events, ["apply"])
+                self.assertEqual(self.reservations, set())
+                self.assertEqual(self.saved, {})
+
     def test_valid_source_matched_correction_precedes_model_and_durable_readback(self):
         output = self.invoke()
         self.assertEqual(output.text, "The user explicitly corrected the assistant interpretation.")
