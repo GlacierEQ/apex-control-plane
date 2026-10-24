@@ -51,7 +51,7 @@ def execute_with_recovered_context(
     kernel: Any,
     expected_mission_id: str,
     execute: Callable[[AdmissionReceipt], Any],
-    apply_context: Callable[[Any], ContextApplication],
+    apply_context: Callable[[Any], ContextApplication] | None,
 ) -> Any:
     """Recover, apply, then execute -- all from host-supplied objects.
 
@@ -70,20 +70,69 @@ def execute_with_recovered_context(
         raise GatewayDenied("journal supplies no recoverable context")
     if not isinstance(recovery, Recovery):
         raise GatewayDenied("recovered context must be a Recovery")
+    # Python annotations and a frozen dataclass do not enforce immutable field
+    # values. Reject list-backed corrections/facts before any host callback can
+    # erase them and then attest to the altered recovery.
+    if (
+        not isinstance(recovery.mission_id, str)
+        or not isinstance(recovery.source_ref, str)
+        or not isinstance(recovery.cursor, str)
+        or type(recovery.material_context_found) is not bool
+        or not isinstance(recovery.corrections, tuple)
+        or not isinstance(recovery.facts, tuple)
+        or any(not isinstance(item, str) for item in recovery.corrections)
+        or any(not isinstance(item, str) for item in recovery.facts)
+    ):
+        raise GatewayDenied("recovered context must have immutable typed source bindings")
+    original_bindings = (
+        recovery.mission_id, recovery.source_ref, recovery.cursor,
+        recovery.corrections, recovery.facts, recovery.material_context_found,
+    )
     if recovery.mission_id != expected_mission_id:
         raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
-    if not callable(apply_context):
-        raise GatewayDenied("context application callback required")
-    application = apply_context(recovery)
-    if not isinstance(application, ContextApplication):
-        raise GatewayDenied("context application must be a ContextApplication")
+    # A fresh mission has no historical source/cursor/corrections/facts to apply.
+    # Recovered source identity or cursor is material even if a host sets the
+    # material_context_found flag incorrectly. Never downgrade recovered history.
+    material = bool(
+        recovery.material_context_found or recovery.source_ref or recovery.cursor
+        or recovery.corrections or recovery.facts
+    )
+    application = None
+    if material:
+        if not callable(apply_context):
+            raise GatewayDenied("historical context application callback required")
+        application = apply_context(recovery)
+        # Even a frozen dataclass can be modified through object.__setattr__.
+        # Do not compare a callback's attestation to a recovery it has changed.
+        if (
+            recovery.mission_id, recovery.source_ref, recovery.cursor,
+            recovery.corrections, recovery.facts, recovery.material_context_found,
+        ) != original_bindings:
+            raise GatewayDenied("context application callback mutated recovered source bindings")
+        if not isinstance(application, ContextApplication):
+            raise GatewayDenied("context application must be a ContextApplication")
+        expected = (
+            recovery.mission_id, recovery.source_ref, recovery.cursor,
+            recovery.corrections, recovery.facts,
+        )
+        observed = (
+            application.mission_id, application.source_ref, application.cursor,
+            application.corrections, application.facts,
+        )
+        if observed != expected:
+            raise GatewayDenied(
+                "context application does not match recovered mission/source/cursor/corrections/facts"
+            )
+        if (not isinstance(application.application_ref, str)
+                or not application.application_ref.strip()):
+            raise GatewayDenied("context application requires a nonempty host application reference")
     receipt = AdmissionReceipt(
         mission_id=recovery.mission_id,
         chat_session_id=chat_session_id,
         source_ref=recovery.source_ref,
         cursor=recovery.cursor,
         recovery=recovery,
-        application_ref=application.application_ref,
+        application_ref=application.application_ref if application else "",
         application=application,
     )
     return execute(receipt)
@@ -140,6 +189,10 @@ class ContinuationEnvelope:
     # A downstream consumer must never interpret either as Operator-authored fact.
     response_author: str = "assistant"
     memory_authority: str = "SOURCE_CANDIDATE_ONLY"
+    # Digests bind continuation to recovered facts and host application without
+    # copying potentially sensitive fact text or host references into the journal.
+    recovered_facts_sha256: str = ""
+    application_ref_sha256: str = ""
 
 
 _USER_AUTHORITY_KINDS = frozenset({
@@ -236,7 +289,7 @@ def _validate_output(
 
 
 def _snapshot(envelope: ContinuationEnvelope) -> dict[str, Any]:
-    return {
+    payload = {
         "operation_key": envelope.operation_key,
         "chat_session_id": envelope.chat_session_id,
         "mission_id": envelope.mission_id,
@@ -252,6 +305,12 @@ def _snapshot(envelope: ContinuationEnvelope) -> dict[str, Any]:
             for item in envelope.memory_proposals
         ],
     }
+    # Keep historical envelope digests valid: legacy checkpoints have neither
+    # field, while new checkpoints bind both to the persisted digest.
+    if envelope.recovered_facts_sha256 or envelope.application_ref_sha256:
+        payload["recovered_facts_sha256"] = envelope.recovered_facts_sha256
+        payload["application_ref_sha256"] = envelope.application_ref_sha256
+    return payload
 
 
 def _envelope_digest(envelope: ContinuationEnvelope) -> str:
@@ -268,7 +327,7 @@ def run_admitted_session(
     kernel: Any,
     expected_mission_id: str,
     invocation_id: str,
-    apply_context: Callable[[Any], ContextApplication],
+    apply_context: Callable[[Any], ContextApplication] | None,
     invoke_model: Callable[[AdmissionReceipt], GatewayModelOutput],
     resolve_source: Callable[[str], OriginRecord],
     reserve: Callable[[str], bool],
@@ -283,7 +342,7 @@ def run_admitted_session(
     durable reservation, and an independent persistent-store readback.
     """
     for name, callback in {
-        "apply_context": apply_context, "invoke_model": invoke_model,
+        "invoke_model": invoke_model,
         "resolve_source": resolve_source, "reserve": reserve,
         "persist": persist, "readback": readback,
     }.items():
@@ -319,6 +378,16 @@ def run_admitted_session(
             attributions=output.attributions,
             memory_proposals=output.memory_proposals,
             digest="",
+            recovered_facts_sha256=(
+                "sha256:" + sha256(json.dumps(
+                    list(receipt.recovery.facts), ensure_ascii=False,
+                    separators=(",", ":"),
+                ).encode("utf-8")).hexdigest()
+            ),
+            application_ref_sha256=(
+                "sha256:" + sha256(receipt.application_ref.encode("utf-8")).hexdigest()
+                if receipt.application_ref else ""
+            ),
         )
         from dataclasses import replace
         envelope = replace(envelope, digest=_envelope_digest(envelope))
