@@ -51,7 +51,7 @@ def execute_with_recovered_context(
     kernel: Any,
     expected_mission_id: str,
     execute: Callable[[AdmissionReceipt], Any],
-    apply_context: Callable[[Any], ContextApplication],
+    apply_context: Callable[[Any], ContextApplication] | None,
 ) -> Any:
     """Recover, apply, then execute -- all from host-supplied objects.
 
@@ -72,28 +72,33 @@ def execute_with_recovered_context(
         raise GatewayDenied("recovered context must be a Recovery")
     if recovery.mission_id != expected_mission_id:
         raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
-    if not callable(apply_context):
-        raise GatewayDenied("context application callback required")
-    application = apply_context(recovery)
-    if not isinstance(application, ContextApplication):
-        raise GatewayDenied("context application must be a ContextApplication")
-    if (not isinstance(application.application_ref, str)
-            or not application.application_ref.strip()
-            or application.mission_id != recovery.mission_id
-            or application.source_ref != recovery.source_ref
-            or application.cursor != recovery.cursor
-            or not isinstance(application.corrections, tuple)
-            or not isinstance(application.facts, tuple)
-            or application.corrections != recovery.corrections
-            or application.facts != recovery.facts):
-        raise GatewayDenied("source-matched context application receipt required")
+    # An empty fresh mission has no historical context to apply. A recovered
+    # correction/fact is material even when a caller mislabels the flag false.
+    material = bool(recovery.material_context_found or recovery.corrections or recovery.facts)
+    application = None
+    if material:
+        if not callable(apply_context):
+            raise GatewayDenied("historical context application callback required")
+        application = apply_context(recovery)
+        if not isinstance(application, ContextApplication):
+            raise GatewayDenied("context application must be a ContextApplication")
+        if (not isinstance(application.application_ref, str)
+                or not application.application_ref.strip()
+                or application.mission_id != recovery.mission_id
+                or application.source_ref != recovery.source_ref
+                or application.cursor != recovery.cursor
+                or not isinstance(application.corrections, tuple)
+                or not isinstance(application.facts, tuple)
+                or application.corrections != recovery.corrections
+                or application.facts != recovery.facts):
+            raise GatewayDenied("source-matched context application receipt required")
     receipt = AdmissionReceipt(
         mission_id=recovery.mission_id,
         chat_session_id=chat_session_id,
         source_ref=recovery.source_ref,
         cursor=recovery.cursor,
         recovery=recovery,
-        application_ref=application.application_ref,
+        application_ref=application.application_ref if application else "",
         application=application,
     )
     return execute(receipt)
@@ -293,7 +298,7 @@ def run_admitted_session(
     durable reservation, and an independent persistent-store readback.
     """
     for name, callback in {
-        "apply_context": apply_context, "invoke_model": invoke_model,
+        "invoke_model": invoke_model,
         "resolve_source": resolve_source, "reserve": reserve,
         "persist": persist, "readback": readback,
     }.items():
