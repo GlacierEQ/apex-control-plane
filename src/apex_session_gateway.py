@@ -77,6 +77,21 @@ def execute_with_recovered_context(
     application = apply_context(recovery)
     if not isinstance(application, ContextApplication):
         raise GatewayDenied("context application must be a ContextApplication")
+    # A callback is host testimony, not permission to change the recovered
+    # source, mission, cursor, corrections or facts. This comparison restores
+    # the source-matched admission invariant lost during the gateway overhaul.
+    expected = (
+        recovery.mission_id, recovery.source_ref, recovery.cursor,
+        recovery.corrections, recovery.facts,
+    )
+    observed = (
+        application.mission_id, application.source_ref, application.cursor,
+        application.corrections, application.facts,
+    )
+    if observed != expected:
+        raise GatewayDenied("context application does not match recovered mission/source/cursor/corrections/facts")
+    if not isinstance(application.application_ref, str) or not application.application_ref.strip():
+        raise GatewayDenied("context application requires a nonempty host application reference")
     receipt = AdmissionReceipt(
         mission_id=recovery.mission_id,
         chat_session_id=chat_session_id,
