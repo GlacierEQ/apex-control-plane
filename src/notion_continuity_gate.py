@@ -19,8 +19,50 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from auto_boot import EXIT_BOOT_BLOCKED, BootError
-from prime_directive_boot import receipt_from_environment
+EXIT_BOOT_BLOCKED = 78
+
+
+class BootError(RuntimeError):
+    """Validation error raised by this module's policy checks.
+
+    Defined locally since the 2026-10-23 eradication removed the shared
+    boot apparatus (auto_boot / prime_directive_boot) this module used to
+    import the exception, the blocked-exit constant, and the boot-receipt
+    reader from. The receipt reader below preserves the removed helper's
+    exact behavior.
+    """
+
+
+def _read_boot_receipt_json(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise BootError(f"boot receipt not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise BootError(f"invalid boot receipt JSON at {path}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise BootError("boot receipt must be a JSON object")
+    return value
+
+
+def receipt_from_environment() -> dict[str, Any] | None:
+    inline = os.getenv("CASEY_BOOT_RECEIPT_JSON", "").strip()
+    path_value = os.getenv("CASEY_BOOT_RECEIPT_PATH", "").strip()
+    if inline and path_value:
+        raise BootError(
+            "set only one of CASEY_BOOT_RECEIPT_JSON or CASEY_BOOT_RECEIPT_PATH"
+        )
+    if inline:
+        try:
+            value = json.loads(inline)
+        except json.JSONDecodeError as exc:
+            raise BootError(f"CASEY_BOOT_RECEIPT_JSON is invalid: {exc}") from exc
+        if not isinstance(value, dict):
+            raise BootError("CASEY_BOOT_RECEIPT_JSON must contain an object")
+        return value
+    if path_value:
+        return _read_boot_receipt_json(Path(path_value).expanduser().resolve())
+    return None
 
 DEFAULT_POLICY_PATH = (
     Path(__file__).resolve().parents[1] / "config" / "notion_continuity_policy.json"

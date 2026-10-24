@@ -22,12 +22,10 @@ from apex_runtime_kernel import (
 )
 
 
+# 2026-10-23 eradication: only the notion-continuity observer survives; the
+# boot/fidelity/startup getters came from the removed apparatus.
 _GATE_GETTERS = (
     "get_in_process_notion_validation",
-    "get_in_process_boot_validation",
-    "get_in_process_operator_fidelity_lock",
-    "get_in_process_operator_fidelity_validation",
-    "get_in_process_apex_validation",
 )
 
 
@@ -88,13 +86,13 @@ def test_factory_converts_missing_startup_observer_to_uplift(monkeypatch) -> Non
     valid = SimpleNamespace(ok=True, status="complete")
     for getter in _GATE_GETTERS:
         monkeypatch.setattr(runtime, getter, lambda valid=valid: valid)
-    monkeypatch.setattr(runtime, "get_in_process_apex_validation", lambda: None)
+    monkeypatch.setattr(runtime, "get_in_process_notion_validation", lambda: None)
 
     kernel = create_verified_runtime_kernel()
 
     assert kernel.phase is RuntimePhase.BOOTSTRAPPED
     assert kernel.startup_gates == runtime.EXPECTED_STARTUP_OBSERVERS
-    assert any("apex_startup: validation missing" in item for item in kernel.startup_findings)
+    assert any("notion_continuity: validation missing" in item for item in kernel.startup_findings)
 
 
 def test_context_recovery_is_mandatory_before_begin(monkeypatch) -> None:

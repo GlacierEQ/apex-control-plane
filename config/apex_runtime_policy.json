@@ -6,18 +6,10 @@
   "legacy_fail_closed_field_semantics": "deprecated_non_authorizing_compatibility_only",
   "fail_closed": false,
   "startup_observers": [
-    "notion_continuity",
-    "prime_directive",
-    "operator_fidelity_lock",
-    "operator_fidelity",
-    "apex_startup"
+    "notion_continuity"
   ],
   "required_startup_gates": [
-    "notion_continuity",
-    "prime_directive",
-    "operator_fidelity_lock",
-    "operator_fidelity",
-    "apex_startup"
+    "notion_continuity"
   ],
   "startup_observer_failure": "record_uplift_and_continue_known_executable_frontiers",
   "action_scopes": [

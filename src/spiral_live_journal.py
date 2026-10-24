@@ -11,8 +11,10 @@ into native ChatGPT conversations.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Sequence
+from threading import RLock
+from typing import Any, Iterator, Sequence
 import importlib.util
 import os
 import stat
@@ -33,11 +35,34 @@ except ImportError:  # existing PYTHONPATH=src legacy module import
     )
 
 
-# Import through one canonical module name, including legacy top-level imports.
-try:
-    from src.continuity_admission_guard import exclusive_kernel_admission
-except ModuleNotFoundError:  # legacy PYTHONPATH=src without repository root
-    from continuity_admission_guard import exclusive_kernel_admission
+# Per-kernel admission serializer, preserved verbatim from the removed
+# continuity_admission_guard module (2026-10-23 eradication). It serializes
+# recovery/application on one kernel without blocking unrelated kernels; the
+# registry owns a strong kernel reference only while admissions are active.
+_ADMISSION_REGISTRY_GUARD = RLock()
+_ADMISSION_ACTIVE: dict[int, list[Any]] = {}
+
+
+@contextmanager
+def exclusive_kernel_admission(kernel: Any) -> Iterator[None]:
+    """Hold per-kernel admission through host application and executor dispatch."""
+    identity = id(kernel)
+    with _ADMISSION_REGISTRY_GUARD:
+        entry = _ADMISSION_ACTIVE.get(identity)
+        if entry is None:
+            entry = [kernel, RLock(), 0]
+            _ADMISSION_ACTIVE[identity] = entry
+        elif entry[0] is not kernel:
+            raise RuntimeError("kernel identity changed while admitting context")
+        entry[2] += 1
+    try:
+        with entry[1]:
+            yield
+    finally:
+        with _ADMISSION_REGISTRY_GUARD:
+            entry[2] -= 1
+            if entry[2] == 0:
+                del _ADMISSION_ACTIVE[identity]
 
 
 class SpiralChatAdmissionError(ValueError):

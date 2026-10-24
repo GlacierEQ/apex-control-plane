@@ -12,7 +12,12 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from auto_boot import BootError
+class BootError(RuntimeError):
+    """Validation error raised by this module's model checks.
+
+    Defined locally since the 2026-10-23 eradication removed the shared
+    boot apparatus (auto_boot) this module used to import it from.
+    """
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 

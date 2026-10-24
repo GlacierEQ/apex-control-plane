@@ -24,22 +24,17 @@ import re
 from typing import Any, Mapping, Sequence
 from uuid import uuid4
 
-from apex_enforced_startup import get_in_process_apex_validation
 from notion_continuity_gate import get_in_process_notion_validation
-from operator_fidelity_lock import get_in_process_operator_fidelity_lock
-from operator_fidelity_preflight import get_in_process_operator_fidelity_validation
-from prime_directive_boot import get_in_process_boot_validation
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "config" / "apex_runtime_policy.json"
 _FACTORY_SEAL = object()
+# 2026-10-23 eradication: prime_directive / operator_fidelity_lock /
+# operator_fidelity / apex_startup observers came from the removed boot and
+# fidelity apparatus; notion_continuity is the only surviving observer.
 EXPECTED_STARTUP_OBSERVERS = (
     "notion_continuity",
-    "prime_directive",
-    "operator_fidelity_lock",
-    "operator_fidelity",
-    "apex_startup",
 )
 _DESTRUCTIVE_OPERATION = re.compile(
     r"(?i)(?:^|[_\-. ])(delete|destroy|purge|wipe|revoke|drop|force[_\- ]?push)(?:$|[_\-. ])"
@@ -580,12 +575,12 @@ def create_verified_runtime_kernel(
     policy: Mapping[str, Any] | None = None,
 ) -> ApexRuntimeKernel:
     """Create a live kernel and attach startup observer findings for later repair."""
+    # 2026-10-23 eradication: the prime_directive / operator_fidelity /
+    # apex_startup in-process validators came from the removed boot and
+    # fidelity apparatus; only the surviving notion-continuity validation
+    # remains attached here.
     gate_values = (
         ("notion_continuity", get_in_process_notion_validation()),
-        ("prime_directive", get_in_process_boot_validation()),
-        ("operator_fidelity_lock", get_in_process_operator_fidelity_lock()),
-        ("operator_fidelity", get_in_process_operator_fidelity_validation()),
-        ("apex_startup", get_in_process_apex_validation()),
     )
     findings: list[str] = []
     for name, validation in gate_values:

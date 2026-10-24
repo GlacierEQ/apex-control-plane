@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from auto_boot import BootError
+from model_attractor_defense import BootError
 from executable_frontier_authority import derive_frontier_id
 from model_attractor_defense import (
     build_local_source_binding,
