@@ -144,8 +144,12 @@ class GatewayCheckpointStore:
             raise GatewayStoreDenied("proposals cannot be promoted to governing memory")
         if envelope.digest != _envelope_digest(envelope):
             raise GatewayStoreDenied("checkpoint digest missing or invalid")
-        if not envelope.source_ref or not envelope.chat_session_id:
-            raise GatewayStoreDenied("source-bound session identity required")
+        # A first-session admission has no historical source reference. A
+        # cursor-only recovery can also have no source_ref, but must have passed
+        # the gateway's source-matched application callback. Do not make the
+        # durable store silently reject these valid gateway admissions.
+        if not envelope.chat_session_id:
+            raise GatewayStoreDenied("chat session identity required")
         data = _snapshot(envelope)
         data["digest"] = envelope.digest
         encoded = _canonical(data)
