@@ -97,6 +97,71 @@ class GatewaySQLiteIntegrationTests(unittest.TestCase):
         self.assertEqual(proof["corrections"], ["preserve the complete mission scope"])
         self.assertTrue(proof["digest"].startswith("sha256:"))
 
+    def test_sqlite_fact_binding_survives_cross_process_without_raw_fact_leak(self):
+        recovery = Recovery(
+            "case-A", "original:user:middle", "cursor-7",
+            ("preserve the complete mission scope",),
+            ("restricted:case-source-pointer:fact-A",), True,
+        )
+        run_admitted_session(
+            journal=recovery, chat_session_id="fact-session",
+            kernel=RecordingKernel(), expected_mission_id="case-A",
+            invocation_id="fact-turn", apply_context=self.apply,
+            invoke_model=self.model, resolve_source=self._source,
+            reserve=self.store.reserve, persist=self.store.persist,
+            readback=self.store.readback,
+        )
+        key = "case-A:model:fact-session:fact-turn"
+        with sqlite3.connect(self.db) as conn:
+            payload = conn.execute(
+                "SELECT envelope_json FROM apex_session_gateway_continuations "
+                "WHERE operation_key=?", (key,),
+            ).fetchone()[0]
+        self.assertNotIn("restricted:case-source-pointer:fact-A", payload)
+        code = (
+            "import json,sys;"
+            "from src.apex_session_gateway_store import GatewayCheckpointStore;"
+            "e=GatewayCheckpointStore(sys.argv[1], mission_id='case-A').readback(sys.argv[2]);"
+            "print(json.dumps({'facts':e.recovered_facts_sha256,"
+            "'application':e.application_ref_sha256,'digest':e.digest}))"
+        )
+        run = subprocess.run(
+            [sys.executable, "-c", code, str(self.db), key],
+            cwd=str(Path(__file__).resolve().parents[1]),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True,
+        )
+        proof = json.loads(run.stdout)
+        self.assertTrue(proof["facts"].startswith("sha256:"))
+        self.assertTrue(proof["application"].startswith("sha256:"))
+        self.assertTrue(proof["digest"].startswith("sha256:"))
+
+    def test_sqlite_rejects_missing_fact_binding_on_readback(self):
+        recovery = Recovery(
+            "case-A", "original:user:middle", "cursor-7",
+            ("preserve the complete mission scope",), ("fact-pointer",), True,
+        )
+        run_admitted_session(
+            journal=recovery, chat_session_id="fact-tamper",
+            kernel=RecordingKernel(), expected_mission_id="case-A",
+            invocation_id="fact-turn", apply_context=self.apply,
+            invoke_model=self.model, resolve_source=self._source,
+            reserve=self.store.reserve, persist=self.store.persist,
+            readback=self.store.readback,
+        )
+        key = "case-A:model:fact-tamper:fact-turn"
+        with sqlite3.connect(self.db) as conn:
+            payload = json.loads(conn.execute(
+                "SELECT envelope_json FROM apex_session_gateway_continuations "
+                "WHERE operation_key=?", (key,),
+            ).fetchone()[0])
+            del payload["recovered_facts_sha256"]
+            conn.execute(
+                "UPDATE apex_session_gateway_continuations SET envelope_json=? "
+                "WHERE operation_key=?", (json.dumps(payload), key),
+            )
+        with self.assertRaisesRegex(GatewayStoreDenied, "digest|readback"):
+            self.store.readback(key)
+
     def test_cross_process_replay_is_denied_before_another_model_call(self):
         self.invoke()
         with self.assertRaisesRegex(Exception, "already reserved"):
