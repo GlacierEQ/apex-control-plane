@@ -112,6 +112,33 @@ class SessionGatewayTests(unittest.TestCase):
         self.assertEqual(checkpoint.response_author, "assistant")
         self.assertEqual(checkpoint.memory_authority, "SOURCE_CANDIDATE_ONLY")
 
+    def test_mismatched_context_application_never_admits_model_or_reservation(self):
+        from dataclasses import replace
+
+        variants = (
+            ("mission_id", "case-B"),
+            ("source_ref", "unrelated:summary"),
+            ("cursor", "stale-cursor"),
+            ("corrections", ()),
+            ("facts", ("injected-fact",)),
+            ("application_ref", ""),
+            ("application_ref", None),
+        )
+        for field, value in variants:
+            with self.subTest(field=field, value=value):
+                self.events.clear()
+                self.reservations.clear()
+                self.saved.clear()
+
+                def mismatched(recovery):
+                    return replace(self.apply(recovery), **{field: value})
+
+                with self.assertRaisesRegex(GatewayDenied, "context application"):
+                    self.invoke(apply=mismatched)
+                self.assertEqual(self.events, ["apply"])
+                self.assertEqual(self.reservations, set())
+                self.assertEqual(self.saved, {})
+
     def test_assistant_opening_can_never_be_promoted_to_user_instruction(self):
         impersonation = assertion("original:assistant:first", "user", ASSISTANT_FIRST)
         def model(receipt):
