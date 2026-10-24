@@ -196,6 +196,50 @@ class GatewaySQLiteIntegrationTests(unittest.TestCase):
         self.assertEqual(checkpoint.cursor, "cursor-only")
         self.assertTrue(checkpoint.application_ref_sha256.startswith("sha256:"))
 
+    def test_persist_rejects_cross_session_checkpoint_even_with_valid_digest(self):
+        # A caller may compute a correct content digest while claiming the wrong
+        # chat session. The reserved operation key remains the session authority.
+        from dataclasses import replace
+        from src.apex_session_gateway import ContinuationEnvelope, _envelope_digest
+        key = "case-A:model:reserved-chat:turn-a"
+        self.assertTrue(self.store.reserve(key))
+        envelope = ContinuationEnvelope(
+            operation_key=key, chat_session_id="unrelated-chat",
+            mission_id="case-A", source_ref="", cursor="", corrections=(),
+            response_text="source-neutral response", attributions=(),
+            memory_proposals=(), digest="",
+        )
+        envelope = replace(envelope, digest=_envelope_digest(envelope))
+        with self.assertRaisesRegex(GatewayStoreDenied, "session"):
+            self.store.persist(envelope)
+        with self.assertRaisesRegex(GatewayStoreDenied, "not committed"):
+            self.store.readback(key)
+
+    def test_readback_rejects_cross_session_attribution_with_recomputed_digest(self):
+        # An unkeyed digest alone cannot establish that stored session metadata
+        # belongs to the reservation. Validate the reserved operation identity.
+        from hashlib import sha256
+        self.invoke()
+        key = "case-A:model:new-chat:user-turn-1"
+        with sqlite3.connect(self.db) as conn:
+            payload = json.loads(conn.execute(
+                "SELECT envelope_json FROM apex_session_gateway_continuations "
+                "WHERE operation_key=?", (key,),
+            ).fetchone()[0])
+            payload["chat_session_id"] = "unrelated-chat"
+            canonical = json.dumps(
+                {k: v for k, v in payload.items() if k != "digest"},
+                sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")
+            payload["digest"] = "sha256:" + sha256(canonical).hexdigest()
+            conn.execute(
+                "UPDATE apex_session_gateway_continuations "
+                "SET envelope_json=?,envelope_digest=? WHERE operation_key=?",
+                (json.dumps(payload), payload["digest"], key),
+            )
+        with self.assertRaisesRegex(GatewayStoreDenied, "readback|session|authority"):
+            self.store.readback(key)
+
     def test_cross_process_replay_is_denied_before_another_model_call(self):
         self.invoke()
         with self.assertRaisesRegex(Exception, "already reserved"):
