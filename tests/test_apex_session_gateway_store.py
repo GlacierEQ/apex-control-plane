@@ -162,6 +162,40 @@ class GatewaySQLiteIntegrationTests(unittest.TestCase):
         with self.assertRaisesRegex(GatewayStoreDenied, "digest|readback"):
             self.store.readback(key)
 
+    def test_fresh_mission_persists_without_invented_source_or_application(self):
+        fresh = Recovery("case-A", "", "", (), (), False)
+        result = run_admitted_session(
+            journal=fresh, chat_session_id="fresh-chat",
+            kernel=RecordingKernel(), expected_mission_id="case-A",
+            invocation_id="fresh-turn", apply_context=None,
+            invoke_model=lambda receipt: GatewayModelOutput("fresh response", (), (), ()),
+            resolve_source=self._source, reserve=self.store.reserve,
+            persist=self.store.persist, readback=self.store.readback,
+        )
+        self.assertEqual(result.text, "fresh response")
+        checkpoint = self.store.readback("case-A:model:fresh-chat:fresh-turn")
+        self.assertEqual(checkpoint.source_ref, "")
+        self.assertEqual(checkpoint.cursor, "")
+        self.assertEqual(checkpoint.application_ref_sha256, "")
+        self.assertTrue(checkpoint.recovered_facts_sha256.startswith("sha256:"))
+
+    def test_cursor_only_history_persists_after_source_matched_application(self):
+        # A cursor alone is material recovery, even if the host's flag is false.
+        cursor_only = Recovery("case-A", "", "cursor-only", (), (), False)
+        result = run_admitted_session(
+            journal=cursor_only, chat_session_id="cursor-chat",
+            kernel=RecordingKernel(), expected_mission_id="case-A",
+            invocation_id="cursor-turn", apply_context=self.apply,
+            invoke_model=lambda receipt: GatewayModelOutput("cursor response", (), (), ()),
+            resolve_source=self._source, reserve=self.store.reserve,
+            persist=self.store.persist, readback=self.store.readback,
+        )
+        self.assertEqual(result.text, "cursor response")
+        checkpoint = self.store.readback("case-A:model:cursor-chat:cursor-turn")
+        self.assertEqual(checkpoint.source_ref, "")
+        self.assertEqual(checkpoint.cursor, "cursor-only")
+        self.assertTrue(checkpoint.application_ref_sha256.startswith("sha256:"))
+
     def test_cross_process_replay_is_denied_before_another_model_call(self):
         self.invoke()
         with self.assertRaisesRegex(Exception, "already reserved"):
