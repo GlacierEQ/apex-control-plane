@@ -164,6 +164,10 @@ class ContinuationEnvelope:
     # A downstream consumer must never interpret either as Operator-authored fact.
     response_author: str = "assistant"
     memory_authority: str = "SOURCE_CANDIDATE_ONLY"
+    # Digests bind continuation to recovered facts and host application without
+    # copying potentially sensitive fact text or host references into the journal.
+    recovered_facts_sha256: str = ""
+    application_ref_sha256: str = ""
 
 
 _USER_AUTHORITY_KINDS = frozenset({
@@ -260,7 +264,7 @@ def _validate_output(
 
 
 def _snapshot(envelope: ContinuationEnvelope) -> dict[str, Any]:
-    return {
+    payload = {
         "operation_key": envelope.operation_key,
         "chat_session_id": envelope.chat_session_id,
         "mission_id": envelope.mission_id,
@@ -276,6 +280,12 @@ def _snapshot(envelope: ContinuationEnvelope) -> dict[str, Any]:
             for item in envelope.memory_proposals
         ],
     }
+    # Keep historical envelope digests valid: legacy checkpoints have neither
+    # field, while new checkpoints bind both to the persisted digest.
+    if envelope.recovered_facts_sha256 or envelope.application_ref_sha256:
+        payload["recovered_facts_sha256"] = envelope.recovered_facts_sha256
+        payload["application_ref_sha256"] = envelope.application_ref_sha256
+    return payload
 
 
 def _envelope_digest(envelope: ContinuationEnvelope) -> str:
@@ -343,6 +353,16 @@ def run_admitted_session(
             attributions=output.attributions,
             memory_proposals=output.memory_proposals,
             digest="",
+            recovered_facts_sha256=(
+                "sha256:" + sha256(json.dumps(
+                    list(receipt.recovery.facts), ensure_ascii=False,
+                    separators=(",", ":"),
+                ).encode("utf-8")).hexdigest()
+            ),
+            application_ref_sha256=(
+                "sha256:" + sha256(receipt.application_ref.encode("utf-8")).hexdigest()
+                if receipt.application_ref else ""
+            ),
         )
         from dataclasses import replace
         envelope = replace(envelope, digest=_envelope_digest(envelope))
