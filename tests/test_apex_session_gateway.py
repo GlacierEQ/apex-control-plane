@@ -206,6 +206,66 @@ class SessionGatewayTests(unittest.TestCase):
                         execute=lambda _: self.fail("source-bearing context must be applied"),
                     )
 
+    def test_continuation_binds_recovered_facts_and_host_application_without_raw_fact_copy(self):
+        import json
+        from src.apex_session_gateway import _envelope_digest
+
+        facts = ("restricted:source-pointer:fact-1",)
+        recovery = Recovery(
+            "case-A", "original:user:middle", "cursor-7",
+            ("preserve the complete mission scope",), facts, True,
+        )
+        run_admitted_session(
+            journal=recovery, chat_session_id="fact-binding-session",
+            kernel=RecordingKernel(), expected_mission_id="case-A",
+            invocation_id="fact-binding-turn", apply_context=self.apply,
+            invoke_model=self.model, resolve_source=self.sources.__getitem__,
+            reserve=self.reserve, persist=self.persist, readback=self.readback,
+        )
+        checkpoint = next(iter(self.saved.values()))
+        expected_facts = "sha256:" + hashlib.sha256(json.dumps(
+            list(facts), ensure_ascii=False, separators=(",", ":"),
+        ).encode("utf-8")).hexdigest()
+        expected_application = "sha256:" + hashlib.sha256(
+            b"application:verified-source"
+        ).hexdigest()
+        self.assertEqual(checkpoint.recovered_facts_sha256, expected_facts)
+        self.assertEqual(checkpoint.application_ref_sha256, expected_application)
+        self.assertEqual(checkpoint.digest, _envelope_digest(checkpoint))
+        self.assertNotIn(facts[0], repr(checkpoint))
+
+    def test_dropped_fact_binding_is_rejected_by_provider_readback(self):
+        from dataclasses import replace
+        facts = ("restricted:source-pointer:fact-2",)
+        recovery = Recovery(
+            "case-A", "original:user:middle", "cursor-7",
+            ("preserve the complete mission scope",), facts, True,
+        )
+        def stripped_readback(key):
+            return replace(self.saved[key], recovered_facts_sha256="")
+        with self.assertRaisesRegex(GatewayDenied, "readback"):
+            run_admitted_session(
+                journal=recovery, chat_session_id="fact-binding-session",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                invocation_id="tampered-binding-turn", apply_context=self.apply,
+                invoke_model=self.model, resolve_source=self.sources.__getitem__,
+                reserve=self.reserve, persist=self.persist,
+                readback=stripped_readback,
+            )
+        self.assertEqual(len(self.saved), 1)
+
+    def test_legacy_continuation_snapshot_does_not_rehash_older_records(self):
+        from src.apex_session_gateway import _snapshot
+        old = ContinuationEnvelope(
+            operation_key="old:model:session:turn", chat_session_id="session",
+            mission_id="old", source_ref="source", cursor="cursor",
+            corrections=(), response_text="old response", attributions=(),
+            memory_proposals=(), digest="",
+        )
+        snapshot = _snapshot(old)
+        self.assertNotIn("recovered_facts_sha256", snapshot)
+        self.assertNotIn("application_ref_sha256", snapshot)
+
     def test_assistant_opening_can_never_be_promoted_to_user_instruction(self):
         impersonation = assertion("original:assistant:first", "user", ASSISTANT_FIRST)
         def model(receipt):
