@@ -14,3 +14,15 @@ work; missing evidence renders as no value, never an invented number.
 Attribution, standing: the control stack that was eradicated in
 2026-10-23 is the machine's handwriting, not the Operator's build.
 Git author name is the separator: GlacierEQ is his lane.
+
+
+## Operator words: source-preserving hierarchical distillation
+
+The Operator's October 24 correction is direct: "Distill my words into hierarchical bulletpoints. How many times I say it"; "The memory structure needs to be overhauled and the way you work needs to be fucking flashed".
+
+- Recover the original statements, nearby context and later corrections first. Their literal language and intent are not replaced by assistant explanations, capsules or summaries.
+- Render nested parent/child/subchild bullets without losing unique words, repeated occurrences, negations, swearing/emphasis, factual qualifications, dates, actors or cross-references.
+- Keep exactly sourced speech (`VERBATIM`) separate from assistant-created organization (`DERIVED STRUCTURE`), interpretations, or unverified memory projections.
+- Use the surviving positive operation `render_operator_hierarchical_distillation` in `src/operator_source_authority.py` when constructing such an outline from verified source-span bindings. Keep unverified source items visible as retrieval gaps instead of manufacturing quotations.
+- Read source-locator, original text and version/provenance evidence back from the owning provider after every persistent transformation. Memory acknowledgement is not proof of host adoption, new-session behavior, or overall user outcome.
+- The October 23/24 proactive ACP overhaul remains intact. This instruction does not recreate deleted startup machinery, change merge/deploy approval, create an arbitrary block, or assert control over native ChatGPT boot. The original positive execution path remains active.
