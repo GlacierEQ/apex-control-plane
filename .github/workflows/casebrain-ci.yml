@@ -33,13 +33,35 @@ jobs:
         run: python -m compileall -q src tests
       - name: Test safety and resilience invariants
         run: python -m pytest -q
-      - name: Proactive smoke test emits a before/after receipt
+      - name: Proactive smoke test proves durable event routing
         run: |
-          python src/control_plane.py > /tmp/casebrain-smoke.json
-          test -s /tmp/casebrain-smoke.json
-          grep -q '"status": "proactive"' /tmp/casebrain-smoke.json
-          grep -q '"diff"' /tmp/casebrain-smoke.json
-          if grep -q '"external_action_authorized": true' /tmp/casebrain-smoke.json; then
-            echo "smoke output must not manufacture blanket external authorization" >&2
-            exit 1
-          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+          import sys
+          import tempfile
+
+          with tempfile.TemporaryDirectory() as root:
+              state = Path(root) / "state"
+              event = Path(root) / "event.json"
+              event.write_text(json.dumps({
+                  "event_type": "gmail.reply.received",
+                  "source_system": "gmail",
+                  "subject_id": "SMOKE",
+                  "correlation_id": "smoke-corr",
+                  "payload": {"message_id": "smoke-m1"},
+                  "provenance_refs": ["gmail://message/smoke-m1"]
+              }))
+              command = [sys.executable, "src/control_plane.py",
+                         "--event-file", str(event), "--state-dir", str(state)]
+              out = json.loads(subprocess.check_output(command, text=True))
+              assert out["status"] == "ingested", out
+              assert out["receipt"]["diff"]["events"] == 1, out
+              assert out["receipt"]["diff"]["work"] == 1, out
+              assert out["readback"]["events"] == 1, out
+              assert out["readback"]["work"] == 1, out
+              again = json.loads(subprocess.check_output(command, text=True))
+              assert again["status"] == "duplicate", again
+              assert again["receipt"]["diff"]["events"] == 0, again
+          PY
