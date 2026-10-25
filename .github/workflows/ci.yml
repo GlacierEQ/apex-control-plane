@@ -24,7 +24,8 @@ jobs:
           python-version: "3.12"
       - name: Compile current runtime surfaces
         run: |
-          python -m py_compile src/tool_catalog.py src/apex_session_gateway.py src/connector_mission_router.py src/control_plane.py
+          # Compile every current source module; avoid stale references to removed modules.
+          python -m compileall -q src
           python -m json.tool config/continuous_control_plane.json >/dev/null
       - name: Full test suite
         run: |
