@@ -252,3 +252,32 @@ def test_hierarchical_distillation_preserves_superseded_words_without_promoting_
     assert out["bullets"][1]["source_state"] == "active"
     assert out["bullets"][1]["direction_authority"] == "source_quote_not_external_fact"
     assert out["complete_source_coverage"] is True
+
+
+def test_hierarchical_distillation_supports_deep_history_without_recursion() -> None:
+    """Large source-linked hierarchies must not hit Python recursion limits."""
+    from src.operator_source_authority import render_operator_hierarchical_distillation
+
+    original = "DO NOT REPLACE THE OPERATOR'S ORIGINAL WORDS."
+    source = original.encode("utf-8")
+    count = 4096
+    bindings = []
+    parents = {}
+    for index in range(count):
+        identity = f"history-{index}"
+        binding = _binding(source, original)
+        binding["proposition_id"] = identity
+        bindings.append(binding)
+        parents[identity] = f"history-{index - 1}" if index else None
+
+    for order in (bindings, list(reversed(bindings))):
+        result = render_operator_hierarchical_distillation(
+            source_bindings=order,
+            parents=parents,
+            source_resolver=lambda _: source,
+            expected_proposition_ids=tuple(parents),
+        )
+        assert result["source_count"] == count
+        assert result["bullets"][-1]["depth"] == count - 1
+        assert result["bullets"][-1]["original_text"] == original
+        assert result["complete_source_coverage"] is True
