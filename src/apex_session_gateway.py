@@ -439,6 +439,11 @@ def run_admitted_session(
             raise GatewayDenied("continuation persistence or readback failed") from exc
         if not isinstance(persisted, ContinuationEnvelope):
             raise GatewayDenied("continuation readback missing typed envelope")
+        # An in-memory echo of the exact object just passed to persist is not
+        # a fresh provider read. Distinct identity is necessary, not sufficient:
+        # the host must still authenticate its independent storage readback.
+        if persisted is envelope:
+            raise GatewayDenied("continuation readback reused in-memory envelope")
         if (persisted != envelope or persisted.digest != _envelope_digest(persisted)):
             raise GatewayDenied("continuation readback differs from admitted output")
         return output
