@@ -428,11 +428,28 @@ def run_admitted_session(
         )
         from dataclasses import replace
         envelope = replace(envelope, digest=_envelope_digest(envelope))
+        # Snapshot the *validated* continuation before crossing either provider
+        # callback boundary. Frozen dataclasses and nested source assertions can
+        # still be modified with object.__setattr__; a callback could otherwise
+        # rewrite both the envelope and digest, then return a matching readback.
+        validated_snapshot = _snapshot(envelope)
+        validated_digest = envelope.digest
+
+        def require_unchanged_continuation() -> None:
+            try:
+                if (_snapshot(envelope) != validated_snapshot
+                        or envelope.digest != validated_digest):
+                    raise GatewayDenied("provider callback mutated validated continuation")
+            except (AttributeError, TypeError, ValueError) as exc:
+                raise GatewayDenied("provider callback mutated validated continuation") from exc
+
         try:
             checkpoint = persist(envelope)
+            require_unchanged_continuation()
             if checkpoint is None:
                 raise GatewayDenied("no durable checkpoint was returned")
             persisted = readback(checkpoint)
+            require_unchanged_continuation()
         except GatewayDenied:
             raise
         except Exception as exc:
@@ -444,7 +461,15 @@ def run_admitted_session(
         # the host must still authenticate its independent storage readback.
         if persisted is envelope:
             raise GatewayDenied("continuation readback reused in-memory envelope")
-        if (persisted != envelope or persisted.digest != _envelope_digest(persisted)):
+        try:
+            matches_validated = (
+                _snapshot(persisted) == validated_snapshot
+                and persisted.digest == validated_digest
+                and persisted.digest == _envelope_digest(persisted)
+            )
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise GatewayDenied("continuation readback invalid") from exc
+        if not matches_validated:
             raise GatewayDenied("continuation readback differs from admitted output")
         return output
 
