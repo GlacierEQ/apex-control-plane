@@ -138,14 +138,22 @@ class GatewayCheckpointStore:
         self._validate_operation_key(envelope.operation_key)
         if envelope.mission_id != self.mission_id:
             raise GatewayStoreDenied("checkpoint mission mismatch")
+        # A valid digest does not bind a checkpoint to its reserved chat session.
+        # Reject cross-session attribution before writing the durable record.
+        if envelope.chat_session_id != envelope.operation_key.split(":")[2]:
+            raise GatewayStoreDenied("checkpoint session identity mismatches reservation")
         if envelope.response_author != "assistant":
             raise GatewayStoreDenied("model response cannot impersonate user authorship")
         if envelope.memory_authority != "SOURCE_CANDIDATE_ONLY":
             raise GatewayStoreDenied("proposals cannot be promoted to governing memory")
         if envelope.digest != _envelope_digest(envelope):
             raise GatewayStoreDenied("checkpoint digest missing or invalid")
-        if not envelope.source_ref or not envelope.chat_session_id:
-            raise GatewayStoreDenied("source-bound session identity required")
+        # A first-session admission has no historical source reference. A
+        # cursor-only recovery can also have no source_ref, but must have passed
+        # the gateway's source-matched application callback. Do not make the
+        # durable store silently reject these valid gateway admissions.
+        if not envelope.chat_session_id:
+            raise GatewayStoreDenied("chat session identity required")
         data = _snapshot(envelope)
         data["digest"] = envelope.digest
         encoded = _canonical(data)
@@ -169,6 +177,32 @@ class GatewayCheckpointStore:
             if result.rowcount != 1:
                 raise GatewayStoreDenied("checkpoint state changed during persistence")
         return envelope.operation_key
+
+    def read_latest(self) -> ContinuationEnvelope | None:
+        """Recover the newest mission checkpoint without a caller-known key.
+
+        This is a continuation pointer, NOT host application or authority.
+        A newer unresolved reservation must block fallback to older history:
+        an uncertain invocation may have executed without a checkpoint.
+        Hold a write lock while selecting and validating the latest row so a
+        concurrent reservation cannot make the selected cursor stale.
+        """
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT operation_key,state FROM apex_session_gateway_continuations "
+                "WHERE mission_id=? ORDER BY rowid DESC LIMIT 1",
+                (self.mission_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            if row["state"] != "CHECKPOINTED":
+                raise GatewayStoreDenied(
+                    "latest reservation unresolved; reconcile before resuming"
+                )
+            # Read via the existing digest/authority/mission validator. The
+            # transaction prevents a newer reservation until this returns.
+            return self.readback(row["operation_key"])
 
     def readback(self, operation_key: str) -> ContinuationEnvelope:
         """Reopen and authenticate stored checksum + typed source/role metadata."""
@@ -203,6 +237,10 @@ class GatewayCheckpointStore:
                 digest=payload["digest"],
                 response_author=payload["response_author"],
                 memory_authority=payload["memory_authority"],
+                # Old checkpoint JSON lacks these fields. Preserve its original
+                # digest while round-tripping new source-bound fingerprints.
+                recovered_facts_sha256=payload.get("recovered_facts_sha256", ""),
+                application_ref_sha256=payload.get("application_ref_sha256", ""),
             )
             if (_snapshot(envelope) != {k: v for k, v in payload.items() if k != "digest"}
                     or envelope.response_author != "assistant"
@@ -210,6 +248,7 @@ class GatewayCheckpointStore:
                     or envelope.digest != row["envelope_digest"]
                     or envelope.digest != _envelope_digest(envelope)
                     or envelope.operation_key != operation_key
+                    or envelope.chat_session_id != operation_key.split(":")[2]
                     or envelope.mission_id != self.mission_id):
                 raise GatewayStoreDenied("checkpoint readback digest or authority mismatch")
             return envelope

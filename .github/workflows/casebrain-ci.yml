@@ -33,13 +33,21 @@ jobs:
         run: python -m compileall -q src tests
       - name: Test safety and resilience invariants
         run: python -m pytest -q
-      - name: Proactive smoke test emits a before/after receipt
+      - name: Runtime smoke test validates local receipt without external-action claims
         run: |
           python src/control_plane.py > /tmp/casebrain-smoke.json
-          test -s /tmp/casebrain-smoke.json
-          grep -q '"status": "proactive"' /tmp/casebrain-smoke.json
-          grep -q '"diff"' /tmp/casebrain-smoke.json
-          if grep -q '"external_action_authorized": true' /tmp/casebrain-smoke.json; then
-            echo "smoke output must not manufacture blanket external authorization" >&2
-            exit 1
-          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result = json.loads(Path("/tmp/casebrain-smoke.json").read_text())
+          assert result.get("status") == "ok", "current runtime status not returned"
+          receipt = result.get("receipt")
+          assert isinstance(receipt, dict), "local receipt missing"
+          assert receipt.get("label") == "control_plane_main", "unexpected runtime receipt"
+          assert receipt.get("before") == {"routes_run": 0}, "unexpected local prestate"
+          assert receipt.get("after") == {"routes_run": 1}, "unexpected local poststate"
+          assert result.get("external_action_authorized") is not True, "blanket authorization asserted"
+          assert receipt.get("external_action_authorized") is not True, "blanket authorization asserted"
+          # This synthetic local receipt does not prove a provider-side action.
+          PY
