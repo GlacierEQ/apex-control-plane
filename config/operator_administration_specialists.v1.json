@@ -152,7 +152,7 @@
       "parent": "OA.OPERATOR",
       "domain": "cognition",
       "display_name": "Context 12",
-      "purpose": "Compile authority-aware, provenance-aware, minimum-sufficient context before reasoning and execution.",
+      "purpose": "Compile complete mission-preserving, authority-aware, provenance-aware context, including prior decisions, source evidence, dependencies, corrections, and verified continuation state before reasoning and execution; never impose an arbitrary context or capability ceiling.",
       "specialization": {
         "objective": "Every run starts from the strongest relevant recoverable context rather than prompt-local state.",
         "memory_scope": "cross_domain_context",
