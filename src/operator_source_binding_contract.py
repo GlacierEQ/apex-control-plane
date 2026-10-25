@@ -75,6 +75,7 @@ def validate_source_span_binding_shape(
     allowed_source_kinds: frozenset[str] = ALLOWED_OPERATOR_SOURCE_KINDS,
     require_temporal_context: bool = True,
     require_unsuperseded: bool = False,
+    allow_historical_quote_states: bool = False,
 ) -> tuple[str, ...]:
     """Validate reusable source-span provenance shape without claiming readback."""
     errors: list[str] = []
@@ -112,7 +113,8 @@ def validate_source_span_binding_shape(
         errors.append(f"{prefix}.span byte range must be non-negative and increasing")
 
     contradiction_state = str(binding.get("contradiction_state", "")).strip()
-    if contradiction_state not in ACTIVE_CONTRADICTION_STATES:
+    historical_only = frozenset({"superseded", "conflicted"}) if allow_historical_quote_states and not require_unsuperseded else frozenset()
+    if contradiction_state not in ACTIVE_CONTRADICTION_STATES | historical_only:
         errors.append(
             f"{prefix}.contradiction_state must be active or resolved_consistent; superseded/conflicted source cannot silently remain authoritative"
         )
@@ -135,6 +137,7 @@ def verify_source_span_binding(
     allowed_source_kinds: frozenset[str] = ALLOWED_OPERATOR_SOURCE_KINDS,
     require_temporal_context: bool = True,
     require_unsuperseded: bool = False,
+    allow_historical_quote_states: bool = False,
 ) -> SourceSpanVerification:
     """Independently resolve bytes and prove hashes/span/text for one binding."""
     errors = list(
@@ -144,6 +147,7 @@ def verify_source_span_binding(
             allowed_source_kinds=allowed_source_kinds,
             require_temporal_context=require_temporal_context,
             require_unsuperseded=require_unsuperseded,
+            allow_historical_quote_states=allow_historical_quote_states,
         )
     )
     if errors:
