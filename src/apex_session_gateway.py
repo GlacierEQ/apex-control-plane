@@ -262,6 +262,32 @@ def _validate_output(
     if (not isinstance(output.corrections_applied, tuple)
             or output.corrections_applied != tuple(receipt.recovery.corrections)):
         raise GatewayDenied("recovered corrections were omitted or modified")
+    # Freeze values BEFORE invoking the host source resolver. A later resolver
+    # call can mutate an earlier validated attribution (or the model response)
+    # through object.__setattr__, even on frozen dataclasses. The post-callback
+    # checkpoint digest must never certify those unverified replacements.
+    def validation_values() -> tuple[Any, ...]:
+        def assertion_values(item: SourceAssertion) -> tuple[Any, ...]:
+            if not isinstance(item, SourceAssertion):
+                raise GatewayDenied("source attribution must be typed")
+            return (
+                item.source_ref, item.speaker, item.verbatim,
+                item.start_byte, item.end_byte, item.source_sha256,
+            )
+        if not isinstance(output.attributions, tuple) or not isinstance(output.memory_proposals, tuple):
+            raise GatewayDenied("model output source collections changed during validation")
+        proposals = []
+        for item in output.memory_proposals:
+            if not isinstance(item, MemoryProposal):
+                raise GatewayDenied("memory proposal must be typed")
+            proposals.append((item.kind, assertion_values(item.source)))
+        return (
+            output.text, output.corrections_applied,
+            tuple(assertion_values(item) for item in output.attributions),
+            tuple(proposals),
+        )
+
+    original_validation_values = validation_values()
     checked: set[SourceAssertion] = set()
     for assertion in output.attributions:
         _verify_assertion(assertion, resolve_source)
@@ -286,6 +312,12 @@ def _validate_output(
             raise GatewayDenied("assistant inference must have assistant provenance")
         # All proposals remain untrusted, source-only candidates. No model-authored
         # proposal is a governing user instruction or an accepted factual memory.
+    try:
+        unchanged = validation_values() == original_validation_values
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise GatewayDenied("source attribution mutated during validation") from exc
+    if not unchanged:
+        raise GatewayDenied("source attribution mutated during validation")
 
 
 def _snapshot(envelope: ContinuationEnvelope) -> dict[str, Any]:
