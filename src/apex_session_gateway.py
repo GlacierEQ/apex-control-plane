@@ -355,6 +355,41 @@ def run_admitted_session(
         raise GatewayDenied("ambiguous operation identity component")
 
     def after_admission(receipt: AdmissionReceipt) -> GatewayModelOutput:
+        # Freeze the admitted binding *values*, not just their dataclass object
+        # references: object.__setattr__ can mutate even frozen dataclasses.
+        # The model and source resolver are untrusted callbacks. Neither may
+        # replace the provenance/correction/fact context after admission.
+        def admitted_bindings() -> tuple[Any, ...]:
+            recovery = receipt.recovery
+            application = receipt.application
+            if not isinstance(recovery, Recovery) or (
+                application is not None and not isinstance(application, ContextApplication)
+            ):
+                raise GatewayDenied("mutated admitted context")
+            return (
+                receipt.mission_id, receipt.chat_session_id,
+                receipt.source_ref, receipt.cursor, receipt.application_ref,
+                id(recovery), recovery.mission_id, recovery.source_ref,
+                recovery.cursor, recovery.corrections, recovery.facts,
+                recovery.material_context_found,
+                id(application),
+                None if application is None else (
+                    application.mission_id, application.source_ref,
+                    application.cursor, application.corrections,
+                    application.facts, application.application_ref,
+                ),
+            )
+
+        original_admission = admitted_bindings()
+
+        def require_unchanged_admission() -> None:
+            try:
+                current = admitted_bindings()
+            except (AttributeError, TypeError, GatewayDenied) as exc:
+                raise GatewayDenied("mutated admitted context") from exc
+            if current != original_admission:
+                raise GatewayDenied("mutated admitted context")
+
         # Reservation occurs BEFORE any potentially effectful model callback.
         # On failure the reservation stays reserved: a host must reconcile
         # provider state before retrying an uncertain invocation.
@@ -366,7 +401,9 @@ def run_admitted_session(
         if reserved is not True:
             raise GatewayDenied("operation already reserved; reconcile before replay")
         output = invoke_model(receipt)
+        require_unchanged_admission()
         _validate_output(output, receipt, resolve_source)
+        require_unchanged_admission()
         envelope = ContinuationEnvelope(
             operation_key=key,
             chat_session_id=receipt.chat_session_id,
