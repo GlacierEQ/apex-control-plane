@@ -68,15 +68,14 @@ def _validate_explicit_boot_receipt_syntax() -> None:
 
 
 if __name__ == "__main__":
-    # Overhaul entry: no startup boot interception. Print a before/after
-    # receipt for the local runtime state and exit 0; external effects
-    # still require their own provider route and readback.
-    from apex_proactive import state_receipt
-
+    # No startup boot interception. Print a before/after receipt for the
+    # local runtime state and exit 0; external effects still require their
+    # own provider route and readback. (The apex_proactive engine was
+    # removed 2026-10-24 after its live-job proof returned NOT PROVEN;
+    # this block no longer depends on it.)
     before = {"routes_run": 0}
     after = {"routes_run": 1}
-    receipt = state_receipt(before, after, "control_plane_main")
-    print(json.dumps({"status": "proactive", "receipt": receipt.to_dict()}, sort_keys=True))
+    print(json.dumps({"status": "ok", "receipt": {"before": before, "after": after, "label": "control_plane_main"}}, sort_keys=True))
 
 else:
     from control_plane_runtime import *  # noqa: F401,F403

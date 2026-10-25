@@ -31,7 +31,7 @@ STATE_EVOLUTION  = CURRENT_STATE ⊕ VERIFIED_GAIN
 
 Repository labels, registries, historical `canonical` classifications, governance files, summaries, or assistant-generated doctrine are evidence and topology metadata. They do not become project-direction authority.
 
-The proactive engine is [`src/apex_proactive.py`](src/apex_proactive.py); the overhaul note is [`OVERHAUL_NOTES.md`](OVERHAUL_NOTES.md). Enforced-startup references in older sections are superseded by the 2026-10-24 overhaul.
+The proactive engine (`src/apex_proactive.py`) was removed 2026-10-24 after its live-job proof returned NOT PROVEN; the tool catalog survives as [`src/tool_catalog.py`](src/tool_catalog.py). The overhaul note is [`OVERHAUL_NOTES.md`](OVERHAUL_NOTES.md). Enforced-startup references in older sections are superseded by the 2026-10-24 overhaul.
 
 ## Source-bound session gateway
 
@@ -126,7 +126,7 @@ python src/control_plane.py
 ### Validate a provider receipt
 
 ```bash
-python -m pytest -q tests/test_apex_proactive.py
+python -m pytest -q tests/
 ```
 
 ### Run the control plane
@@ -164,7 +164,6 @@ Repository CI exercises startup, Operator fidelity, mission-outcome fidelity, re
 Core proof commands include:
 
 ```bash
-python -m pytest -q tests/test_apex_proactive.py
 python -m pytest -q tests/test_notion_continuity_gate.py
 python -m pytest -q tests/test_scan_repos.py
 python -m pytest -q tests/test_apex_session_gateway.py
@@ -183,7 +182,7 @@ The smoke test is synthetic and performs no network or external action. Request 
 ## Federation and architecture references
 
 - Project-direction authority: **Operator intent**
-- APEX proactive engine: `src/apex_proactive.py`
+- Tool catalog: `src/tool_catalog.py` (whole inventory visible; per-turn loading by the agent)
 - AKOS relationship: architecture/federation reference and dependency, not superior project authority
 - Adoption metadata: `AKOS_ADOPTION.yaml`
 - Runtime design: `docs/UNIFIED_CASEBRAIN.md`
@@ -215,7 +214,7 @@ This repository implements the **APEX Control Plane**, a resilient orchestrator 
 | Component | Purpose |
 |---|---|
 | `src/control_plane.py` | Explicit startup wrapper and runtime handoff |
-| `src/apex_proactive.py` | Proactive triggers, receipts, worker/grader separation, structured workflow |
+| `src/tool_catalog.py` | Whole skill/connector inventory, visible; per-turn selection and hot swap |
 | `src/notion_continuity_gate.py` | Continuity and existing-work topology proof |
 | `src/control_plane_runtime.py` | Preserved runtime |
 | `migrations/` | Relational state migrations |

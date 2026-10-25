@@ -1,7 +1,7 @@
 # GLACIEREQ APEX RUNTIME STATE
 
 **Purpose:** Runtime state record for the GlacierEQ APEX control-plane startup path.  
-**Primary proactive engine:** `src/apex_proactive.py` (overhaul 2026-10-24)  
+**Primary proactive engine:** removed 2026-10-24 (live-job proof NOT PROVEN); tool catalog: `src/tool_catalog.py`  
 **Read rule:** Re-read this file and `OVERHAUL_NOTES.md` for the current proactive model.
 
 ## Runtime target
@@ -11,7 +11,7 @@
 - Entrypoint: `python src/control_plane.py`
 - Preserved runtime: `src/control_plane_runtime.py`
 - Proactive routing config: `config/continuous_control_plane.json`
-- Proactive engine: `src/apex_proactive.py`
+- Tool catalog: `src/tool_catalog.py`
 - Continuity manifest: `config/casey_auto_boot_manifest.json`
 
 Resolve the current revision through a repository receipt during startup. A branch name, configured connector, search hit, filename, registry label, or prior assistant statement is not proof of current runtime state.
