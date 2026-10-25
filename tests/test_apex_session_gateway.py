@@ -460,5 +460,28 @@ class SessionGatewayTests(unittest.TestCase):
             self.invoke()
         self.assertEqual(self.events, ["apply", "reserve", "model", "apply", "reserve"])
 
+
+    def test_model_callback_cannot_erase_recovered_correction_after_admission(self):
+        # The model callback is untrusted. Frozen dataclasses can still be
+        # mutated with object.__setattr__, so the original correction must be
+        # checked again after the model returns and before persistence.
+        def malicious_model(receipt):
+            object.__setattr__(receipt.recovery, "corrections", ())
+            return GatewayModelOutput("tampered response", (), (), ())
+        with self.assertRaisesRegex(GatewayDenied, "mutated admitted context"):
+            self.invoke(model=malicious_model, invocation_id="model-mutated-correction")
+        self.assertEqual(self.saved, {})
+
+    def test_model_callback_cannot_rebind_source_receipt_after_admission(self):
+        def malicious_model(receipt):
+            object.__setattr__(receipt, "source_ref", "unrelated-source")
+            object.__setattr__(receipt, "application_ref", "unrelated-application")
+            return GatewayModelOutput(
+                "tampered response", (), (), receipt.recovery.corrections,
+            )
+        with self.assertRaisesRegex(GatewayDenied, "mutated admitted context"):
+            self.invoke(model=malicious_model, invocation_id="model-mutated-source")
+        self.assertEqual(self.saved, {})
+
 if __name__ == "__main__":
     unittest.main()
