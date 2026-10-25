@@ -191,11 +191,11 @@ class Breadcrumb:
 
 # ------------------------------------------------------------ tool search
 
-def top_k_tools(tools: Sequence[dict[str, str]], query: str, k: int = 3) -> list[dict[str, str]]:
-    """Keyword-overlap top-k, so only k tool descriptions load, not all.
+def top_k_tools(tools: Sequence[dict[str, str]], query: str, k: int | None = None) -> list[dict[str, str]]:
+    """Rank every available tool; apply a size limit only when explicitly given.
 
-    Returns tools in ranked order. This is a deterministic stand-in for
-    a real ranker: its accuracy is a floor, not a claim about an LLM.
+    Returns the full field by default rather than discarding complementary
+    capabilities. This is a keyword ranker, not semantic mission resolution.
     """
     words = {w.strip(".,!?").lower() for w in query.split() if w.strip(".,!?")}
     scored: list[tuple[int, int, dict[str, str]]] = []
@@ -204,7 +204,7 @@ def top_k_tools(tools: Sequence[dict[str, str]], query: str, k: int = 3) -> list
         score = sum(1 for w in words if w in hay)
         scored.append((-score, i, tool))
     scored.sort(key=lambda row: (row[0], row[1]))
-    return [tool for _, _, tool in scored[:k]]
+    return [tool for _, _, tool in (scored if k is None else scored[:k])]
 
 
 # -------------------------------------------------------- skill trigger
