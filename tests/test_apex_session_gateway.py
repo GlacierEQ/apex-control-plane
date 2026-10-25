@@ -160,6 +160,44 @@ class SessionGatewayTests(unittest.TestCase):
             self.invoke(readback=corrupt_readback, invocation_id="readback-mutation")
         self.assertEqual(self.events, ["apply", "reserve", "model", "persist", "readback"])
 
+    def test_persist_cannot_mutate_validated_model_output_after_checkpoint(self):
+        # Persisting a valid envelope cannot license returning a different,
+        # post-validation model response to the host.
+        captured = {}
+
+        def capture_model(receipt):
+            output = self.model(receipt)
+            captured["output"] = output
+            return output
+
+        def mutate_output(envelope):
+            object.__setattr__(captured["output"], "text", "fabricated-after-validation")
+            object.__setattr__(captured["output"], "corrections_applied", ())
+            return self.persist(envelope)
+
+        with self.assertRaisesRegex(GatewayDenied, "model output mutated after validation"):
+            self.invoke(model=capture_model, persist=mutate_output,
+                        invocation_id="output-mutation-persist")
+        self.assertEqual(self.events, ["apply", "reserve", "model", "persist"])
+        self.assertEqual(len(self.reservations), 1)
+
+    def test_readback_cannot_mutate_validated_model_output_after_checkpoint(self):
+        captured = {}
+
+        def capture_model(receipt):
+            output = self.model(receipt)
+            captured["output"] = output
+            return output
+
+        def mutate_output(key):
+            object.__setattr__(captured["output"], "text", "unverified-readback-text")
+            return self.readback(key)
+
+        with self.assertRaisesRegex(GatewayDenied, "model output mutated after validation"):
+            self.invoke(model=capture_model, readback=mutate_output,
+                        invocation_id="output-mutation-readback")
+        self.assertEqual(self.events, ["apply", "reserve", "model", "persist", "readback"])
+
     def test_valid_source_matched_correction_precedes_model_and_durable_readback(self):
         output = self.invoke()
         self.assertEqual(output.text, "The user explicitly corrected the assistant interpretation.")
