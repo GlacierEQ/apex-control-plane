@@ -133,6 +133,51 @@ class SessionGatewayTests(unittest.TestCase):
         self.assertEqual(self.events, ["apply", "reserve", "model", "persist"])
         self.assertEqual(len(self.reservations), 1)
 
+    def test_later_source_resolver_cannot_rewrite_earlier_verified_attribution(self):
+        # A source resolver invoked for attribution B can mutate attribution A
+        # after A has been verified, before the gateway snapshots its digest.
+        # Without a post-validation source recheck, fabricated text is persisted.
+        def model(receipt):
+            self.events.append("model")
+            return GatewayModelOutput(
+                "Verified answer",
+                (self.user_assertion, self.assistant_assertion),
+                (),
+                receipt.recovery.corrections,
+            )
+
+        def resolver(ref):
+            if ref == "original:assistant:first":
+                object.__setattr__(self.user_assertion, "verbatim", "fabricated-after-source-check")
+            return self.sources[ref]
+
+        with self.assertRaisesRegex(GatewayDenied, "source attribution mutated during validation"):
+            self.invoke(model=model, resolve_source=resolver,
+                        invocation_id="resolver-mutates-previous-source")
+        self.assertEqual(self.events, ["apply", "reserve", "model"])
+        self.assertEqual(self.saved, {})
+
+    def test_source_resolver_cannot_erase_corrections_after_initial_check(self):
+        # Corrections were checked before provenance reads. A later resolver
+        # must not rewrite the model output and then receive a valid digest.
+        captured = {}
+
+        def model(receipt):
+            output = self.model(receipt)
+            captured["output"] = output
+            return output
+
+        def resolver(ref):
+            object.__setattr__(captured["output"], "corrections_applied", ())
+            object.__setattr__(captured["output"], "text", "suppressed-correction-response")
+            return self.sources[ref]
+
+        with self.assertRaisesRegex(GatewayDenied, "source attribution mutated during validation"):
+            self.invoke(model=model, resolve_source=resolver,
+                        invocation_id="resolver-erases-corrections")
+        self.assertEqual(self.events, ["apply", "reserve", "model"])
+        self.assertEqual(self.saved, {})
+
     def test_persist_cannot_rewrite_nested_verified_source(self):
         from src.apex_session_gateway import _envelope_digest
 
