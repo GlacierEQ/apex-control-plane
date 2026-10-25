@@ -275,6 +275,43 @@ class GatewaySQLiteIntegrationTests(unittest.TestCase):
         with self.assertRaisesRegex(GatewayStoreDenied, "mission"):
             wrong.readback("case-A:model:new-chat:user-turn-1")
 
+    def test_latest_checkpoint_recovery_across_process_without_known_key(self):
+        # A second process can discover the last committed continuation
+        # without inventing a cursor or knowing the previous invocation ID.
+        self.assertIsNone(self.store.read_latest())
+        self.invoke()
+        code = (
+            "import json,sys;"
+            "from src.apex_session_gateway_store import GatewayCheckpointStore;"
+            "e=GatewayCheckpointStore(sys.argv[1],mission_id='case-A').read_latest();"
+            "print(json.dumps({'mission':e.mission_id,'cursor':e.cursor,"
+            "'corrections':list(e.corrections),'authority':e.memory_authority}))"
+        )
+        run = subprocess.run(
+            [sys.executable, "-c", code, str(self.db)],
+            cwd=str(Path(__file__).resolve().parents[1]),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True,
+        )
+        recovered = json.loads(run.stdout)
+        self.assertEqual(recovered["mission"], "case-A")
+        self.assertEqual(recovered["cursor"], "cursor-7")
+        self.assertEqual(recovered["corrections"], ["preserve the complete mission scope"])
+        self.assertEqual(recovered["authority"], "SOURCE_CANDIDATE_ONLY")
+
+    def test_latest_unresolved_reservation_blocks_stale_checkpoint_fallback(self):
+        # A later reservation can represent an unknown external model effect.
+        # Never silently return the older successful checkpoint as current.
+        self.invoke()
+        self.assertTrue(self.store.reserve("case-A:model:new-chat:later-turn"))
+        with self.assertRaisesRegex(GatewayStoreDenied, "latest reservation unresolved"):
+            self.store.read_latest()
+        other = GatewayCheckpointStore(self.db, mission_id="other-mission")
+        self.assertIsNone(other.read_latest())
+        self.assertEqual(
+            self.store.readback("case-A:model:new-chat:user-turn-1").cursor,
+            "cursor-7",
+        )
+
     def test_unsafe_symlink_db_path_is_denied(self):
         alias = Path(self.tmp.name) / "alias.db"
         alias.symlink_to(self.db)
