@@ -178,6 +178,32 @@ class GatewayCheckpointStore:
                 raise GatewayStoreDenied("checkpoint state changed during persistence")
         return envelope.operation_key
 
+    def read_latest(self) -> ContinuationEnvelope | None:
+        """Recover the newest mission checkpoint without a caller-known key.
+
+        This is a continuation pointer, NOT host application or authority.
+        A newer unresolved reservation must block fallback to older history:
+        an uncertain invocation may have executed without a checkpoint.
+        Hold a write lock while selecting and validating the latest row so a
+        concurrent reservation cannot make the selected cursor stale.
+        """
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT operation_key,state FROM apex_session_gateway_continuations "
+                "WHERE mission_id=? ORDER BY rowid DESC LIMIT 1",
+                (self.mission_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            if row["state"] != "CHECKPOINTED":
+                raise GatewayStoreDenied(
+                    "latest reservation unresolved; reconcile before resuming"
+                )
+            # Read via the existing digest/authority/mission validator. The
+            # transaction prevents a newer reservation until this returns.
+            return self.readback(row["operation_key"])
+
     def readback(self, operation_key: str) -> ContinuationEnvelope:
         """Reopen and authenticate stored checksum + typed source/role metadata."""
         self._validate_operation_key(operation_key)
