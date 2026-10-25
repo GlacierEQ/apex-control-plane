@@ -191,3 +191,64 @@ def test_hierarchical_distillation_rejects_cycles_and_unknown_parents() -> None:
         render_operator_hierarchical_distillation(
             **kwargs, parents={"one": None, "two": "missing"},
         )
+
+
+def test_hierarchical_distillation_cannot_claim_corpus_completeness_from_supplied_bindings() -> None:
+    from src.operator_source_authority import render_operator_hierarchical_distillation
+
+    quote = "First known original"
+    binding = _binding(quote.encode(), quote)
+    binding["proposition_id"] = "first"
+    base = {
+        "source_bindings": [binding],
+        "parents": {"first": None},
+        "source_resolver": lambda _: quote.encode(),
+    }
+    out = render_operator_hierarchical_distillation(**base)
+    assert out["supplied_binding_coverage"] is True
+    assert out["complete_source_coverage"] is False
+    assert out["coverage_scope"] == "supplied_bindings_only"
+    with pytest.raises(OperatorSourceAuthorityError, match="expected.*missing"):
+        render_operator_hierarchical_distillation(
+            **base, expected_proposition_ids=("first", "missing"),
+        )
+    full = render_operator_hierarchical_distillation(
+        **base, expected_proposition_ids=("first",),
+    )
+    assert full["complete_source_coverage"] is True
+    assert full["coverage_scope"] == "caller_inventory_match_not_independent_corpus_proof"
+
+
+def test_hierarchical_distillation_preserves_superseded_words_without_promoting_as_active() -> None:
+    from src.operator_source_authority import render_operator_hierarchical_distillation
+
+    originals = {
+        "file:old": "DO NOT SUMMARIZE.",
+        "file:new": "YOU DISTILL MINE INTO HIERARCHICAL BULLETPOINTS.",
+    }
+    bindings = []
+    for index, (ref, quote) in enumerate(originals.items()):
+        row = _binding(quote.encode(), quote)
+        row.update({
+            "source_ref": ref,
+            "proposition_id": "earlier" if index == 0 else "later",
+            "temporal_context": f"2026-10-{22 + index}",
+        })
+        if index == 0:
+            row["contradiction_state"] = "superseded"
+            row["superseded_by"] = "later"
+        bindings.append(row)
+
+    out = render_operator_hierarchical_distillation(
+        source_bindings=bindings,
+        parents={"earlier": None, "later": "earlier"},
+        source_resolver=lambda ref: originals[ref].encode(),
+        expected_proposition_ids=("earlier", "later"),
+    )
+    assert [node["original_text"] for node in out["bullets"]] == list(originals.values())
+    assert out["bullets"][0]["source_state"] == "superseded"
+    assert out["bullets"][0]["direction_authority"] == "historical_quote_only"
+    assert out["bullets"][0]["superseded_by"] == "later"
+    assert out["bullets"][1]["source_state"] == "active"
+    assert out["bullets"][1]["direction_authority"] == "source_quote_not_external_fact"
+    assert out["complete_source_coverage"] is True
