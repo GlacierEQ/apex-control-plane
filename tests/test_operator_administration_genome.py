@@ -48,3 +48,18 @@ def test_specialist_genome_preserves_operator_rooted_authority() -> None:
     assert "'role_does_not_create_authority',true" in sql
     assert "'no_silent_scope_expansion',true" in sql
     assert "'replacement_executor_must_rehydrate',true" in sql
+
+
+def test_context_specialist_recovers_complete_mission_without_reduction() -> None:
+    specialists = json.loads(SPECIALISTS.read_text())
+    contexts = [agent for agent in specialists["agents"] if agent["logical_agent_id"] == "OA.CONTEXT.12"]
+    assert len(contexts) == 1
+    purpose = contexts[0]["purpose"]
+    for required in ("mission-preserving", "prior decisions", "source evidence", "dependencies",
+                     "corrections", "verified continuation", "capability ceiling"):
+        assert required in purpose
+    assert "minimum-sufficient" not in purpose.casefold()
+    assert "smallest sufficient" not in purpose.casefold()
+
+    specialist_doc = (ROOT / "docs" / "operator-administration" / "SPECIALISTS.md").read_text()
+    assert purpose in specialist_doc
