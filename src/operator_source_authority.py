@@ -409,23 +409,20 @@ def render_operator_hierarchical_distillation(
                 f"hierarchical distillation unknown parent for {identity!r}"
             )
 
-    # Explicit cycle detection before traversal avoids unbounded recursion.
+    # Iterative parent-chain validation avoids Python recursion limits when
+    # thousands of original Operator statements form a deep hierarchy.
     seen: set[str] = set()
-    visiting: set[str] = set()
-    def visit(identity: str) -> None:
-        if identity in visiting:
-            raise OperatorSourceAuthorityError("hierarchical distillation parent cycle")
-        if identity in seen:
-            return
-        visiting.add(identity)
-        parent = parents[identity]
-        if parent is not None:
-            visit(parent)
-        visiting.remove(identity)
-        seen.add(identity)
-
     for identity in source_order:
-        visit(identity)
+        if identity in seen:
+            continue
+        path: set[str] = set()
+        current: str | None = identity
+        while current is not None and current not in seen:
+            if current in path:
+                raise OperatorSourceAuthorityError("hierarchical distillation parent cycle")
+            path.add(current)
+            current = parents[current]
+        seen.update(path)
 
     children: dict[str | None, list[str]] = {None: []}
     for identity in source_order:
@@ -433,7 +430,12 @@ def render_operator_hierarchical_distillation(
 
     bullets: list[dict[str, Any]] = []
     markdown_lines: list[str] = []
-    def emit(identity: str, depth: int) -> None:
+    # Preserve preorder and sibling order without a recursive emitter.
+    stack: list[tuple[str, int]] = [
+        (identity, 0) for identity in reversed(children[None])
+    ]
+    while stack:
+        identity, depth = stack.pop()
         source = rows[identity]
         bullets.append({
             "proposition_id": identity,
@@ -458,11 +460,10 @@ def render_operator_hierarchical_distillation(
         markdown_lines.append(
             f"{indent}- VERBATIM [{identity}] ({source['source_ref']}): {displayed_text}"
         )
-        for child in children.get(identity, []):
-            emit(child, depth + 1)
+        stack.extend(
+            (child, depth + 1) for child in reversed(children.get(identity, []))
+        )
 
-    for root in children[None]:
-        emit(root, 0)
     return {
         "source_count": len(source_order),
         "bullets": bullets,
