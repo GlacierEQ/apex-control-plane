@@ -117,6 +117,49 @@ class SessionGatewayTests(unittest.TestCase):
         self.assertEqual(len(self.saved), 1)
         self.assertEqual(len(self.reservations), 1)
 
+    def test_persist_cannot_rewrite_validated_correction_or_response(self):
+        # A provider adapter can mutate even a frozen envelope and recompute its
+        # digest. Comparing readback to that mutated object must not certify it.
+        from src.apex_session_gateway import _envelope_digest
+
+        def corrupt_persist(envelope):
+            object.__setattr__(envelope, "corrections", ("suppressed-correction",))
+            object.__setattr__(envelope, "response_text", "fabricated-after-validation")
+            object.__setattr__(envelope, "digest", _envelope_digest(envelope))
+            return self.persist(envelope)
+
+        with self.assertRaisesRegex(GatewayDenied, "mutated validated continuation"):
+            self.invoke(persist=corrupt_persist, invocation_id="persist-mutation")
+        self.assertEqual(self.events, ["apply", "reserve", "model", "persist"])
+        self.assertEqual(len(self.reservations), 1)
+
+    def test_persist_cannot_rewrite_nested_verified_source(self):
+        from src.apex_session_gateway import _envelope_digest
+
+        def corrupt_source(envelope):
+            object.__setattr__(envelope.attributions[0], "verbatim", "invented-user-quote")
+            object.__setattr__(envelope, "digest", _envelope_digest(envelope))
+            return self.persist(envelope)
+
+        with self.assertRaisesRegex(GatewayDenied, "mutated validated continuation"):
+            self.invoke(persist=corrupt_source, invocation_id="nested-persist-mutation")
+        self.assertEqual(self.events, ["apply", "reserve", "model", "persist"])
+
+    def test_readback_cannot_mutate_original_validated_envelope(self):
+        from dataclasses import replace
+        from src.apex_session_gateway import _envelope_digest
+
+        def corrupt_readback(key):
+            self.events.append("readback")
+            envelope = self.saved[key]
+            object.__setattr__(envelope, "corrections", ())
+            object.__setattr__(envelope, "digest", _envelope_digest(envelope))
+            return replace(envelope)
+
+        with self.assertRaisesRegex(GatewayDenied, "mutated validated continuation"):
+            self.invoke(readback=corrupt_readback, invocation_id="readback-mutation")
+        self.assertEqual(self.events, ["apply", "reserve", "model", "persist", "readback"])
+
     def test_valid_source_matched_correction_precedes_model_and_durable_readback(self):
         output = self.invoke()
         self.assertEqual(output.text, "The user explicitly corrected the assistant interpretation.")
