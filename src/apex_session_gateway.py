@@ -404,6 +404,13 @@ def run_admitted_session(
         require_unchanged_admission()
         _validate_output(output, receipt, resolve_source)
         require_unchanged_admission()
+        # The model output is frozen only by convention: a provider callback
+        # retaining its reference can use object.__setattr__ after validation.
+        # Bind the exact user-facing response before crossing that boundary.
+        validated_output_fields = (
+            output.text, output.corrections_applied,
+            output.attributions, output.memory_proposals,
+        )
         envelope = ContinuationEnvelope(
             operation_key=key,
             chat_session_id=receipt.chat_session_id,
@@ -435,6 +442,14 @@ def run_admitted_session(
         validated_snapshot = _snapshot(envelope)
         validated_digest = envelope.digest
 
+        def require_unchanged_model_output() -> None:
+            if (
+                not isinstance(output, GatewayModelOutput)
+                or (output.text, output.corrections_applied,
+                    output.attributions, output.memory_proposals) != validated_output_fields
+            ):
+                raise GatewayDenied("model output mutated after validation")
+
         def require_unchanged_continuation() -> None:
             try:
                 if (_snapshot(envelope) != validated_snapshot
@@ -446,10 +461,12 @@ def run_admitted_session(
         try:
             checkpoint = persist(envelope)
             require_unchanged_continuation()
+            require_unchanged_model_output()
             if checkpoint is None:
                 raise GatewayDenied("no durable checkpoint was returned")
             persisted = readback(checkpoint)
             require_unchanged_continuation()
+            require_unchanged_model_output()
         except GatewayDenied:
             raise
         except Exception as exc:
@@ -471,7 +488,19 @@ def run_admitted_session(
             raise GatewayDenied("continuation readback invalid") from exc
         if not matches_validated:
             raise GatewayDenied("continuation readback differs from admitted output")
-        return output
+        require_unchanged_model_output()
+        # Return a detached, source-validated value, not the callback-owned
+        # object that could still be modified after the gateway returns.
+        from dataclasses import replace
+        return GatewayModelOutput(
+            text=validated_output_fields[0],
+            corrections_applied=validated_output_fields[1],
+            attributions=tuple(replace(item) for item in validated_output_fields[2]),
+            memory_proposals=tuple(
+                MemoryProposal(item.kind, replace(item.source))
+                for item in validated_output_fields[3]
+            ),
+        )
 
     return execute_with_recovered_context(
         journal=journal, chat_session_id=session, kernel=kernel,
