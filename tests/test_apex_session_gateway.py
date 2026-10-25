@@ -82,8 +82,11 @@ class SessionGatewayTests(unittest.TestCase):
         return envelope.operation_key
 
     def readback(self, key):
+        # Test-only synthetic independent retrieval. The SQLite suite proves
+        # real durable storage separately; an object echo is not a readback.
+        from dataclasses import replace
         self.events.append("readback")
-        return self.saved[key]
+        return replace(self.saved[key])
 
     def invoke(self, *, model=None, resolve_source=None, expected="case-A",
                apply=None, persist=None, readback=None, invocation_id="turn-1"):
@@ -98,6 +101,21 @@ class SessionGatewayTests(unittest.TestCase):
             persist=persist if persist is not None else self.persist,
             readback=readback if readback is not None else self.readback,
         )
+
+    def test_in_memory_echo_cannot_count_as_independent_checkpoint(self):
+        # An echo of the object handed to persist proves no independent read.
+        # It previously passed equality and digest checks, falsely certifying
+        # the storage boundary. This guard is necessary, not proof of a real
+        # provider: an authenticated host must still supply native readback.
+        def echo(key):
+            self.events.append("readback")
+            return self.saved[key]
+
+        with self.assertRaisesRegex(GatewayDenied, "reused in-memory envelope"):
+            self.invoke(readback=echo)
+        self.assertEqual(self.events, ["apply", "reserve", "model", "persist", "readback"])
+        self.assertEqual(len(self.saved), 1)
+        self.assertEqual(len(self.reservations), 1)
 
     def test_valid_source_matched_correction_precedes_model_and_durable_readback(self):
         output = self.invoke()
