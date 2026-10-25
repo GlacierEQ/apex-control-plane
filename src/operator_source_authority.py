@@ -334,8 +334,9 @@ def render_operator_hierarchical_distillation(
     source_bindings: list[Mapping[str, Any]],
     parents: Mapping[str, str | None],
     source_resolver: SourceResolver,
+    expected_proposition_ids: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
-    """Render a complete, source-linked parent/child outline of Operator words.
+    """Render a source-linked parent/child outline of Operator words.
 
     This is a *positive execution route*, not a new startup or permission
     gate. The caller supplies the parent/child classification; that structure
@@ -351,6 +352,19 @@ def render_operator_hierarchical_distillation(
     if not callable(source_resolver):
         raise OperatorSourceAuthorityError("hierarchical distillation source resolver required")
 
+    # Source coverage cannot be inferred from whatever subset a model supplies.
+    # An independently inventoried corpus is a HOST responsibility; this optional
+    # expected set verifies consistency with the caller's inventory, not the
+    # independent completeness of that inventory itself.
+    expected_set: set[str] | None = None
+    if expected_proposition_ids is not None:
+        if (not isinstance(expected_proposition_ids, (list, tuple))
+                or not expected_proposition_ids
+                or not all(isinstance(x, str) and x.strip() for x in expected_proposition_ids)
+                or len(set(expected_proposition_ids)) != len(expected_proposition_ids)):
+            raise OperatorSourceAuthorityError("expected source inventory requires unique nonempty identifiers")
+        expected_set = set(expected_proposition_ids)
+
     rows: dict[str, dict[str, str]] = {}
     source_order: list[str] = []
     for position, binding in enumerate(source_bindings):
@@ -363,6 +377,7 @@ def render_operator_hierarchical_distillation(
             binding, resolver=source_resolver,
             prefix=f"hierarchical_distillation[{position}]",
             require_unsuperseded=False,
+            allow_historical_quote_states=True,
         )
         if verified.errors or verified.span_text is None:
             raise OperatorSourceAuthorityError(
@@ -373,8 +388,17 @@ def render_operator_hierarchical_distillation(
         rows[identity] = {
             "source_ref": str(binding["source_ref"]),
             "original_text": verified.span_text,
+            "source_state": str(binding["contradiction_state"]),
+            "superseded_by": str(binding.get("superseded_by") or ""),
+            "temporal_context": str(binding.get("temporal_context") or ""),
         }
 
+    if expected_set is not None and expected_set != set(source_order):
+        missing = sorted(expected_set - set(source_order))
+        extra = sorted(set(source_order) - expected_set)
+        raise OperatorSourceAuthorityError(
+            f"expected source inventory missing={missing!r} unexpected={extra!r}"
+        )
     if set(parents.keys()) != set(source_order):
         raise OperatorSourceAuthorityError(
             "hierarchical distillation parents must exactly cover every original statement"
@@ -419,6 +443,13 @@ def render_operator_hierarchical_distillation(
             "source_ref": source["source_ref"],
             "source_author": "operator_source_record",
             "structure_author": "derived_organization_only",
+            "source_state": source["source_state"],
+            "superseded_by": source["superseded_by"] or None,
+            "temporal_context": source["temporal_context"],
+            "direction_authority": (
+                "historical_quote_only" if source["source_state"] in {"superseded", "conflicted"}
+                else "source_quote_not_external_fact"
+            ),
         })
         indent = "  " * depth
         # The structured original_text is untouched; continuation indentation
@@ -437,5 +468,10 @@ def render_operator_hierarchical_distillation(
         "bullets": bullets,
         "markdown": "\n".join(markdown_lines) + "\n",
         "projection_author": "derived_organization_only",
-        "complete_source_coverage": len(bullets) == len(source_order),
+        "supplied_binding_coverage": len(bullets) == len(source_order),
+        "complete_source_coverage": expected_set is not None and len(bullets) == len(expected_set),
+        "coverage_scope": (
+            "caller_inventory_match_not_independent_corpus_proof"
+            if expected_set is not None else "supplied_bindings_only"
+        ),
     }
