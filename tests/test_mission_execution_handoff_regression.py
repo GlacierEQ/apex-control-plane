@@ -82,6 +82,39 @@ class RecoveredMissionExecutionTests(unittest.TestCase):
         ])
         self.assertEqual(len(self.store), 1)
 
+    def test_zero_completed_lanes_can_start_first_authorized_action(self):
+        initial = {
+            "mission_id": "CHERRY", "cursor": "cursor-11",
+            "applied_correction_ids": ["owner-correction"],
+            "completed_lanes": [],
+            "evidence_refs": [],
+            "claimed_complete": False,
+        }
+        result = self.invoke(execution_evidence=initial)
+        self.assertEqual(result["native_id"], "private-artifact-42")
+        self.assertEqual(len(self.store), 1)
+
+    def test_partial_mission_continues_another_independent_lane_without_replay(self):
+        self.invoke()
+        def second_execute():
+            self.events.append("execute-2")
+            return {"native_id": "private-artifact-43"}
+        second = self.invoke(
+            operation_id="artifact-2", execute=second_execute,
+            readback=lambda result: result["native_id"] == "private-artifact-43",
+            verify_continuation=lambda key: self.store[key].native_result["native_id"] == "private-artifact-43",
+        )
+        self.assertEqual(second["native_id"], "private-artifact-43")
+        self.assertEqual(len(self.store), 2)
+        self.assertIn("CHERRY:case-provider:write-private-artifact:artifact-1", self.store)
+        self.assertIn("CHERRY:case-provider:write-private-artifact:artifact-2", self.store)
+        self.assertEqual(self.events.count("execute"), 1)
+        self.assertEqual(self.events.count("execute-2"), 1)
+        with self.assertRaisesRegex(AdmissionDenied, "already reserved"):
+            self.invoke()
+        self.assertEqual(len(self.store), 2)
+        self.assertEqual(self.events.count("execute"), 1)
+
     def test_valid_new_mission_works_without_fidelity_snapshot(self):
         result = self.invoke(mission_scope=None, execution_evidence=None)
         self.assertEqual(result["native_id"], "private-artifact-42")
