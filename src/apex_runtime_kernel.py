@@ -423,13 +423,22 @@ class ApexRuntimeKernel:
         _require_receipt_ref(reference)
         if self.phase is RuntimePhase.COMPLETE:
             raise RuntimeViolation("completed task cannot be retroactively blocked")
-        if self.phase is not RuntimePhase.BLOCKED:
+        # A failed provider route cannot freeze unrelated authorized work.
+        # Keep the live execution phase and reconcile via an alternative route.
+        continue_execution = (
+            self.task.mode is TaskMode.MUTATION
+            and self.phase is RuntimePhase.EXECUTING
+        )
+        if not continue_execution and self.phase is not RuntimePhase.BLOCKED:
             self.task.resume_phase = self.phase
         if reason_text not in self.task.unresolved_blockers:
             self.task.unresolved_blockers.append(reason_text)
         self._record_receipt("blocker", reference, False, {"reason": reason_text})
-        self.phase = RuntimePhase.BLOCKED
-        self._audit_event("route_blocked")
+        if continue_execution:
+            self._audit_event("provider_route_failed_alternative_execution_available")
+        else:
+            self.phase = RuntimePhase.BLOCKED
+            self._audit_event("route_blocked")
         return self.snapshot()
 
     def resolve_blocker(
@@ -438,7 +447,8 @@ class ApexRuntimeKernel:
         *,
         resolution_reference: str,
     ) -> RuntimeSnapshot:
-        self._require_phase(RuntimePhase.BLOCKED)
+        if self.phase is not RuntimePhase.BLOCKED and self.task.mode is not TaskMode.MUTATION:
+            raise RuntimeViolation("route reconciliation requires active mutation or blocked phase")
         reason_text = _require_text(reason, "blocker reason")
         if reason_text not in self.task.unresolved_blockers:
             raise RuntimeViolation("specified blocker is not unresolved")
@@ -446,6 +456,10 @@ class ApexRuntimeKernel:
         self.task.unresolved_blockers.remove(reason_text)
         if self.task.unresolved_blockers:
             self._audit_event("blocker_partially_resolved")
+            return self.snapshot()
+
+        if self.phase is not RuntimePhase.BLOCKED:
+            self._audit_event("route_reconciled_while_execution_continued")
             return self.snapshot()
 
         resume = self.task.resume_phase or RuntimePhase.READY
