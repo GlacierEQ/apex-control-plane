@@ -33,13 +33,18 @@ jobs:
         run: python -m compileall -q src tests
       - name: Test safety and resilience invariants
         run: python -m pytest -q
-      - name: Proactive smoke test emits a before/after receipt
+      - name: Control plane CLI receipt smoke (not a provider execution claim)
         run: |
           python src/control_plane.py > /tmp/casebrain-smoke.json
-          test -s /tmp/casebrain-smoke.json
-          grep -q '"status": "proactive"' /tmp/casebrain-smoke.json
-          grep -q '"diff"' /tmp/casebrain-smoke.json
-          if grep -q '"external_action_authorized": true' /tmp/casebrain-smoke.json; then
-            echo "smoke output must not manufacture blanket external authorization" >&2
-            exit 1
-          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          proof = json.loads(Path("/tmp/casebrain-smoke.json").read_text())
+          assert proof.get("status") == "ok", "CLI receipt did not report current status"
+          receipt = proof.get("receipt")
+          assert isinstance(receipt, dict), "missing CLI receipt"
+          assert isinstance(receipt.get("before"), dict), "missing before state"
+          assert isinstance(receipt.get("after"), dict), "missing after state"
+          assert receipt.get("label") == "control_plane_main", "wrong CLI entrypoint"
+          assert '"external_action_authorized": true' not in json.dumps(proof), "blanket external authorization invented"
+          PY
