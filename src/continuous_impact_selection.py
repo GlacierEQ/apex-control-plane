@@ -218,7 +218,11 @@ class ContinuousImpactSelector:
             attempts[(attempt.candidate_id, attempt.method_id, attempt.source_state_ref)] = attempt
         # Source-/authority-bound selection is mandatory for continuity workers
         # that assert require_authenticated_frontier. Legacy callers stay compatible.
-        guard = require_authenticated_frontier or bool(prior_attempts)
+        # A prior failure applies to that prior candidate, not every new
+        # independent internal action. Only an explicitly authenticated
+        # frontier or a candidate being retried needs full prior-proof metadata.
+        attempted_ids = {attempt.candidate_id for attempt in prior_attempts}
+        guard = require_authenticated_frontier
         seen: set[str] = set()
         eligible: list[ImpactCandidate] = []
         rejected: list[str] = []
@@ -238,11 +242,12 @@ class ContinuousImpactSelector:
                 rejection_reasons[candidate_id] = "operation class differs from Operator-bound task"
                 continue
             meta = candidate.metadata
-            if guard:
+            if guard or candidate_id in attempted_ids:
                 source_ref = meta.get("source_state_ref")
                 method_id = meta.get("method_id")
-                flags = ("authorized", "external_effect",
-                         "external_effect_authorized", "already_completed")
+                # A non-external action has no external permission to prove.
+                # The redundant field must not block already-authorized work.
+                flags = ("authorized", "external_effect", "already_completed")
                 if (
                     not isinstance(source_ref, str)
                     or ":" not in source_ref
@@ -262,7 +267,7 @@ class ContinuousImpactSelector:
                     rejected.append(candidate_id)
                     rejection_reasons[candidate_id] = "no explicit or standing Operator authorization"
                     continue
-                if meta["external_effect"] and not meta["external_effect_authorized"]:
+                if meta["external_effect"] and meta.get("external_effect_authorized") is not True:
                     rejected.append(candidate_id)
                     rejection_reasons[candidate_id] = "external effect requires distinct Operator authorization"
                     continue
