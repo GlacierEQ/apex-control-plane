@@ -1,0 +1,69 @@
+{
+  "schema": "glaciereq.jack.casebuilder-forge.v1",
+  "authority": {
+    "project_direction": "OPERATOR",
+    "jack_project_authority": false,
+    "specialist_project_authority": false
+  },
+  "topology": {
+    "forge_engine": "GlacierEQ/Casebuilder4000",
+    "live_case_corpus": "GlacierEQ/apex-legal-case",
+    "source_acquisition_plane": "GlacierEQ/computer-user",
+    "litigation_output_runtime": "GlacierEQ/legal-powerhouse",
+    "orchestration_plane": "GlacierEQ/apex-control-plane"
+  },
+  "non_absorption": {
+    "preserve_specialist_independence": true,
+    "casebuilder_remains_independently_upgradeable": true,
+    "case_corpus_remains_source_domain_state": true,
+    "control_plane_validates_receipts_not_internal_implementation": true
+  },
+  "execution": {
+    "receipt_schema": "casebuilder4000.build-receipt.v2",
+    "verified_action_requires_artifact_readback": true,
+    "packet_only_is_not_execution": true,
+    "generated_artifact_is_not_filed_or_served": true,
+    "verified_forge_build_is_not_case_completion": true
+  },
+  "evidence": {
+    "source_lineage_required": true,
+    "derived_chat_cannot_self_promote_to_native_proof": true,
+    "contradiction_is_attached_case_work_not_discarded_noise": true,
+    "proof_gap_blocks_unsupported_promotion_not_lower_state": true
+  },
+  "allegation_lifecycle": [
+    "raw",
+    "structured",
+    "sourced",
+    "corroborated",
+    "element_mapped",
+    "defense_tested",
+    "hardened",
+    "demand_ready",
+    "pleading_ready",
+    "referral_ready",
+    "trial_ready",
+    "quarantined",
+    "killed"
+  ],
+  "outputs": [
+    "case_state.json",
+    "master_fact_ledger.jsonl",
+    "master_event_timeline.csv",
+    "actor_index.csv",
+    "element_matrix.csv",
+    "allegation_matrix.csv",
+    "contradiction_matrix.csv",
+    "damages_ledger.csv",
+    "discovery_targets.csv",
+    "defense_matrix.csv",
+    "accountability_matrix.csv",
+    "allegation_links.csv",
+    "cross_exam_blocks.jsonl",
+    "actor_dossiers.json",
+    "event_development_plan.json",
+    "case_pressure_map.csv",
+    "conversion_map.json",
+    "max_impact_report.md"
+  ]
+}
