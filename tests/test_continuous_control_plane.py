@@ -346,6 +346,61 @@ def test_reawakened_work_is_claimable_without_another_manual_compile(tmp_path):
     assert claimed.state is WorkState.DISPATCHED
 
 
+def test_due_waiting_work_is_claimed_without_manual_wake_after_restart(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    compile_work(cp, work.work_id)
+    cp.transition(work.work_id, WorkState.DISPATCHED, reason="dispatch")
+    cp.transition(
+        work.work_id, WorkState.WAITING,
+        reason="temporarily_wait_for_due_time",
+        not_before=NOW + timedelta(minutes=1),
+    )
+    restarted = plane(tmp_path)
+    early = restarted.claim_next(
+        worker_id="scheduled-run", capabilities=[work.capability],
+        now=NOW + timedelta(seconds=59),
+    )
+    assert early is None
+    claimed = restarted.claim_next(
+        worker_id="scheduled-run", capabilities=[work.capability],
+        now=NOW + timedelta(minutes=1, seconds=1),
+    )
+    assert claimed is not None
+    assert claimed.work_id == work.work_id
+    assert claimed.state is WorkState.DISPATCHED
+    assert claimed.lease_owner == "scheduled-run"
+    assert claimed.not_before is None or claimed.not_before <= NOW + timedelta(minutes=1, seconds=1)
+    assert restarted.claim_next(
+        worker_id="second-worker", capabilities=[work.capability],
+        now=NOW + timedelta(minutes=1, seconds=2),
+    ) is None
+
+
+def test_due_waiting_work_is_recovered_alongside_other_ready_work(tmp_path):
+    cp = plane(tmp_path)
+    older = cp.ingest_event(event())[0]
+    compile_work(cp, older.work_id)
+    cp.transition(older.work_id, WorkState.DISPATCHED, reason="dispatch")
+    cp.transition(
+        older.work_id, WorkState.WAITING, reason="wait",
+        not_before=NOW + timedelta(seconds=4),
+    )
+    fresh_event = ControlEvent(
+        event_type="github.workflow.finished",
+        source_system="github", subject_id="CASE-CHR-004",
+        correlation_id="corr-2", occurred_at=NOW,
+        payload={"conclusion": "failure"}, dedupe_key="distinct-event",
+    )
+    incoming = cp.ingest_event(fresh_event)
+    ready = cp.claim_next(
+        worker_id="worker", capabilities=[older.capability] + [x.capability for x in incoming],
+        now=NOW + timedelta(seconds=5),
+    )
+    assert ready is not None
+    assert cp.work[older.work_id].state is not WorkState.WAITING
+
+
 def test_expired_nonexternal_lease_recovers_and_retries_without_manual_gate(tmp_path):
     cp = plane(tmp_path)
     work = cp.ingest_event(event())[0]
