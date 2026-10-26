@@ -151,3 +151,30 @@ def test_replay_readback_error_cannot_abort_independent_work(tmp_path):
         Step(another, lambda _: {"artifact": "local:second"}, lambda _: True),
     ])
     assert [r.state for r in result] == ["RECONCILE", "VERIFIED"]
+
+
+def test_plain_control_plane_entrypoint_executes_configured_internal_manifest(tmp_path):
+    import os
+    manifest = tmp_path / "live-work.json"
+    manifest.write_text(json.dumps({
+        "mission_id": "CHERRY",
+        "actions": [{
+            "operation_id": "ready-evidence",
+            "kind": "casebook",
+            "title": "Source-bound evidence",
+            "claimant": "Cherry",
+            "records": [{
+                "source_ref": "box:original-1",
+                "statement": "Preserved original source",
+                "classification": "SOURCE_REPORTED",
+            }],
+        }],
+    }), encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(Path(__file__).resolve().parents[1] / "src/control_plane.py")],
+        env={**os.environ, "GLACIEREQ_INTERNAL_MANIFEST": str(manifest)},
+        capture_output=True, text=True, check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert json.loads(proc.stdout)["results"][0]["state"] == "VERIFIED"
+    assert (tmp_path / "results" / "ready-evidence.md").is_file()
