@@ -18,6 +18,7 @@ from continuous_control_plane import (
     load_continuous_control_config,
 )
 import json
+from hashlib import sha256
 import os
 from pathlib import Path
 import runpy
@@ -81,12 +82,22 @@ if __name__ == "__main__":
             "status": "idle", "executed": False, "routes_run": 0,
             "reason": "no_execution_command_supplied",
         }, sort_keys=True))
-    elif (args[0] == "--run-next-local" and len(args) >= 5
-          and args[3] == "--"):
+    elif args[0] == "--run-next-local" and len(args) >= 5:
         # Operator supplies a concrete command; the persisted queue supplies
-        # the work identity. Do not execute instructions extracted from events.
+        # the work identity. Never execute instructions extracted from events.
         queue_root, capability = args[1], args[2]
-        command = args[4:]
+        verify_file = None
+        if args[3] == "--":
+            command = args[4:]
+        elif len(args) >= 7 and args[3] == "--verify-file" and args[5] == "--":
+            verify_file = Path(args[4])
+            command = args[6:]
+        else:
+            print(json.dumps({
+                "status": "failed", "executed": False, "routes_run": 0,
+                "reason": "usage: --run-next-local STORE CAPABILITY [--verify-file PATH] -- PROGRAM [ARG ...]",
+            }, sort_keys=True))
+            raise SystemExit(2)
         plane = ContinuousControlPlane.from_config(
             JsonlControlStore(queue_root),
             load_continuous_control_config(
@@ -95,7 +106,7 @@ if __name__ == "__main__":
             ),
         )
 
-        def execute_queued(item: WorkItem) -> ExecutionReceipt:
+        def execute_queued(item: WorkItem) -> ExecutionReceipt | list[ExecutionReceipt]:
             try:
                 process = subprocess.run(
                     command, check=False, text=True, capture_output=True,
@@ -104,7 +115,7 @@ if __name__ == "__main__":
                 stdout, stderr = process.stdout, process.stderr
             except OSError as exc:
                 code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
-            return ExecutionReceipt(
+            execution = ExecutionReceipt(
                 work_id=item.work_id,
                 mission_id=item.mission_id,
                 correlation_id=item.correlation_id,
@@ -118,6 +129,30 @@ if __name__ == "__main__":
                     "scope": "local process execution only; independent mission validation may remain",
                 },
             )
+            if code != 0 or verify_file is None:
+                return execution
+            try:
+                actual = verify_file.read_bytes()
+            except OSError:
+                # A missing or unreadable target is not independent proof.
+                return execution
+            return [
+                execution,
+                ExecutionReceipt(
+                    work_id=item.work_id,
+                    mission_id=item.mission_id,
+                    correlation_id=item.correlation_id,
+                    receipt_kind="verification",
+                    status="verified",
+                    source_system="apex-local-artifact-readback",
+                    details={
+                        "path": str(verify_file),
+                        "sha256": sha256(actual).hexdigest(),
+                        "bytes": len(actual),
+                        "scope": "verified file readback, not external provider completion",
+                    },
+                ),
+            ]
 
         result = plane.execute_next_local(
             worker_id="apex-local-cli",
