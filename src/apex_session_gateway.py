@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 @dataclass(frozen=True)
 class Recovery:
@@ -52,6 +52,7 @@ def execute_with_recovered_context(
     expected_mission_id: str,
     execute: Callable[[AdmissionReceipt], Any],
     apply_context: Callable[[Any], ContextApplication],
+    fact_keys: Sequence[str] = (),
 ) -> Any:
     """Recover, apply, then execute -- all from host-supplied objects.
 
@@ -77,6 +78,22 @@ def execute_with_recovered_context(
     application = apply_context(recovery)
     if not isinstance(application, ContextApplication):
         raise GatewayDenied("context application must be a ContextApplication")
+    # Applying THIS recovery requires a matching source, cursor, corrections
+    # and facts; merely returning a receipt cannot satisfy that obligation.
+    if (application.mission_id != recovery.mission_id
+            or application.source_ref != recovery.source_ref
+            or application.cursor != recovery.cursor
+            or tuple(application.corrections) != tuple(recovery.corrections)):
+        raise GatewayDenied("context application does not match recovered source, cursor and corrections")
+    if not isinstance(application.application_ref, str) or not application.application_ref.strip():
+        raise GatewayDenied("context application lacks a source-bound application reference")
+    if (not isinstance(fact_keys, (tuple, list))
+            or any(not isinstance(fact, str) or not fact.strip() for fact in fact_keys)):
+        raise GatewayDenied("required fact keys must be nonempty source identifiers")
+    if not set(fact_keys).issubset(set(recovery.facts)):
+        raise GatewayDenied("required fact keys missing from recovered source")
+    if not set(recovery.facts).issubset(set(application.facts)):
+        raise GatewayDenied("recovered facts were not applied")
     receipt = AdmissionReceipt(
         mission_id=recovery.mission_id,
         chat_session_id=chat_session_id,

@@ -15,7 +15,7 @@ steps:
       test "$actual" = "$BUILDKITE_COMMIT"
       mkdir -p artifacts/buildkite
       python3 --version
-      python3 -m py_compile src/apex_proactive.py src/apex_session_gateway.py src/connector_mission_router.py src/control_plane.py src/model_attractor_defense.py
+      python3 -m py_compile src/mission_fidelity_admission.py src/apex_session_gateway.py src/connector_mission_router.py src/control_plane.py src/model_attractor_defense.py
       python3 -m json.tool config/continuous_control_plane.json >/dev/null
       python3 -m json.tool config/model_attractor_defense_policy.json >/dev/null
       python3 -m pip install --upgrade pytest

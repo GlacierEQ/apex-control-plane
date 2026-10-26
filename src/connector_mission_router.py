@@ -179,8 +179,11 @@ def dispatch_recovered_once(
                 fidelity = assess_mission_fidelity(mission_scope, execution_evidence)
             except FidelityViolation as exc:
                 raise AdmissionDenied("mission fidelity rejected: " + str(exc)) from exc
-            if fidelity["status"] != "COMPLETE":
-                raise AdmissionDenied("mission fidelity incomplete: " + ", ".join(fidelity["remaining_lanes"]))
+            # PARTIAL mission coverage is the normal reason to execute the
+            # next authorized step. Never demand a completed mission BEFORE
+            # dispatch; the assessor already rejects false completion claims.
+            if fidelity["status"] not in {"PARTIAL", "COMPLETE"}:
+                raise AdmissionDenied("unrecognized mission fidelity state")
             if fidelity["mission_id"] != expected_mission_id or fidelity["cursor"] != receipt.cursor:
                 raise AdmissionDenied("mission fidelity does not match recovered context")
             if not set(receipt.recovery.corrections).issubset(set(fidelity["applied_correction_ids"])):
