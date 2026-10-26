@@ -383,3 +383,91 @@ def test_expired_external_lease_is_not_blindly_replayed(tmp_path):
     assert first is not None
     retried = cp.claim_next(worker_id="replacement", capabilities=[work.capability], now=NOW + timedelta(seconds=2))
     assert retried is None
+
+
+def test_execute_next_local_runs_real_worker_and_persists_success(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    product = tmp_path / "actual-output.txt"
+
+    def run(item):
+        product.write_text(item.objective)
+        assert product.read_text() == item.objective
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-executor",
+            details={"artifact": str(product), "verified_bytes": len(product.read_bytes())},
+        )
+
+    result = cp.execute_next_local(
+        worker_id="local-worker", capabilities=[work.capability],
+        executor=run, now=NOW,
+    )
+    assert product.read_text() == work.objective
+    assert result["status"] == "complete"
+    assert result["executed"] is True
+    assert result["work_id"] == work.work_id
+    restored = plane(tmp_path)
+    assert restored.work[work.work_id].state is WorkState.COMPLETE
+    assert len(restored.receipts) == 1
+
+
+def test_execute_next_local_skips_external_writes_and_executes_local_work(tmp_path):
+    cp = plane(tmp_path)
+    external = cp.ingest_event(event("dockets.referral.ready"))[0]
+    local = cp.ingest_event(event())[0]
+    seen = []
+    def run(item):
+        seen.append(item.work_id)
+        return None
+
+    result = cp.execute_next_local(
+        worker_id="local", capabilities=[external.capability, local.capability],
+        executor=run, now=NOW,
+    )
+    assert seen == [local.work_id]
+    assert result["status"] == "unconfirmed"
+    assert cp.work[external.work_id].state is WorkState.RECEIVED
+    assert cp.work[local.work_id].state is WorkState.RECONCILING
+
+
+def test_execute_next_local_failed_receipt_requeues_nonexternal_work(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    def fail(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="execution",
+            status="failed", source_system="local-process",
+            details={"exit_code": 17},
+        )
+    result = cp.execute_next_local(worker_id="local", capabilities=[work.capability], executor=fail, now=NOW)
+    assert result["status"] == "retryable_failure"
+    assert result["exit_code"] == 17
+    assert cp.work[work.work_id].state is WorkState.RECEIVED
+    assert cp.work[work.work_id].attempt == 1
+
+
+def test_execute_next_local_does_not_promote_unverified_execution_receipt(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    def run(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="execution",
+            status="verified", source_system="local-process",
+            details={"exit_code": 0, "scope": "command exited 0"},
+        )
+    result = cp.execute_next_local(worker_id="local", capabilities=[work.capability], executor=run, now=NOW)
+    assert result["executed"] is True
+    assert result["status"] == "awaiting_receipts"
+    assert cp.work[work.work_id].state is WorkState.VERIFYING
+    assert any(r.receipt_kind == "execution" for r in cp.receipts.values())
+
+
+def test_execute_next_local_idle_does_not_claim_work_or_report_execution(tmp_path):
+    cp = plane(tmp_path)
+    result = cp.execute_next_local(worker_id="local", capabilities=["case.response.ingest"], executor=lambda item: None)
+    assert result["status"] == "idle"
+    assert result["executed"] is False
