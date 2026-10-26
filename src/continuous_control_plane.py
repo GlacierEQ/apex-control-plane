@@ -66,8 +66,8 @@ ALLOWED_TRANSITIONS = {
     WorkState.RECEIVED: {WorkState.HYDRATING, WorkState.DISPATCHED, WorkState.BLOCKED},
     WorkState.HYDRATING: {WorkState.COMPILED, WorkState.DISPATCHED, WorkState.BLOCKED},
     WorkState.COMPILED: {WorkState.DISPATCHED, WorkState.BLOCKED},
-    WorkState.DISPATCHED: {WorkState.EXECUTING, WorkState.WAITING, WorkState.RECONCILING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
-    WorkState.EXECUTING: {WorkState.RECONCILING, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
+    WorkState.DISPATCHED: {WorkState.RECEIVED, WorkState.EXECUTING, WorkState.WAITING, WorkState.RECONCILING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
+    WorkState.EXECUTING: {WorkState.RECEIVED, WorkState.RECONCILING, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
     WorkState.WAITING: {WorkState.RECEIVED, WorkState.RECONCILING, WorkState.BLOCKED},
     WorkState.RECONCILING: {WorkState.CHANGESET_READY, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
     WorkState.CHANGESET_READY: {WorkState.MUTATING, WorkState.VERIFYING, WorkState.BLOCKED},
@@ -493,12 +493,40 @@ class ContinuousControlPlane:
             self.checkpoint(receipt.mission_id)
             return receipt
 
+    def _recover_expired_leases_unlocked(self, instant: datetime) -> list[WorkItem]:
+        """Reclaim local work under the store lock; reconcile external actions first.
+
+        A historical attempt counter is telemetry, not permission to terminate
+        uncompleted work. The store transaction makes recovery and reassignment
+        atomic across worker instances, preventing double claims.
+        """
+        changed: list[WorkItem] = []
+        for item in list(self.work.values()):
+            if item.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
+                continue
+            if item.lease_expires_at is None or item.lease_expires_at > instant:
+                continue
+            if item.external_action:
+                target, reason = WorkState.RECONCILING, "external_action_lease_expired_reconcile_before_retry"
+            else:
+                target, reason = WorkState.RECEIVED, "local_lease_expired_reclaim_for_continuation"
+            recovered = replace(
+                item, state=target, lease_owner=None, lease_expires_at=None,
+                updated_at=instant,
+            )
+            self.work[item.work_id] = recovered
+            self.store.append_work(recovered, reason=reason)
+            self.checkpoint(recovered.mission_id)
+            changed.append(recovered)
+        return changed
+
     def claim_next(self, *, worker_id: str, capabilities: Iterable[str],
                    now: datetime | None = None, lease_seconds: int = 90) -> WorkItem | None:
         instant = _require_aware(now or utc_now(), "now")
         supported = set(capabilities)
         with self.store.transaction():
             self._refresh()
+            self._recover_expired_leases_unlocked(instant)
             candidates = [
                 item for item in self.work.values()
                 # New and resumed work must be executable without a second
@@ -507,7 +535,6 @@ class ContinuousControlPlane:
                 and item.capability in supported
                 and (item.not_before is None or item.not_before <= instant)
                 and (item.lease_expires_at is None or item.lease_expires_at <= instant)
-                and item.attempt < item.max_attempts
             ]
             if not candidates:
                 return None
@@ -532,20 +559,9 @@ class ContinuousControlPlane:
 
     def reconcile_expired_leases(self, now: datetime | None = None) -> list[WorkItem]:
         instant = _require_aware(now or utc_now(), "now")
-        changed = []
-        for item in list(self.work.values()):
-            if item.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
-                continue
-            if item.lease_expires_at is None or item.lease_expires_at > instant:
-                continue
-            if item.external_action:
-                target, reason = WorkState.RECONCILING, "external_action_lease_expired_reconcile_before_retry"
-            elif item.attempt >= item.max_attempts:
-                target, reason = WorkState.DEAD_LETTER, "max_attempts_exhausted"
-            else:
-                target, reason = WorkState.BLOCKED, "lease_expired_requires_recovery"
-            changed.append(self.transition(item.work_id, target, reason=reason))
-        return changed
+        with self.store.transaction():
+            self._refresh()
+            return self._recover_expired_leases_unlocked(instant)
 
     def checkpoint(self, mission_id: str) -> dict[str, Any]:
         items = [item for item in self.work.values() if item.mission_id == mission_id]
