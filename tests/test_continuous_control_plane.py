@@ -133,7 +133,7 @@ def test_stale_second_instance_cannot_double_claim(tmp_path):
     assert cp2.claim_next(worker_id="worker-2",capabilities=[work.capability],now=NOW) is None
 
 
-def test_expired_dispatched_work_at_legacy_attempt_limit_reclaims(tmp_path):
+def test_expired_dispatched_work_continues_beyond_legacy_attempt_count(tmp_path):
     cp=plane(tmp_path)
     work=cp.ingest_event(event())[0]
     compile_work(cp,work.work_id)
@@ -141,15 +141,38 @@ def test_expired_dispatched_work_at_legacy_attempt_limit_reclaims(tmp_path):
     assert claimed is not None
     exhausted=replace(claimed,max_attempts=claimed.attempt)
     cp.work[work.work_id]=exhausted
-    cp.store.append_work(exhausted,reason="legacy_attempt_limit")
+    cp.store.append_work(exhausted,reason="legacy_retry_counter_reached")
     changed=cp.reconcile_expired_leases(NOW+timedelta(seconds=2))
     assert changed[0].state is WorkState.RECEIVED
-    assert changed[0].lease_owner is None
-    assert changed[0].lease_expires_at is None
-    reclaimed=cp.claim_next(worker_id="worker-2",capabilities=[work.capability],now=NOW+timedelta(seconds=2))
-    assert reclaimed is not None
-    assert reclaimed.work_id == work.work_id
-    assert reclaimed.attempt > reclaimed.max_attempts
+    recovered=plane(tmp_path)
+    next_attempt=recovered.claim_next(
+        worker_id="recovery-worker",capabilities=[work.capability],now=NOW+timedelta(seconds=3)
+    )
+    assert next_attempt is not None
+    assert next_attempt.work_id == work.work_id
+    assert next_attempt.attempt == claimed.attempt + 1
+    assert next_attempt.state is WorkState.DISPATCHED
+
+
+def test_atomic_lease_recovery_does_not_dead_letter_at_legacy_zero_budget(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    original = cp.claim_next(
+        worker_id="first-worker", capabilities=[work.capability], now=NOW, lease_seconds=1
+    )
+    assert original is not None
+    old_budget = replace(original, max_attempts=0)
+    cp.work[work.work_id] = old_budget
+    cp.store.append_work(old_budget, reason="preexisting_zero_legacy_retry_budget")
+
+    another_instance = plane(tmp_path)
+    attempt = another_instance.claim_next(
+        worker_id="new-worker", capabilities=[work.capability], now=NOW+timedelta(seconds=5)
+    )
+    assert attempt is not None
+    assert attempt.work_id == original.work_id
+    assert attempt.state is WorkState.DISPATCHED
+    assert attempt.attempt == 2
 
 
 def test_naive_now_is_rejected_explicitly(tmp_path):
@@ -321,3 +344,185 @@ def test_reawakened_work_is_claimable_without_another_manual_compile(tmp_path):
     assert claimed is not None
     assert claimed.work_id == work.work_id
     assert claimed.state is WorkState.DISPATCHED
+
+
+def test_due_waiting_work_is_claimed_without_manual_wake_after_restart(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    compile_work(cp, work.work_id)
+    cp.transition(work.work_id, WorkState.DISPATCHED, reason="dispatch")
+    cp.transition(
+        work.work_id, WorkState.WAITING,
+        reason="temporarily_wait_for_due_time",
+        not_before=NOW + timedelta(minutes=1),
+    )
+    restarted = plane(tmp_path)
+    early = restarted.claim_next(
+        worker_id="scheduled-run", capabilities=[work.capability],
+        now=NOW + timedelta(seconds=59),
+    )
+    assert early is None
+    claimed = restarted.claim_next(
+        worker_id="scheduled-run", capabilities=[work.capability],
+        now=NOW + timedelta(minutes=1, seconds=1),
+    )
+    assert claimed is not None
+    assert claimed.work_id == work.work_id
+    assert claimed.state is WorkState.DISPATCHED
+    assert claimed.lease_owner == "scheduled-run"
+    assert claimed.not_before is None or claimed.not_before <= NOW + timedelta(minutes=1, seconds=1)
+    assert restarted.claim_next(
+        worker_id="second-worker", capabilities=[work.capability],
+        now=NOW + timedelta(minutes=1, seconds=2),
+    ) is None
+
+
+def test_due_waiting_work_is_recovered_alongside_other_ready_work(tmp_path):
+    cp = plane(tmp_path)
+    older = cp.ingest_event(event())[0]
+    compile_work(cp, older.work_id)
+    cp.transition(older.work_id, WorkState.DISPATCHED, reason="dispatch")
+    cp.transition(
+        older.work_id, WorkState.WAITING, reason="wait",
+        not_before=NOW + timedelta(seconds=4),
+    )
+    fresh_event = ControlEvent(
+        event_type="github.workflow.finished",
+        source_system="github", subject_id="CASE-CHR-004",
+        correlation_id="corr-2", occurred_at=NOW,
+        payload={"conclusion": "failure"}, dedupe_key="distinct-event",
+    )
+    incoming = cp.ingest_event(fresh_event)
+    ready = cp.claim_next(
+        worker_id="worker", capabilities=[older.capability] + [x.capability for x in incoming],
+        now=NOW + timedelta(seconds=5),
+    )
+    assert ready is not None
+    assert cp.work[older.work_id].state is not WorkState.WAITING
+
+
+def test_expired_nonexternal_lease_recovers_and_retries_without_manual_gate(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    first = cp.claim_next(worker_id="crashed-worker", capabilities=[work.capability], now=NOW, lease_seconds=1)
+    assert first is not None and first.attempt == 1
+
+    # A new worker must be able to recover the orphaned local task and claim it.
+    restarted = plane(tmp_path)
+    retried = restarted.claim_next(
+        worker_id="replacement-worker",
+        capabilities=[work.capability],
+        now=NOW + timedelta(seconds=2), lease_seconds=30,
+    )
+    assert retried is not None
+    assert retried.work_id == work.work_id
+    assert retried.attempt == 2
+    assert retried.lease_owner == "replacement-worker"
+    assert retried.state is WorkState.DISPATCHED
+
+
+def test_explicit_reconciliation_requeues_expired_local_task(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    cp.claim_next(worker_id="worker", capabilities=[work.capability], now=NOW, lease_seconds=1)
+    recovered = cp.reconcile_expired_leases(NOW + timedelta(seconds=2))
+    assert len(recovered) == 1
+    assert recovered[0].state is WorkState.RECEIVED
+    assert recovered[0].lease_owner is None
+
+
+def test_expired_external_lease_is_not_blindly_replayed(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event("dockets.referral.ready"))[0]
+    first = cp.claim_next(worker_id="sender", capabilities=[work.capability], now=NOW, lease_seconds=1)
+    assert first is not None
+    retried = cp.claim_next(worker_id="replacement", capabilities=[work.capability], now=NOW + timedelta(seconds=2))
+    assert retried is None
+
+
+def test_execute_next_local_runs_real_worker_and_persists_success(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    product = tmp_path / "actual-output.txt"
+
+    def run(item):
+        product.write_text(item.objective)
+        assert product.read_text() == item.objective
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-executor",
+            details={"artifact": str(product), "verified_bytes": len(product.read_bytes())},
+        )
+
+    result = cp.execute_next_local(
+        worker_id="local-worker", capabilities=[work.capability],
+        executor=run, now=NOW,
+    )
+    assert product.read_text() == work.objective
+    assert result["status"] == "complete"
+    assert result["executed"] is True
+    assert result["work_id"] == work.work_id
+    restored = plane(tmp_path)
+    assert restored.work[work.work_id].state is WorkState.COMPLETE
+    assert len(restored.receipts) == 1
+
+
+def test_execute_next_local_skips_external_writes_and_executes_local_work(tmp_path):
+    cp = plane(tmp_path)
+    external = cp.ingest_event(event("dockets.referral.ready"))[0]
+    local = cp.ingest_event(event())[0]
+    seen = []
+    def run(item):
+        seen.append(item.work_id)
+        return None
+
+    result = cp.execute_next_local(
+        worker_id="local", capabilities=[external.capability, local.capability],
+        executor=run, now=NOW,
+    )
+    assert seen == [local.work_id]
+    assert result["status"] == "unconfirmed"
+    assert cp.work[external.work_id].state is WorkState.RECEIVED
+    assert cp.work[local.work_id].state is WorkState.RECONCILING
+
+
+def test_execute_next_local_failed_receipt_requeues_nonexternal_work(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    def fail(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="execution",
+            status="failed", source_system="local-process",
+            details={"exit_code": 17},
+        )
+    result = cp.execute_next_local(worker_id="local", capabilities=[work.capability], executor=fail, now=NOW)
+    assert result["status"] == "retryable_failure"
+    assert result["exit_code"] == 17
+    assert cp.work[work.work_id].state is WorkState.RECEIVED
+    assert cp.work[work.work_id].attempt == 1
+
+
+def test_execute_next_local_does_not_promote_unverified_execution_receipt(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    def run(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="execution",
+            status="verified", source_system="local-process",
+            details={"exit_code": 0, "scope": "command exited 0"},
+        )
+    result = cp.execute_next_local(worker_id="local", capabilities=[work.capability], executor=run, now=NOW)
+    assert result["executed"] is True
+    assert result["status"] == "awaiting_receipts"
+    assert cp.work[work.work_id].state is WorkState.VERIFYING
+    assert any(r.receipt_kind == "execution" for r in cp.receipts.values())
+
+
+def test_execute_next_local_idle_does_not_claim_work_or_report_execution(tmp_path):
+    cp = plane(tmp_path)
+    result = cp.execute_next_local(worker_id="local", capabilities=["case.response.ingest"], executor=lambda item: None)
+    assert result["status"] == "idle"
+    assert result["executed"] is False
