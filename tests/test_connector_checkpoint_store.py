@@ -166,6 +166,30 @@ class ConnectorContinuationSQLiteTests(unittest.TestCase):
         with sqlite3.connect(self.provider_path) as db:
             self.assertEqual(db.execute("SELECT count(*) FROM effects").fetchone()[0], 1)
 
+    def test_crashed_after_native_write_recovers_missing_checkpoint(self):
+        from src.connector_mission_router import RecoveredEffect
+        self.assertTrue(self.store.reserve_connector_effect(self.key))
+        self.provider_effect()  # The external action already happened before the crash.
+        replay = MissionCheckpointStore(self.path, mission_id="case-A")
+        attempts = []
+        result = dispatch_once(
+            self.mission, self.capability, "op-1",
+            replay.reserve_connector_effect,
+            lambda: attempts.append("duplicate"),
+            lambda receipt: self.provider_readback(receipt["native_id"]),
+            persist_continuation=lambda record: replay.persist_connector_continuation(
+                record, receipt_ref=record.native_result["native_id"], next_cursor="cursor-8"),
+            verify_continuation=replay.verify_connector_continuation,
+            reconcile_reserved=lambda key: RecoveredEffect(key, {"native_id": "provider-10"}, None),
+        )
+        self.assertEqual(result["native_id"], "provider-10")
+        self.assertEqual(attempts, [])
+        checkpoint = replay.load_connector_checkpoint(self.key)
+        self.assertEqual(checkpoint["receipt_ref"], "provider-10")
+        self.assertTrue(replay.verify_connector_continuation(checkpoint))
+        with sqlite3.connect(self.provider_path) as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM effects").fetchone()[0], 1)
+
     def test_stale_provider_cannot_be_resumed_or_replayed(self):
         from src.connector_mission_router import RecoveredEffect
         self._run()
