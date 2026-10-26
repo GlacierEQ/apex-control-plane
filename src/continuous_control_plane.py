@@ -66,8 +66,8 @@ ALLOWED_TRANSITIONS = {
     WorkState.RECEIVED: {WorkState.HYDRATING, WorkState.DISPATCHED, WorkState.BLOCKED},
     WorkState.HYDRATING: {WorkState.COMPILED, WorkState.DISPATCHED, WorkState.BLOCKED},
     WorkState.COMPILED: {WorkState.DISPATCHED, WorkState.BLOCKED},
-    WorkState.DISPATCHED: {WorkState.EXECUTING, WorkState.WAITING, WorkState.RECONCILING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
-    WorkState.EXECUTING: {WorkState.RECONCILING, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
+    WorkState.DISPATCHED: {WorkState.RECEIVED, WorkState.EXECUTING, WorkState.WAITING, WorkState.RECONCILING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
+    WorkState.EXECUTING: {WorkState.RECEIVED, WorkState.RECONCILING, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
     WorkState.WAITING: {WorkState.RECEIVED, WorkState.RECONCILING, WorkState.BLOCKED},
     WorkState.RECONCILING: {WorkState.CHANGESET_READY, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
     WorkState.CHANGESET_READY: {WorkState.MUTATING, WorkState.VERIFYING, WorkState.BLOCKED},
@@ -499,6 +499,26 @@ class ContinuousControlPlane:
         supported = set(capabilities)
         with self.store.transaction():
             self._refresh()
+            # A crashed local worker cannot permanently strand an admitted
+            # work item. Reclaim expired local leases inside the same atomic
+            # claim transaction; never blindly replay an uncertain external
+            # operation, which instead enters provider reconciliation.
+            for expired in list(self.work.values()):
+                if expired.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
+                    continue
+                if expired.lease_expires_at is None or expired.lease_expires_at > instant:
+                    continue
+                if expired.external_action:
+                    state, reason = WorkState.RECONCILING, "expired_external_lease_requires_provider_reconciliation"
+                elif expired.attempt >= expired.max_attempts:
+                    state, reason = WorkState.DEAD_LETTER, "local_retry_limit_reached"
+                else:
+                    state, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
+                recovered = replace(expired, state=state, lease_owner=None,
+                                    lease_expires_at=None, updated_at=instant)
+                self.work[expired.work_id] = recovered
+                self.store.append_work(recovered, reason=reason)
+                self.checkpoint(expired.mission_id)
             candidates = [
                 item for item in self.work.values()
                 # New and resumed work must be executable without a second
@@ -543,7 +563,7 @@ class ContinuousControlPlane:
             elif item.attempt >= item.max_attempts:
                 target, reason = WorkState.DEAD_LETTER, "max_attempts_exhausted"
             else:
-                target, reason = WorkState.BLOCKED, "lease_expired_requires_recovery"
+                target, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
             changed.append(self.transition(item.work_id, target, reason=reason))
         return changed
 

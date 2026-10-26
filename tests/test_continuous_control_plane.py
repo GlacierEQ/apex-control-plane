@@ -315,3 +315,42 @@ def test_reawakened_work_is_claimable_without_another_manual_compile(tmp_path):
     assert claimed is not None
     assert claimed.work_id == work.work_id
     assert claimed.state is WorkState.DISPATCHED
+
+
+def test_expired_nonexternal_lease_recovers_and_retries_without_manual_gate(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    first = cp.claim_next(worker_id="crashed-worker", capabilities=[work.capability], now=NOW, lease_seconds=1)
+    assert first is not None and first.attempt == 1
+
+    # A new worker must be able to recover the orphaned local task and claim it.
+    restarted = plane(tmp_path)
+    retried = restarted.claim_next(
+        worker_id="replacement-worker",
+        capabilities=[work.capability],
+        now=NOW + timedelta(seconds=2), lease_seconds=30,
+    )
+    assert retried is not None
+    assert retried.work_id == work.work_id
+    assert retried.attempt == 2
+    assert retried.lease_owner == "replacement-worker"
+    assert retried.state is WorkState.DISPATCHED
+
+
+def test_explicit_reconciliation_requeues_expired_local_task(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    cp.claim_next(worker_id="worker", capabilities=[work.capability], now=NOW, lease_seconds=1)
+    recovered = cp.reconcile_expired_leases(NOW + timedelta(seconds=2))
+    assert len(recovered) == 1
+    assert recovered[0].state is WorkState.RECEIVED
+    assert recovered[0].lease_owner is None
+
+
+def test_expired_external_lease_is_not_blindly_replayed(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event("dockets.referral.ready"))[0]
+    first = cp.claim_next(worker_id="sender", capabilities=[work.capability], now=NOW, lease_seconds=1)
+    assert first is not None
+    retried = cp.claim_next(worker_id="replacement", capabilities=[work.capability], now=NOW + timedelta(seconds=2))
+    assert retried is None

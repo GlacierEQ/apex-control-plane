@@ -374,7 +374,7 @@ def test_unrecognized_health_is_uncertain_not_a_veto_on_execution() -> None:
     result = fabric.execute(
         workload,
         [obs("new-provider", capabilities={"python"}, health="warming_up")],
-        lambda substrate, _: {"attempted": substrate},
+        lambda substrate, _: {"status": "success", "attempted": substrate},
     )
     assert result.ok is True
     assert result.substrate == "new-provider"
@@ -395,3 +395,83 @@ def test_actually_unavailable_provider_is_not_treated_as_executable() -> None:
     )
     assert result.ok is False
     assert called == []
+
+
+
+def test_explicit_failed_result_falls_back_instead_of_reporting_success() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload(
+        workload_id="execution:reported-error",
+        objective="do work rather than declare an error response successful",
+        capabilities=frozenset({"python"}),
+    )
+    attempted: list[str] = []
+    def execute(route: str, _: Workload) -> dict:
+        attempted.append(route)
+        return {"status": "failed", "error": "provider rejected operation"} if route == "primary" else {"status": "success", "receipt": "secondary-ok"}
+
+    result = fabric.execute(workload, [
+        obs("primary", capabilities={"python"}, score=0.99),
+        obs("secondary", capabilities={"python"}, score=0.75),
+    ], execute)
+    assert result.ok is True
+    assert result.substrate == "secondary"
+    assert attempted == ["primary", "secondary"]
+    assert result.failures[0]["substrate"] == "primary"
+
+
+def test_false_result_is_not_a_success_and_fallback_runs() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload("execution:false", "execute real work", frozenset({"python"}))
+    result = fabric.execute(workload, [
+        obs("primary", capabilities={"python"}, score=0.99),
+        obs("secondary", capabilities={"python"}, score=0.70),
+    ], lambda route, _: False if route == "primary" else {"status": "success", "receipt": "ok"})
+    assert result.ok is True
+    assert result.substrate == "secondary"
+
+
+def test_accepted_asynchronous_result_is_not_completed_or_retried() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload("execution:queued", "submit async work once", frozenset({"ci"}))
+    calls: list[str] = []
+    def execute(route: str, _: Workload) -> dict:
+        calls.append(route)
+        return {"status": "queued", "job_id": "job-12"}
+
+    result = fabric.execute(workload, [
+        obs("primary", capabilities={"ci"}, score=0.99),
+        obs("secondary", capabilities={"ci"}, score=0.80),
+    ], execute)
+    assert result.ok is False
+    assert result.status == "pending"
+    assert result.substrate == "primary"
+    assert calls == ["primary"]
+    assert result.result["job_id"] == "job-12"
+
+
+def test_silent_executor_return_cannot_claim_verified_success_or_blindly_retry() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload("execution:silent", "report honest result", frozenset({"python"}))
+    calls: list[str] = []
+    def execute(route: str, _: Workload) -> None:
+        calls.append(route)
+        return None
+
+    result = fabric.execute(workload, [
+        obs("primary", capabilities={"python"}, score=0.99),
+        obs("secondary", capabilities={"python"}, score=0.80),
+    ], execute)
+    assert result.ok is False
+    assert result.status == "unconfirmed"
+    assert calls == ["primary"]
+
+
+def test_failed_return_without_alternative_is_exhausted_not_success() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload("execution:failed-only", "complete work", frozenset({"python"}))
+    result = fabric.execute(workload, [obs("only", capabilities={"python"})],
+                            lambda route, _: {"ok": False, "error": "provider refused"})
+    assert result.ok is False
+    assert result.status == "route_exhausted"
+    assert result.failures[0]["substrate"] == "only"
