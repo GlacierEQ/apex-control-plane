@@ -604,16 +604,14 @@ class ContinuousControlPlane:
             "verified", "pass", "passed", "success", "succeeded",
         }
         if not good:
-            if item.attempt >= item.max_attempts:
-                self.transition(item.work_id, WorkState.DEAD_LETTER,
-                                reason="local_worker_attempts_exhausted")
-                state = "exhausted"
-            else:
-                self.transition(item.work_id, WorkState.RECEIVED,
-                                reason="failed_local_execution_ready_to_retry")
-                state = "retryable_failure"
+            # The legacy retry budget is diagnostic metadata, not authority to
+            # permanently abandon reversible local work. One failed execution
+            # returns to the queue; no synchronous runaway retry loop occurs.
+            # External actions are never selected by execute_next_local.
+            self.transition(item.work_id, WorkState.RECEIVED,
+                            reason="failed_local_execution_ready_to_retry")
             return {
-                "status": state, "executed": True, "routes_run": 1,
+                "status": "retryable_failure", "executed": True, "routes_run": 1,
                 "work_id": item.work_id, "receipt_id": receipt.receipt_id,
                 "exit_code": receipt.details.get("exit_code"),
             }
