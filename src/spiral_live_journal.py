@@ -322,18 +322,58 @@ def execute_recovered_capture_in_apex(
             capture, authorize=authorize, ingest_rpc=ingest_rpc,
             find_tasks=find_tasks, create_task=create_task, read_task=read_task,
         )
-        if result.get("owner_status") != "OWNER_NATIVE_READBACK_VERIFIED":
-            raise SpiralChatAdmissionError("owner-native task has not been verified")
-        owner = result["task_receipt"]
         ingest = result["ingest_receipt"]
         ingest_inner = ingest.get("ingest") if isinstance(ingest.get("ingest"), dict) else ingest
         ingest_id = str(
             ingest_inner.get("ingest_id") or ingest_inner.get("id")
             or ingest_inner.get("receipt_id") or ""
         )
+        if not ingest_id:
+            raise SpiralChatAdmissionError("native APEX ingest identity missing")
+
+        owner_status = result.get("owner_status")
+        if owner_status in {"NO_DATE_ONLY_TASK", "TASK_AUTHORITY_REQUIRED"}:
+            # APEX really ingested this source. An inapplicable or unavailable
+            # downstream task must not erase the executed work, and it must
+            # not claim the task or the mission has completed.
+            kernel.record_execution(
+                "apex-ingest:" + ingest_id,
+                details={"source_ref": recovery.source_ref, "owner_status": owner_status},
+            )
+            partial = {
+                "mission_id": recovery.mission_id,
+                "cursor": recovery.cursor,
+                "source_id": item.source_id,
+                "source_version": item.source_version,
+                "ingest_id": ingest_id,
+                "owner_status": owner_status,
+                "idempotency_key": item.idempotency_key,
+                "mission_complete": False,
+            }
+            saved = persist_result(partial)
+            if not isinstance(saved, dict) or not saved.get("id"):
+                raise SpiralChatAdmissionError("partial native ingest lacks durable continuation receipt")
+            saved_id = str(saved["id"])
+            reread = read_persisted_result(saved_id)
+            if not isinstance(reread, dict) or not all(
+                reread.get(field) == value for field, value in partial.items()
+            ):
+                raise SpiralChatAdmissionError("partial native ingest continuation readback mismatch")
+            return {
+                "status": "BOUND_PARTIAL_HANDOFF_PERSISTED",
+                "source_id": item.source_id,
+                "ingest_id": ingest_id,
+                "owner_status": owner_status,
+                "continuation_ref": saved_id,
+                "apex_phase": kernel.phase.value,
+                "mission_complete": False,
+            }
+        if owner_status != "OWNER_NATIVE_READBACK_VERIFIED":
+            raise SpiralChatAdmissionError("owner-native task has not been verified")
+        owner = result["task_receipt"]
         task_id = str(owner["provider_ref"])
-        if not ingest_id or not task_id:
-            raise SpiralChatAdmissionError("native provider identities missing")
+        if not task_id:
+            raise SpiralChatAdmissionError("native owner task identity missing")
         kernel.record_execution(
             "apex-ingest:" + ingest_id,
             details={"owner_ref": task_id, "source_ref": recovery.source_ref},
