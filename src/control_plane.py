@@ -72,6 +72,17 @@ if __name__ == "__main__":
         # Real local execution is independent of external host/provider boot.
         from execute_now import main as execute_internal
         raise SystemExit(execute_internal(sys.argv[2:]))
+    # A host/cron worker may bind a manifest via one environment variable.
+    # Execute that internal work immediately, without waiting on a provider host.
+    manifest = os.getenv("GLACIEREQ_INTERNAL_MANIFEST")
+    if manifest:
+        from execute_now import main as execute_internal
+        manifest_path = Path(manifest)
+        raise SystemExit(execute_internal([
+            "--manifest", str(manifest_path),
+            "--out-dir", str(manifest_path.parent / "results"),
+            "--journal", str(manifest_path.parent / ".apex_direct_execution.sqlite3"),
+        ]))
     # A direct CLI invocation has no authenticated provider callbacks.
     # Do not turn a fabricated before/after counter into an execution receipt.
     print(json.dumps({
