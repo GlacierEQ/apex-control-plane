@@ -493,46 +493,55 @@ class ContinuousControlPlane:
             self.checkpoint(receipt.mission_id)
             return receipt
 
-    def _recover_expired_leases_unlocked(self, instant: datetime) -> list[WorkItem]:
-        """Reclaim local work under the store lock; reconcile external actions first.
-
-        A historical attempt counter is telemetry, not permission to terminate
-        uncompleted work. The store transaction makes recovery and reassignment
-        atomic across worker instances, preventing double claims.
-        """
-        changed: list[WorkItem] = []
-        for item in list(self.work.values()):
-            if item.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
-                continue
-            if item.lease_expires_at is None or item.lease_expires_at > instant:
-                continue
-            if item.external_action:
-                target, reason = WorkState.RECONCILING, "external_action_lease_expired_reconcile_before_retry"
-            else:
-                target, reason = WorkState.RECEIVED, "local_lease_expired_reclaim_for_continuation"
-            recovered = replace(
-                item, state=target, lease_owner=None, lease_expires_at=None,
-                updated_at=instant,
-            )
-            self.work[item.work_id] = recovered
-            self.store.append_work(recovered, reason=reason)
-            self.checkpoint(recovered.mission_id)
-            changed.append(recovered)
-        return changed
-
     def claim_next(self, *, worker_id: str, capabilities: Iterable[str],
-                   now: datetime | None = None, lease_seconds: int = 90) -> WorkItem | None:
+                   now: datetime | None = None, lease_seconds: int = 90,
+                   external_action: bool | None = None) -> WorkItem | None:
         instant = _require_aware(now or utc_now(), "now")
         supported = set(capabilities)
         with self.store.transaction():
             self._refresh()
-            self._recover_expired_leases_unlocked(instant)
+            # A crashed local worker cannot permanently strand an admitted
+            # work item. Reclaim expired local leases inside the same atomic
+            # claim transaction; never blindly replay an uncertain external
+            # operation, which instead enters provider reconciliation.
+            for expired in list(self.work.values()):
+                if expired.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
+                    continue
+                if expired.lease_expires_at is None or expired.lease_expires_at > instant:
+                    continue
+                if expired.external_action:
+                    state, reason = WorkState.RECONCILING, "expired_external_lease_requires_provider_reconciliation"
+                else:
+                    # Legacy max_attempts is telemetry, never an automatic
+                    # abandonment of reversible, local work.
+                    state, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
+                recovered = replace(expired, state=state, lease_owner=None,
+                                    lease_expires_at=None, updated_at=instant)
+                self.work[expired.work_id] = recovered
+                self.store.append_work(recovered, reason=reason)
+                self.checkpoint(expired.mission_id)
+            # Due work is made runnable during the claim itself. Requiring a
+            # separate reawaken_due() invocation strands scheduled work when
+            # that extra scheduler hook is absent or a process restarts.
+            for sleeping in list(self.work.values()):
+                if (sleeping.state is not WorkState.WAITING
+                        or sleeping.not_before is None
+                        or sleeping.not_before > instant):
+                    continue
+                reawakened = replace(
+                    sleeping, state=WorkState.RECEIVED, not_before=None,
+                    lease_owner=None, lease_expires_at=None, updated_at=instant,
+                )
+                self.work[sleeping.work_id] = reawakened
+                self.store.append_work(reawakened, reason="due_work_auto_reawakened_during_claim")
+                self.checkpoint(sleeping.mission_id)
             candidates = [
                 item for item in self.work.values()
                 # New and resumed work must be executable without a second
                 # manual ceremony to advance RECEIVED -> HYDRATING -> COMPILED.
                 if item.state in {WorkState.RECEIVED, WorkState.HYDRATING, WorkState.COMPILED}
                 and item.capability in supported
+                and (external_action is None or item.external_action is external_action)
                 and (item.not_before is None or item.not_before <= instant)
                 and (item.lease_expires_at is None or item.lease_expires_at <= instant)
             ]
@@ -549,6 +558,93 @@ class ContinuousControlPlane:
             self.checkpoint(dispatched.mission_id)
             return dispatched
 
+    def execute_next_local(
+        self,
+        *,
+        worker_id: str,
+        capabilities: Iterable[str],
+        executor: Callable[[WorkItem], ExecutionReceipt | None],
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Claim and actually execute one nonexternal work item, preserving proof.
+
+        The worker, not this queue, owns the command. A returned receipt must be
+        bound to the exact claimed work. A missing receipt does not imply
+        success or authorize a blind retry of a possibly completed effect.
+        """
+        if not callable(executor):
+            raise TypeError("an executable worker callback is required")
+        item = self.claim_next(
+            worker_id=worker_id, capabilities=capabilities, now=now,
+            external_action=False,
+        )
+        if item is None:
+            return {"status": "idle", "executed": False, "routes_run": 0}
+        self.transition(item.work_id, WorkState.EXECUTING, reason="worker_invoked")
+        try:
+            receipt = executor(item)
+        except Exception as exc:
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="worker_exception_requires_outcome_reconciliation")
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+        if not isinstance(receipt, ExecutionReceipt):
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="worker_returned_no_provider_receipt")
+            return {
+                "status": "unconfirmed", "executed": True,
+                "routes_run": 1, "work_id": item.work_id,
+            }
+
+        self.record_receipt(receipt)
+        good = receipt.status.casefold() in {
+            "verified", "pass", "passed", "success", "succeeded",
+        }
+        if not good:
+            if item.attempt >= item.max_attempts:
+                self.transition(item.work_id, WorkState.DEAD_LETTER,
+                                reason="local_worker_attempts_exhausted")
+                state = "exhausted"
+            else:
+                self.transition(item.work_id, WorkState.RECEIVED,
+                                reason="failed_local_execution_ready_to_retry")
+                state = "retryable_failure"
+            return {
+                "status": state, "executed": True, "routes_run": 1,
+                "work_id": item.work_id, "receipt_id": receipt.receipt_id,
+                "exit_code": receipt.details.get("exit_code"),
+            }
+        self.transition(item.work_id, WorkState.RECONCILING,
+                        reason="local_worker_receipt_received")
+        self.transition(item.work_id, WorkState.CHANGESET_READY,
+                        reason="local_receipt_identity_reconciled")
+        self.transition(item.work_id, WorkState.VERIFYING,
+                        reason="validate_local_execution_receipts")
+        required = set(item.required_receipt_kinds)
+        present = {
+            r.receipt_kind for r in self.receipts.values()
+            if r.work_id == item.work_id
+            and r.status.casefold() in {
+                "verified", "pass", "passed", "success", "succeeded",
+            }
+        }
+        if not required.issubset(present):
+            return {
+                "status": "awaiting_receipts", "executed": True,
+                "routes_run": 1, "work_id": item.work_id,
+                "receipt_id": receipt.receipt_id,
+                "missing_receipt_kinds": sorted(required - present),
+            }
+        self.transition(item.work_id, WorkState.COMPLETE,
+                        reason="all_required_local_receipts_verified")
+        return {
+            "status": "complete", "executed": True, "routes_run": 1,
+            "work_id": item.work_id, "receipt_id": receipt.receipt_id,
+        }
+
     def reawaken_due(self, now: datetime | None = None) -> list[WorkItem]:
         instant = _require_aware(now or utc_now(), "now")
         return [
@@ -559,9 +655,20 @@ class ContinuousControlPlane:
 
     def reconcile_expired_leases(self, now: datetime | None = None) -> list[WorkItem]:
         instant = _require_aware(now or utc_now(), "now")
-        with self.store.transaction():
-            self._refresh()
-            return self._recover_expired_leases_unlocked(instant)
+        changed = []
+        for item in list(self.work.values()):
+            if item.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
+                continue
+            if item.lease_expires_at is None or item.lease_expires_at > instant:
+                continue
+            if item.external_action:
+                target, reason = WorkState.RECONCILING, "external_action_lease_expired_reconcile_before_retry"
+            else:
+                # Keep retrying local work after worker crashes. Real provider
+                # failures remain visible; external calls still reconcile.
+                target, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
+            changed.append(self.transition(item.work_id, target, reason=reason))
+        return changed
 
     def checkpoint(self, mission_id: str) -> dict[str, Any]:
         items = [item for item in self.work.values() if item.mission_id == mission_id]
