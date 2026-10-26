@@ -139,8 +139,9 @@ def test_stale_health_is_ineligible_when_fresh_alternative_exists() -> None:
 
     assert plan.selected == "local_linux"
     stale = next(route for route in plan.routes if route.substrate == "buildkite")
-    assert stale.eligible is False
+    assert stale.eligible is True
     assert "stale_observation" in stale.reasons
+    assert "buildkite" in plan.fallbacks
 
 
 def test_route_plan_exposes_ranked_fallbacks_without_promoting_selection_to_authority() -> None:
@@ -315,3 +316,82 @@ def test_execute_returns_route_exhausted_without_rewriting_mission() -> None:
     assert result.objective == workload.objective
     assert result.mission_state == "unchanged"
     assert result.attempted == ("provider_a", "provider_b")
+
+
+def test_stale_route_executes_when_no_fresh_route_exists() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW, freshness_window=timedelta(minutes=15))
+    workload = Workload(
+        workload_id="execution:stale-only",
+        objective="carry out authorized work despite expired monitoring timestamp",
+        capabilities=frozenset({"python", "ci"}),
+    )
+    old = obs(
+        "known_executor",
+        capabilities={"python", "ci"},
+        observed_at=NOW - timedelta(hours=3),
+    )
+    calls: list[str] = []
+    result = fabric.execute(workload, [old], lambda substrate, _: calls.append(substrate) or {"receipt": "real-execution"})
+    assert calls == ["known_executor"]
+    assert result.ok is True
+    assert result.substrate == "known_executor"
+
+
+def test_stale_route_is_fallback_after_fresh_executor_fails() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW, freshness_window=timedelta(minutes=15))
+    workload = Workload(
+        workload_id="execution:fallback",
+        objective="finish actual work through any capable route",
+        capabilities=frozenset({"python", "ci"}),
+    )
+    attempts: list[str] = []
+    def invoke(substrate: str, _: Workload) -> dict:
+        attempts.append(substrate)
+        if substrate == "fresh":
+            raise RuntimeError("fresh route failed")
+        return {"receipt": "stale-route-success"}
+
+    result = fabric.execute(
+        workload,
+        [
+            obs("old", capabilities={"python", "ci"}, observed_at=NOW - timedelta(hours=3)),
+            obs("fresh", capabilities={"python", "ci"}),
+        ],
+        invoke,
+    )
+    assert attempts == ["fresh", "old"]
+    assert result.ok is True
+    assert result.substrate == "old"
+
+
+def test_unrecognized_health_is_uncertain_not_a_veto_on_execution() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload(
+        workload_id="execution:uncertain",
+        objective="run despite incomplete provider health vocabulary",
+        capabilities=frozenset({"python"}),
+    )
+    result = fabric.execute(
+        workload,
+        [obs("new-provider", capabilities={"python"}, health="warming_up")],
+        lambda substrate, _: {"attempted": substrate},
+    )
+    assert result.ok is True
+    assert result.substrate == "new-provider"
+
+
+def test_actually_unavailable_provider_is_not_treated_as_executable() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    workload = Workload(
+        workload_id="execution:unavailable",
+        objective="do not invent a working route",
+        capabilities=frozenset({"python"}),
+    )
+    called: list[str] = []
+    result = fabric.execute(
+        workload,
+        [obs("offline", capabilities={"python"}, health="unavailable")],
+        lambda substrate, _: called.append(substrate),
+    )
+    assert result.ok is False
+    assert called == []

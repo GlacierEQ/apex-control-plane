@@ -68,14 +68,45 @@ def _validate_explicit_boot_receipt_syntax() -> None:
 
 
 if __name__ == "__main__":
-    # No startup boot interception. Print a before/after receipt for the
-    # local runtime state and exit 0; external effects still require their
-    # own provider route and readback. (The apex_proactive engine was
-    # removed 2026-10-24 after its live-job proof returned NOT PROVEN;
-    # this block no longer depends on it.)
-    before = {"routes_run": 0}
-    after = {"routes_run": 1}
-    print(json.dumps({"status": "ok", "receipt": {"before": before, "after": after, "label": "control_plane_main"}}, sort_keys=True))
+    # APEX's direct CLI performs requested work instead of fabricating an
+    # execution count. With no command there is no completed work to claim.
+    # An explicitly supplied process executes under the host's own identity
+    # and environment; there is no second, invented APEX approval ceremony.
+    import subprocess
+
+    args = sys.argv[1:]
+    if not args:
+        print(json.dumps({
+            "status": "idle", "executed": False, "routes_run": 0,
+            "reason": "no_execution_command_supplied",
+        }, sort_keys=True))
+    elif args[0] == "--exec" and len(args) > 1:
+        try:
+            completed = subprocess.run(
+                args[1:], check=False, capture_output=True, text=True,
+            )
+        except OSError as exc:
+            print(json.dumps({
+                "status": "failed", "executed": False, "routes_run": 0,
+                "error": f"{type(exc).__name__}: {exc}",
+            }, sort_keys=True))
+            raise SystemExit(127) from exc
+        print(json.dumps({
+            "status": "completed" if completed.returncode == 0 else "failed",
+            "executed": True,
+            "routes_run": 1,
+            "exit_code": completed.returncode,
+            "command": args[1:],
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+        }, sort_keys=True))
+        raise SystemExit(completed.returncode)
+    else:
+        print(json.dumps({
+            "status": "failed", "executed": False, "routes_run": 0,
+            "reason": "usage: control_plane.py --exec PROGRAM [ARG ...]",
+        }, sort_keys=True))
+        raise SystemExit(2)
 
 else:
     from control_plane_runtime import *  # noqa: F401,F403

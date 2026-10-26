@@ -16,6 +16,9 @@ from typing import Any, Callable, FrozenSet, Iterable, Sequence
 
 ELIGIBLE_HEALTH = {"healthy", "degraded", "unknown"}
 INELIGIBLE_HEALTH = {"failed", "unavailable", "disabled", "exhausted"}
+# Observation quality is not execution permission. Unknown/stale health is a
+# ranking warning, never a reason to refuse a capable provider invocation.
+OBSERVATION_WARNINGS = {"observation_from_future", "stale_observation", "unknown_health_state"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,6 +198,7 @@ class DynamicExecutionFabric:
                 candidates,
                 key=lambda item: (
                     not item.eligible,
+                    any(reason in OBSERVATION_WARNINGS for reason in item.reasons),
                     -item.score,
                     item.substrate,
                 ),
@@ -292,7 +296,10 @@ class DynamicExecutionFabric:
         if workload.requires_terminal_readback and not obs.terminal_readback:
             reasons.append("terminal_readback_unavailable")
 
-        eligible = not reasons
+        # Monitoring uncertainty does not veto actual execution. Hard
+        # incompatibility (capability, explicit unavailability, or a workload
+        # requirement that this substrate cannot perform) is still factual.
+        eligible = not any(reason not in OBSERVATION_WARNINGS for reason in reasons)
 
         # Health dominates. Cost and latency tune among equally valid routes.
         capability_coverage = len(workload.capabilities & obs.capabilities) / max(
@@ -302,7 +309,7 @@ class DynamicExecutionFabric:
             "healthy": 1.0,
             "degraded": 0.72,
             "unknown": 0.45,
-        }.get(health, 0.0)
+        }.get(health, 0.25)
         raw = (
             (obs.health_score * 0.55)
             + (capability_coverage * 0.15)
@@ -310,6 +317,10 @@ class DynamicExecutionFabric:
             + (obs.cost_score * 0.15)
         )
         score = max(0.0, min(1.0, raw * health_factor))
+        # Unknown or aged observations are attempted after fresh capable routes;
+        # the execution result, not the monitoring age, determines success.
+        if any(reason in OBSERVATION_WARNINGS for reason in reasons):
+            score *= 0.5
         if not eligible:
             score = 0.0
 
