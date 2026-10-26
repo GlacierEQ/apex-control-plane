@@ -612,16 +612,12 @@ class ContinuousControlPlane:
             "verified", "pass", "passed", "success", "succeeded",
         } for evidence in receipts)
         if not good:
-            if item.attempt >= item.max_attempts:
-                self.transition(item.work_id, WorkState.DEAD_LETTER,
-                                reason="local_worker_attempts_exhausted")
-                state = "exhausted"
-            else:
-                self.transition(item.work_id, WorkState.RECEIVED,
-                                reason="failed_local_execution_ready_to_retry")
-                state = "retryable_failure"
+            # Historical retry budget is telemetry, not permission to kill
+            # reversible work. One attempt per invocation avoids retry loops.
+            self.transition(item.work_id, WorkState.RECEIVED,
+                            reason="failed_local_execution_ready_to_retry")
             return {
-                "status": state, "executed": True, "routes_run": 1,
+                "status": "retryable_failure", "executed": True, "routes_run": 1,
                 "work_id": item.work_id, "receipt_id": receipt.receipt_id,
                 "exit_code": receipt.details.get("exit_code"),
             }

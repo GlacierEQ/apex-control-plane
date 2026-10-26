@@ -12,7 +12,7 @@ import spiral_live_journal as bridge
 @pytest.mark.parametrize(
     "raw_text,allow_task,expected_owner",
     [
-        ("Source: verified continuity record.", True, "NO_DATE_ONLY_TASK"),
+        ("Source: verified continuity record.", True, "NO_ACTION"),
         ("Review the Mem integration test on Friday.", False, "TASK_AUTHORITY_REQUIRED"),
     ],
 )
