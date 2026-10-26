@@ -133,7 +133,7 @@ def test_stale_second_instance_cannot_double_claim(tmp_path):
     assert cp2.claim_next(worker_id="worker-2",capabilities=[work.capability],now=NOW) is None
 
 
-def test_expired_dispatched_work_at_attempt_limit_dead_letters(tmp_path):
+def test_expired_dispatched_work_at_legacy_attempt_limit_reclaims(tmp_path):
     cp=plane(tmp_path)
     work=cp.ingest_event(event())[0]
     compile_work(cp,work.work_id)
@@ -141,9 +141,15 @@ def test_expired_dispatched_work_at_attempt_limit_dead_letters(tmp_path):
     assert claimed is not None
     exhausted=replace(claimed,max_attempts=claimed.attempt)
     cp.work[work.work_id]=exhausted
-    cp.store.append_work(exhausted,reason="test_attempt_limit")
+    cp.store.append_work(exhausted,reason="legacy_attempt_limit")
     changed=cp.reconcile_expired_leases(NOW+timedelta(seconds=2))
-    assert changed[0].state is WorkState.DEAD_LETTER
+    assert changed[0].state is WorkState.RECEIVED
+    assert changed[0].lease_owner is None
+    assert changed[0].lease_expires_at is None
+    reclaimed=cp.claim_next(worker_id="worker-2",capabilities=[work.capability],now=NOW+timedelta(seconds=2))
+    assert reclaimed is not None
+    assert reclaimed.work_id == work.work_id
+    assert reclaimed.attempt > reclaimed.max_attempts
 
 
 def test_naive_now_is_rejected_explicitly(tmp_path):
