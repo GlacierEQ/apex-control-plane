@@ -52,3 +52,50 @@ def test_control_plane_propagates_real_process_failure() -> None:
     assert payload["status"] == "failed"
     assert payload["exit_code"] == 17
     assert payload["executed"] is True
+
+
+def test_cli_dequeues_real_work_and_runs_supplied_command(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        load_continuous_control_config, WorkState,
+    )
+    store_path = tmp_path / "queue"
+    cp = ContinuousControlPlane.from_config(
+        JsonlControlStore(store_path),
+        load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json"),
+    )
+    work = cp.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="mission-test", correlation_id="corr-test", payload={},
+    ))[0]
+    target = tmp_path / "proof.txt"
+    command = [sys.executable, "-c",
+               "from pathlib import Path; import sys; Path(sys.argv[1]).write_text('ran')", str(target)]
+    result = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(store_path),
+         work.capability, "--", *command],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert target.read_text() == "ran"
+    payload = json.loads(result.stdout)
+    assert payload["executed"] is True
+    assert payload["status"] == "awaiting_receipts"
+    cp = ContinuousControlPlane.from_config(
+        JsonlControlStore(store_path),
+        load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json"),
+    )
+    assert cp.work[work.work_id].state is WorkState.VERIFYING
+
+
+def test_cli_with_no_queued_local_work_is_idle_not_fabricated_success(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(tmp_path / "queue"),
+         "case.response.ingest", "--", sys.executable, "-c", "print('not invoked')"],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "idle"
+    assert payload["executed"] is False
