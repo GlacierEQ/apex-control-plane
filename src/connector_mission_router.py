@@ -51,6 +51,18 @@ class ContinuationRecord:
     native_result: object
 
 
+@dataclass(frozen=True)
+class RecoveredEffect:
+    """Previously committed provider effect plus its owning continuation.
+
+    This object is only a candidate for resumption. The dispatcher still
+    independently validates current provider and durable-store readbacks.
+    """
+    operation_key: str
+    native_result: object
+    continuation_checkpoint: object
+
+
 def admit(mission: MissionAdmission, capability: ConnectorCapability) -> None:
     if not isinstance(mission.expected_mission_id, str) or not mission.expected_mission_id.strip():
         raise AdmissionDenied("missing host-derived expected mission identity")
@@ -81,6 +93,7 @@ def dispatch_once(
     *,
     persist_continuation: Callable[[ContinuationRecord], object] | None = None,
     verify_continuation: Callable[[object], bool] | None = None,
+    reconcile_reserved: Callable[[str], RecoveredEffect | None] | None = None,
 ) -> object:
     """Recover -> reserve -> execute -> provider readback -> durable handoff.
 
@@ -102,7 +115,33 @@ def dispatch_once(
         raise AdmissionDenied("durable continuation persistence and independent readback required")
     key = f"{mission.expected_mission_id}:{capability.provider}:{capability.action}:{operation_id}"
     if reserve(key) is not True:
-        raise AdmissionDenied("operation already reserved; reconcile provider state before retry")
+        # The operation may have succeeded before a later crash/retry. A
+        # persisted reservation must not become a permanent execution veto,
+        # and it must never be replayed without a native reconciliation.
+        if not callable(reconcile_reserved):
+            raise AdmissionDenied("operation already reserved; reconcile provider state before retry")
+        try:
+            recovered = reconcile_reserved(key)
+            if not isinstance(recovered, RecoveredEffect) or recovered.operation_key != key:
+                raise AdmissionDenied("reserved operation has no matching reconciled provider receipt")
+            checkpoint = recovered.continuation_checkpoint
+            if not isinstance(checkpoint, dict) or any(
+                checkpoint.get(field) != value for field, value in (
+                    ("mission_id", mission.expected_mission_id),
+                    ("provider", capability.provider),
+                    ("action", capability.action),
+                    ("operation_key", key),
+                )
+            ):
+                raise AdmissionDenied("reconciled continuation does not match original operation")
+            if (verify_continuation(checkpoint) is not True
+                    or readback(recovered.native_result) is not True):
+                raise AdmissionDenied("reconciled effect lacks current provider and continuation readback")
+        except AdmissionDenied:
+            raise
+        except Exception as exc:
+            raise AdmissionDenied("reserved operation reconciliation failed; reservation retained") from exc
+        return recovered.native_result
     result = execute()
     if readback(result) is not True:
         raise AdmissionDenied("provider effect not independently verified; reservation retained")
@@ -140,6 +179,7 @@ def dispatch_recovered_once(
     readback: Callable[[object], bool],
     persist_continuation: Callable[[ContinuationRecord], object] | None = None,
     verify_continuation: Callable[[object], bool] | None = None,
+    reconcile_reserved: Callable[[str], RecoveredEffect | None] | None = None,
     fact_keys: Sequence[str] = (),
     apply_context: Callable[[Any], Any] | None = None,
     mission_scope: dict | None = None,
@@ -192,6 +232,7 @@ def dispatch_recovered_once(
             admission, capability, operation_id, reserve, execute, readback,
             persist_continuation=persist_continuation,
             verify_continuation=verify_continuation,
+            reconcile_reserved=reconcile_reserved,
         )
 
     return execute_with_recovered_context(
