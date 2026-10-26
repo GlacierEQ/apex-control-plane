@@ -137,6 +137,59 @@ class ConnectorContinuationSQLiteTests(unittest.TestCase):
         self.assertIsNotNone(self.store.load_connector_checkpoint(self.key))
         self.assertFalse(self.store.reserve_connector_effect(self.key))
 
+    def test_reserved_operation_resumes_after_restart_with_native_readback(self):
+        from src.connector_mission_router import RecoveredEffect
+        first = self._run()
+        self.assertEqual(first["native_id"], "provider-10")
+        replay = MissionCheckpointStore(self.path, mission_id="case-A")
+        invoked = []
+        def reconcile(key):
+            checkpoint = replay.recover_connector_checkpoint(
+                key, lambda provider, native_id: self.provider_readback(native_id)
+            )
+            return RecoveredEffect(
+                operation_key=key,
+                native_result={"native_id": checkpoint["receipt_ref"]},
+                continuation_checkpoint=checkpoint,
+            )
+        received = dispatch_once(
+            self.mission, self.capability, "op-1",
+            replay.reserve_connector_effect,
+            lambda: invoked.append("duplicate") or self.provider_effect(),
+            lambda record: self.provider_readback(record["native_id"]),
+            persist_continuation=lambda _: (_ for _ in ()).throw(AssertionError("duplicate continuation")),
+            verify_continuation=replay.verify_connector_continuation,
+            reconcile_reserved=reconcile,
+        )
+        self.assertEqual(received["native_id"], "provider-10")
+        self.assertEqual(invoked, [])
+        with sqlite3.connect(self.provider_path) as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM effects").fetchone()[0], 1)
+
+    def test_stale_provider_cannot_be_resumed_or_replayed(self):
+        from src.connector_mission_router import RecoveredEffect
+        self._run()
+        with sqlite3.connect(self.provider_path) as db:
+            db.execute("DELETE FROM effects")
+        replay = MissionCheckpointStore(self.path, mission_id="case-A")
+        attempts = []
+        def reconcile(key):
+            checkpoint = replay.recover_connector_checkpoint(
+                key, lambda provider, native_id: self.provider_readback(native_id)
+            )
+            return RecoveredEffect(key, {"native_id": checkpoint["receipt_ref"]}, checkpoint)
+        with self.assertRaisesRegex(AdmissionDenied, "reconciliation failed"):
+            dispatch_once(
+                self.mission, self.capability, "op-1",
+                replay.reserve_connector_effect,
+                lambda: attempts.append("duplicate"),
+                lambda result: self.provider_readback(result["native_id"]),
+                persist_continuation=lambda _: None,
+                verify_continuation=replay.verify_connector_continuation,
+                reconcile_reserved=reconcile,
+            )
+        self.assertEqual(attempts, [])
+
     def test_checkpoint_tampering_is_not_validated(self):
         self._run()
         with sqlite3.connect(self.path) as db:
