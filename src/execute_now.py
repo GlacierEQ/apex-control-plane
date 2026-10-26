@@ -54,6 +54,7 @@ class Step:
     effect: Callable[[Action], Any]
     verify: Callable[[Any], bool] | None = None
     authorization: Callable[[Action], bool] | None = None
+    preflight: Callable[[Action], None] | None = None
 
 
 def _intent(action: Action) -> tuple[str, str]:
@@ -143,11 +144,16 @@ class DirectExecutor:
         *,
         verify: Callable[[Any], bool] | None = None,
         authorization: Callable[[Action], bool] | None = None,
+        preflight: Callable[[Action], None] | None = None,
     ) -> Receipt:
         """Execute directly; an external action needs its own scoped authorization."""
         if not callable(effect):
             raise ExecutionDenied("executable effect callback missing")
         _intent(action)
+        # Pure validation happens before the durable reservation: malformed
+        # internal source data must not poison an operation identity.
+        if callable(preflight):
+            preflight(action)
         if action.external:
             if not isinstance(action.approval_ref, str) or not action.approval_ref.strip():
                 raise ExecutionDenied("external effect requires attributable approval")
@@ -157,8 +163,12 @@ class DirectExecutor:
                 raise ExecutionDenied("external effect requires provider readback")
         replay = self._reserve(action)
         if replay is not None:
-            if callable(verify) and verify(replay.result) is not True:
-                raise ReconciliationRequired("previous receipt failed fresh readback")
+            if callable(verify):
+                try:
+                    if verify(replay.result) is not True:
+                        raise ReconciliationRequired("previous receipt failed fresh readback")
+                except Exception as exc:
+                    raise ReconciliationRequired("previous receipt readback unavailable; reconcile") from exc
             return replay
         try:
             result = effect(action)
@@ -199,7 +209,7 @@ class DirectExecutor:
             try:
                 outcomes.append(self.run(
                     step.action, step.effect, verify=step.verify,
-                    authorization=step.authorization,
+                    authorization=step.authorization, preflight=step.preflight,
                 ))
             except ExecutionDenied as exc:
                 outcomes.append(Receipt(
@@ -236,6 +246,14 @@ def _casebook_content(action: Action) -> bytes:
             raise ExecutionDenied("record requires source_ref, statement and classification")
         lines.append(f"- [{classification}] {statement} — source: {ref}")
     return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def _casebook_preflight(action: Action) -> None:
+    if action.kind != "casebook" or action.external:
+        raise ExecutionDenied("CLI executes only internal casebook operations")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", action.operation_id):
+        raise ExecutionDenied("operation_id cannot be used as an artifact filename")
+    _casebook_content(action)
 
 
 def _casebook_effect(output_dir: Path) -> Callable[[Action], dict[str, Any]]:
@@ -303,7 +321,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 payload=raw,
                 external=raw.get("external", False),
                 approval_ref=raw.get("approval_ref"),
-            ), effect, _verify_casebook)
+            ), effect, _verify_casebook, preflight=_casebook_preflight)
             for raw in raw_actions
         ]
         outcomes = DirectExecutor(args.journal).run_many(steps)
