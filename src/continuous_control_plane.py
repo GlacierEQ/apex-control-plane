@@ -494,7 +494,8 @@ class ContinuousControlPlane:
             return receipt
 
     def claim_next(self, *, worker_id: str, capabilities: Iterable[str],
-                   now: datetime | None = None, lease_seconds: int = 90) -> WorkItem | None:
+                   now: datetime | None = None, lease_seconds: int = 90,
+                   external_action: bool | None = None) -> WorkItem | None:
         instant = _require_aware(now or utc_now(), "now")
         supported = set(capabilities)
         with self.store.transaction():
@@ -540,6 +541,7 @@ class ContinuousControlPlane:
                 # manual ceremony to advance RECEIVED -> HYDRATING -> COMPILED.
                 if item.state in {WorkState.RECEIVED, WorkState.HYDRATING, WorkState.COMPILED}
                 and item.capability in supported
+                and (external_action is None or item.external_action is external_action)
                 and (item.not_before is None or item.not_before <= instant)
                 and (item.lease_expires_at is None or item.lease_expires_at <= instant)
             ]
@@ -555,6 +557,93 @@ class ContinuousControlPlane:
             self.store.append_work(dispatched, reason="claimed")
             self.checkpoint(dispatched.mission_id)
             return dispatched
+
+    def execute_next_local(
+        self,
+        *,
+        worker_id: str,
+        capabilities: Iterable[str],
+        executor: Callable[[WorkItem], ExecutionReceipt | None],
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Claim and actually execute one nonexternal work item, preserving proof.
+
+        The worker, not this queue, owns the command. A returned receipt must be
+        bound to the exact claimed work. A missing receipt does not imply
+        success or authorize a blind retry of a possibly completed effect.
+        """
+        if not callable(executor):
+            raise TypeError("an executable worker callback is required")
+        item = self.claim_next(
+            worker_id=worker_id, capabilities=capabilities, now=now,
+            external_action=False,
+        )
+        if item is None:
+            return {"status": "idle", "executed": False, "routes_run": 0}
+        self.transition(item.work_id, WorkState.EXECUTING, reason="worker_invoked")
+        try:
+            receipt = executor(item)
+        except Exception as exc:
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="worker_exception_requires_outcome_reconciliation")
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+        if not isinstance(receipt, ExecutionReceipt):
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="worker_returned_no_provider_receipt")
+            return {
+                "status": "unconfirmed", "executed": True,
+                "routes_run": 1, "work_id": item.work_id,
+            }
+
+        self.record_receipt(receipt)
+        good = receipt.status.casefold() in {
+            "verified", "pass", "passed", "success", "succeeded",
+        }
+        if not good:
+            if item.attempt >= item.max_attempts:
+                self.transition(item.work_id, WorkState.DEAD_LETTER,
+                                reason="local_worker_attempts_exhausted")
+                state = "exhausted"
+            else:
+                self.transition(item.work_id, WorkState.RECEIVED,
+                                reason="failed_local_execution_ready_to_retry")
+                state = "retryable_failure"
+            return {
+                "status": state, "executed": True, "routes_run": 1,
+                "work_id": item.work_id, "receipt_id": receipt.receipt_id,
+                "exit_code": receipt.details.get("exit_code"),
+            }
+        self.transition(item.work_id, WorkState.RECONCILING,
+                        reason="local_worker_receipt_received")
+        self.transition(item.work_id, WorkState.CHANGESET_READY,
+                        reason="local_receipt_identity_reconciled")
+        self.transition(item.work_id, WorkState.VERIFYING,
+                        reason="validate_local_execution_receipts")
+        required = set(item.required_receipt_kinds)
+        present = {
+            r.receipt_kind for r in self.receipts.values()
+            if r.work_id == item.work_id
+            and r.status.casefold() in {
+                "verified", "pass", "passed", "success", "succeeded",
+            }
+        }
+        if not required.issubset(present):
+            return {
+                "status": "awaiting_receipts", "executed": True,
+                "routes_run": 1, "work_id": item.work_id,
+                "receipt_id": receipt.receipt_id,
+                "missing_receipt_kinds": sorted(required - present),
+            }
+        self.transition(item.work_id, WorkState.COMPLETE,
+                        reason="all_required_local_receipts_verified")
+        return {
+            "status": "complete", "executed": True, "routes_run": 1,
+            "work_id": item.work_id, "receipt_id": receipt.receipt_id,
+        }
 
     def reawaken_due(self, now: datetime | None = None) -> list[WorkItem]:
         instant = _require_aware(now or utc_now(), "now")
