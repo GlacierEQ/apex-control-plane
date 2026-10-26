@@ -33,18 +33,20 @@ jobs:
         run: python -m compileall -q src tests
       - name: Test safety and resilience invariants
         run: python -m pytest -q
-      - name: Control plane CLI receipt smoke (not a provider execution claim)
+      - name: Unbound CLI cannot fake an executed provider route
         run: |
+          set +e
           python src/control_plane.py > /tmp/casebrain-smoke.json
+          rc=$?
+          set -e
+          test "$rc" -eq 78
           python - <<'PY'
           import json
-          from pathlib import Path
-          proof = json.loads(Path("/tmp/casebrain-smoke.json").read_text())
-          assert proof.get("status") == "ok", "CLI receipt did not report current status"
-          receipt = proof.get("receipt")
-          assert isinstance(receipt, dict), "missing CLI receipt"
-          assert isinstance(receipt.get("before"), dict), "missing before state"
-          assert isinstance(receipt.get("after"), dict), "missing after state"
-          assert receipt.get("label") == "control_plane_main", "wrong CLI entrypoint"
-          assert '"external_action_authorized": true' not in json.dumps(proof), "blanket external authorization invented"
+          with open("/tmp/casebrain-smoke.json", encoding="utf-8") as fp:
+              payload = json.load(fp)
+          assert payload["status"] == "HOST_EXECUTOR_NOT_BOUND"
+          assert payload["routes_run"] == 0
+          assert payload["provider_receipt"] is None
+          assert payload["continuation_verified"] is False
+          assert "before" not in payload and "after" not in payload
           PY
