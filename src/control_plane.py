@@ -68,6 +68,10 @@ def _validate_explicit_boot_receipt_syntax() -> None:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "run-internal":
+        # Real local execution is independent of external host/provider boot.
+        from execute_now import main as execute_internal
+        raise SystemExit(execute_internal(sys.argv[2:]))
     # A direct CLI invocation has no authenticated provider callbacks.
     # Do not turn a fabricated before/after counter into an execution receipt.
     print(json.dumps({
