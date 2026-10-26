@@ -63,8 +63,8 @@ class WorkState(str, Enum):
 
 
 ALLOWED_TRANSITIONS = {
-    WorkState.RECEIVED: {WorkState.HYDRATING, WorkState.BLOCKED},
-    WorkState.HYDRATING: {WorkState.COMPILED, WorkState.BLOCKED},
+    WorkState.RECEIVED: {WorkState.HYDRATING, WorkState.DISPATCHED, WorkState.BLOCKED},
+    WorkState.HYDRATING: {WorkState.COMPILED, WorkState.DISPATCHED, WorkState.BLOCKED},
     WorkState.COMPILED: {WorkState.DISPATCHED, WorkState.BLOCKED},
     WorkState.DISPATCHED: {WorkState.EXECUTING, WorkState.WAITING, WorkState.RECONCILING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
     WorkState.EXECUTING: {WorkState.RECONCILING, WorkState.WAITING, WorkState.BLOCKED, WorkState.DEAD_LETTER},
@@ -501,7 +501,10 @@ class ContinuousControlPlane:
             self._refresh()
             candidates = [
                 item for item in self.work.values()
-                if item.state is WorkState.COMPILED and item.capability in supported
+                # New and resumed work must be executable without a second
+                # manual ceremony to advance RECEIVED -> HYDRATING -> COMPILED.
+                if item.state in {WorkState.RECEIVED, WorkState.HYDRATING, WorkState.COMPILED}
+                and item.capability in supported
                 and (item.not_before is None or item.not_before <= instant)
                 and (item.lease_expires_at is None or item.lease_expires_at <= instant)
                 and item.attempt < item.max_attempts
