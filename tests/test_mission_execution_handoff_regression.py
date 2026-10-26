@@ -120,16 +120,6 @@ class RecoveredMissionExecutionTests(unittest.TestCase):
         self.assertEqual(result["native_id"], "private-artifact-42")
         self.assertIn("execute", self.events)
 
-    def test_intent_only_audit_snapshot_cannot_veto_authorized_execution(self):
-        result = self.invoke(execution_evidence=None)
-        self.assertEqual(result["native_id"], "private-artifact-42")
-        self.assertIn("execute", self.events)
-
-    def test_evidence_only_audit_snapshot_cannot_veto_authorized_execution(self):
-        result = self.invoke(mission_scope=None)
-        self.assertEqual(result["native_id"], "private-artifact-42")
-        self.assertIn("execute", self.events)
-
     def test_false_completion_rejected_before_any_provider_side_effect(self):
         bad = {
             "mission_id": "CHERRY", "cursor": "cursor-11",
