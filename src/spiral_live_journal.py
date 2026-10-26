@@ -332,7 +332,7 @@ def execute_recovered_capture_in_apex(
             raise SpiralChatAdmissionError("native APEX ingest identity missing")
 
         owner_status = result.get("owner_status")
-        if owner_status in {"NO_DATE_ONLY_TASK", "TASK_AUTHORITY_REQUIRED"}:
+        if owner_status in {"NO_ACTION", "NO_DATE_ONLY_TASK", "TASK_AUTHORITY_REQUIRED"}:
             # APEX really ingested this source. An inapplicable or unavailable
             # downstream task must not erase the executed work, and it must
             # not claim the task or the mission has completed.
