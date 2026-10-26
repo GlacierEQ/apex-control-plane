@@ -434,6 +434,57 @@ def test_readback_mismatch_routes_to_repair_without_erasing_execution(monkeypatc
     assert "persistence" in result.receipt_kinds
 
 
+def test_failed_outcome_reenters_execution_and_can_finish_after_repair(monkeypatch) -> None:
+    """A missed real target must cause fresh execution, not endless retesting."""
+    kernel = _arm(monkeypatch)
+    _bind_mutation(kernel)
+    kernel.begin()
+    kernel.record_execution("provider-action:first")
+    kernel.record_test("pytest:first", passed=True)
+    kernel.record_adversarial_test("pytest:adversarial-first", passed=True)
+    kernel.record_verification(
+        "verification:first", passed=True, verified_gain_refs=("gain:attempt-one",)
+    )
+    kernel.begin_persistence()
+    kernel.record_persistence("provider-write:first")
+
+    failed = kernel.record_readback(
+        "provider-readback:first", matches_expected_state=True, target_reached=False
+    )
+    assert failed.phase == "repairing"
+    assert "target_not_reached" in failed.repair_reasons
+
+    resumed = kernel.record_repair("repair:reconcile-and-retry-provider-action")
+    assert resumed.phase == "executing"
+    assert resumed.verified_gain_refs == ("gain:attempt-one",)
+
+    kernel.record_execution("provider-action:second")
+    kernel.record_test("pytest:second", passed=True)
+    kernel.record_adversarial_test("pytest:adversarial-second", passed=True)
+    kernel.record_verification(
+        "verification:second", passed=True, verified_gain_refs=("gain:attempt-two",)
+    )
+    kernel.begin_persistence()
+    kernel.record_persistence("provider-write:second")
+    result = kernel.record_readback(
+        "provider-readback:second", matches_expected_state=True, target_reached=True
+    )
+    assert result.phase == "complete"
+    assert "gain:attempt-two" in result.verified_gain_refs
+    assert result.receipt_kinds.count("execution") == 2
+
+
+def test_missing_outcome_and_missing_gain_do_not_resume_as_test_only(monkeypatch) -> None:
+    kernel = _arm(monkeypatch)
+    _bind_mutation(kernel)
+    kernel.begin()
+    kernel.record_execution("provider-action:initial")
+    kernel.record_test("pytest:initial", passed=True)
+    kernel.record_adversarial_test("pytest:adversarial-initial", passed=True)
+    assert kernel.record_verification("verification:no-gain", passed=True).phase == "repairing"
+    assert kernel.record_repair("repair:retry-to-obtain-real-gain").phase == "executing"
+
+
 def test_concrete_provider_blocker_is_resumable_and_route_local(monkeypatch) -> None:
     kernel = _arm(monkeypatch)
     _bind_mutation(kernel)
