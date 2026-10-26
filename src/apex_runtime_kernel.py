@@ -321,12 +321,24 @@ class ApexRuntimeKernel:
     ) -> RuntimeSnapshot:
         self._require_phase(RuntimePhase.REPAIRING)
         self._record_receipt("repair", reference, True, details)
+        reasons = tuple(self.task.repair_reasons)
         self.task.repair_reasons.clear()
-        self.phase = (
-            RuntimePhase.VERIFYING
-            if self.task.mode is TaskMode.OBSERVATION
-            else RuntimePhase.TESTING
-        )
+        if self.task.mode is TaskMode.OBSERVATION:
+            self.phase = RuntimePhase.VERIFYING
+        elif any(
+            reason in {"readback_mismatch", "target_not_reached",
+                       "verification_failed", "verified_gain_reference_missing"}
+            or reason.startswith("completion_evidence_gap:")
+            for reason in reasons
+        ):
+            # The prior provider attempt did not prove the requested outcome.
+            # Return to execution so the host can reconcile idempotency and
+            # actually retry or finish work; retesting alone cannot do so.
+            self.phase = RuntimePhase.EXECUTING
+        else:
+            # A test-only defect can be repaired and retested without
+            # repeating an already successful external provider action.
+            self.phase = RuntimePhase.TESTING
         self._audit_event("repair_recorded")
         return self.snapshot()
 
