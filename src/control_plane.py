@@ -22,6 +22,7 @@ from hashlib import sha256
 import os
 from pathlib import Path
 import runpy
+import stat
 import sys
 from typing import Any
 
@@ -106,7 +107,23 @@ if __name__ == "__main__":
             ),
         )
 
+        def _artifact_snapshot(path: Path | None) -> tuple[int, int, int, int, int] | None:
+            """Read a regular file's identity without following a symbolic link."""
+            if path is None:
+                return None
+            try:
+                meta = path.lstat()
+            except OSError:
+                return None
+            if not stat.S_ISREG(meta.st_mode):
+                return None
+            return (
+                meta.st_dev, meta.st_ino, meta.st_size,
+                meta.st_mtime_ns, meta.st_ctime_ns,
+            )
+
         def execute_queued(item: WorkItem) -> ExecutionReceipt | list[ExecutionReceipt]:
+            before_artifact = _artifact_snapshot(verify_file)
             try:
                 process = subprocess.run(
                     command, check=False, text=True, capture_output=True,
@@ -131,11 +148,38 @@ if __name__ == "__main__":
             )
             if code != 0 or verify_file is None:
                 return execution
-            try:
-                actual = verify_file.read_bytes()
-            except OSError:
-                # A missing or unreadable target is not independent proof.
+            after_artifact = _artifact_snapshot(verify_file)
+            if after_artifact is None or after_artifact == before_artifact:
+                # Pre-existing unchanged output is not proof of this execution.
                 return execution
+            fd = -1
+            try:
+                fd = os.open(
+                    verify_file,
+                    os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                )
+                opened = os.fstat(fd)
+                opened_snapshot = (
+                    opened.st_dev, opened.st_ino, opened.st_size,
+                    opened.st_mtime_ns, opened.st_ctime_ns,
+                )
+                if not stat.S_ISREG(opened.st_mode) or opened_snapshot != after_artifact:
+                    return execution
+                with os.fdopen(fd, "rb") as handle:
+                    fd = -1
+                    actual = handle.read()
+                    final = os.fstat(handle.fileno())
+                    final_snapshot = (
+                        final.st_dev, final.st_ino, final.st_size,
+                        final.st_mtime_ns, final.st_ctime_ns,
+                    )
+                    if final_snapshot != opened_snapshot:
+                        return execution
+            except OSError:
+                return execution
+            finally:
+                if fd >= 0:
+                    os.close(fd)
             return [
                 execution,
                 ExecutionReceipt(
@@ -149,7 +193,8 @@ if __name__ == "__main__":
                         "path": str(verify_file),
                         "sha256": sha256(actual).hexdigest(),
                         "bytes": len(actual),
-                        "scope": "verified file readback, not external provider completion",
+                        "freshness": "created_or_changed_during_this_command",
+                        "scope": "current-run regular-file readback, not external provider completion",
                     },
                 ),
             ]
