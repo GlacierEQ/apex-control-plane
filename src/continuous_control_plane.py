@@ -519,6 +519,21 @@ class ContinuousControlPlane:
                 self.work[expired.work_id] = recovered
                 self.store.append_work(recovered, reason=reason)
                 self.checkpoint(expired.mission_id)
+            # Due work is made runnable during the claim itself. Requiring a
+            # separate reawaken_due() invocation strands scheduled work when
+            # that extra scheduler hook is absent or a process restarts.
+            for sleeping in list(self.work.values()):
+                if (sleeping.state is not WorkState.WAITING
+                        or sleeping.not_before is None
+                        or sleeping.not_before > instant):
+                    continue
+                reawakened = replace(
+                    sleeping, state=WorkState.RECEIVED, not_before=None,
+                    lease_owner=None, lease_expires_at=None, updated_at=instant,
+                )
+                self.work[sleeping.work_id] = reawakened
+                self.store.append_work(reawakened, reason="due_work_auto_reawakened_during_claim")
+                self.checkpoint(sleeping.mission_id)
             candidates = [
                 item for item in self.work.values()
                 # New and resumed work must be executable without a second
