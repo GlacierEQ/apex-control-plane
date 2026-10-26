@@ -15,6 +15,7 @@ from continuous_control_plane import (
     JsonlControlStore,
     WorkItem,
     WorkState,
+    load_continuous_control_config,
 )
 import json
 import os
@@ -80,6 +81,52 @@ if __name__ == "__main__":
             "status": "idle", "executed": False, "routes_run": 0,
             "reason": "no_execution_command_supplied",
         }, sort_keys=True))
+    elif (args[0] == "--run-next-local" and len(args) >= 5
+          and args[3] == "--"):
+        # Operator supplies a concrete command; the persisted queue supplies
+        # the work identity. Do not execute instructions extracted from events.
+        queue_root, capability = args[1], args[2]
+        command = args[4:]
+        plane = ContinuousControlPlane.from_config(
+            JsonlControlStore(queue_root),
+            load_continuous_control_config(
+                Path(__file__).resolve().parents[1]
+                / "config" / "continuous_control_plane.json"
+            ),
+        )
+
+        def execute_queued(item: WorkItem) -> ExecutionReceipt:
+            try:
+                process = subprocess.run(
+                    command, check=False, text=True, capture_output=True,
+                )
+                code = process.returncode
+                stdout, stderr = process.stdout, process.stderr
+            except OSError as exc:
+                code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
+            return ExecutionReceipt(
+                work_id=item.work_id,
+                mission_id=item.mission_id,
+                correlation_id=item.correlation_id,
+                receipt_kind="execution",
+                status="verified" if code == 0 else "failed",
+                source_system="apex-local-process",
+                details={
+                    "exit_code": code,
+                    "stdout": stdout,
+                    "stderr": stderr,
+                    "scope": "local process execution only; independent mission validation may remain",
+                },
+            )
+
+        result = plane.execute_next_local(
+            worker_id="apex-local-cli",
+            capabilities=[capability],
+            executor=execute_queued,
+        )
+        print(json.dumps(result, sort_keys=True))
+        if result["status"] in {"retryable_failure", "exhausted"}:
+            raise SystemExit(result.get("exit_code") or 1)
     elif args[0] == "--exec" and len(args) > 1:
         try:
             completed = subprocess.run(
