@@ -113,3 +113,41 @@ def test_real_cli_builds_readback_verified_casebook_from_source_records(tmp_path
     second = subprocess.run(command, capture_output=True, text=True, check=False)
     assert second.returncode == 0, second.stderr + second.stdout
     assert json.loads(second.stdout)["results"][0]["replayed"] is True
+
+
+def test_invalid_casebook_does_not_reserve_or_block_corrected_work(tmp_path):
+    manifest = tmp_path / "manifest.json"
+    journal = tmp_path / "journal.sqlite3"
+    output = tmp_path / "out"
+    task = {"operation_id": "correction", "kind": "casebook", "title": "Cherry casebook",
+            "claimant": "Cherry", "records": [{"source_ref": "box:original", "statement": "Preserved"}]}
+    def invoke():
+        return subprocess.run(
+            [sys.executable, str(Path(__file__).resolve().parents[1] / "src/control_plane.py"),
+             "run-internal", "--manifest", str(manifest), "--out-dir", str(output),
+             "--journal", str(journal)],
+            capture_output=True, text=True, check=False,
+        )
+    manifest.write_text(json.dumps({"mission_id": "CHERRY", "actions": [task]}), encoding="utf-8")
+    blocked = invoke()
+    assert blocked.returncode == 1
+    assert json.loads(blocked.stdout)["results"][0]["state"] == "BLOCKED"
+    task["records"][0]["classification"] = "SOURCE_REPORTED"
+    manifest.write_text(json.dumps({"mission_id": "CHERRY", "actions": [task]}), encoding="utf-8")
+    fixed = invoke()
+    assert fixed.returncode == 0, fixed.stdout + fixed.stderr
+    assert json.loads(fixed.stdout)["results"][0]["state"] == "VERIFIED"
+
+
+def test_replay_readback_error_cannot_abort_independent_work(tmp_path):
+    runner = DirectExecutor(tmp_path / "journal.sqlite3")
+    old = Action("CHERRY", "first", "compile", {})
+    another = Action("CHERRY", "second", "compile", {})
+    runner.run(old, lambda _: {"artifact": "local:first"}, verify=lambda _: True)
+    def unavailable(_):
+        raise OSError("temporary readback outage")
+    result = runner.run_many([
+        Step(old, lambda _: pytest.fail("must not replay"), unavailable),
+        Step(another, lambda _: {"artifact": "local:second"}, lambda _: True),
+    ])
+    assert [r.state for r in result] == ["RECONCILE", "VERIFIED"]
