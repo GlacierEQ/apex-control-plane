@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-import sys
 
 import pytest
 
@@ -13,10 +13,13 @@ if str(SRC) not in sys.path:
 
 from approved_operation_bridge import (
     ApprovedOperationError,
+    EvidenceAuthority,
     ProviderExecutionObservation,
+    ResolvedProviderEvidence,
     action_scope_sha256,
     build_execution_receipt,
     validate_approved_action_request,
+    validate_execution_receipt,
 )
 from approved_session_dispatch import (
     ApprovedSessionDispatchError,
@@ -24,7 +27,6 @@ from approved_session_dispatch import (
 )
 from connector_receipts import load_connector_catalog
 from control_plane_runtime import CaseBrainOrchestrator, Producer
-
 
 CATALOG_PATH = ROOT / "config" / "apex_connector_catalog.json"
 NOW = datetime(2026, 8, 22, 12, 0, tzinfo=UTC)
@@ -142,6 +144,16 @@ def test_supabase_update_requires_one_constrained_statement_with_where():
         build_approved_session_operation_plan(action_request=request, catalog=catalog, now=NOW)
 
 
+def _provider_native_resolver(evidence: dict[str, bytes]):
+    def resolve(source_ref: str) -> ResolvedProviderEvidence:
+        return ResolvedProviderEvidence(
+            material=evidence[source_ref],
+            authority=EvidenceAuthority.PROVIDER_NATIVE,
+            verifier_ref="test-provider-native-readback",
+        )
+    return resolve
+
+
 def test_runtime_admits_execution_receipt_without_provider_content_and_deduplicates():
     catalog = load_connector_catalog(CATALOG_PATH)
     action_request = approved_action()
@@ -169,17 +181,17 @@ def test_runtime_admits_execution_receipt_without_provider_content_and_deduplica
         )
     )
 
+    provider_evidence = {
+        "github://issue/create/result": b'{"id": 123, "title": "Approval-gated issue"}',
+        "github://issue/123": b'{"number": 123, "state": "open"}',
+    }
     accepted = runtime.admit_connector_execution_receipt(
-        action_request,
-        receipt,
-        catalog,
-        now=NOW,
+        action_request, receipt, catalog, now=NOW,
+        evidence_resolver=_provider_native_resolver(provider_evidence),
     )
     duplicate = runtime.admit_connector_execution_receipt(
-        action_request,
-        receipt,
-        catalog,
-        now=NOW,
+        action_request, receipt, catalog, now=NOW,
+        evidence_resolver=_provider_native_resolver(provider_evidence),
     )
 
     assert accepted["status"] == "accepted"
@@ -316,3 +328,94 @@ def test_supabase_insert_maps_after_exact_approval_and_single_statement_guard():
     assert plan.provider_name == "supabase"
     assert plan.provider_operation == "execute_sql"
     assert plan.external_action_authorized is True
+
+
+def _source_bound_receipt(action):
+    return build_execution_receipt(
+        action=action,
+        execution=ProviderExecutionObservation(
+            source_refs=("github://issue/create/result",), material=b"provider result", observed_at=NOW,
+        ),
+        result_target={"repository": "GlacierEQ/apex-control-plane", "issue_number": 123},
+        readback=ProviderExecutionObservation(
+            source_refs=("github://issue/123",), material=b"provider readback",
+            observed_at=NOW + timedelta(seconds=1),
+        ),
+        verification_passed=True,
+    )
+
+
+def test_execution_receipt_requires_independent_provider_evidence_resolver():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    action = validate_approved_action_request(approved_action(), catalog, now=NOW)
+    with pytest.raises(ApprovedOperationError, match="readback unresolved"):
+        validate_execution_receipt(_source_bound_receipt(action), action)
+
+
+def test_execution_receipt_rejects_tampered_resolved_provider_bytes():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    action = validate_approved_action_request(approved_action(), catalog, now=NOW)
+    evidence = {
+        "github://issue/create/result": b"tampered execution bytes",
+        "github://issue/123": b"provider readback",
+    }
+    with pytest.raises(ApprovedOperationError, match="digest does not match independently resolved"):
+        validate_execution_receipt(
+            _source_bound_receipt(action), action, evidence_resolver=_provider_native_resolver(evidence)
+        )
+
+
+def test_execution_receipt_preserves_provider_retrieval_failure_as_unresolved():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    action = validate_approved_action_request(approved_action(), catalog, now=NOW)
+    def unavailable(_: str) -> ResolvedProviderEvidence:
+        raise OSError("provider unavailable")
+    with pytest.raises(ApprovedOperationError, match="readback unresolved: OSError"):
+        validate_execution_receipt(
+            _source_bound_receipt(action), action, evidence_resolver=unavailable
+        )
+
+
+def test_execution_receipt_rejects_derivative_self_certifying_evidence_ref():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    action = validate_approved_action_request(approved_action(), catalog, now=NOW)
+    receipt = _source_bound_receipt(action)
+    receipt["execution_source_refs"] = ["assistant_summary:claimed-provider-result"]
+    evidence = {
+        "assistant_summary:claimed-provider-result": b"provider result",
+        "github://issue/123": b"provider readback",
+    }
+    with pytest.raises(ApprovedOperationError, match="derivative/self-certifying"):
+        validate_execution_receipt(receipt, action, evidence_resolver=_provider_native_resolver(evidence))
+
+
+def test_execution_receipt_records_independent_evidence_resolution_state():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    action = validate_approved_action_request(approved_action(), catalog, now=NOW)
+    evidence = {
+        "github://issue/create/result": b"provider result",
+        "github://issue/123": b"provider readback",
+    }
+    validated = validate_execution_receipt(
+        _source_bound_receipt(action), action, evidence_resolver=_provider_native_resolver(evidence)
+    )
+    assert validated.evidence_verification_state == "provider_native_evidence_resolved"
+
+
+def test_captured_artifact_cannot_certify_successful_provider_completion():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    action = validate_approved_action_request(approved_action(), catalog, now=NOW)
+    evidence = {
+        "github://issue/create/result": b"provider result",
+        "github://issue/123": b"provider readback",
+    }
+    def captured(source_ref: str) -> ResolvedProviderEvidence:
+        return ResolvedProviderEvidence(
+            material=evidence[source_ref],
+            authority=EvidenceAuthority.CAPTURED_ARTIFACT,
+            verifier_ref="captured-artifact:test",
+        )
+    with pytest.raises(ApprovedOperationError, match="provider-native execution evidence"):
+        validate_execution_receipt(
+            _source_bound_receipt(action), action, evidence_resolver=captured
+        )
