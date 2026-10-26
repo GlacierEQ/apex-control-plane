@@ -125,6 +125,26 @@ def dispatch_once(
             if not isinstance(recovered, RecoveredEffect) or recovered.operation_key != key:
                 raise AdmissionDenied("reserved operation has no matching reconciled provider receipt")
             checkpoint = recovered.continuation_checkpoint
+            if checkpoint is None:
+                # The native effect may have succeeded just before the host
+                # crashed. A fresh provider readback permits finishing the
+                # existing reservation WITHOUT replaying the side effect.
+                if readback(recovered.native_result) is not True:
+                    raise AdmissionDenied("unverified provider effect cannot bridge missing checkpoint")
+                record = ContinuationRecord(
+                    mission_id=mission.expected_mission_id,
+                    source_ref=mission.source_ref,
+                    cursor=mission.cursor,
+                    correction_ids=mission.correction_ids,
+                    provider=capability.provider,
+                    action=capability.action,
+                    operation_key=key,
+                    native_result=recovered.native_result,
+                )
+                checkpoint = persist_continuation(record)
+                if checkpoint is None or verify_continuation(checkpoint) is not True:
+                    raise AdmissionDenied("reconciled continuation not independently verified")
+                return recovered.native_result
             if not isinstance(checkpoint, dict) or any(
                 checkpoint.get(field) != value for field, value in (
                     ("mission_id", mission.expected_mission_id),
