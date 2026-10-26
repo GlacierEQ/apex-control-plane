@@ -158,7 +158,8 @@ def test_orchestrator_generates_review_only_recommendations_and_receipt() -> Non
     actions = {item["action"] for item in result["recommendations"]}
     assert "verify_deadline_and_prepare_review_packet" in actions
     assert "build_corroboration_matrix" in actions
-    assert "freeze_external_automation_and_route_operator_review" in actions
+    assert "prioritize_threat_verification_and_continue_authorized_work" in actions
+    assert "freeze_external_automation_and_route_operator_review" not in actions
     assert len(orchestrator.receipts) == 1
     assert orchestrator.receipts[0].output_sha256 is not None
 
