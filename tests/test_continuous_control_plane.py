@@ -133,7 +133,7 @@ def test_stale_second_instance_cannot_double_claim(tmp_path):
     assert cp2.claim_next(worker_id="worker-2",capabilities=[work.capability],now=NOW) is None
 
 
-def test_expired_dispatched_work_at_attempt_limit_dead_letters(tmp_path):
+def test_expired_dispatched_work_continues_beyond_legacy_attempt_count(tmp_path):
     cp=plane(tmp_path)
     work=cp.ingest_event(event())[0]
     compile_work(cp,work.work_id)
@@ -141,9 +141,38 @@ def test_expired_dispatched_work_at_attempt_limit_dead_letters(tmp_path):
     assert claimed is not None
     exhausted=replace(claimed,max_attempts=claimed.attempt)
     cp.work[work.work_id]=exhausted
-    cp.store.append_work(exhausted,reason="test_attempt_limit")
+    cp.store.append_work(exhausted,reason="legacy_retry_counter_reached")
     changed=cp.reconcile_expired_leases(NOW+timedelta(seconds=2))
-    assert changed[0].state is WorkState.DEAD_LETTER
+    assert changed[0].state is WorkState.RECEIVED
+    recovered=plane(tmp_path)
+    next_attempt=recovered.claim_next(
+        worker_id="recovery-worker",capabilities=[work.capability],now=NOW+timedelta(seconds=3)
+    )
+    assert next_attempt is not None
+    assert next_attempt.work_id == work.work_id
+    assert next_attempt.attempt == claimed.attempt + 1
+    assert next_attempt.state is WorkState.DISPATCHED
+
+
+def test_atomic_lease_recovery_does_not_dead_letter_at_legacy_zero_budget(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    original = cp.claim_next(
+        worker_id="first-worker", capabilities=[work.capability], now=NOW, lease_seconds=1
+    )
+    assert original is not None
+    old_budget = replace(original, max_attempts=0)
+    cp.work[work.work_id] = old_budget
+    cp.store.append_work(old_budget, reason="preexisting_zero_legacy_retry_budget")
+
+    another_instance = plane(tmp_path)
+    attempt = another_instance.claim_next(
+        worker_id="new-worker", capabilities=[work.capability], now=NOW+timedelta(seconds=5)
+    )
+    assert attempt is not None
+    assert attempt.work_id == original.work_id
+    assert attempt.state is WorkState.DISPATCHED
+    assert attempt.attempt == 2
 
 
 def test_naive_now_is_rejected_explicitly(tmp_path):
