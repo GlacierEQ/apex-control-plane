@@ -139,8 +139,9 @@ def test_stale_health_is_ineligible_when_fresh_alternative_exists() -> None:
 
     assert plan.selected == "local_linux"
     stale = next(route for route in plan.routes if route.substrate == "buildkite")
-    assert stale.eligible is False
+    assert stale.eligible is True
     assert "stale_observation" in stale.reasons
+    assert "buildkite" in plan.fallbacks
 
 
 def test_route_plan_exposes_ranked_fallbacks_without_promoting_selection_to_authority() -> None:
