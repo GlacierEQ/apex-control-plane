@@ -494,14 +494,18 @@ def test_concrete_provider_blocker_is_resumable_and_route_local(monkeypatch) -> 
         "provider rejected write",
         reference="provider-error:403",
     )
-    assert blocked.phase == "blocked"
+    # One failed provider path is not a global execution halt.
+    assert blocked.phase == "executing"
     assert blocked.unresolved_blockers == ("provider rejected write",)
+    kernel.record_execution("provider-action:independent-alternative")
+    assert kernel.phase is RuntimePhase.TESTING
 
+    # Reconciliation of the failed route remains possible after other work.
     resumed = kernel.resolve_blocker(
         "provider rejected write",
         resolution_reference="provider-recovery:alternate-route",
     )
-    assert resumed.phase == "executing"
+    assert resumed.phase == "testing"
     assert resumed.unresolved_blockers == ()
 
 
