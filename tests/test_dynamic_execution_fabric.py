@@ -374,7 +374,7 @@ def test_unrecognized_health_is_uncertain_not_a_veto_on_execution() -> None:
     result = fabric.execute(
         workload,
         [obs("new-provider", capabilities={"python"}, health="warming_up")],
-        lambda substrate, _: {"attempted": substrate},
+        lambda substrate, _: {"status": "success", "attempted": substrate},
     )
     assert result.ok is True
     assert result.substrate == "new-provider"
