@@ -44,6 +44,21 @@ class ReconcileReservedOperationTests(unittest.TestCase):
         self.assertEqual(outcome, self.effect)
         self.assertEqual(self.external_calls, [])
 
+    def test_crash_after_provider_success_finishes_missing_checkpoint_without_replay(self):
+        # A native provider receipt can exist without a saved APEX checkpoint.
+        # Its independently verified result must be persisted, never created again.
+        result = self.dispatch(lambda key: RecoveredEffect(key, self.effect, None))
+        self.assertEqual(result, self.effect)
+        self.assertEqual(self.external_calls, [])
+
+    def test_unverified_native_result_cannot_bridge_missing_checkpoint(self):
+        with self.assertRaises(AdmissionDenied):
+            self.dispatch(
+                lambda key: RecoveredEffect(key, {"native_id": "wrong"}, None),
+                readback=lambda result: result == self.effect,
+            )
+        self.assertEqual(self.external_calls, [])
+
     def test_reserved_without_provider_checkpoint_remains_unreplayed(self):
         with self.assertRaisesRegex(AdmissionDenied, "reconcile"):
             self.dispatch(lambda _: None)
