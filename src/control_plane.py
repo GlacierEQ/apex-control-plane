@@ -75,6 +75,17 @@ if __name__ == "__main__":
     import subprocess
 
     args = sys.argv[1:]
+    if args and args[0] == "run-internal":
+        from execute_now import main as run_internal
+        raise SystemExit(run_internal(args[1:]))
+    if not args and os.getenv("GLACIEREQ_INTERNAL_MANIFEST"):
+        from execute_now import main as run_internal
+        manifest = Path(os.environ["GLACIEREQ_INTERNAL_MANIFEST"])
+        raise SystemExit(run_internal([
+            "--manifest", str(manifest),
+            "--out-dir", str(manifest.parent / "results"),
+            "--journal", str(manifest.parent / ".apex_direct_execution.sqlite3"),
+        ]))
     if not args:
         print(json.dumps({
             "status": "idle", "executed": False, "routes_run": 0,
