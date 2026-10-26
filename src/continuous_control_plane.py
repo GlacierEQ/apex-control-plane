@@ -563,7 +563,7 @@ class ContinuousControlPlane:
         *,
         worker_id: str,
         capabilities: Iterable[str],
-        executor: Callable[[WorkItem], ExecutionReceipt | None],
+        executor: Callable[[WorkItem], ExecutionReceipt | list[ExecutionReceipt] | tuple[ExecutionReceipt, ...] | None],
         now: datetime | None = None,
     ) -> dict[str, Any]:
         """Claim and actually execute one nonexternal work item, preserving proof.
@@ -591,7 +591,13 @@ class ContinuousControlPlane:
                 "work_id": item.work_id,
                 "error": f"{type(exc).__name__}: {exc}",
             }
-        if not isinstance(receipt, ExecutionReceipt):
+        if isinstance(receipt, ExecutionReceipt):
+            receipts = (receipt,)
+        elif isinstance(receipt, (tuple, list)) and receipt and all(
+            isinstance(row, ExecutionReceipt) for row in receipt
+        ):
+            receipts = tuple(receipt)
+        else:
             self.transition(item.work_id, WorkState.RECONCILING,
                             reason="worker_returned_no_provider_receipt")
             return {
@@ -599,10 +605,12 @@ class ContinuousControlPlane:
                 "routes_run": 1, "work_id": item.work_id,
             }
 
-        self.record_receipt(receipt)
-        good = receipt.status.casefold() in {
+        for evidence in receipts:
+            self.record_receipt(evidence)
+        receipt = receipts[-1]
+        good = all(evidence.status.casefold() in {
             "verified", "pass", "passed", "success", "succeeded",
-        }
+        } for evidence in receipts)
         if not good:
             if item.attempt >= item.max_attempts:
                 self.transition(item.work_id, WorkState.DEAD_LETTER,

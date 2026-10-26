@@ -99,3 +99,65 @@ def test_cli_with_no_queued_local_work_is_idle_not_fabricated_success(tmp_path: 
     payload = json.loads(result.stdout)
     assert payload["status"] == "idle"
     assert payload["executed"] is False
+
+
+
+def test_cli_verified_artifact_closes_work_in_one_execution(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        WorkState, load_continuous_control_config,
+    )
+    store_path = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    work = cp.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="proof-mission", correlation_id="correlated", payload={},
+    ))[0]
+    target = tmp_path / "real-output.txt"
+    cmd = [sys.executable, "-c",
+           "from pathlib import Path; import sys; Path(sys.argv[1]).write_text('verified work')",
+           str(target)]
+    run = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(store_path),
+         work.capability, "--verify-file", str(target), "--", *cmd],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert run.returncode == 0, run.stderr
+    assert target.read_text() == "verified work"
+    payload = json.loads(run.stdout)
+    assert payload["status"] == "complete"
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    assert cp.work[work.work_id].state is WorkState.COMPLETE
+    assert {r.receipt_kind for r in cp.receipts.values()} == {"execution", "verification"}
+    verified = next(r for r in cp.receipts.values() if r.receipt_kind == "verification")
+    assert verified.details["bytes"] == len(target.read_bytes())
+    assert len(verified.details["sha256"]) == 64
+
+
+def test_cli_missing_artifact_does_not_claim_complete(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        WorkState, load_continuous_control_config,
+    )
+    store_path = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    work = cp.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="missing-artifact", correlation_id="correlated", payload={},
+    ))[0]
+    missing = tmp_path / "never-created.txt"
+    run = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(store_path),
+         work.capability, "--verify-file", str(missing), "--",
+         sys.executable, "-c", "print('ran without artifact')"],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert run.returncode == 0, run.stderr
+    assert json.loads(run.stdout)["status"] == "awaiting_receipts"
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    assert cp.work[work.work_id].state is WorkState.VERIFYING
+    assert {r.receipt_kind for r in cp.receipts.values()} == {"execution"}
