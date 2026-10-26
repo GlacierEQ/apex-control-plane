@@ -10,6 +10,7 @@ Static policy defines invariants. Live observations decide the route.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any, Callable, FrozenSet, Iterable, Sequence
 
@@ -173,6 +174,44 @@ class DynamicObservationRegistry:
         return tuple(observations)
 
 
+def _provider_outcome(result: Any) -> tuple[str, str | None]:
+    """Distinguish terminal success, explicit failure, and uncertain execution.
+
+    A callback invocation is not evidence of successful work. An ambiguous or
+    queued side effect is not retried blindly, even when fallback routes exist.
+    """
+    if result is None:
+        return "unconfirmed", "executor_returned_no_result"
+    if result is False:
+        return "failed", "executor_returned_false"
+    if result is True:
+        return "success", None
+    if isinstance(result, Mapping):
+        state = str(result.get("status") or result.get("state") or "").strip().lower()
+        if result.get("ok") is False or result.get("success") is False:
+            return "failed", str(result.get("error") or state or "provider_reported_failure")
+        if state in {"failed", "failure", "error", "denied", "rejected", "cancelled", "canceled", "unavailable", "timed_out"}:
+            return "failed", str(result.get("error") or state)
+        if state in {"queued", "pending", "accepted", "submitted", "scheduled", "running", "processing", "in_progress"}:
+            return "pending", None
+        if result.get("error"):
+            return "failed", str(result["error"])
+        if state in {"success", "succeeded", "complete", "completed", "verified", "passed", "pass", "ok"} or result.get("ok") is True or result.get("success") is True:
+            return "success", None
+        if result.get("receipt") or result.get("provider_receipt_id"):
+            return "success", None
+        return "unconfirmed", "executor_returned_unclassified_result"
+    if isinstance(result, str):
+        state = result.strip().lower()
+        if state in {"success", "completed", "verified", "succeeded"}:
+            return "success", None
+        if state in {"failed", "failure", "error", "rejected"}:
+            return "failed", state
+        if state in {"queued", "pending", "accepted", "running"}:
+            return "pending", None
+    return "unconfirmed", "executor_result_not_verified"
+
+
 class DynamicExecutionFabric:
     """Rank live execution substrates without letting routing redefine the mission."""
 
@@ -244,9 +283,16 @@ class DynamicExecutionFabric:
                     "error": str(exc),
                 })
                 continue
+            outcome, reason = _provider_outcome(result)
+            if outcome == "failed":
+                failures.append({
+                    "substrate": substrate,
+                    "error": reason or "provider_reported_failure",
+                })
+                continue
             return ExecutionResult(
-                ok=True,
-                status="success",
+                ok=outcome == "success",
+                status=outcome,
                 workload_id=workload.workload_id,
                 objective=workload.objective,
                 substrate=substrate,
