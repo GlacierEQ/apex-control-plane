@@ -24,7 +24,7 @@ jobs:
           python-version: "3.12"
       - name: Compile proactive surfaces
         run: |
-          python -m py_compile src/apex_proactive.py src/apex_session_gateway.py src/connector_mission_router.py src/control_plane.py
+          python -m py_compile src/mission_fidelity_admission.py src/apex_session_gateway.py src/connector_mission_router.py src/control_plane.py
           python -m json.tool config/continuous_control_plane.json >/dev/null
       - name: Full test suite
         run: |
