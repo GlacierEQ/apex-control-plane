@@ -55,18 +55,20 @@ def test_duplicate_source_has_stable_idempotency_key():
     assert build_capture(CAPTURE).idempotency_key == build_capture(dict(CAPTURE)).idempotency_key
 
 
-def test_absent_deadline_is_recorded_but_not_sent_to_task_provider():
+def test_absent_deadline_remains_actionable_without_inventing_a_date():
     item = build_capture({**CAPTURE, "raw_text": "Review the Mem integration test."})
+    assert item.categories == ("ACTION", "COMMITMENT")
     assert item.due_date is None
-    with pytest.raises(CaptureRoutingError, match="date-only deadline required"):
-        make_ticktick_task(item)
+    task = make_ticktick_task(item)["task"]
+    assert task["title"] == "Review the Mem integration test"
+    assert "dueDate" not in task
+    assert task["isAllDay"] is False
 
 
 def test_next_friday_is_not_silently_interpreted():
     item = build_capture({**CAPTURE, "raw_text": "Review the Mem integration test next Friday."})
     assert item.due_date is None
-    with pytest.raises(CaptureRoutingError, match="date-only deadline required"):
-        make_ticktick_task(item)
+    assert "dueDate" not in make_ticktick_task(item)["task"]
 
 
 def test_ingest_uses_existing_apex_rpc_without_fabricated_execution():
@@ -161,8 +163,7 @@ def test_bad_source_metadata_is_never_assumed_to_be_authoritative():
 def test_same_weekday_without_explicit_this_or_next_is_not_scheduled():
     item = build_capture({**CAPTURE, "observed_at": "2026-10-16T10:25:00-10:00"})
     assert item.due_date is None
-    with pytest.raises(CaptureRoutingError, match="date-only deadline required"):
-        make_ticktick_task(item)
+    assert "dueDate" not in make_ticktick_task(item)["task"]
 
 
 def test_missing_source_version_provides_a_specific_error():

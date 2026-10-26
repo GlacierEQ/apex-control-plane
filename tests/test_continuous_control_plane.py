@@ -526,3 +526,37 @@ def test_execute_next_local_idle_does_not_claim_work_or_report_execution(tmp_pat
     result = cp.execute_next_local(worker_id="local", capabilities=["case.response.ingest"], executor=lambda item: None)
     assert result["status"] == "idle"
     assert result["executed"] is False
+
+
+def test_failed_local_execution_does_not_die_at_legacy_zero_retry_budget(tmp_path):
+    """Legacy retry metadata must not kill reversible local work."""
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    limited = replace(work, max_attempts=0)
+    cp.work[work.work_id] = limited
+    cp.store.append_work(limited, reason="legacy_zero_retry_budget")
+    calls = []
+
+    def fail(item):
+        calls.append(item.attempt)
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="execution",
+            status="failed", source_system="local-process",
+            details={"exit_code": 17},
+        )
+
+    first = cp.execute_next_local(
+        worker_id="local-1", capabilities=[work.capability],
+        executor=fail, now=NOW,
+    )
+    assert first["status"] == "retryable_failure"
+    assert cp.work[work.work_id].state is WorkState.RECEIVED
+
+    second = cp.execute_next_local(
+        worker_id="local-2", capabilities=[work.capability],
+        executor=fail, now=NOW + timedelta(seconds=1),
+    )
+    assert second["status"] == "retryable_failure"
+    assert cp.work[work.work_id].state is WorkState.RECEIVED
+    assert calls == [1, 2]
