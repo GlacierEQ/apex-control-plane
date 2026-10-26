@@ -19,7 +19,7 @@ WEEKDAYS = {name.lower(): index for index, name in enumerate((
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
 ))}
 ACTION_RE = re.compile(
-    r"^(Review|Check|Inspect|Audit|Verify|Prepare|Update|Follow up on|Test)\s+(.+?)(?:\s+on\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday))?\.?$",
+    r"^(Review|Check|Inspect|Audit|Verify|Prepare|Update|Follow up on|Test|Build|Fix|Remove|Repair|Execute|Implement|Integrate|Deploy|Ship|Enforce|Complete|Continue)\s+(.+?)(?:\s+on\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday))?\.?$",
     re.IGNORECASE,
 )
 
