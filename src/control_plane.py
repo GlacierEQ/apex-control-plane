@@ -68,14 +68,16 @@ def _validate_explicit_boot_receipt_syntax() -> None:
 
 
 if __name__ == "__main__":
-    # No startup boot interception. Print a before/after receipt for the
-    # local runtime state and exit 0; external effects still require their
-    # own provider route and readback. (The apex_proactive engine was
-    # removed 2026-10-24 after its live-job proof returned NOT PROVEN;
-    # this block no longer depends on it.)
-    before = {"routes_run": 0}
-    after = {"routes_run": 1}
-    print(json.dumps({"status": "ok", "receipt": {"before": before, "after": after, "label": "control_plane_main"}}, sort_keys=True))
+    # A direct CLI invocation has no authenticated provider callbacks.
+    # Do not turn a fabricated before/after counter into an execution receipt.
+    print(json.dumps({
+        "status": "HOST_EXECUTOR_NOT_BOUND",
+        "routes_run": 0,
+        "provider_receipt": None,
+        "continuation_verified": False,
+        "required_runtime": "authenticated APEX host invoking dispatch_recovered_once",
+    }, sort_keys=True))
+    raise SystemExit(78)
 
 else:
     from control_plane_runtime import *  # noqa: F401,F403
