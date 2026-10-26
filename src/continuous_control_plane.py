@@ -510,9 +510,9 @@ class ContinuousControlPlane:
                     continue
                 if expired.external_action:
                     state, reason = WorkState.RECONCILING, "expired_external_lease_requires_provider_reconciliation"
-                elif expired.attempt >= expired.max_attempts:
-                    state, reason = WorkState.DEAD_LETTER, "local_retry_limit_reached"
                 else:
+                    # Legacy max_attempts is telemetry, never an automatic
+                    # abandonment of reversible, local work.
                     state, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
                 recovered = replace(expired, state=state, lease_owner=None,
                                     lease_expires_at=None, updated_at=instant)
@@ -527,7 +527,6 @@ class ContinuousControlPlane:
                 and item.capability in supported
                 and (item.not_before is None or item.not_before <= instant)
                 and (item.lease_expires_at is None or item.lease_expires_at <= instant)
-                and item.attempt < item.max_attempts
             ]
             if not candidates:
                 return None
@@ -560,9 +559,9 @@ class ContinuousControlPlane:
                 continue
             if item.external_action:
                 target, reason = WorkState.RECONCILING, "external_action_lease_expired_reconcile_before_retry"
-            elif item.attempt >= item.max_attempts:
-                target, reason = WorkState.DEAD_LETTER, "max_attempts_exhausted"
             else:
+                # Keep retrying local work after worker crashes. Real provider
+                # failures remain visible; external calls still reconcile.
                 target, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
             changed.append(self.transition(item.work_id, target, reason=reason))
         return changed
