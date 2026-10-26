@@ -33,13 +33,16 @@ jobs:
         run: python -m compileall -q src tests
       - name: Test safety and resilience invariants
         run: python -m pytest -q
-      - name: Proactive smoke test emits a before/after receipt
+      - name: CLI smoke test executes actual work instead of inventing completion
         run: |
-          python src/control_plane.py > /tmp/casebrain-smoke.json
-          test -s /tmp/casebrain-smoke.json
-          grep -q '"status": "proactive"' /tmp/casebrain-smoke.json
-          grep -q '"diff"' /tmp/casebrain-smoke.json
-          if grep -q '"external_action_authorized": true' /tmp/casebrain-smoke.json; then
-            echo "smoke output must not manufacture blanket external authorization" >&2
-            exit 1
-          fi
+          python src/control_plane.py > /tmp/casebrain-idle.json
+          python src/control_plane.py --exec python -c "print('executed in process')" > /tmp/casebrain-exec.json
+          python - <<'PY'
+          import json
+          idle = json.load(open('/tmp/casebrain-idle.json', encoding='utf-8'))
+          executed = json.load(open('/tmp/casebrain-exec.json', encoding='utf-8'))
+          assert idle['status'] == 'idle' and idle['routes_run'] == 0 and idle['executed'] is False
+          assert executed['status'] == 'completed' and executed['routes_run'] == 1
+          assert executed['executed'] is True and executed['exit_code'] == 0
+          assert executed['stdout'].strip() == 'executed in process'
+          PY
