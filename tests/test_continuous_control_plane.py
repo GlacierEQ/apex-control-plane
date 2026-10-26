@@ -285,3 +285,33 @@ def test_deadline_preemption_does_not_authorize_mutation(tmp_path):
     cp.transition(filing.work_id, WorkState.CHANGESET_READY, reason="ready")
     with pytest.raises(PermissionError, match="authorization"):
         cp.transition(filing.work_id, WorkState.MUTATING, reason="not-authorized")
+
+
+def test_newly_submitted_work_is_claimable_without_manual_compile(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    assert work.state is WorkState.RECEIVED
+    claimed = cp.claim_next(worker_id="worker-direct", capabilities=[work.capability], now=NOW)
+    assert claimed is not None
+    assert claimed.work_id == work.work_id
+    assert claimed.state is WorkState.DISPATCHED
+    assert claimed.attempt == 1
+    recovered = plane(tmp_path)
+    assert recovered.work[work.work_id].state is WorkState.DISPATCHED
+
+
+def test_reawakened_work_is_claimable_without_another_manual_compile(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    compile_work(cp, work.work_id)
+    cp.transition(work.work_id, WorkState.DISPATCHED, reason="dispatch")
+    cp.transition(work.work_id, WorkState.WAITING, reason="wait", not_before=NOW + timedelta(minutes=1))
+    cp.reawaken_due(NOW + timedelta(minutes=2))
+    claimed = cp.claim_next(
+        worker_id="worker-resume",
+        capabilities=[work.capability],
+        now=NOW + timedelta(minutes=2),
+    )
+    assert claimed is not None
+    assert claimed.work_id == work.work_id
+    assert claimed.state is WorkState.DISPATCHED
