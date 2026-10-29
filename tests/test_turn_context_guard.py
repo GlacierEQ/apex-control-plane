@@ -180,3 +180,23 @@ def test_study_provenance_changes_receipt_digest() -> None:
         research_applied_refs=("current_conversation",),
     ))
     assert base.receipt_sha256 != studied.receipt_sha256
+
+
+def test_absent_context_cannot_be_marked_applied() -> None:
+    decision = route_turn_context(_receipt(
+        material_context_found=False,
+        material_context_applied=True,
+    ))
+    assert decision.next_action == "RECONCILE_CONTEXT_CLAIMS_THEN_CONTINUE"
+    assert decision.mission_stopped is False
+
+
+def test_unexpected_source_type_is_not_trusted_as_consulted_evidence() -> None:
+    decision = route_turn_context(_receipt(
+        sources_consulted=(["unhashable-source"],),
+        retrieval_attempted=True,
+        material_context_found=False,
+        material_context_applied=False,
+        applied_context_refs=(),
+    ))
+    assert decision.next_action == "RETRIEVE_CONTEXT_THEN_CONTINUE"
