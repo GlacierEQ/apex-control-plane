@@ -526,3 +526,99 @@ def test_execute_next_local_idle_does_not_claim_work_or_report_execution(tmp_pat
     result = cp.execute_next_local(worker_id="local", capabilities=["case.response.ingest"], executor=lambda item: None)
     assert result["status"] == "idle"
     assert result["executed"] is False
+
+
+def test_local_worker_failure_after_retry_budget_keeps_mission_runnable(tmp_path):
+    """A local worker's legacy attempt budget cannot permanently abandon work."""
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    low_budget = replace(work, max_attempts=1)
+    cp.work[work.work_id] = low_budget
+    cp.store.append_work(low_budget, reason="simulate_prior_retry_budget")
+
+    def fail(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="execution",
+            status="failed", source_system="local-process",
+            details={"exit_code": 17},
+        )
+
+    result = cp.execute_next_local(
+        worker_id="local", capabilities=[work.capability], executor=fail, now=NOW
+    )
+    assert result["status"] == "retry_scheduled"
+    assert result["executed"] is True
+    assert result["exit_code"] == 17
+    assert cp.work[work.work_id].state is WorkState.WAITING
+    assert cp.work[work.work_id].not_before == NOW + timedelta(seconds=2)
+    assert cp.claim_next(
+        worker_id="too-soon", capabilities=[work.capability],
+        now=NOW + timedelta(seconds=1),
+    ) is None
+
+    restarted = plane(tmp_path)
+
+    def recover(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-process",
+            details={"outcome": "recovered"},
+        )
+
+    recovered = restarted.execute_next_local(
+        worker_id="replacement", capabilities=[work.capability],
+        executor=recover, now=NOW + timedelta(seconds=3),
+    )
+    assert recovered["status"] == "complete"
+    assert recovered["work_id"] == work.work_id
+    assert restarted.work[work.work_id].state is WorkState.COMPLETE
+    assert restarted.work[work.work_id].attempt == 2
+
+
+def test_scheduled_local_retry_does_not_block_independent_work(tmp_path):
+    cp = plane(tmp_path)
+    failed = cp.ingest_event(event())[0]
+    low_budget = replace(failed, max_attempts=1)
+    cp.work[failed.work_id] = low_budget
+    cp.store.append_work(low_budget, reason="simulate_prior_retry_budget")
+
+    def fail(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="execution",
+            status="failed", source_system="local-process",
+            details={"exit_code": 9},
+        )
+
+    scheduled = cp.execute_next_local(
+        worker_id="first", capabilities=[failed.capability], executor=fail, now=NOW
+    )
+    assert scheduled["status"] == "retry_scheduled"
+    assert cp.work[failed.work_id].state is WorkState.WAITING
+
+    independent = ControlEvent(
+        event_type="github.workflow.finished", source_system="github",
+        subject_id="ENGINEERING-OTHER", correlation_id="other-corr",
+        occurred_at=NOW, payload={"conclusion": "success"},
+        dedupe_key="independent-local-unit",
+    )
+    ready = cp.ingest_event(independent)[0]
+
+    def succeed(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-executor",
+            details={"completed": True},
+        )
+
+    result = cp.execute_next_local(
+        worker_id="other", capabilities=[failed.capability, ready.capability],
+        executor=succeed, now=NOW + timedelta(seconds=1),
+    )
+    assert result["status"] == "complete"
+    assert result["work_id"] == ready.work_id
+    assert cp.work[failed.work_id].state is WorkState.WAITING
+    assert cp.work[ready.work_id].state is WorkState.COMPLETE
