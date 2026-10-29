@@ -66,11 +66,17 @@ class OperationalCore:
         self.adapters = dict(adapters)
         self.lease_seconds = lease_seconds
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        first = not self.path.exists()
+        if self.path.is_symlink():
+            raise ValueError("operation journal cannot be a symbolic link")
+        if os.name == "posix":
+            try:
+                fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            except FileExistsError:
+                pass
+            else:
+                os.close(fd)
         self.db = sqlite3.connect(self.path, timeout=15, isolation_level=None)
         self.db.row_factory = sqlite3.Row
-        if first and os.name == "posix":
-            os.chmod(self.path, 0o600)
         self.db.execute("PRAGMA busy_timeout=15000")
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("""CREATE TABLE IF NOT EXISTS operations (
@@ -185,6 +191,8 @@ class OperationalCore:
                     return self._finish(operation_id, "needs_reconciliation", error_type="non_idempotent_replay")
                 self.db.execute("BEGIN IMMEDIATE")
                 r = self.db.execute("SELECT * FROM operations WHERE id=?", (operation_id,)).fetchone()
+                if r is None:
+                    raise KeyError(operation_id)
                 if r["state"] == "verified":
                     self.db.execute("COMMIT")
                     return self.status(operation_id)
@@ -248,17 +256,27 @@ class OperationalCore:
 
 
 class FileWriteAdapter:
-    """Explicit, idempotent local file action, verified by independent read."""
+    """Write only inside an explicitly configured and trusted workspace root."""
 
     idempotent = True
 
+    def __init__(self, root: str | Path):
+        self.root = Path(root).resolve()
+
+    def _target(self, payload: Mapping[str, Any]) -> Path:
+        original = Path(str(payload["path"]))
+        if original.is_symlink():
+            raise ValueError("refusing to overwrite a symbolic link")
+        target = (self.root / original).resolve()
+        if target == self.root or not target.is_relative_to(self.root):
+            raise ValueError("file target escapes the authorized workspace root")
+        return target
+
     def execute(self, payload: Mapping[str, Any], operation_id: str) -> dict[str, str]:
-        destination = Path(str(payload["path"]))
+        destination = self._target(payload)
         content = payload["content"]
         if not isinstance(content, str):
             raise ValueError("file content must be text")
-        if destination.is_symlink():
-            raise ValueError("refusing to overwrite a symbolic link")
         destination.parent.mkdir(parents=True, exist_ok=True)
         tmp_path: str | None = None
         try:
@@ -275,8 +293,9 @@ class FileWriteAdapter:
         return {"path": str(destination), "sha256": sha256(content.encode()).hexdigest()}
 
     def verify(self, payload: Mapping[str, Any]) -> bool | None:
-        destination = Path(str(payload["path"]))
-        if destination.is_symlink():
+        try:
+            destination = self._target(payload)
+        except ValueError:
             return None
         try:
             actual = destination.read_bytes()
