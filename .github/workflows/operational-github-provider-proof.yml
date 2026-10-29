@@ -1,0 +1,34 @@
+name: Live Operational GitHub Provider Proof
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/operational-github-provider-proof.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  provider-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute native GitHub API write and independent readback
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'Operational core live native GitHub API execution proof\n' > "$RUNNER_TEMP/desired.txt"
+          python scripts/operate_github.py \
+            --state "$RUNNER_TEMP/github-operation.sqlite" \
+            --id "operational-github-provider-proof-v1" \
+            --repo "${{ github.repository }}" \
+            --branch main \
+            --path "docs/receipts/operational-github-provider-proof.txt" \
+            --content-file "$RUNNER_TEMP/desired.txt" \
+            --message "Record live operational adapter provider proof"
