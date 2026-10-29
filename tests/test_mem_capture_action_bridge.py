@@ -205,8 +205,11 @@ def test_mem_revision_identity_accepts_exact_integer_or_decimal_string():
 def test_same_weekday_without_explicit_this_or_next_is_not_scheduled():
     item = build_capture({**CAPTURE, "observed_at": "2026-10-16T10:25:00-10:00"})
     assert item.due_date is None
-    with pytest.raises(CaptureRoutingError, match="date-only deadline required"):
-        make_ticktick_task(item)
+    task = make_ticktick_task(item)["task"]
+    # The action remains actionable; ambiguous "Friday" must not invent a due date.
+    assert task["title"] == "Review the Mem integration test"
+    assert "dueDate" not in task
+    assert task["isAllDay"] is False
 
 
 def test_missing_source_version_provides_a_specific_error():
