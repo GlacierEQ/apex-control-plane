@@ -48,7 +48,33 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GLACIEREQ_APEX_LEARNING_STATE_PATH: .apex/learning/model.json
-        run: python scripts/verify_live_github_feedback.py
+        run: |
+          python scripts/verify_live_github_feedback.py | tee "$RUNNER_TEMP/native-feedback-first.json"
+          python scripts/verify_live_github_feedback.py | tee "$RUNNER_TEMP/native-feedback-replay.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          first = json.loads((Path(os.environ["RUNNER_TEMP"]) / "native-feedback-first.json").read_text())
+          replay = json.loads((Path(os.environ["RUNNER_TEMP"]) / "native-feedback-replay.json").read_text())
+          if first.get("status") == "NO_RELEVANT_CODE_DELTA":
+              if replay.get("status") != "NO_RELEVANT_CODE_DELTA":
+                  raise RuntimeError("non-code commits yielded contradictory replay status")
+          elif first.get("status") in {
+              "GITHUB_NATIVE_CODE_DELTA_VERIFIED",
+              "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED",
+          }:
+              if replay.get("status") != "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED":
+                  raise RuntimeError("GitHub-native feedback was not idempotent")
+              if replay.get("prior_model_sha256") != (
+                  first.get("new_model_sha256") or first.get("prior_model_sha256")
+              ):
+                  raise RuntimeError("GitHub learning model mutated on duplicate replay")
+          else:
+              raise RuntimeError("unexpected native feedback status")
+          print("GitHub-native feedback replay independently verified")
+          PY
       - name: Save verified GitHub learning checkpoint
         id: save_feedback
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.native_feedback.outcome == 'success' }}
