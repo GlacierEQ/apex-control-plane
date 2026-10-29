@@ -14,9 +14,10 @@ def test_idle_control_plane_cannot_fabricate_completed_routes() -> None:
     result = subprocess.run(
         [sys.executable, str(CLI)], cwd=ROOT, capture_output=True, text=True
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 3, result.stderr
     payload = json.loads(result.stdout)
     assert payload["status"] == "idle"
+    assert payload["mission_complete"] is False
     assert payload["routes_run"] == 0
     assert payload["executed"] is False
 
@@ -36,7 +37,9 @@ def test_control_plane_runs_real_local_command_and_reports_actual_exit(tmp_path:
     assert result.returncode == 0, result.stderr
     assert target.read_text() == "actual execution"
     payload = json.loads(result.stdout)
-    assert payload["status"] == "completed"
+    assert payload["status"] == "process_succeeded_unverified"
+    assert payload["mission_complete"] is False
+    assert payload["outcome_verified"] is False
     assert payload["executed"] is True
     assert payload["routes_run"] == 1
     assert payload["exit_code"] == 0
@@ -77,7 +80,7 @@ def test_cli_dequeues_real_work_and_runs_supplied_command(tmp_path: Path) -> Non
          work.capability, "--", *command],
         cwd=ROOT, text=True, capture_output=True,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 4, result.stderr
     assert target.read_text() == "ran"
     payload = json.loads(result.stdout)
     assert payload["executed"] is True
@@ -95,7 +98,7 @@ def test_cli_with_no_queued_local_work_is_idle_not_fabricated_success(tmp_path: 
          "case.response.ingest", "--", sys.executable, "-c", "print('not invoked')"],
         cwd=ROOT, text=True, capture_output=True,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 3, result.stderr
     payload = json.loads(result.stdout)
     assert payload["status"] == "idle"
     assert payload["executed"] is False
@@ -156,7 +159,7 @@ def test_cli_missing_artifact_does_not_claim_complete(tmp_path: Path) -> None:
          sys.executable, "-c", "print('ran without artifact')"],
         cwd=ROOT, text=True, capture_output=True,
     )
-    assert run.returncode == 0, run.stderr
+    assert run.returncode == 4, run.stderr
     assert json.loads(run.stdout)["status"] == "awaiting_receipts"
     cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
     assert cp.work[work.work_id].state is WorkState.VERIFYING
@@ -284,3 +287,43 @@ def test_cli_symlink_target_is_not_accepted_as_artifact_readback(tmp_path: Path)
     assert json.loads(result.stdout)["status"] == "awaiting_receipts"
     cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
     assert cp.work[work.work_id].state is WorkState.VERIFYING
+
+
+def test_queued_local_verified_file_proves_work_item_not_entire_mission(tmp_path: Path) -> None:
+    """A true local success must still not claim full mission completion."""
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        load_continuous_control_config,
+    )
+    store_path = tmp_path / "queue"
+    cp = ContinuousControlPlane.from_config(
+        JsonlControlStore(store_path),
+        load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json"),
+    )
+    work = cp.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="truthful-completion", correlation_id="correct-correlation", payload={},
+    ))[0]
+    target = tmp_path / "fresh-evidence.txt"
+    run = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(store_path),
+         work.capability, "--verify-file", str(target), "--",
+         sys.executable, "-c", "from pathlib import Path; Path(__import__('sys').argv[1]).write_text('fresh')", str(target)],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert run.returncode == 0, run.stderr
+    payload = json.loads(run.stdout)
+    assert payload["status"] == "complete"
+    assert payload["work_item_complete"] is True
+    assert payload["mission_complete"] is False
+    assert payload["outcome_scope"] == "local_work_item"
+
+
+def test_cli_invalid_command_never_reports_success() -> None:
+    run = subprocess.run(
+        [sys.executable, str(CLI), "--not-a-command"],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert run.returncode != 0
+    assert json.loads(run.stdout)["mission_complete"] is False
