@@ -62,3 +62,70 @@ def test_wrong_native_commit_identity_fails(monkeypatch):
     })
     with pytest.raises(ValueError, match="different commit"):
         bridge.prove_live_source_feedback("GlacierEQ/apex-control-plane", "current", "token")
+
+
+def test_cross_run_feedback_reuses_checkpoint_and_prevents_duplicate_learning(tmp_path, monkeypatch):
+    monkeypatch.setattr(bridge, "github_get", lambda _repo, resource, _token: _fake_github(resource))
+    model = tmp_path / "model.json"
+    first = bridge.prove_live_source_feedback(
+        "GlacierEQ/apex-control-plane", "current", "token", model_state_path=model,
+    )
+    assert first["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED"
+    assert first["prior_model_restored"] is False
+    state_after_first = model.read_bytes()
+    second = bridge.prove_live_source_feedback(
+        "GlacierEQ/apex-control-plane", "current", "token", model_state_path=model,
+    )
+    assert second["status"] == "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED"
+    assert second["prior_model_restored"] is True
+    assert second["duplicate_learning_prevented"] is True
+    assert model.read_bytes() == state_after_first
+
+
+def test_cross_run_new_commit_builds_on_prior_learning(tmp_path, monkeypatch):
+    def native(_repo, resource, _token):
+        if resource.startswith("commits/"):
+            commit = resource.partition("/")[2]
+            return {"sha": commit, "parents": [{"sha": "previous"}],
+                    "files": [{"filename": "scripts/fix.py", "status": "modified"}]}
+        if resource.startswith("contents/scripts/fix.py?ref="):
+            revision = resource.partition("ref=")[2]
+            return {"sha": ("a" if revision == "previous" else "b") * 40}
+        raise AssertionError(resource)
+    monkeypatch.setattr(bridge, "github_get", native)
+    model = tmp_path / "model.json"
+    first = bridge.prove_live_source_feedback(
+        "GlacierEQ/apex-control-plane", "1" * 40, "token", model_state_path=model,
+    )
+    second = bridge.prove_live_source_feedback(
+        "GlacierEQ/apex-control-plane", "2" * 40, "token", model_state_path=model,
+    )
+    assert first["applied_commit_count"] == 1
+    assert second["applied_commit_count"] == 2
+    assert second["prior_model_restored"] is True
+    import json
+    checkpoint = json.loads((tmp_path / "github-feedback-checkpoint.json").read_text())
+    assert checkpoint["applied_commits"] == ["1" * 40, "2" * 40]
+
+
+def test_bad_cached_checkpoint_is_not_silently_accepted(tmp_path, monkeypatch):
+    monkeypatch.setattr(bridge, "github_get", lambda _repo, resource, _token: _fake_github(resource))
+    from src.continuous_impact_selection import ContinuousImpactSelector
+    model = tmp_path / "model.json"
+    checkpoint = tmp_path / "github-feedback-checkpoint.json"
+    checkpoint.write_text('{"schema_version":1,"applied_commits":["bad"]}')
+    with pytest.raises(ValueError, match="incompatible persisted"):
+        bridge.prove_live_source_feedback(
+            "GlacierEQ/apex-control-plane", "current", "token", model_state_path=model,
+        )
+
+
+def test_missing_cached_model_is_not_falsely_restored(tmp_path, monkeypatch):
+    monkeypatch.setattr(bridge, "github_get", lambda _repo, resource, _token: _fake_github(resource))
+    model = tmp_path / "model.json"
+    checkpoint = tmp_path / "github-feedback-checkpoint.json"
+    checkpoint.write_text('{"schema_version":1,"applied_commits":[]}')
+    with pytest.raises(ValueError, match="without its learned model"):
+        bridge.prove_live_source_feedback(
+            "GlacierEQ/apex-control-plane", "current", "token", model_state_path=model,
+        )
