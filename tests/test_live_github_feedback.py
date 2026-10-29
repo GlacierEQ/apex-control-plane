@@ -8,9 +8,10 @@ from src.continuous_impact_selection import ImpactSelectionViolation
 
 
 def _fake_github(resource: str, *, wrong_readback: bool = False):
-    if resource == "commits/current":
+    if resource.startswith("commits/"):
+        commit_id = resource.removeprefix("commits/")
         return {
-            "sha": "current", "parents": [{"sha": "previous"}],
+            "sha": commit_id, "parents": [{"sha": "previous"}],
             "files": [{"filename": "scripts/fix.py", "status": "modified"}],
         }
     if resource == "contents/scripts/fix.py?ref=previous":
@@ -67,14 +68,15 @@ def test_wrong_native_commit_identity_fails(monkeypatch):
 def test_cross_run_feedback_reuses_checkpoint_and_prevents_duplicate_learning(tmp_path, monkeypatch):
     monkeypatch.setattr(bridge, "github_get", lambda _repo, resource, _token: _fake_github(resource))
     model = tmp_path / "model.json"
+    sha = "1" * 40
     first = bridge.prove_live_source_feedback(
-        "GlacierEQ/apex-control-plane", "current", "token", model_state_path=model,
+        "GlacierEQ/apex-control-plane", sha, "token", model_state_path=model,
     )
     assert first["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED"
     assert first["prior_model_restored"] is False
     state_after_first = model.read_bytes()
     second = bridge.prove_live_source_feedback(
-        "GlacierEQ/apex-control-plane", "current", "token", model_state_path=model,
+        "GlacierEQ/apex-control-plane", sha, "token", model_state_path=model,
     )
     assert second["status"] == "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED"
     assert second["prior_model_restored"] is True
