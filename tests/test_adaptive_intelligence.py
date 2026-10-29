@@ -216,3 +216,39 @@ def test_explicit_ranker_cannot_silently_replace_prior_learned_state(tmp_path) -
     )
     with pytest.raises(ValueError, match="persisted"):
         AdaptiveIntelligenceEngine(model_state_path=path, ranker=AdaptiveRanker())
+
+
+@pytest.mark.parametrize("invalid", [math.nan, math.inf, -math.inf])
+def test_nonfinite_features_do_not_become_maximum_confidence(invalid) -> None:
+    learner = AdaptiveIntelligenceEngine()
+    with pytest.raises(ValueError, match="finite"):
+        learner.rank([_candidate("corrupted-signal", provenance_strength=invalid)])
+
+
+@pytest.mark.parametrize("invalid", [math.nan, math.inf, -math.inf])
+def test_nonfinite_feedback_cannot_turn_into_positive_learning(tmp_path, invalid) -> None:
+    model_path = tmp_path / "learned-state.json"
+    engine = AdaptiveIntelligenceEngine(model_state_path=model_path)
+    candidate = _candidate("broken-feedback", task_relevance=0.8, operator_alignment=1.0)
+    initial = engine.ranker.score(candidate).score
+    with pytest.raises(ValueError, match="finite"):
+        engine.record_outcome(
+            task_id="bad-feedback", candidate=candidate, reward=invalid,
+            reason="invalid measurement is not successful work",
+        )
+    assert engine.ranker.score(candidate).score == initial
+    assert not model_path.exists()
+
+
+def test_finite_reward_and_feature_clamping_remains_backward_compatible() -> None:
+    learner = AdaptiveIntelligenceEngine(ranker=AdaptiveRanker(learning_rate=0.2))
+    candidate = _candidate("known-finite", task_relevance=1.5, verification_strength=0.6)
+    features = candidate.normalized_features()
+    assert features["task_relevance"] == 1.0
+    before = learner.ranker.score(candidate).score
+    event = learner.record_outcome(
+        task_id="finite-feedback", candidate=candidate, reward=2.0,
+        reason="bounded positive outcome",
+    )
+    assert event.reward == 1.0
+    assert learner.ranker.score(candidate).score > before
