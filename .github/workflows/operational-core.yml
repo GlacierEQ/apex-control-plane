@@ -4,12 +4,18 @@ on:
     branches: [main]
     paths:
       - 'src/operational_core.py'
+      - 'src/provider_github.py'
+      - 'scripts/operate_github.py'
+      - 'tests/test_provider_github.py'
       - 'scripts/operate_direct.py'
       - 'tests/test_operational_core.py'
       - '.github/workflows/operational-core.yml'
   pull_request:
     paths:
       - 'src/operational_core.py'
+      - 'src/provider_github.py'
+      - 'scripts/operate_github.py'
+      - 'tests/test_provider_github.py'
       - 'scripts/operate_direct.py'
       - 'tests/test_operational_core.py'
       - '.github/workflows/operational-core.yml'
@@ -25,7 +31,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Test behavioral execution and recovery
-        run: python -m unittest discover -s tests -p 'test_operational_core.py' -v
+        run: |
+          python -m unittest discover -s tests -p 'test_operational_core.py' -v
+          python -m unittest discover -s tests -p 'test_provider_github.py' -v
       - name: Verify CLI makes an actual change
         shell: bash
         run: |
