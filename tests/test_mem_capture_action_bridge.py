@@ -75,18 +75,24 @@ def test_duplicate_source_has_stable_idempotency_key():
     assert build_capture(CAPTURE).idempotency_key == build_capture(dict(CAPTURE)).idempotency_key
 
 
-def test_absent_deadline_is_recorded_but_not_sent_to_task_provider():
+def test_absent_deadline_remains_actionable_without_inventing_a_due_date():
     item = build_capture({**CAPTURE, "raw_text": "Review the Mem integration test."})
+    assert item.categories == ("ACTION", "COMMITMENT")
     assert item.due_date is None
-    with pytest.raises(CaptureRoutingError, match="date-only deadline required"):
-        make_ticktick_task(item)
+    task = make_ticktick_task(item)["task"]
+    assert task["title"] == "Review the Mem integration test"
+    assert "dueDate" not in task
+    assert task["isAllDay"] is False
+    readback = verify_ticktick_readback(item, {**task, "id": "task-undated", "status": 0})
+    assert readback["provider_ref"] == "task-undated"
+    assert readback["due_precision"] is None
 
 
 def test_next_friday_is_not_silently_interpreted():
     item = build_capture({**CAPTURE, "raw_text": "Review the Mem integration test next Friday."})
     assert item.due_date is None
-    with pytest.raises(CaptureRoutingError, match="date-only deadline required"):
-        make_ticktick_task(item)
+    task = make_ticktick_task(item)["task"]
+    assert "dueDate" not in task
 
 
 def test_ingest_uses_existing_apex_rpc_without_fabricated_execution():
@@ -457,3 +463,44 @@ def test_flat_or_unbound_ingest_receipt_blocks_owner_actions(receipt):
             find_tasks=forbidden, create_task=forbidden, read_task=forbidden,
         )
     assert calls == []
+
+
+@pytest.mark.parametrize("verb", [
+    "Build", "Fix", "Remove", "Repair", "Execute", "Implement",
+    "Integrate", "Deploy", "Ship", "Enforce", "Complete", "Continue",
+])
+def test_execution_verbs_remain_actions_without_mandatory_deadline(verb):
+    item = build_capture({**CAPTURE, "raw_text": f"{verb} the active execution handoff."})
+    assert item.categories == ("ACTION", "COMMITMENT")
+    assert item.title == f"{verb} the active execution handoff"
+    assert item.due_date is None
+    task = make_ticktick_task(item)["task"]
+    assert task["title"] == item.title
+    assert "dueDate" not in task
+    assert task["isAllDay"] is False
+
+
+def test_undated_provider_readback_rejects_invented_deadline():
+    item = build_capture({**CAPTURE, "raw_text": "Fix the stalled execution handoff."})
+    task = make_ticktick_task(item)["task"]
+    with pytest.raises(CaptureRoutingError, match="invented"):
+        verify_ticktick_readback(
+            item, {**task, "id": "task-1", "dueDate": "2026-10-30T00:00:00-10:00"}
+        )
+
+
+def test_undated_action_reaches_native_owner_when_authorized():
+    capture = {**CAPTURE, "raw_text": "Build the existing integration."}
+    item = build_capture(capture)
+    created = []
+    task = make_ticktick_task(item)["task"]
+    result = execute_authorized_capture(
+        capture, authorize=lambda *_: True,
+        ingest_rpc=lambda *_: _native_ingest_receipt(capture),
+        find_tasks=lambda _: [],
+        create_task=lambda payload: created.append(payload) or {"id": "task-2"},
+        read_task=lambda _: {**task, "id": "task-2"},
+    )
+    assert result["owner_status"] == "OWNER_NATIVE_READBACK_VERIFIED"
+    assert result["mission_complete"] is False
+    assert created and "dueDate" not in created[0]
