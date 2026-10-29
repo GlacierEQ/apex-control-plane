@@ -30,6 +30,6 @@ jobs:
         shell: bash
         run: |
           work="$(mktemp -d)"
-          python scripts/operate_direct.py --state "$work/state.db" submit-file --id ci-smoke --path "$work/actual.txt" --content 'operating'
+          python scripts/operate_direct.py --state "$work/state.db" --root "$work" submit-file --id ci-smoke --path "$work/actual.txt" --content 'operating'
           test "$(cat "$work/actual.txt")" = operating
           python scripts/operate_direct.py --state "$work/state.db" status --id ci-smoke | grep '"verified": true'
