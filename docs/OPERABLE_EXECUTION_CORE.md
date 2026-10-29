@@ -15,7 +15,7 @@ To resume or inspect an operation:
     python scripts/operate_direct.py --state .local/operations.sqlite run --id first-run
     python scripts/operate_direct.py --state .local/operations.sqlite status --id first-run
 
-The state database contains request inputs; keep it private and outside version control, in a directory accessible only to the authorized host.
+The state database contains request inputs; keep it private and outside version control, in a directory accessible only to the authorized host. File effects are restricted to the trusted current working directory by default. Use `--root /trusted/workspace` to explicitly choose a different permitted workspace. Paths outside that root and symbolic-link escapes are rejected.
 
 ## Connect real providers
 
@@ -50,4 +50,4 @@ This engine reports verified provider effects, not human-world mission outcomes.
 
 Run `python -m unittest discover -s tests -p 'test_operational_core.py' -v`. Tests cover actual file effects, simulated connector callbacks, response loss after a successful effect, retries, lease recovery, no duplicates, restart, and a real CLI subprocess. **The simulated adapter tests do not prove any production connector is already wired.**
 
-A usable deployment requires connecting one live provider adapter, performing an authorized action through it, verifying source-native readback, then migrating further work. Preserve prior mission data and evidence while replacing the nonoperational execution path. Do not mistake a green repository test, a coordination record, or a connector health check for a running cross-connector service.
+A usable deployment requires connecting one live provider adapter, performing an authorized action through it, verifying source-native readback, then migrating further work. Re-running a previously verified operation re-checks current target state and repairs an idempotent effect if it has drifted. Preserve prior mission data and evidence while replacing the nonoperational execution path. Do not mistake a green repository test, a coordination record, or a connector health check for a running cross-connector service.
