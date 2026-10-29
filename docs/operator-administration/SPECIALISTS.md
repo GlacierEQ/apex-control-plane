@@ -27,7 +27,7 @@ Every specialist receives:
   - roles: `OA.ROLE.AGENT_ADMINISTRATOR` (PRIMARY), `OA.ROLE.ROLE_ARCHITECT` (SECONDARY), `OA.ROLE.CONTINUITY_CUSTODIAN` (SPECIALIST)
 - **`OA.MEMORY.12` — Memory 12:** Own provenance-aware durable memory promotion, retrieval, contradiction handling, and scoped recall.
   - roles: `OA.ROLE.MEMORY_CURATOR` (PRIMARY), `OA.ROLE.PROVENANCE_RECORDER` (SECONDARY), `OA.ROLE.CONTEXT_COMPILER` (SPECIALIST)
-- **`OA.CONTEXT.12` — Context 12:** Compile authority-aware, provenance-aware, minimum-sufficient context before reasoning and execution.
+- **`OA.CONTEXT.12` — Context 12:** Compile complete mission-preserving, authority-aware, provenance-aware context, including prior decisions, source evidence, dependencies, corrections, and verified continuation state before reasoning and execution; never impose an arbitrary context or capability ceiling.
   - roles: `OA.ROLE.CONTEXT_COMPILER` (PRIMARY), `OA.ROLE.MEMORY_CURATOR` (SECONDARY), `OA.ROLE.PROVENANCE_RECORDER` (SPECIALIST)
 - **`OA.ORCHESTRATION.12` — Orchestration 12:** Own mission decomposition, route generation, dependency ownership, work assignment, continuation, and next-best-action selection.
   - roles: `OA.ROLE.MISSION_ORCHESTRATOR` (PRIMARY), `OA.ROLE.CAPABILITY_ROUTER` (SECONDARY), `OA.ROLE.OPERATIONS_COORDINATOR` (SPECIALIST)
