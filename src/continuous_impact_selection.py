@@ -18,7 +18,7 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 try:  # Package import under pytest / library consumers.
     from .adaptive_intelligence import (
@@ -350,8 +350,9 @@ class ContinuousImpactSelector:
         success: bool,
         reason: str,
         provider_attempt: ImpactAttempt,
+        verify_native_readback: Callable[[ImpactAttempt], bool],
     ) -> None:
-        """Learn only from source-bound, outcome-specific provider evidence.
+        """Learn only from authenticated, outcome-specific provider evidence.
 
         The owning host must authenticate the provider journal before passing
         an ImpactAttempt. A success boolean, assistant report, or local
@@ -369,6 +370,11 @@ class ContinuousImpactSelector:
             raise ImpactSelectionViolation("learning receipt does not match the selected mission operation")
         if provider_attempt.source_class != "source_native":
             raise ImpactSelectionViolation("verified learning requires source-native provider evidence")
+        # The receipt shape is necessary but insufficient. The owning host must
+        # independently read the provider's actual current state; no Boolean
+        # in a candidate or locally fabricated receipt can establish that.
+        if not callable(verify_native_readback) or verify_native_readback(provider_attempt) is not True:
+            raise ImpactSelectionViolation("provider-native independent readback not verified")
         if success:
             if provider_attempt.stage not in {"VERIFIED_MATERIAL_DELTA", "HUMAN_OUTCOME"}:
                 raise ImpactSelectionViolation("cannot reinforce an action without a verified material outcome")
