@@ -637,7 +637,7 @@ def test_drain_local_executes_all_independent_eligible_work_without_partial_succ
             ExecutionReceipt(
                 work_id=item.work_id, mission_id=item.mission_id,
                 correlation_id=item.correlation_id, receipt_kind=kind,
-                status="verified", source_system="test-executor",
+                status="verified", source_system="test-executor", details={"ok": True},
             )
             for kind in ("execution", "verification")
         ]
@@ -674,7 +674,7 @@ def test_drain_local_continues_independent_work_after_recoverable_failure(tmp_pa
                 details={"exit_code": 17},
             )
         return [
-            ExecutionReceipt(**receipt_kwargs, receipt_kind=kind, status="verified")
+            ExecutionReceipt(**receipt_kwargs, receipt_kind=kind, status="verified", details={"ok": True})
             for kind in ("execution", "verification")
         ]
 
@@ -698,7 +698,7 @@ def test_drain_local_never_claims_success_for_previous_awaiting_verification(tmp
         executor=lambda item: ExecutionReceipt(
             work_id=item.work_id, mission_id=item.mission_id,
             correlation_id=item.correlation_id, receipt_kind="execution",
-            status="verified", source_system="test",
+            status="verified", source_system="test", details={"ok": True},
         ), now=NOW,
     )
     assert result["status"] == "awaiting_receipts"
