@@ -14,6 +14,10 @@ def validate(url: str = None, key: str = None) -> dict:
         with urllib.request.urlopen(req, timeout=10) as r:
             return {"connector": "supabase", "state": "action_capable", "status": r.status}
     except urllib.error.HTTPError as e:
-        return {"connector": "supabase", "state": "auth_failed", "code": e.code}
+        if e.code == 402:
+            return {"connector": "supabase", "state": "quota_exceeded", "code": e.code}
+        if e.code in (401, 403):
+            return {"connector": "supabase", "state": "auth_failed", "code": e.code}
+        return {"connector": "supabase", "state": "unreachable", "code": e.code}
     except Exception as e:
         return {"connector": "supabase", "state": "unreachable", "error": str(e)}
