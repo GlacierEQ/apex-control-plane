@@ -7,6 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import spiral_live_journal as bridge
+from mem_capture_action_bridge import build_capture, make_ingest_rpc
 
 
 @pytest.mark.parametrize(
@@ -60,10 +61,20 @@ def test_executed_ingest_is_persisted_without_falsely_blocking_or_completing(
     def authorize(_source_id, action):
         return action == "apex.ingest" or (action == "ticktick.task" and allow_task)
 
+    # Preserve the strict native-source proof contract. A bare ingest ID does
+    # not prove which Mem note APEX accepted or its payload digest.
+    args = make_ingest_rpc(build_capture(capture))["args"]
+    native_ingest = {
+        "ingest_id": "native-ingest-1",
+        "source_ref": ":".join((
+            args["p_source_system"], args["p_account_key"], args["p_external_id"],
+        )),
+        "payload_hash": "a" * 64,
+    }
     outcome = bridge.execute_recovered_capture_in_apex(
         kernel, recovery, capture,
         authorize=authorize,
-        ingest_rpc=lambda *_a: {"ingest": {"ingest_id": "native-ingest-1"}},
+        ingest_rpc=lambda *_a: {"ingest": native_ingest},
         find_tasks=forbidden,
         create_task=forbidden,
         read_task=forbidden,
