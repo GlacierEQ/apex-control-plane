@@ -220,9 +220,21 @@ if __name__ == "__main__":
             capabilities=[capability],
             executor=execute_queued,
         )
+        # A single successful item is not a successful sweep if independent
+        # work of this capability is still queued. Preserve the verified item
+        # while returning an explicitly incomplete, nonzero invocation.
+        if not drain and result["status"] == "complete":
+            unfinished = sorted(
+                item.work_id for item in plane.work.values()
+                if item.capability == capability and not item.external_action
+                and item.state is not WorkState.COMPLETE
+            )
+            if unfinished:
+                result["status"] = "partial_local_completion"
+                result["remaining_unverified_ids"] = unfinished
         # Verified local work and an entire mission are different outcomes.
         result["outcome_scope"] = "local_batch" if drain else "local_work_item"
-        result["work_item_complete"] = result["status"] == "complete"
+        result["work_item_complete"] = result["status"] in {"complete", "partial_local_completion"}
         result["batch_complete"] = result["status"] == "local_batch_complete"
         result["mission_complete"] = False
         print(json.dumps(result, sort_keys=True))
@@ -234,7 +246,7 @@ if __name__ == "__main__":
             raise SystemExit(result.get("exit_code") or 1)
         if result["status"] == "idle":
             raise SystemExit(3)
-        if result["status"] in {"awaiting_receipts", "unfinished"}:
+        if result["status"] in {"awaiting_receipts", "unfinished", "partial_local_completion"}:
             raise SystemExit(4)
         if result["status"] == "unconfirmed":
             raise SystemExit(5)
