@@ -19,7 +19,7 @@ WEEKDAYS = {name.lower(): index for index, name in enumerate((
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
 ))}
 ACTION_RE = re.compile(
-    r"^(Review|Check|Inspect|Audit|Verify|Prepare|Update|Follow up on|Test)\s+(.+?)(?:\s+on\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday))?\.?$",
+    r"^(Review|Check|Inspect|Audit|Verify|Prepare|Update|Follow up on|Test|Build|Fix|Remove|Repair|Execute|Implement|Integrate|Deploy|Ship|Enforce|Complete|Continue)\s+(.+?)(?:\s+on\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday))?\.?$",
     re.IGNORECASE,
 )
 
@@ -174,10 +174,16 @@ def make_ingest_rpc(item: CaptureEnvelope) -> dict[str, Any]:
 def make_ticktick_task(item: CaptureEnvelope) -> dict[str, Any]:
     """Build a host-executable plan, not permission or proof of provider write."""
     _require_portable(item)
-    if item.title is None or item.due_date is None or item.due_precision != "day":
-        raise CaptureRoutingError("date-only deadline required for owner-native test task")
-    midnight = datetime.combine(date.fromisoformat(item.due_date),
-                                datetime.min.time(), tzinfo=ZoneInfo(item.timezone))
+    if item.title is None:
+        raise CaptureRoutingError("action title required for owner-native task")
+    if item.due_date is not None and item.due_precision != "day":
+        raise CaptureRoutingError("unsupported due-date precision for owner-native task")
+    # A real action needs no invented deadline; preserve operator intent.
+    midnight = (
+        datetime.combine(date.fromisoformat(item.due_date),
+                         datetime.min.time(), tzinfo=ZoneInfo(item.timezone))
+        if item.due_date is not None else None
+    )
     return {
         "owner": "ticktick",
         "authorization_required": True,
@@ -191,11 +197,11 @@ def make_ticktick_task(item: CaptureEnvelope) -> dict[str, Any]:
                         f"capture_key={item.idempotency_key}; "
                         f"source_sha256={item.raw_sha256}; "
                         f"source_version={item.source_version}; "
-                        f"due_precision=day; project={item.project}. "
+                        f"due_precision={item.due_precision or 'unspecified'}; project={item.project}. "
                         "Controlled continuity test; no automatic mission completion."),
-            "dueDate": midnight.isoformat(),
+            **({"dueDate": midnight.isoformat()} if midnight is not None else {}),
             "timeZone": item.timezone,
-            "isAllDay": True,
+            "isAllDay": midnight is not None,
             "status": 0,
             "kind": "TEXT",
         },
@@ -225,14 +231,22 @@ def verify_ticktick_readback(item: CaptureEnvelope, response: Mapping[str, Any])
     if not ((canonical_source in content or legacy_source in content)
             and all(marker in content for marker in correlation_fields)):
         raise CaptureRoutingError("provider task lacks exact source correlation")
-    if response.get("isAllDay") is not True or response.get("timeZone") != item.timezone:
-        raise CaptureRoutingError("provider task day precision/timezone conflict")
-    try:
-        due = datetime.fromisoformat(str(response.get("dueDate", "")).replace("-1000", "-10:00"))
-    except ValueError as exc:
-        raise CaptureRoutingError("invalid provider due date") from exc
-    if due.tzinfo is None or due.astimezone(ZoneInfo(item.timezone)).date().isoformat() != item.due_date:
-        raise CaptureRoutingError("provider due date conflict")
+    if response.get("timeZone") != item.timezone:
+        raise CaptureRoutingError("provider task timezone conflict")
+    if item.due_date is None:
+        if response.get("dueDate") not in (None, ""):
+            raise CaptureRoutingError("provider invented an unexpected due date")
+        if response.get("isAllDay") not in (False, None):
+            raise CaptureRoutingError("undated provider task cannot be all-day")
+    else:
+        if response.get("isAllDay") is not True:
+            raise CaptureRoutingError("provider task day precision conflict")
+        try:
+            due = datetime.fromisoformat(str(response.get("dueDate", "")).replace("-1000", "-10:00"))
+        except ValueError as exc:
+            raise CaptureRoutingError("invalid provider due date") from exc
+        if due.tzinfo is None or due.astimezone(ZoneInfo(item.timezone)).date().isoformat() != item.due_date:
+            raise CaptureRoutingError("provider due date conflict")
     if response.get("status") != 0:
         raise CaptureRoutingError("provider task not in expected active state")
     return {
@@ -245,7 +259,7 @@ def verify_ticktick_readback(item: CaptureEnvelope, response: Mapping[str, Any])
         "provider_etag": response.get("etag"),
         "provider_status": 0,
         "due_date": item.due_date,
-        "due_precision": "day",
+        "due_precision": item.due_precision,
         "completed": False,
         "mission_complete": False,
     }
@@ -294,8 +308,8 @@ def execute_authorized_capture(
         "ingest_receipt": dict(ingest),
         "mission_complete": False,
     }
-    if item.title is None or item.due_date is None:
-        result["owner_status"] = "NO_DATE_ONLY_TASK"
+    if item.title is None:
+        result["owner_status"] = "NO_ACTION"
         return result
     if authorize(item.source_id, "ticktick.task") is not True:
         result["owner_status"] = "TASK_AUTHORITY_REQUIRED"
