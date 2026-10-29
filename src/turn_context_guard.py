@@ -59,7 +59,10 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
 
     # The host may reuse source-bearing context without repeated retrieval.
     # Exact consulted identifiers, not an ungrounded self-report, anchor reuse.
-    consulted = set(receipt.sources_consulted)
+    consulted = {
+        ref for ref in receipt.sources_consulted
+        if isinstance(ref, str) and ref.strip()
+    }
     reusable = bool(receipt.reused_context_refs) and all(
         isinstance(ref, str) and ref.strip() and ref in consulted
         for ref in receipt.reused_context_refs
@@ -80,6 +83,18 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
             mission_stopped=False,
             confidence_mode="DEGRADED_CONTEXT_COVERAGE",
             reason="retrieval is unavailable; preserve mission and pursue alternate context sources",
+            receipt_sha256=digest,
+        )
+
+    if not receipt.material_context_found and (
+        receipt.material_context_applied or receipt.applied_context_refs
+    ):
+        return TurnContextDecision(
+            turn_id=turn_id,
+            next_action="RECONCILE_CONTEXT_CLAIMS_THEN_CONTINUE",
+            mission_stopped=False,
+            confidence_mode="CONTEXT_EVIDENCE_CONFLICT",
+            reason="no material context was found but application was asserted; reconcile contradictory evidence",
             receipt_sha256=digest,
         )
 
