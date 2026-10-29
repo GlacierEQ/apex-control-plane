@@ -72,7 +72,7 @@ def prove_live_source_feedback(
         if isinstance(item, dict)
         and item.get("status") in {"added", "modified"}
         and isinstance(item.get("filename"), str)
-        and item["filename"].startswith(("src/", "scripts/", ".github/workflows/"))
+        and item["filename"].startswith(("src/", "scripts/", "tests/", ".github/workflows/"))
     ), None)
     if not candidate_file:
         return {"status": "NO_RELEVANT_CODE_DELTA", "commit": commit_sha}
@@ -120,6 +120,7 @@ def prove_live_source_feedback(
                 raise ValueError("learned model exists without the matching feedback checkpoint")
             applied = []
         prior_model_restored = model_path.is_file()
+        prior_model_sha256 = sha256(model_path.read_bytes()).hexdigest() if prior_model_restored else None
         selector = ContinuousImpactSelector(model_state_path=model_path)
         decision = selector.select(
             task_id=f"github-native-feedback:{commit_sha}",
@@ -158,6 +159,7 @@ def prove_live_source_feedback(
                 "status": "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED",
                 "commit": commit_sha, "path": path,
                 "prior_model_restored": True,
+                "prior_model_sha256": prior_model_sha256,
                 "duplicate_learning_prevented": True,
                 "human_mission_complete": False,
             }
@@ -184,6 +186,8 @@ def prove_live_source_feedback(
         "readback_blob": after_blob,
         "model_reloaded": True,
         "prior_model_restored": prior_model_restored,
+        "prior_model_sha256": prior_model_sha256,
+        "new_model_sha256": sha256(model_path.read_bytes()).hexdigest(),
         "applied_commit_count": len(applied) + 1,
         "human_mission_complete": False,
     }
