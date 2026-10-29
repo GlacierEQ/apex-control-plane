@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from hashlib import sha256
-from typing import Callable
+from typing import Callable, Iterable, Mapping
 
 from .connector_mission_router import (
     ConnectorCapability, MissionAdmission, dispatch_once,
@@ -73,6 +73,9 @@ class PursuitHistory:
     response_window_source: str = ""
     escalation_route: str = ""
     escalation_authorized: bool = False
+    # A verified independent route can be used directly; no invented
+    # requirement to first ask the same institution or wait for a reply.
+    direct_review_available: bool = False
     independent_review_receipt: str = ""
     target_result_ref: str = ""
     target_result_readback: str = ""
@@ -121,6 +124,8 @@ def next_pursuit_step(finding: PursuitFinding, history: PursuitHistory) -> Pursu
         raise PursuitViolation("mission, finding, observation and target required")
     if not isinstance(finding.observation_authenticated, bool) or not isinstance(finding.duty_verified, bool):
         raise PursuitViolation("verification flags must be explicit booleans")
+    if type(history.direct_review_available) is not bool or type(history.escalation_authorized) is not bool:
+        raise PursuitViolation("independent route flags must be explicit booleans")
     if (finding.observation_authenticated and
         (not _source_ref(finding.observation_ref) or
          len(finding.observation_sha256) != 64 or
@@ -157,6 +162,12 @@ def next_pursuit_step(finding: PursuitFinding, history: PursuitHistory) -> Pursu
         stage = PursuitStage.IDENTIFY_ACTOR
     elif supported:
         stage = PursuitStage.REASSESS
+    elif history.direct_review_available and not history.independent_review_receipt:
+        # Go straight to an independently available review route rather than
+        # requiring an internal challenge or an arbitrary waiting period.
+        stage = (PursuitStage.INDEPENDENT_REVIEW if
+                 history.escalation_authorized and _source_ref(history.escalation_route)
+                 else PursuitStage.FIND_LAWFUL_ROUTE)
     elif not history.challenge_receipt:
         stage = PursuitStage.REQUEST_ACCOUNT
     elif history.independent_review_receipt:
@@ -188,6 +199,30 @@ def next_pursuit_step(finding: PursuitFinding, history: PursuitHistory) -> Pursu
         authorized_route=history.escalation_route if stage is PursuitStage.INDEPENDENT_REVIEW else "",
     )
 
+
+
+def next_pursuit_steps(
+    findings: Iterable[PursuitFinding],
+    histories: Mapping[tuple[str, str], PursuitHistory],
+) -> tuple[PursuitStep, ...]:
+    """Advance EVERY reported finding, including small and unverified ones.
+
+    One result per distinct (mission, finding), with no severity threshold.
+    Unverified observations get an authentication action, not erasure or a
+    premature accusation. Histories cannot leak between case owners.
+    """
+    seen: set[tuple[str, str]] = set()
+    steps: list[PursuitStep] = []
+    for finding in findings:
+        key = (finding.mission_id, finding.finding_id)
+        if key in seen:
+            raise PursuitViolation("duplicate mission/finding identity")
+        seen.add(key)
+        history = histories.get(key, PursuitHistory())
+        if not isinstance(history, PursuitHistory):
+            raise PursuitViolation("history must be a provider-backed PursuitHistory")
+        steps.append(next_pursuit_step(finding, history))
+    return tuple(steps)
 
 
 def pursuit_impact_candidate(step: PursuitStep):
