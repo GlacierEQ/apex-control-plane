@@ -475,3 +475,81 @@ def test_failed_return_without_alternative_is_exhausted_not_success() -> None:
     assert result.ok is False
     assert result.status == "route_exhausted"
     assert result.failures[0]["substrate"] == "only"
+
+
+def test_required_receipt_without_native_reference_is_unconfirmed() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    work = Workload(
+        "execution:receipt-proof",
+        "confirm the actual supported provider outcome",
+        frozenset({"ci"}),
+        requires_receipts=True,
+    )
+    attempted = []
+    result = fabric.execute(work, [
+        obs("primary", capabilities={"ci"}, score=0.99),
+        obs("fallback", capabilities={"ci"}, score=0.80),
+    ], lambda route, _: attempted.append(route) or {"status": "success"})
+    assert result.ok is False
+    assert result.status == "unconfirmed"
+    assert attempted == ["primary"]
+    assert result.objective == work.objective
+
+
+def test_terminal_readback_requirement_cannot_be_satisfied_by_success_text() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    work = Workload(
+        "execution:readback-proof",
+        "read back deployed artifact rather than trusting the submission",
+        frozenset({"deploy"}),
+        requires_receipts=True,
+        requires_terminal_readback=True,
+    )
+    attempted = []
+    result = fabric.execute(work, [
+        obs("primary", capabilities={"deploy"}),
+        obs("fallback", capabilities={"deploy"}, score=0.7),
+    ], lambda route, _: attempted.append(route) or {
+        "status": "success", "receipt": "provider:submitted-1"
+    })
+    assert result.ok is False
+    assert result.status == "unconfirmed"
+    assert attempted == ["primary"]
+
+
+def test_required_native_receipt_and_terminal_readback_enable_verified_success() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    work = Workload(
+        "execution:verified-proof",
+        "complete actual provider-verified work",
+        frozenset({"deploy"}),
+        requires_receipts=True,
+        requires_terminal_readback=True,
+    )
+    result = fabric.execute(work, [
+        obs("primary", capabilities={"deploy"}),
+    ], lambda _route, _: {
+        "status": "verified",
+        "provider_receipt_id": "provider:operation-7",
+        "terminal_readback": True,
+    })
+    assert result.ok is True
+    assert result.status == "success"
+    assert result.substrate == "primary"
+
+
+def test_status_success_without_required_readback_is_not_blindly_replayed() -> None:
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    work = Workload(
+        "execution:unknown-provider-effect",
+        "preserve uncertain effect and reconcile rather than duplicate it",
+        frozenset({"ci"}),
+        requires_terminal_readback=True,
+    )
+    attempted = []
+    result = fabric.execute(work, [
+        obs("primary", capabilities={"ci"}, score=0.99),
+        obs("fallback", capabilities={"ci"}, score=0.6),
+    ], lambda route, _: attempted.append(route) or {"status": "success", "terminal_readback": False})
+    assert result.status == "unconfirmed"
+    assert attempted == ["primary"]
