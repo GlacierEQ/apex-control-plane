@@ -188,7 +188,7 @@ def test_cli_preexisting_unchanged_artifact_is_not_current_run_proof(tmp_path: P
          sys.executable, "-c", "print('success without writing target')"],
         cwd=ROOT, text=True, capture_output=True,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 4, result.stderr
     assert json.loads(result.stdout)["status"] == "awaiting_receipts"
     cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
     assert cp.work[work.work_id].state is WorkState.VERIFYING
@@ -254,7 +254,7 @@ def test_cli_prior_verification_receipt_does_not_verify_later_unrelated_executio
          work.capability, "--", sys.executable, "-c", "print('new no-op')"],
         cwd=ROOT, text=True, capture_output=True,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 4, result.stderr
     assert json.loads(result.stdout)["status"] == "awaiting_receipts"
     cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
     assert cp.work[work.work_id].state is WorkState.VERIFYING
@@ -283,7 +283,7 @@ def test_cli_symlink_target_is_not_accepted_as_artifact_readback(tmp_path: Path)
          sys.executable, "-c", "print('no artifact generated')"],
         cwd=ROOT, text=True, capture_output=True,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 4, result.stderr
     assert json.loads(result.stdout)["status"] == "awaiting_receipts"
     cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
     assert cp.work[work.work_id].state is WorkState.VERIFYING
