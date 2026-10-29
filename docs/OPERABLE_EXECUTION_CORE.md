@@ -40,6 +40,16 @@ Example integration, where provider_write and provider_read are existing authent
 
 The host—not this library—establishes authenticated connector identity and the operator's intended scope. Do not populate adapter operations from untrusted documents. No credentials are embedded in this repository.
 
+## Live GitHub adapter
+
+The implementation now includes `src/provider_github.py` and `scripts/operate_github.py`. It uses GitHub's actual Contents API with a host-supplied `GITHUB_TOKEN`, reads the target before writes to avoid unnecessary commits, writes to the explicitly chosen branch/path, and independently re-reads the target before returning verified. No token is persisted in the operation journal.
+
+From an authorized host with a scoped GitHub token:
+
+    GITHUB_TOKEN=<host_secret> python scripts/operate_github.py --state .local/github.sqlite --id unique-change-001 --repo GlacierEQ/apex-control-plane --branch main --path proof/result.txt --content-file ./desired-content.txt
+
+The example path is illustrative; select the actual intended target. This script does not ask for another approval after the host has authenticated and authorized the requested effect. The adapter tests use an in-process HTTP double; a deployed authenticated GitHub write/readback is a separate evidence requirement.
+
 ## Recovery instead of gate accumulation
 
 States: `queued -> running -> verified`. When readback shows a missing effect, an idempotent operation becomes `retryable`; when readback is unknown it becomes `uncertain` and is checked before any later retry. Non-idempotent ambiguous operations become `needs_reconciliation`, not blind duplicates. Active leases prevent competing invocations; expired leases trigger source-state readback before replay. SQLite state survives process restarts.
