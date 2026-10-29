@@ -92,9 +92,11 @@ if __name__ == "__main__":
     if not args:
         print(json.dumps({
             "status": "idle", "executed": False, "routes_run": 0,
+            "mission_complete": False,
             "reason": "no_execution_command_supplied",
         }, sort_keys=True))
-    elif args[0] == "--run-next-local" and len(args) >= 5:
+        raise SystemExit(3)
+    elif args[0] in {"--run-next-local", "--drain-local"} and len(args) >= 5:
         # Operator supplies a concrete command; the persisted queue supplies
         # the work identity. Never execute instructions extracted from events.
         queue_root, capability = args[1], args[2]
@@ -107,7 +109,8 @@ if __name__ == "__main__":
         else:
             print(json.dumps({
                 "status": "failed", "executed": False, "routes_run": 0,
-                "reason": "usage: --run-next-local STORE CAPABILITY [--verify-file PATH] -- PROGRAM [ARG ...]",
+                "mission_complete": False,
+                "reason": "usage: (--run-next-local | --drain-local) STORE CAPABILITY [--verify-file PATH] -- PROGRAM [ARG ...]",
             }, sort_keys=True))
             raise SystemExit(2)
         plane = ContinuousControlPlane.from_config(
@@ -210,14 +213,44 @@ if __name__ == "__main__":
                 ),
             ]
 
-        result = plane.execute_next_local(
+        drain = args[0] == "--drain-local"
+        executor_fn = plane.drain_local if drain else plane.execute_next_local
+        result = executor_fn(
             worker_id="apex-local-cli",
             capabilities=[capability],
             executor=execute_queued,
         )
+        # A single successful item is not a successful sweep if independent
+        # work of this capability is still queued. Preserve the verified item
+        # while returning an explicitly incomplete, nonzero invocation.
+        if not drain and result["status"] == "complete":
+            unfinished = sorted(
+                item.work_id for item in plane.work.values()
+                if item.capability == capability and not item.external_action
+                and item.state is not WorkState.COMPLETE
+            )
+            if unfinished:
+                result["status"] = "partial_local_completion"
+                result["remaining_unverified_ids"] = unfinished
+        # Verified local work and an entire mission are different outcomes.
+        result["outcome_scope"] = "local_batch" if drain else "local_work_item"
+        result["work_item_complete"] = result["status"] in {"complete", "partial_local_completion"}
+        result["batch_complete"] = result["status"] == "local_batch_complete"
+        result["mission_complete"] = False
         print(json.dumps(result, sort_keys=True))
-        if result["status"] in {"retryable_failure", "exhausted"}:
+        if result["status"] in {"complete", "local_batch_complete"}:
+            raise SystemExit(0)
+        # Exit zero must never silently certify an idle, unverified,
+        # unfinished or scheduled-retry invocation as successful work.
+        if result["status"] in {"retryable_failure", "exhausted", "retry_scheduled"}:
             raise SystemExit(result.get("exit_code") or 1)
+        if result["status"] == "idle":
+            raise SystemExit(3)
+        if result["status"] in {"awaiting_receipts", "unfinished", "partial_local_completion"}:
+            raise SystemExit(4)
+        if result["status"] == "unconfirmed":
+            raise SystemExit(5)
+        raise SystemExit(2)
     elif args[0] == "--exec" and len(args) > 1:
         try:
             completed = subprocess.run(
@@ -226,11 +259,15 @@ if __name__ == "__main__":
         except OSError as exc:
             print(json.dumps({
                 "status": "failed", "executed": False, "routes_run": 0,
+                "mission_complete": False, "outcome_verified": False,
                 "error": f"{type(exc).__name__}: {exc}",
             }, sort_keys=True))
             raise SystemExit(127) from exc
         print(json.dumps({
-            "status": "completed" if completed.returncode == 0 else "failed",
+            "status": "process_succeeded_unverified" if completed.returncode == 0 else "failed",
+            "mission_complete": False,
+            "outcome_verified": False,
+            "outcome_scope": "subprocess_exit_only",
             "executed": True,
             "routes_run": 1,
             "exit_code": completed.returncode,
@@ -242,6 +279,7 @@ if __name__ == "__main__":
     else:
         print(json.dumps({
             "status": "failed", "executed": False, "routes_run": 0,
+            "mission_complete": False,
             "reason": "usage: control_plane.py --exec PROGRAM [ARG ...]",
         }, sort_keys=True))
         raise SystemExit(2)
