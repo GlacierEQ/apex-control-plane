@@ -275,6 +275,14 @@
     "research_is_capability_enrichment_not_universal_permission": true,
     "verification_is_outcome_evidence_not_procedural_celebration": true,
     "host_required_to_verify_source_consultation_and_application": true,
-    "scope": "apply across relevant living GlacierEQ components through their owners; this projection alone is not a runtime hook or provider permission"
+    "scope": "apply across relevant living GlacierEQ components through their owners; this projection alone is not a runtime hook or provider permission",
+    "compounding_outcome": "knowledge that compounds into better decisions, stronger code, fewer repeated failures, and greater progress",
+    "learning_evidence_contract": {
+      "learning_surface": "existing src/continuous_impact_selection.py and src/adaptive_intelligence.py",
+      "positive_or_negative_provider_feedback_requires": "mission-matched source-native outcome and owning-provider independent readback",
+      "invalid_features_or_rewards": "nonfinite values rejected, never silently promoted to maximum confidence",
+      "recovery": "preserve prior verified learning, correct defects, continue from current valid frontier",
+      "deployment_claim": "code committed to main, CI and actual host feedback wiring require separate verification"
+    }
   }
 }
