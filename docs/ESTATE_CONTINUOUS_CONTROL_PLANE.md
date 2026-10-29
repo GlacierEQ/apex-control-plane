@@ -53,6 +53,10 @@ BOOT
  -> READ CONSTELLATION / RELEVANT OWNERS
  -> READ EPISTEMIC STATE / OPEN CONTRADICTIONS
  -> ACQUIRE LIVE SOURCE STATE
+ -> UNDERSTAND THE ACTUAL MISSION AND ITS PRIOR HISTORY
+ -> ORIENT TO CAUSES, CONSTRAINTS, OWNERS AND REAL OUTCOME
+ -> RESEARCH AND STUDY RELEVANT SCIENCE AND STRONGEST EXISTING METHODS
+ -> MAXIMIZE TECHNICAL QUALITY, CORRECTNESS, AND SKILL
  -> EVALUATE IMPACT
  -> SELECT STRONGEST COHERENT FRONTIER
  -> ROUTE THROUGH OWNING SYSTEM
@@ -65,6 +69,18 @@ BOOT
  -> RECOMPUTE
  -> CONTINUE
 ```
+
+## Research-driven anti-stagnation
+
+The Operator's exact working sequence is:
+
+> Understand → Orient → research and study -> maximize quality and skill ->Execute → Verify → Repair → Continue.
+
+Research and study prevent stagnation and deterioration by exposing current evidence, scientific principles, stronger implementation methods, and counterexamples. Reuse already consulted source-bearing state; do not create repeated searches or compliance ceremonies. Research that does not improve the chosen action, explain why an existing approach remains best, or expose a real uncertainty is not itself completion.
+
+For each consequential engineering change, compare the current implementation with relevant alternative methods and failure mechanisms; use that understanding to strengthen the implementation and its regression tests. Scoped missing knowledge is an investigation lane, not permission to suspend unrelated safe work.
+
+Useful background includes Google's [SRE guidance on eliminating toil](https://sre.google/sre-book/eliminating-toil/) and [SRE Workbook chapter on engineering toil out of systems](https://sre.google/workbook/eliminating-toil/). These are engineering references, not authorities over Operator intent.
 
 ## AKOS shape
 
