@@ -129,11 +129,13 @@ OBSERVED_IN_OPERATION
 
 Material state promotion requires the corresponding evidence. For example, attempted work does not become executed without an execution receipt, and committed work does not become deployed without deployment proof.
 
-### Generate a connector request
+### No-command status (not an execution request)
 
 ```bash
 python src/control_plane.py
 ```
+
+Returns an idle status; this does not generate a connector request or perform work.
 
 ### Validate a provider receipt
 
@@ -141,7 +143,7 @@ python src/control_plane.py
 python -m pytest -q tests/
 ```
 
-### Run the control plane
+### Historical boot configuration (not the current CLI default)
 
 ```bash
 CASEY_BOOT_PROFILE=legal_case \
@@ -151,7 +153,7 @@ python src/control_plane.py
 
 The profile name above is an interface example. No case-specific evidence or private legal record is part of this README's public capability claim.
 
-### Request mode
+### Historical request-mode configuration
 
 ```bash
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
