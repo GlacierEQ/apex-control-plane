@@ -16,7 +16,7 @@ def _fake_github(resource: str, *, wrong_readback: bool = False):
         }
     if resource == "contents/scripts/fix.py?ref=previous":
         return {"sha": "a" * 40}
-    if resource == "contents/scripts/fix.py?ref=current":
+    if resource.startswith("contents/scripts/fix.py?ref="):
         return {"sha": ("b" if not wrong_readback else "c") * 40}
     raise AssertionError(f"unexpected provider request: {resource}")
 
