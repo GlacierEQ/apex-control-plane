@@ -158,8 +158,17 @@ class OperationalCore:
                 raise KeyError(operation_id)
             adapter = self.adapters[r["adapter"]]
             if r["state"] == "verified":
+                # A prior success can become stale if the target changes later.
                 self.db.execute("COMMIT")
-                return self.status(operation_id)
+                verdict = self._verify(adapter, json.loads(r["request"]))
+                if verdict is True:
+                    return self.status(operation_id)
+                if verdict is None:
+                    return self._finish(operation_id, "uncertain", error_type="readback_unavailable", recheck=True)
+                if not adapter.idempotent:
+                    return self._finish(operation_id, "needs_reconciliation", error_type="verified_effect_disappeared", recheck=True)
+                self._finish(operation_id, "retryable", error_type="verified_effect_disappeared", recheck=True)
+                return self.run(operation_id)
             if r["state"] == "running" and r["lease_until"] and datetime.fromisoformat(r["lease_until"]) > _now():
                 self.db.execute("COMMIT")
                 return self.status(operation_id)
@@ -214,13 +223,14 @@ class OperationalCore:
                             error_type=failure or "desired_effect_missing")
 
     def _finish(self, operation_id: str, state: str, *,
-                result_sha256: str | None = None, error_type: str | None = None) -> Status:
+                result_sha256: str | None = None, error_type: str | None = None,
+                recheck: bool = False) -> Status:
         self.db.execute("BEGIN IMMEDIATE")
         try:
             current = self.db.execute("SELECT state FROM operations WHERE id=?", (operation_id,)).fetchone()
             if current is None:
                 raise KeyError(operation_id)
-            if current["state"] == "verified":
+            if current["state"] == "verified" and not recheck:
                 self.db.execute("COMMIT")
                 return self.status(operation_id)
             status = self._transition(operation_id, state, result_sha256=result_sha256, error_type=error_type)
