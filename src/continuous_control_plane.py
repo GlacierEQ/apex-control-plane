@@ -618,7 +618,7 @@ class ContinuousControlPlane:
             # External actions are excluded by claim_next(external_action=False)
             # and still require provider reconciliation before any retry.
             if item.attempt >= max(1, item.max_attempts):
-                retry_at = _require_aware(now or utc_now()) + timedelta(
+                retry_at = _require_aware(now or utc_now(), "retry instant") + timedelta(
                     seconds=min(300, 2 ** min(item.attempt, 8))
                 )
                 self.transition(
