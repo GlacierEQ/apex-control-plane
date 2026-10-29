@@ -43,7 +43,10 @@ DEFAULT_WEIGHTS: dict[str, float] = {
 
 
 def _clamp01(value: float) -> float:
-    return max(0.0, min(1.0, float(value)))
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("adaptive feature must be finite")
+    return max(0.0, min(1.0, number))
 
 
 def _sigmoid(value: float) -> float:
@@ -144,7 +147,10 @@ class AdaptiveRanker:
         Returns the predicted score before and after the update.
         """
 
-        bounded_reward = max(-1.0, min(1.0, float(reward)))
+        measured_reward = float(reward)
+        if not math.isfinite(measured_reward):
+            raise ValueError("adaptive learning reward must be finite")
+        bounded_reward = max(-1.0, min(1.0, measured_reward))
         target = (bounded_reward + 1.0) / 2.0
         before = self.score(candidate).score
         error = target - before
