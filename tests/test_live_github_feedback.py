@@ -131,3 +131,25 @@ def test_missing_cached_model_is_not_falsely_restored(tmp_path, monkeypatch):
         bridge.prove_live_source_feedback(
             "GlacierEQ/apex-control-plane", "current", "token", model_state_path=model,
         )
+
+
+def test_test_code_changes_are_material_to_learning(monkeypatch):
+    commit = "f" * 40
+    def native(_repo, resource, _token):
+        if resource == f"commits/{commit}":
+            return {
+                "sha": commit, "parents": [{"sha": "e" * 40}],
+                "files": [{"filename": "tests/test_learning.py", "status": "modified"}],
+            }
+        if resource == "contents/tests/test_learning.py?ref=" + "e" * 40:
+            return {"sha": "a" * 40}
+        if resource == f"contents/tests/test_learning.py?ref={commit}":
+            return {"sha": "b" * 40}
+        raise AssertionError(resource)
+    monkeypatch.setattr(bridge, "github_get", native)
+    result = bridge.prove_live_source_feedback(
+        "GlacierEQ/apex-control-plane", commit, "token",
+    )
+    assert result["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED"
+    assert result["path"] == "tests/test_learning.py"
+    assert result["model_reloaded"] is True
