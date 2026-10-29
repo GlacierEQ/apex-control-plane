@@ -609,6 +609,24 @@ class ContinuousControlPlane:
                 "routes_run": 1, "work_id": item.work_id,
             }
 
+        # Verify the worker's returned receipts belong to the item that was
+        # actually claimed. Checking only against the receipt's own work_id
+        # would allow evidence from one run to be laundered into another item.
+        if any(
+            evidence.work_id != item.work_id
+            or evidence.mission_id != item.mission_id
+            or evidence.correlation_id != item.correlation_id
+            for evidence in receipts
+        ):
+            self.transition(
+                item.work_id, WorkState.RECONCILING,
+                reason="worker_receipt_identity_conflicts_with_claimed_work",
+            )
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id,
+                "error": "worker receipt identity does not match claimed work",
+            }
         for evidence in receipts:
             self.record_receipt(evidence)
         receipt = receipts[-1]
