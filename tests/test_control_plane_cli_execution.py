@@ -364,3 +364,40 @@ def test_cli_drain_local_attempts_every_independent_work_and_verifies_all(tmp_pa
     assert payload["mission_complete"] is False
     restored = ContinuousControlPlane.from_config(JsonlControlStore(queue), config)
     assert all(restored.work[i].state is WorkState.COMPLETE for i in ids)
+
+
+def test_single_item_cli_does_not_exit_green_with_another_local_item_queued(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        load_continuous_control_config, WorkState,
+    )
+    queue = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(queue), config)
+    ids = []
+    for n in (1, 2):
+        item = cp.ingest_event(ControlEvent(
+            event_type="gmail.reply.received", source_system="test",
+            subject_id=f"single-{n}", correlation_id=f"single-corr-{n}", payload={},
+        ))[0]
+        ids.append(item.work_id)
+    proof = tmp_path / "evidence.txt"
+    run = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(queue),
+         item.capability, "--verify-file", str(proof), "--",
+         sys.executable, "-c",
+         "from pathlib import Path; import sys; Path(sys.argv[1]).write_text('verified')",
+         str(proof)],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    payload = json.loads(run.stdout)
+    assert run.returncode == 4, run.stderr
+    assert payload["status"] == "partial_local_completion"
+    assert payload["work_item_complete"] is True
+    assert payload["mission_complete"] is False
+    assert len(payload["remaining_unverified_ids"]) == 1
+    restored = ContinuousControlPlane.from_config(JsonlControlStore(queue), config)
+    assert sorted(restored.work[i].state.value for i in ids) == sorted([
+        WorkState.COMPLETE.value, WorkState.RECEIVED.value,
+    ])
