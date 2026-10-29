@@ -290,6 +290,23 @@ class DynamicExecutionFabric:
                     "error": reason or "provider_reported_failure",
                 })
                 continue
+            # A provider's optimistic status is not evidence of the specific
+            # outcome this workload requires. Unknown side effects must be
+            # reconciled; do not automatically replay on a fallback substrate.
+            if outcome == "success" and workload.requires_receipts:
+                has_receipt = (
+                    isinstance(result, Mapping)
+                    and bool(result.get("receipt") or result.get("provider_receipt_id"))
+                )
+                if not has_receipt:
+                    outcome = "unconfirmed"
+            if outcome == "success" and workload.requires_terminal_readback:
+                has_readback = (
+                    isinstance(result, Mapping)
+                    and result.get("terminal_readback") is True
+                )
+                if not has_readback:
+                    outcome = "unconfirmed"
             return ExecutionResult(
                 ok=outcome == "success",
                 status=outcome,
