@@ -469,7 +469,7 @@ def test_verified_learning_requires_exact_source_bound_provider_outcome(tmp_path
     first.record_verified_outcome(
         decision=decision, candidates=(candidate,), success=True,
         reason="readback confirms the intended source-native delta",
-        provider_attempt=attempt,
+        provider_attempt=attempt, verify_native_readback=lambda _: True,
     )
     second = ContinuousImpactSelector(model_state_path=learned)
     after = second.engine.ranker.score(second._to_adaptive(candidate)).score
@@ -495,6 +495,7 @@ def test_false_positive_learning_is_not_reinforced(change) -> None:
         selector.record_verified_outcome(
             decision=decision, candidates=(candidate,), success=True,
             reason="claimed verified", provider_attempt=replace(attempt, **change),
+            verify_native_readback=lambda _: True,
         )
     assert selector.engine.ranker.score(selector._to_adaptive(candidate)).score == previous
 
@@ -509,6 +510,7 @@ def test_provider_confirmed_no_delta_is_negative_learning() -> None:
         provider_attempt=replace(
             attempt, stage="NO_DELTA", after_state_ref=None, readback_ref=None,
         ),
+        verify_native_readback=lambda _: True,
     )
     after = selector.engine.ranker.score(selector._to_adaptive(candidate)).score
     assert after < before
@@ -521,7 +523,7 @@ def test_verified_learning_rejects_candidate_mutation_between_selection_and_feed
     with pytest.raises(ImpactSelectionViolation, match="does not match"):
         selector.record_verified_outcome(
             decision=decision, candidates=(mutated,), success=True,
-            reason="attempt to teach from changed operation", provider_attempt=attempt,
+            reason="attempt to teach from changed operation", provider_attempt=attempt, verify_native_readback=lambda _: True,
         )
 
 
@@ -532,3 +534,35 @@ def test_no_provider_proof_does_not_turn_boolean_success_into_training() -> None
             decision=decision, candidates=(candidate,), success=True,
             reason="a reported success with no source proof",
         )
+
+
+def test_readback_failure_must_not_change_persisted_learning_state(tmp_path) -> None:
+    from dataclasses import replace
+    selector, candidate, decision, attempt = _learning_case()
+    engine = ContinuousImpactSelector(model_state_path=tmp_path / "learning.json")
+    initial = engine.engine.ranker.score(engine._to_adaptive(candidate)).score
+    calls = []
+    with pytest.raises(ImpactSelectionViolation, match="independent readback"):
+        engine.record_verified_outcome(
+            decision=decision, candidates=(candidate,),
+            success=True, reason="optimistic response is not proof",
+            provider_attempt=attempt,
+            verify_native_readback=lambda receipt: calls.append(receipt.provider_ref) or False,
+        )
+    assert calls == ["github:commit-after"]
+    assert engine.engine.ranker.score(engine._to_adaptive(candidate)).score == initial
+    assert not (tmp_path / "learning.json").exists()
+
+
+def test_native_readback_required_for_negative_learning_as_well() -> None:
+    from dataclasses import replace
+    selector, candidate, decision, attempt = _learning_case()
+    prior = selector.engine.ranker.score(selector._to_adaptive(candidate)).score
+    with pytest.raises(ImpactSelectionViolation, match="independent readback"):
+        selector.record_verified_outcome(
+            decision=decision, candidates=(candidate,), success=False,
+            reason="unconfirmed failure cannot penalize future choices",
+            provider_attempt=replace(attempt, stage="BLOCKED", after_state_ref=None, readback_ref=None),
+            verify_native_readback=lambda _: False,
+        )
+    assert selector.engine.ranker.score(selector._to_adaptive(candidate)).score == prior
