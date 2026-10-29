@@ -23,6 +23,10 @@ class TurnContextReceipt:
     material_context_applied: bool
     retrieval_available: bool = True
     unresolved_conflicts: tuple[str, ...] = ()
+    reused_context_refs: tuple[str, ...] = ()
+    applied_context_refs: tuple[str, ...] = ()
+    research_questions: tuple[str, ...] = ()
+    research_applied: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,10 +42,12 @@ class TurnContextDecision:
 def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
     """Choose the next context action without creating a generalized gate.
 
-    The Operator's standing rule is context-first on every turn. The model may
-    not skip retrieval merely because the current conversation appears sufficient.
-    When retrieval is unavailable, the mission continues in a degraded,
-    reversible lane while alternate context sources are pursued.
+    Understand -> Orient -> research and study -> maximize quality and skill
+    -> Execute -> Verify -> Repair -> Continue. Reuse previously consulted,
+    relevant source-bearing context instead of demanding repetitive retrieval.
+    Application of material context must be linked to consulted source refs;
+    action-specific research gaps do not freeze unrelated reversible progress.
+    The host still owns real source verification and provider authorization.
     """
     turn_id = receipt.turn_id.strip()
     if not turn_id:
@@ -49,7 +55,14 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
 
     digest = _digest_receipt(receipt)
 
-    if not receipt.retrieval_attempted:
+    # The host may reuse source-bearing context without repeated retrieval.
+    # Exact consulted identifiers, not an ungrounded self-report, anchor reuse.
+    consulted = set(receipt.sources_consulted)
+    reusable = bool(receipt.reused_context_refs) and all(
+        isinstance(ref, str) and ref.strip() and ref in consulted
+        for ref in receipt.reused_context_refs
+    )
+    if not receipt.retrieval_attempted and not reusable:
         if receipt.retrieval_available:
             return TurnContextDecision(
                 turn_id=turn_id,
@@ -78,13 +91,20 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
             receipt_sha256=digest,
         )
 
-    if receipt.material_context_found and not receipt.material_context_applied:
+    if receipt.material_context_found and (
+        not receipt.material_context_applied
+        or not receipt.applied_context_refs
+        or any(
+            not isinstance(ref, str) or not ref.strip() or ref not in consulted
+            for ref in receipt.applied_context_refs
+        )
+    ):
         return TurnContextDecision(
             turn_id=turn_id,
             next_action="APPLY_MATERIAL_CONTEXT_THEN_CONTINUE",
             mission_stopped=False,
             confidence_mode="PENDING_CONTEXT_APPLICATION",
-            reason="retrieval occurred but material context did not causally affect action selection",
+            reason="material context lacks source-linked application evidence for action selection",
             receipt_sha256=digest,
         )
 
@@ -98,12 +118,22 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
             receipt_sha256=digest,
         )
 
+    if receipt.research_questions and not receipt.research_applied:
+        return TurnContextDecision(
+            turn_id=turn_id,
+            next_action="RESEARCH_STUDY_MAXIMIZE_QUALITY_THEN_CONTINUE",
+            mission_stopped=False,
+            confidence_mode="TARGETED_RESEARCH_IN_PROGRESS",
+            reason="open action-specific research gaps should improve the action without stopping independent work",
+            receipt_sha256=digest,
+        )
+
     return TurnContextDecision(
         turn_id=turn_id,
         next_action="EXECUTE_OPERATOR_ALIGNED_TURN",
         mission_stopped=False,
         confidence_mode="CONTEXT_APPLIED",
-        reason="turn-start retrieval and material correction/application requirements are satisfied",
+        reason="relevant context was consulted or reused and corrections, applied understanding, and targeted research were accounted for",
         receipt_sha256=digest,
     )
 
