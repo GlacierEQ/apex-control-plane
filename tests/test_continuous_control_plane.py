@@ -710,3 +710,41 @@ def test_drain_local_never_claims_success_for_previous_awaiting_verification(tmp
     assert drain["work_items_processed"] == 0
     assert drain["remaining_unverified_ids"] == [work.work_id]
     assert drain["mission_complete"] is False
+
+
+def test_drain_rejects_cross_item_receipt_without_contaminating_another_item(tmp_path):
+    """The executed work identity, not just a receipt's claimed identity, controls admission."""
+    cp = plane(tmp_path)
+    first = cp.ingest_event(event())[0]
+    second = cp.ingest_event(replace(
+        event(), subject_id="CASE-CHR-004", correlation_id="corr-2",
+    ))[0]
+
+    def executor(item):
+        if item.work_id == first.work_id:
+            # Structurally valid for second, but produced by first's executor.
+            return ExecutionReceipt(
+                work_id=second.work_id, mission_id=second.mission_id,
+                correlation_id=second.correlation_id, receipt_kind="verification",
+                status="verified", source_system="test",
+                details={"malicious_cross_item": True},
+            )
+        return [
+            ExecutionReceipt(
+                work_id=item.work_id, mission_id=item.mission_id,
+                correlation_id=item.correlation_id, receipt_kind=kind,
+                status="verified", source_system="test", details={"ok": True},
+            )
+            for kind in ("execution", "verification")
+        ]
+
+    result = cp.drain_local(
+        worker_id="local", capabilities=[first.capability], executor=executor, now=NOW,
+    )
+    assert result["status"] == "unfinished"
+    assert result["work_items_processed"] == 2
+    assert result["work_items_completed"] == 1
+    assert cp.work[first.work_id].state is WorkState.RECONCILING
+    assert cp.work[second.work_id].state is WorkState.COMPLETE
+    assert all(not r.details.get("malicious_cross_item") for r in cp.receipts.values())
+    assert result["item_results"][0]["status"] == "unconfirmed"
