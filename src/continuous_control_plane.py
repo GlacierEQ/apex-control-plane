@@ -645,9 +645,14 @@ class ContinuousControlPlane:
         self.transition(item.work_id, WorkState.VERIFYING,
                         reason="validate_local_execution_receipts")
         required = set(item.required_receipt_kinds)
+        # Same-run completion requires evidence returned by THIS invocation.
+        # Historical receipts remain in the ledger for reconciliation but
+        # cannot certify a later unrelated execution.
         present = {
-            r.receipt_kind for r in self.receipts.values()
+            r.receipt_kind for r in receipts
             if r.work_id == item.work_id
+            and r.mission_id == item.mission_id
+            and r.correlation_id == item.correlation_id
             and r.status.casefold() in {
                 "verified", "pass", "passed", "success", "succeeded",
             }

@@ -161,3 +161,126 @@ def test_cli_missing_artifact_does_not_claim_complete(tmp_path: Path) -> None:
     cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
     assert cp.work[work.work_id].state is WorkState.VERIFYING
     assert {r.receipt_kind for r in cp.receipts.values()} == {"execution"}
+
+
+def test_cli_preexisting_unchanged_artifact_is_not_current_run_proof(tmp_path: Path) -> None:
+    """A successful no-op command must not promote a stale artifact to verified."""
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        WorkState, load_continuous_control_config,
+    )
+    store_path = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    work = cp.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="stale-file", correlation_id="stale-corr", payload={},
+    ))[0]
+    target = tmp_path / "previous-run.txt"
+    target.write_text("old output")
+    result = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(store_path),
+         work.capability, "--verify-file", str(target), "--",
+         sys.executable, "-c", "print('success without writing target')"],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["status"] == "awaiting_receipts"
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    assert cp.work[work.work_id].state is WorkState.VERIFYING
+    assert {r.receipt_kind for r in cp.receipts.values()} == {"execution"}
+
+
+def test_cli_rewritten_existing_artifact_can_verify_current_run(tmp_path: Path) -> None:
+    """Legitimate rewrites of an existing output path retain same-run completion."""
+    import os
+    import time
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        WorkState, load_continuous_control_config,
+    )
+    store_path = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    work = cp.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="rewrite-file", correlation_id="rewrite-corr", payload={},
+    ))[0]
+    target = tmp_path / "existing.txt"
+    target.write_text("same bytes")
+    prior = time.time() - 10
+    os.utime(target, (prior, prior))
+    result = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(store_path),
+         work.capability, "--verify-file", str(target), "--",
+         sys.executable, "-c",
+         "from pathlib import Path; import sys; Path(sys.argv[1]).write_text('same bytes')",
+         str(target)],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["status"] == "complete"
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    assert cp.work[work.work_id].state is WorkState.COMPLETE
+
+
+def test_cli_prior_verification_receipt_does_not_verify_later_unrelated_execution(tmp_path: Path) -> None:
+    """Required kinds must be present in the current attempt, not merely historical."""
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, ExecutionReceipt,
+        JsonlControlStore, WorkState, load_continuous_control_config,
+    )
+    store_path = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    work = cp.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="stale-receipt", correlation_id="old-proof-corr", payload={},
+    ))[0]
+    cp.record_receipt(ExecutionReceipt(
+        work_id=work.work_id, mission_id=work.mission_id,
+        correlation_id=work.correlation_id, receipt_kind="verification",
+        status="verified", source_system="old-run",
+        details={"scope": "prior attempt only"},
+    ))
+    result = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(store_path),
+         work.capability, "--", sys.executable, "-c", "print('new no-op')"],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["status"] == "awaiting_receipts"
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    assert cp.work[work.work_id].state is WorkState.VERIFYING
+
+
+def test_cli_symlink_target_is_not_accepted_as_artifact_readback(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        WorkState, load_continuous_control_config,
+    )
+    store_path = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    work = cp.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="symlink-artifact", correlation_id="symlink-corr", payload={},
+    ))[0]
+    source = tmp_path / "source.txt"
+    source.write_text("old secret-adjacent source")
+    target = tmp_path / "link.txt"
+    target.symlink_to(source)
+    result = subprocess.run(
+        [sys.executable, str(CLI), "--run-next-local", str(store_path),
+         work.capability, "--verify-file", str(target), "--",
+         sys.executable, "-c", "print('no artifact generated')"],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["status"] == "awaiting_receipts"
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(store_path), config)
+    assert cp.work[work.work_id].state is WorkState.VERIFYING
