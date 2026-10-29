@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 import sys
 
@@ -9,6 +10,7 @@ from continuous_impact_selection import (  # noqa: E402
     ContinuousImpactSelector,
     ImpactCandidate,
     ImpactSelectionViolation,
+    ImpactAttempt,
 )
 
 
@@ -426,3 +428,107 @@ def test_verified_outcomes_require_native_readback_not_artifact_claims():
         after_state_ref="source:version2",
     )
     valid.verify_claim()
+
+
+def _learning_case():
+    selector = ContinuousImpactSelector()
+    candidate = _candidate(
+        "best-route", "apply the tested repair", "verified code progresses",
+        mission_advancement=0.6, state_change_value=0.6,
+        failure_risk=0.2, operator_alignment=0.9,
+    )
+    decision = selector.select(
+        task_id="learning-with-evidence",
+        mission="compound verified improvements into future decisions",
+        operation_class="repair_runtime_selection",
+        state_version="source:before",
+        candidates=(candidate,),
+    )
+    attempt = ImpactAttempt(
+        mission_sha256=decision.mission_sha256,
+        candidate_id=decision.selected_candidate_id,
+        method_id="tested-repair",
+        source_state_ref="github:commit-before",
+        stage="VERIFIED_MATERIAL_DELTA",
+        provider_ref="github:commit-after",
+        after_state_ref="github:commit-after",
+        readback_ref="github:blob-after",
+        source_class="source_native",
+    )
+    return selector, candidate, decision, attempt
+
+
+def test_verified_learning_requires_exact_source_bound_provider_outcome(tmp_path) -> None:
+    selector, candidate, decision, attempt = _learning_case()
+    from dataclasses import replace
+    from adaptive_intelligence import AdaptiveRanker
+    learned = tmp_path / "compounding-model.json"
+    # The same persistent state is shared with the next worker.
+    first = ContinuousImpactSelector(model_state_path=learned)
+    before = first.engine.ranker.score(first._to_adaptive(candidate)).score
+    first.record_verified_outcome(
+        decision=decision, candidates=(candidate,), success=True,
+        reason="readback confirms the intended source-native delta",
+        provider_attempt=attempt,
+    )
+    second = ContinuousImpactSelector(model_state_path=learned)
+    after = second.engine.ranker.score(second._to_adaptive(candidate)).score
+    assert learned.exists()
+    assert after > before
+    # An independent readback reference must survive the decision feedback.
+    assert attempt.readback_ref == "github:blob-after"
+
+
+@pytest.mark.parametrize("change", [
+    {"mission_sha256": "a" * 64},
+    {"candidate_id": "unselected-route"},
+    {"source_class": "assistant"},
+    {"stage": "BLOCKED"},
+    {"readback_ref": None},
+    {"after_state_ref": "github:commit-before"},
+])
+def test_false_positive_learning_is_not_reinforced(change) -> None:
+    from dataclasses import replace
+    selector, candidate, decision, attempt = _learning_case()
+    previous = selector.engine.ranker.score(selector._to_adaptive(candidate)).score
+    with pytest.raises(ImpactSelectionViolation):
+        selector.record_verified_outcome(
+            decision=decision, candidates=(candidate,), success=True,
+            reason="claimed verified", provider_attempt=replace(attempt, **change),
+        )
+    assert selector.engine.ranker.score(selector._to_adaptive(candidate)).score == previous
+
+
+def test_provider_confirmed_no_delta_is_negative_learning() -> None:
+    from dataclasses import replace
+    selector, candidate, decision, attempt = _learning_case()
+    before = selector.engine.ranker.score(selector._to_adaptive(candidate)).score
+    selector.record_verified_outcome(
+        decision=decision, candidates=(candidate,), success=False,
+        reason="native provider reports no state change",
+        provider_attempt=replace(
+            attempt, stage="NO_DELTA", after_state_ref=None, readback_ref=None,
+        ),
+    )
+    after = selector.engine.ranker.score(selector._to_adaptive(candidate)).score
+    assert after < before
+
+
+def test_verified_learning_rejects_candidate_mutation_between_selection_and_feedback() -> None:
+    from dataclasses import replace
+    selector, candidate, decision, attempt = _learning_case()
+    mutated = replace(candidate, expected_delta="unrelated replacement objective")
+    with pytest.raises(ImpactSelectionViolation, match="does not match"):
+        selector.record_verified_outcome(
+            decision=decision, candidates=(mutated,), success=True,
+            reason="attempt to teach from changed operation", provider_attempt=attempt,
+        )
+
+
+def test_no_provider_proof_does_not_turn_boolean_success_into_training() -> None:
+    selector, candidate, decision, _ = _learning_case()
+    with pytest.raises((TypeError, ImpactSelectionViolation)):
+        selector.record_verified_outcome(
+            decision=decision, candidates=(candidate,), success=True,
+            reason="a reported success with no source proof",
+        )
