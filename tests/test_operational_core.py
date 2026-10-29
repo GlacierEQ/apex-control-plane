@@ -41,7 +41,7 @@ class CoreTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.provider = FakeProvider()
         self.core = OperationalCore(self.root / "state.db",
-                                    {"provider": self.provider, "file.write": FileWriteAdapter()})
+                                    {"provider": self.provider, "file.write": FileWriteAdapter(self.root)})
         self.addCleanup(self.core.close)
 
     def test_connector_execution_and_independent_readback(self):
@@ -130,17 +130,30 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.core.run("op9").state, "uncertain")
         self.assertEqual(target.read_text(), "untouched")
 
+    def test_reject_out_of_workspace(self):
+        external = self.root.parent / "external-should-not-be-written.txt"
+        self.core.submit("external", "file.write", {"path": str(external), "content": "bad"})
+        result = self.core.run("external")
+        self.assertFalse(result.verified)
+        self.assertFalse(external.exists())
+
+    def test_journal_is_private_at_creation(self):
+        import os
+        if os.name != "posix":
+            self.skipTest("POSIX file permissions")
+        self.assertEqual(self.core.path.stat().st_mode & 0o777, 0o600)
+
     def test_sqlite_persists_across_process_restart(self):
         self.core.submit("op10", "file.write", {"path": str(self.root / "saved.txt"), "content": "hello"})
         self.core.run("op10")
         self.core.close()
-        with OperationalCore(self.root / "state.db", {"file.write": FileWriteAdapter()}) as resumed:
+        with OperationalCore(self.root / "state.db", {"file.write": FileWriteAdapter(self.root)}) as resumed:
             self.assertTrue(resumed.status("op10").verified)
             self.assertEqual(resumed.run("op10").attempts, 1)
 
     def test_cli_real_end_to_end(self):
         cli = ROOT / "scripts" / "operate_direct.py"
-        base = [sys.executable, str(cli), "--state", str(self.root / "cli.db")]
+        base = [sys.executable, str(cli), "--state", str(self.root / "cli.db"), "--root", str(self.root)]
         target = self.root / "cli.txt"
         s = subprocess.run(base + ["submit-file", "--id", "cli1", "--path", str(target), "--content", "operating"], capture_output=True, text=True)
         self.assertEqual(s.returncode, 0, s.stderr)
@@ -156,7 +169,7 @@ class CoreTests(unittest.TestCase):
     def test_cli_queue_only_does_not_claim_execution(self):
         cli = ROOT / "scripts" / "operate_direct.py"
         target = self.root / "queued.txt"
-        args = [sys.executable, str(cli), "--state", str(self.root / "queue.db"),
+        args = [sys.executable, str(cli), "--state", str(self.root / "queue.db"), "--root", str(self.root),
                 "submit-file", "--queue-only", "--id", "q", "--path", str(target), "--content", "queued"]
         p = subprocess.run(args, capture_output=True, text=True)
         self.assertEqual(p.returncode, 0, p.stderr)
