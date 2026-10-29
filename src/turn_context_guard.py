@@ -27,6 +27,8 @@ class TurnContextReceipt:
     applied_context_refs: tuple[str, ...] = ()
     research_questions: tuple[str, ...] = ()
     research_applied: bool = False
+    research_source_refs: tuple[str, ...] = ()
+    research_applied_refs: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,7 +64,7 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
         isinstance(ref, str) and ref.strip() and ref in consulted
         for ref in receipt.reused_context_refs
     )
-    if not receipt.retrieval_attempted and not reusable:
+    if (not receipt.retrieval_attempted or not consulted) and not reusable:
         if receipt.retrieval_available:
             return TurnContextDecision(
                 turn_id=turn_id,
@@ -118,7 +120,19 @@ def route_turn_context(receipt: TurnContextReceipt) -> TurnContextDecision:
             receipt_sha256=digest,
         )
 
-    if receipt.research_questions and not receipt.research_applied:
+    # A bare research_applied=True flag cannot substitute for studied sources
+    # materially informing the proposed action. The host must verify provenance
+    # and the actual application separately before accepting this receipt.
+    studied = receipt.research_source_refs
+    research_applied = receipt.research_applied_refs
+    research_evidenced = (
+        receipt.research_applied is True
+        and bool(studied)
+        and bool(research_applied)
+        and all(isinstance(ref, str) and ref.strip() and ref in consulted for ref in studied)
+        and all(isinstance(ref, str) and ref.strip() and ref in studied for ref in research_applied)
+    )
+    if receipt.research_questions and not research_evidenced:
         return TurnContextDecision(
             turn_id=turn_id,
             next_action="RESEARCH_STUDY_MAXIMIZE_QUALITY_THEN_CONTINUE",
@@ -142,5 +156,10 @@ def _digest_receipt(receipt: TurnContextReceipt) -> str:
     payload: dict[str, Any] = asdict(receipt)
     payload["sources_consulted"] = list(receipt.sources_consulted)
     payload["unresolved_conflicts"] = list(receipt.unresolved_conflicts)
+    payload["reused_context_refs"] = list(receipt.reused_context_refs)
+    payload["applied_context_refs"] = list(receipt.applied_context_refs)
+    payload["research_questions"] = list(receipt.research_questions)
+    payload["research_source_refs"] = list(receipt.research_source_refs)
+    payload["research_applied_refs"] = list(receipt.research_applied_refs)
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return sha256(encoded.encode("utf-8")).hexdigest()
