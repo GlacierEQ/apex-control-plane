@@ -35,14 +35,23 @@ jobs:
         run: python -m pytest -q
       - name: CLI smoke test executes actual work instead of inventing completion
         run: |
+          # A no-op is not a successful execution. Assert the explicit idle exit
+          # instead of allowing bash -e to silently turn it into a fake green.
+          set +e
           python src/control_plane.py > /tmp/casebrain-idle.json
+          idle_code=$?
+          set -e
+          test "$idle_code" -eq 3
           python src/control_plane.py --exec python -c "print('executed in process')" > /tmp/casebrain-exec.json
           python - <<'PY'
           import json
           idle = json.load(open('/tmp/casebrain-idle.json', encoding='utf-8'))
           executed = json.load(open('/tmp/casebrain-exec.json', encoding='utf-8'))
           assert idle['status'] == 'idle' and idle['routes_run'] == 0 and idle['executed'] is False
-          assert executed['status'] == 'completed' and executed['routes_run'] == 1
+          assert idle['mission_complete'] is False
+          assert executed['status'] == 'process_succeeded_unverified' and executed['routes_run'] == 1
           assert executed['executed'] is True and executed['exit_code'] == 0
+          assert executed['mission_complete'] is False and executed['outcome_verified'] is False
+          assert executed['outcome_scope'] == 'subprocess_exit_only'
           assert executed['stdout'].strip() == 'executed in process'
           PY
