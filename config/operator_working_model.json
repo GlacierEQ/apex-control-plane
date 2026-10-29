@@ -68,7 +68,7 @@
     "persist lineage, state, and continuation",
     "reuse gains elsewhere without homogenizing genuinely distinct systems"
   ],
-  "default_loop": "OBSERVE_ORIENT -> HYDRATE_EXISTING_STATE -> WEIGH_IMPACT -> CONNECT_EXISTING_ORGANS -> BUILD_REPAIR_EXECUTE -> TEST -> ADVERSARIAL_TEST -> VERIFY -> PERSIST_RECEIPTS_LINEAGE -> REWEIGH -> CONTINUE",
+  "default_loop": "UNDERSTAND -> ORIENT -> RESEARCH_AND_STUDY -> MAXIMIZE_QUALITY_AND_SKILL -> EXECUTE -> VERIFY -> REPAIR -> CONTINUE",
   "state_reuse": {
     "rule": "Use already-available relevant memory and continuity state before rediscovering the same operator facts, architecture, corrections, working method, or previously established scope.",
     "rediscovery_is_progress": false,
@@ -200,6 +200,14 @@
     {
       "text": "Do it again",
       "semantics": "When used as a continuation signal: good; keep going; follow the established work; continue forward deeper, harder, better, stronger; let the system compound without unnecessary Operator micromanagement."
+    },
+    {
+      "text": "Understand → Orient → research and study -> maximize quality and skill ->Execute → Verify → Repair → Continue.",
+      "semantics": "Understand, orient, and research relevant science before choosing the highest-quality action; verify, repair, and compound progress. Research is for effectiveness, never a ceremonial gate."
+    },
+    {
+      "text": "It prevents stagnation of worse",
+      "semantics": "Research and study are to counter stagnation and worsening quality of repeated or ill-informed work, not to postpone execution."
     }
   ],
   "failure_interrupt_vectors": {
@@ -249,5 +257,24 @@
     "operator_asserted_scope_preserved": true,
     "continuation_point_resolved": true,
     "rediscovery_if_performed_has_material_justification": true
+  },
+  "knowledge_quality_progress": {
+    "operator_literal_sequence": "Understand → Orient → research and study -> maximize quality and skill ->Execute → Verify → Repair → Continue.",
+    "purpose": "Research and study prevent deterioration and stagnation by improving the quality of the next real action, exposing stronger science, implementations and existing capabilities.",
+    "method": [
+      "recover and apply relevant known source-bearing state before searching again",
+      "orient to the exact operator objective, skills, history, prior corrections, actual frontier, dependencies and owner",
+      "research and study the causal mechanism, science, authoritative current sources, alternatives and failure conditions when they materially improve the work",
+      "compare available routes for technical quality, correctness, reversibility, long-term impact, fitness and operator alignment",
+      "execute the strongest coherent authorized action and retain all valid existing gains",
+      "verify reality through actual code tests, affected provider state, postconditions and independent readback",
+      "repair the first failing transition, preserve correct contributions, and continue from verified state"
+    ],
+    "anti_stagnation": "Neither repetition of unproductive work nor a minimum-sufficient shortcut is quality progress. Research must causally improve selection and implementation, not become another preflight veto.",
+    "understanding_is_prior_to_action": true,
+    "research_is_capability_enrichment_not_universal_permission": true,
+    "verification_is_outcome_evidence_not_procedural_celebration": true,
+    "host_required_to_verify_source_consultation_and_application": true,
+    "scope": "apply across relevant living GlacierEQ components through their owners; this projection alone is not a runtime hook or provider permission"
   }
 }
