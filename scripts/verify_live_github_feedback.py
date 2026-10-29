@@ -67,7 +67,7 @@ def prove_live_source_feedback(repository: str, commit_sha: str, token: str) -> 
         if isinstance(item, dict)
         and item.get("status") in {"added", "modified"}
         and isinstance(item.get("filename"), str)
-        and (item["filename"].startswith("src/") or item["filename"].startswith("scripts/"))
+        and item["filename"].startswith(("src/", "scripts/", ".github/workflows/"))
     ), None)
     if not candidate_file:
         return {"status": "NO_RELEVANT_CODE_DELTA", "commit": commit_sha}
