@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
+from contextlib import nullcontext
+from hashlib import sha256
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -52,7 +54,10 @@ def file_blob(repository: str, path: str, at: str, token: str) -> str | None:
     return blob if isinstance(blob, str) and len(blob) == 40 else None
 
 
-def prove_live_source_feedback(repository: str, commit_sha: str, token: str) -> dict:
+def prove_live_source_feedback(
+    repository: str, commit_sha: str, token: str, *,
+    model_state_path: str | Path | None = None,
+) -> dict:
     """Verify one material code delta through GitHub's independent native API."""
     commit = github_get(repository, f"commits/{commit_sha}", token)
     if commit.get("sha") != commit_sha:
@@ -91,8 +96,30 @@ def prove_live_source_feedback(repository: str, commit_sha: str, token: str) -> 
         },
         evidence_refs=(f"github:commit:{commit_sha}",),
     )
-    with TemporaryDirectory(prefix="apex-github-live-feedback-") as folder:
-        model_path = Path(folder) / "verified-learning.json"
+    temporary = TemporaryDirectory(prefix="apex-github-live-feedback-") if model_state_path is None else nullcontext(None)
+    with temporary as folder:
+        model_path = Path(model_state_path) if model_state_path is not None else Path(folder) / "verified-learning.json"
+        model_path.parent.mkdir(parents=True, exist_ok=True)
+        # This is a bounded, non-sensitive continuity marker paired with the
+        # existing learner. Validate source state before considering it applied.
+        marker_path = model_path.with_name("github-feedback-checkpoint.json")
+        if marker_path.exists():
+            checkpoint = json.loads(marker_path.read_text(encoding="utf-8"))
+            if (
+                not isinstance(checkpoint, dict)
+                or checkpoint.get("schema_version") != 1
+                or not isinstance(checkpoint.get("applied_commits"), list)
+                or not all(isinstance(value, str) and len(value) == 40 for value in checkpoint["applied_commits"])
+            ):
+                raise ValueError("incompatible persisted GitHub feedback checkpoint")
+            if not model_path.is_file():
+                raise ValueError("feedback checkpoint exists without its learned model")
+            applied = list(checkpoint["applied_commits"])
+        else:
+            if model_path.is_file():
+                raise ValueError("learned model exists without the matching feedback checkpoint")
+            applied = []
+        prior_model_restored = model_path.is_file()
         selector = ContinuousImpactSelector(model_state_path=model_path)
         decision = selector.select(
             task_id=f"github-native-feedback:{commit_sha}",
@@ -124,6 +151,16 @@ def prove_live_source_feedback(repository: str, commit_sha: str, token: str) -> 
             )
 
         previous = selector.engine.ranker.score(selector._to_adaptive(candidate)).score
+        if commit_sha in applied:
+            if not independent_native_readback(attempt):
+                raise RuntimeError("cached learned commit failed provider-native readback")
+            return {
+                "status": "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED",
+                "commit": commit_sha, "path": path,
+                "prior_model_restored": True,
+                "duplicate_learning_prevented": True,
+                "human_mission_complete": False,
+            }
         selector.record_verified_outcome(
             decision=decision, candidates=(candidate,), success=True,
             reason="GitHub provider independently verified code delta at exact commit",
@@ -134,12 +171,20 @@ def prove_live_source_feedback(repository: str, commit_sha: str, token: str) -> 
         learned = restarted.engine.ranker.score(restarted._to_adaptive(candidate)).score
         if not model_path.is_file() or not learned > previous:
             raise RuntimeError("verified feedback did not persist across selector instances")
+        # Only record a completed provider readback. A crash before the marker
+        # retains the valid model for recovery, rather than manufacturing proof.
+        updated = {"schema_version": 1, "applied_commits": [*applied, commit_sha]}
+        marker_path.write_text(json.dumps(updated, sort_keys=True) + "\n", encoding="utf-8")
+        if json.loads(marker_path.read_text(encoding="utf-8")) != updated:
+            raise RuntimeError("feedback checkpoint independent local readback failed")
     return {
         "status": "GITHUB_NATIVE_CODE_DELTA_VERIFIED",
         "commit": commit_sha, "path": path,
         "source_blob": before_blob,
         "readback_blob": after_blob,
         "model_reloaded": True,
+        "prior_model_restored": prior_model_restored,
+        "applied_commit_count": len(applied) + 1,
         "human_mission_complete": False,
     }
 
@@ -148,5 +193,9 @@ if __name__ == "__main__":
     repository = os.environ["GITHUB_REPOSITORY"]
     sha = os.environ["GITHUB_SHA"]
     token = os.environ["GH_TOKEN"]
-    result = prove_live_source_feedback(repository, sha, token)
+    persistent_model = os.environ.get("GLACIEREQ_APEX_LEARNING_STATE_PATH")
+    result = prove_live_source_feedback(
+        repository, sha, token,
+        model_state_path=persistent_model if persistent_model else None,
+    )
     print(json.dumps(result, sort_keys=True))
