@@ -33,6 +33,12 @@ jobs:
         run: |
           python -m pip install --upgrade pytest
           PYTHONPATH=src:. python -m pytest -q tests/
+      - name: Verify GitHub native-feedback integration
+        id: native_feedback
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.full_test_suite.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/verify_live_github_feedback.py
       - name: Report full-suite result as commit status
         # PR tokens may be read-only, so native status reporting is for main pushes.
         if: ${{ always() && github.event_name != 'pull_request' }}
@@ -40,6 +46,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           COMPILE_RESULT: ${{ steps.compile_surfaces.outcome }}
           TEST_RESULT: ${{ steps.full_test_suite.outcome }}
+          FEEDBACK_RESULT: ${{ steps.native_feedback.outcome }}
         run: |
           python - <<'PY'
           import json
@@ -49,6 +56,10 @@ jobs:
           complete = (
               os.environ.get("COMPILE_RESULT") == "success"
               and os.environ.get("TEST_RESULT") == "success"
+              and (
+                  os.environ.get("GITHUB_REF") != "refs/heads/main"
+                  or os.environ.get("FEEDBACK_RESULT") == "success"
+              )
           )
           state = "success" if complete else "failure"
           repo = os.environ["GITHUB_REPOSITORY"]
