@@ -179,6 +179,7 @@ def prove_live_source_feedback(
         marker_path.write_text(json.dumps(updated, sort_keys=True) + "\n", encoding="utf-8")
         if json.loads(marker_path.read_text(encoding="utf-8")) != updated:
             raise RuntimeError("feedback checkpoint independent local readback failed")
+        new_model_sha256 = sha256(model_path.read_bytes()).hexdigest()
     return {
         "status": "GITHUB_NATIVE_CODE_DELTA_VERIFIED",
         "commit": commit_sha, "path": path,
@@ -187,7 +188,7 @@ def prove_live_source_feedback(
         "model_reloaded": True,
         "prior_model_restored": prior_model_restored,
         "prior_model_sha256": prior_model_sha256,
-        "new_model_sha256": sha256(model_path.read_bytes()).hexdigest(),
+        "new_model_sha256": new_model_sha256,
         "applied_commit_count": len(applied) + 1,
         "human_mission_complete": False,
     }
