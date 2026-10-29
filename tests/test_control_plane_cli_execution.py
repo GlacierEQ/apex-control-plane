@@ -327,3 +327,40 @@ def test_cli_invalid_command_never_reports_success() -> None:
     )
     assert run.returncode != 0
     assert json.loads(run.stdout)["mission_complete"] is False
+
+def test_cli_drain_local_attempts_every_independent_work_and_verifies_all(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        load_continuous_control_config, WorkState,
+    )
+    queue = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    cp = ContinuousControlPlane.from_config(JsonlControlStore(queue), config)
+    ids = []
+    for n in (1, 2):
+        work = cp.ingest_event(ControlEvent(
+            event_type="gmail.reply.received", source_system="test",
+            subject_id=f"mission-{n}", correlation_id=f"corr-{n}", payload={},
+        ))[0]
+        ids.append(work.work_id)
+    target = tmp_path / "proof-growing.txt"
+    result = subprocess.run(
+        [sys.executable, str(CLI), "--drain-local", str(queue),
+         work.capability, "--verify-file", str(target), "--",
+         sys.executable, "-c",
+         "from pathlib import Path; import sys; Path(sys.argv[1]).open('a').write('x')",
+         str(target)],
+        cwd=ROOT, text=True, capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert target.read_text() == "xx"
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "local_batch_complete"
+    assert payload["work_items_processed"] == 2
+    assert payload["work_items_completed"] == 2
+    assert payload["remaining_unverified_ids"] == []
+    assert payload["batch_complete"] is True
+    assert payload["mission_complete"] is False
+    restored = ContinuousControlPlane.from_config(JsonlControlStore(queue), config)
+    assert all(restored.work[i].state is WorkState.COMPLETE for i in ids)
