@@ -11,6 +11,7 @@ def _receipt(**overrides):
         "prior_corrections_checked": True,
         "material_context_found": True,
         "material_context_applied": True,
+        "applied_context_refs": ("current_conversation",),
         "retrieval_available": True,
         "unresolved_conflicts": (),
     }
@@ -73,3 +74,109 @@ def test_context_applied_allows_operator_aligned_execution() -> None:
     assert decision.mission_stopped is False
     assert decision.confidence_mode == "CONTEXT_APPLIED"
     assert len(decision.receipt_sha256) == 64
+
+
+def test_previously_consulted_context_reused_without_retrieval_ritual() -> None:
+    decision = route_turn_context(_receipt(
+        retrieval_attempted=False,
+        sources_consulted=("source:existing-work",),
+        reused_context_refs=("source:existing-work",),
+        applied_context_refs=("source:existing-work",),
+    ))
+    assert decision.next_action == "EXECUTE_OPERATOR_ALIGNED_TURN"
+    assert decision.confidence_mode == "CONTEXT_APPLIED"
+
+
+def test_unconsulted_reuse_claim_cannot_skip_understanding() -> None:
+    decision = route_turn_context(_receipt(
+        retrieval_attempted=False,
+        sources_consulted=("source:known",),
+        reused_context_refs=("source:invented",),
+        material_context_found=False,
+        material_context_applied=False,
+        applied_context_refs=(),
+    ))
+    assert decision.next_action == "RETRIEVE_CONTEXT_THEN_CONTINUE"
+    assert decision.mission_stopped is False
+
+
+def test_retrieval_attempt_without_consulted_source_is_not_understanding() -> None:
+    decision = route_turn_context(_receipt(
+        retrieval_attempted=True,
+        sources_consulted=(),
+        material_context_found=False,
+        material_context_applied=False,
+        applied_context_refs=(),
+    ))
+    assert decision.next_action == "RETRIEVE_CONTEXT_THEN_CONTINUE"
+
+
+def test_context_application_flag_without_consulted_source_is_not_enough() -> None:
+    decision = route_turn_context(_receipt(applied_context_refs=()))
+    assert decision.next_action == "APPLY_MATERIAL_CONTEXT_THEN_CONTINUE"
+
+
+def test_context_application_cannot_use_unconsulted_reference() -> None:
+    decision = route_turn_context(_receipt(applied_context_refs=("source:other-mission",)))
+    assert decision.next_action == "APPLY_MATERIAL_CONTEXT_THEN_CONTINUE"
+
+
+def test_research_question_before_action_routes_to_study_not_false_completion() -> None:
+    decision = route_turn_context(_receipt(
+        research_questions=("What does the current API contract guarantee?",),
+    ))
+    assert decision.next_action == "RESEARCH_STUDY_MAXIMIZE_QUALITY_THEN_CONTINUE"
+    assert decision.mission_stopped is False
+
+
+def test_bare_research_applied_flag_is_not_scientific_evidence() -> None:
+    decision = route_turn_context(_receipt(
+        research_questions=("Find strongest repair approach",),
+        research_applied=True,
+    ))
+    assert decision.next_action == "RESEARCH_STUDY_MAXIMIZE_QUALITY_THEN_CONTINUE"
+
+
+def test_research_sources_must_be_consulted_and_applied() -> None:
+    bad = [
+        {"research_source_refs": ("source:unknown",), "research_applied_refs": ("source:unknown",)},
+        {"research_source_refs": ("current_conversation",), "research_applied_refs": ("source:unknown",)},
+        {"research_source_refs": ("current_conversation",), "research_applied_refs": ()},
+    ]
+    for variant in bad:
+        decision = route_turn_context(_receipt(
+            research_questions=("Compare safe approaches",),
+            research_applied=True,
+            **variant,
+        ))
+        assert decision.next_action == "RESEARCH_STUDY_MAXIMIZE_QUALITY_THEN_CONTINUE"
+
+
+def test_source_bound_research_can_advance_operator_aligned_work() -> None:
+    decision = route_turn_context(_receipt(
+        research_questions=("Study source-supported alternative",),
+        research_applied=True,
+        research_source_refs=("current_conversation",),
+        research_applied_refs=("current_conversation",),
+    ))
+    assert decision.next_action == "EXECUTE_OPERATOR_ALIGNED_TURN"
+    assert decision.mission_stopped is False
+
+
+def test_existing_understanding_avoids_unnecessary_research_gate() -> None:
+    decision = route_turn_context(_receipt(
+        research_questions=(),
+        research_applied=False,
+    ))
+    assert decision.next_action == "EXECUTE_OPERATOR_ALIGNED_TURN"
+
+
+def test_study_provenance_changes_receipt_digest() -> None:
+    base = route_turn_context(_receipt())
+    studied = route_turn_context(_receipt(
+        research_questions=("Study provider semantics",),
+        research_applied=True,
+        research_source_refs=("current_conversation",),
+        research_applied_refs=("current_conversation",),
+    ))
+    assert base.receipt_sha256 != studied.receipt_sha256
