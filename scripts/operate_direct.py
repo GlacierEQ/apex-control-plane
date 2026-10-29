@@ -13,6 +13,7 @@ from operational_core import FileWriteAdapter, OperationalCore
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state", type=Path, required=True, help="Durable SQLite journal")
+    parser.add_argument("--root", type=Path, default=Path.cwd(), help="Trusted workspace root for file effects (default: current directory)")
     commands = parser.add_subparsers(dest="command", required=True)
     submit = commands.add_parser("submit-file", help="Submit and immediately execute a file action")
     submit.add_argument("--id", required=True, help="Stable idempotency key")
@@ -27,7 +28,7 @@ def main() -> int:
     status.add_argument("--id", required=True)
     args = parser.parse_args()
     try:
-        with OperationalCore(args.state, {"file.write": FileWriteAdapter()}) as core:
+        with OperationalCore(args.state, {"file.write": FileWriteAdapter(args.root)}) as core:
             if args.command == "submit-file":
                 content = args.content if args.content is not None else args.content_file.read_text(encoding="utf-8")
                 result = core.submit(args.id, "file.write", {"path": str(args.path), "content": content})
