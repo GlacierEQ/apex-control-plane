@@ -48,19 +48,31 @@ ChatGPT automatic-session hook or control ChatGPT account-level memory
 consolidation. A real host must invoke the gateway before every model call.
 Native ChatGPT startup/memory control remains unverified.
 
-## Enforced startup
+## Execution and startup proof — current paths
 
-`python src/control_plane.py` is the explicit fail-closed wrapper. The composed startup/strong-boot path protects the preserved runtime in `src/control_plane_runtime.py` with these proof boundaries:
+**Executable behavior is the authority, not a historical gate description.**
+The current `src/control_plane.py` CLI accepts explicit work and reports its native result. The older proof-bound startup and associated strict-mode docs remain historical/reference surfaces; they must not be interpreted as a new universal permission requirement or as proof that the CLI launched a worker.
 
-1. **Known-state / continuity preflight** — consult relevant already-known state, reuse provenance-bearing state where usable, resolve the nearest valid continuation, map owners/consumers/dependencies/overlaps where material, and preserve valid prior capability.
-2. **Prime Directive memory-state proof** — satisfy memory acquisition either by provenance-bearing reuse or by a materially justified search; hash-bind pinned ground-truth reads; prove tool inventory, current-source requirements, and provider-backed receipt validation.
-3. **APEX Genesis + Operator fidelity** — bind literal Operator intent and operation class, continuation, target state, prior valid gains, contradiction status, execution-state model, maximum coherent path, and verification plan.
-4. **Model-attractor defense** — fail closed on `CONTINUE -> RECONSTRUCT`, known-state rediscovery, mission/support substitution, and related continuity drift.
-5. **Mission-outcome fidelity** — mutation work cannot persist merely because the assistant produced a ledger, matrix, summary, report, plan, commit, task update, or other artifact; it must prove an underlying source-bearing mission-state transition or an evidenced genuine external boundary after materially available internal routes are exhausted.
+- `python src/control_plane.py` reports `status=idle`, `executed=false` when no command was supplied. **Idle is not success or completion.** It identifies the missing executable request; a runner with a real mission should select an available authorized route rather than citing this result as work done.
+- `python src/control_plane.py --exec PROGRAM [ARG ...]` invokes one explicit local process and reports the exit code. A process exit of zero proves only that process succeeded; it does **not** prove a provider mutation or mission completion.
+- `python src/control_plane.py --run-next-local STORE CAPABILITY [--verify-file PATH] -- PROGRAM [ARG ...]` executes one queued work item with receipts. Local file readback (when used) proves the file state, not an external provider outcome.
+- `src/apex_session_gateway.py` and related continuity contracts apply only where a host actually invokes them. They do not install a native ChatGPT hook.
 
-Strict mode is the default. Without complete provider-backed proof, startup exits with status `78` rather than pretending context or execution state exists.
+**Repair-forward operating rule:** When optional retrieval, legacy startup proof, validation, or a connector route is unavailable, preserve the exact operator mission and existing verified gains, record the affected deficiency, and execute unrelated work through available authorized routes. A local gap cannot grant new permission; provider credential, legal, destructive-action, and actual platform restrictions still govern their own affected operations.
 
-**Rediscovery of already-known relevant Operator/project state is not progress.**
+Never reward or report a diagnosis, gate pass, checklist, plan, queued run, test, or self-created receipt as the requested external outcome. Verify the actual postcondition before claiming completion.
+
+**Existing in-flight work:** [PR #220](https://github.com/GlacierEQ/apex-control-plane/pull/220) proposes broader repair-forward runtime changes but is not assumed merged. Review its current state and relevant code before changing runtime policy or duplicating its implementation.
+
+### Executable smoke checks
+
+```bash
+python src/control_plane.py
+python src/control_plane.py --exec python -c 'print("executed")'
+python -m pytest -q tests/test_apex_session_gateway.py
+```
+
+The second command tests local process invocation only, and the third tests a specific gateway surface. None proves cross-provider execution by itself.
 
 ### Memory-state acquisition
 
@@ -117,11 +129,13 @@ OBSERVED_IN_OPERATION
 
 Material state promotion requires the corresponding evidence. For example, attempted work does not become executed without an execution receipt, and committed work does not become deployed without deployment proof.
 
-### Generate a connector request
+### No-command status (not an execution request)
 
 ```bash
 python src/control_plane.py
 ```
+
+Returns an idle status; this does not generate a connector request or perform work.
 
 ### Validate a provider receipt
 
@@ -129,7 +143,7 @@ python src/control_plane.py
 python -m pytest -q tests/
 ```
 
-### Run the control plane
+### Historical boot configuration (not the current CLI default)
 
 ```bash
 CASEY_BOOT_PROFILE=legal_case \
@@ -139,7 +153,7 @@ python src/control_plane.py
 
 The profile name above is an interface example. No case-specific evidence or private legal record is part of this README's public capability claim.
 
-### Request mode
+### Historical request-mode configuration
 
 ```bash
 CASEY_AUTO_BOOT_MODE=request python src/control_plane.py
