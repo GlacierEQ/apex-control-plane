@@ -96,7 +96,7 @@ if __name__ == "__main__":
             "reason": "no_execution_command_supplied",
         }, sort_keys=True))
         raise SystemExit(3)
-    elif args[0] == "--run-next-local" and len(args) >= 5:
+    elif args[0] in {"--run-next-local", "--drain-local"} and len(args) >= 5:
         # Operator supplies a concrete command; the persisted queue supplies
         # the work identity. Never execute instructions extracted from events.
         queue_root, capability = args[1], args[2]
@@ -110,7 +110,7 @@ if __name__ == "__main__":
             print(json.dumps({
                 "status": "failed", "executed": False, "routes_run": 0,
                 "mission_complete": False,
-                "reason": "usage: --run-next-local STORE CAPABILITY [--verify-file PATH] -- PROGRAM [ARG ...]",
+                "reason": "usage: (--run-next-local | --drain-local) STORE CAPABILITY [--verify-file PATH] -- PROGRAM [ARG ...]",
             }, sort_keys=True))
             raise SystemExit(2)
         plane = ContinuousControlPlane.from_config(
@@ -213,18 +213,20 @@ if __name__ == "__main__":
                 ),
             ]
 
-        result = plane.execute_next_local(
+        drain = args[0] == "--drain-local"
+        executor_fn = plane.drain_local if drain else plane.execute_next_local
+        result = executor_fn(
             worker_id="apex-local-cli",
             capabilities=[capability],
             executor=execute_queued,
         )
-        # A completed local queue item is not proof that the parent mission
-        # achieved its intended external or end-to-end outcome.
-        result["outcome_scope"] = "local_work_item"
+        # Verified local work and an entire mission are different outcomes.
+        result["outcome_scope"] = "local_batch" if drain else "local_work_item"
         result["work_item_complete"] = result["status"] == "complete"
+        result["batch_complete"] = result["status"] == "local_batch_complete"
         result["mission_complete"] = False
         print(json.dumps(result, sort_keys=True))
-        if result["status"] == "complete":
+        if result["status"] in {"complete", "local_batch_complete"}:
             raise SystemExit(0)
         # Exit zero must never silently certify an idle, unverified,
         # unfinished or scheduled-retry invocation as successful work.
@@ -232,7 +234,7 @@ if __name__ == "__main__":
             raise SystemExit(result.get("exit_code") or 1)
         if result["status"] == "idle":
             raise SystemExit(3)
-        if result["status"] == "awaiting_receipts":
+        if result["status"] in {"awaiting_receipts", "unfinished"}:
             raise SystemExit(4)
         if result["status"] == "unconfirmed":
             raise SystemExit(5)
