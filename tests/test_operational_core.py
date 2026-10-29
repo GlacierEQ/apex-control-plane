@@ -52,6 +52,14 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(result.attempts, 1)
         self.assertIn("verified", [e["state"] for e in self.core.events("op1")])
 
+    def test_verified_state_is_rechecked_and_repaired_when_target_drifts(self):
+        self.core.submit("drift", "provider", {"key": "k", "value": 2})
+        self.assertTrue(self.core.run("drift").verified)
+        self.provider.effects.pop("k")
+        self.assertTrue(self.core.run("drift").verified)
+        self.assertEqual(self.provider.calls, 2)
+        self.assertIn("retryable", [e["state"] for e in self.core.events("drift")])
+
     def test_same_request_is_idempotent(self):
         self.core.submit("op1", "provider", {"key": "k", "value": 2})
         self.core.submit("op1", "provider", {"key": "k", "value": 2})
