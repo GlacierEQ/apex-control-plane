@@ -34,7 +34,8 @@ jobs:
           python -m pip install --upgrade pytest
           PYTHONPATH=src:. python -m pytest -q tests/
       - name: Report full-suite result as commit status
-        if: ${{ always() }}
+        # PR tokens may be read-only, so native status reporting is for main pushes.
+        if: ${{ always() && github.event_name != 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
           COMPILE_RESULT: ${{ steps.compile_surfaces.outcome }}
