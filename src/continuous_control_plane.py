@@ -612,11 +612,23 @@ class ContinuousControlPlane:
             "verified", "pass", "passed", "success", "succeeded",
         } for evidence in receipts)
         if not good:
-            if item.attempt >= item.max_attempts:
-                self.transition(item.work_id, WorkState.DEAD_LETTER,
-                                reason="local_worker_attempts_exhausted")
-                state = "exhausted"
+            # A legacy retry counter is diagnostic, not a terminal veto on
+            # recoverable local work. Delay further attempts at the threshold
+            # to avoid a hot retry loop while preserving the runnable mission.
+            # External actions are excluded by claim_next(external_action=False)
+            # and still require provider reconciliation before any retry.
+            if item.attempt >= max(1, item.max_attempts):
+                retry_at = _require_aware(now or utc_now()) + timedelta(
+                    seconds=min(300, 2 ** min(item.attempt, 8))
+                )
+                self.transition(
+                    item.work_id, WorkState.WAITING,
+                    reason="failed_local_execution_retry_scheduled",
+                    not_before=retry_at,
+                )
+                state = "retry_scheduled"
             else:
+                retry_at = None
                 self.transition(item.work_id, WorkState.RECEIVED,
                                 reason="failed_local_execution_ready_to_retry")
                 state = "retryable_failure"
@@ -624,6 +636,7 @@ class ContinuousControlPlane:
                 "status": state, "executed": True, "routes_run": 1,
                 "work_id": item.work_id, "receipt_id": receipt.receipt_id,
                 "exit_code": receipt.details.get("exit_code"),
+                "retry_after": _iso(retry_at),
             }
         self.transition(item.work_id, WorkState.RECONCILING,
                         reason="local_worker_receipt_received")
