@@ -349,8 +349,31 @@ class ContinuousImpactSelector:
         candidates: Sequence[ImpactCandidate],
         success: bool,
         reason: str,
+        provider_attempt: ImpactAttempt,
     ) -> None:
+        """Learn only from source-bound, outcome-specific provider evidence.
+
+        The owning host must authenticate the provider journal before passing
+        an ImpactAttempt. A success boolean, assistant report, or local
+        checkpoint cannot by itself teach the next worker that work succeeded.
+        """
+        if type(success) is not bool or not isinstance(provider_attempt, ImpactAttempt):
+            raise ImpactSelectionViolation("verified learning requires boolean success and native provider attempt")
+        provider_attempt.verify_claim()
         selected = _candidate_by_id(candidates, decision.selected_candidate_id)
+        if (selected.operation != decision.selected_operation
+                or selected.expected_delta != decision.selected_expected_delta
+                or selected.operation_class != decision.operation_class
+                or provider_attempt.candidate_id != selected.candidate_id
+                or provider_attempt.mission_sha256 != decision.mission_sha256):
+            raise ImpactSelectionViolation("learning receipt does not match the selected mission operation")
+        if provider_attempt.source_class != "source_native":
+            raise ImpactSelectionViolation("verified learning requires source-native provider evidence")
+        if success:
+            if provider_attempt.stage not in {"VERIFIED_MATERIAL_DELTA", "HUMAN_OUTCOME"}:
+                raise ImpactSelectionViolation("cannot reinforce an action without a verified material outcome")
+        elif provider_attempt.stage not in {"BLOCKED", "NO_DELTA"}:
+            raise ImpactSelectionViolation("negative outcome must be a provider-confirmed blocked/no-delta state")
         self.engine.record_outcome(
             task_id=decision.task_id,
             candidate=self._to_adaptive(selected),
@@ -359,6 +382,11 @@ class ContinuousImpactSelector:
             metadata={
                 "decision_sha256": decision.decision_sha256,
                 "state_version": decision.state_version,
+                "provider_ref": provider_attempt.provider_ref,
+                "readback_ref": provider_attempt.readback_ref,
+                "source_state_ref": provider_attempt.source_state_ref,
+                "after_state_ref": provider_attempt.after_state_ref,
+                "native_stage": provider_attempt.stage,
             },
         )
 
