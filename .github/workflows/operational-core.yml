@@ -1,0 +1,35 @@
+name: Operable Execution Core
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/operational_core.py'
+      - 'scripts/operate_direct.py'
+      - 'tests/test_operational_core.py'
+      - '.github/workflows/operational-core.yml'
+  pull_request:
+    paths:
+      - 'src/operational_core.py'
+      - 'scripts/operate_direct.py'
+      - 'tests/test_operational_core.py'
+      - '.github/workflows/operational-core.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  operate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test behavioral execution and recovery
+        run: python -m unittest discover -s tests -p 'test_operational_core.py' -v
+      - name: Verify CLI makes an actual change
+        shell: bash
+        run: |
+          work="$(mktemp -d)"
+          python scripts/operate_direct.py --state "$work/state.db" submit-file --id ci-smoke --path "$work/actual.txt" --content 'operating'
+          test "$(cat "$work/actual.txt")" = operating
+          python scripts/operate_direct.py --state "$work/state.db" status --id ci-smoke | grep '"verified": true'
