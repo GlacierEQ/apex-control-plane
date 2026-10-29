@@ -178,3 +178,29 @@ def test_plain_control_plane_entrypoint_executes_configured_internal_manifest(tm
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert json.loads(proc.stdout)["results"][0]["state"] == "VERIFIED"
     assert (tmp_path / "results" / "ready-evidence.md").is_file()
+
+
+def test_casebook_without_os_link_preserves_exclusive_creation_and_readback(
+    monkeypatch, tmp_path
+):
+    import os
+    from src.execute_now import _casebook_effect, _verify_casebook
+
+    monkeypatch.delattr(os, "link", raising=False)
+    action = Action("CHERRY", "portable-casebook", "casebook", {
+        "title": "Source ledger",
+        "claimant": "Cherry",
+        "records": [{
+            "source_ref": "source:original-1",
+            "statement": "Verified source record",
+            "classification": "SOURCE_REPORTED",
+        }],
+    })
+    effect = _casebook_effect(tmp_path / "generated")
+    first = effect(action)
+    assert _verify_casebook(first)
+    assert (tmp_path / "generated" / "portable-casebook.md").is_file()
+    assert effect(action) == first  # no rewrite of an existing identical artifact
+    (tmp_path / "generated" / "portable-casebook.md").write_text("adversarial drift")
+    with pytest.raises(ExecutionDenied, match="existing artifact differs"):
+        effect(action)

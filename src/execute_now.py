@@ -274,10 +274,40 @@ def _casebook_effect(output_dir: Path) -> Callable[[Action], dict[str, Any]]:
                 temp.flush()
                 os.fsync(temp.fileno())
             try:
-                try:
-                    os.link(tmp_path, artifact)  # atomic create-if-absent; no overwrite
-                except FileExistsError:
-                    pass
+                link = getattr(os, "link", None)
+                if callable(link):
+                    try:
+                        link(tmp_path, artifact)  # atomic publish where supported
+                    except FileExistsError:
+                        pass
+                else:
+                    # Some Python hosts omit os.link. Preserve exclusive
+                    # no-overwrite creation rather than denying internal work.
+                    # Reader verification below rejects incomplete contents.
+                    try:
+                        fd = os.open(
+                            artifact, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600,
+                        )
+                    except FileExistsError:
+                        pass
+                    else:
+                        identity = os.fstat(fd)
+                        try:
+                            with os.fdopen(fd, "wb") as target:
+                                target.write(content)
+                                target.flush()
+                                os.fsync(target.fileno())
+                        except BaseException:
+                            # Only clean up the inode we exclusively created.
+                            try:
+                                current = artifact.lstat()
+                                if (current.st_dev, current.st_ino) == (
+                                    identity.st_dev, identity.st_ino
+                                ):
+                                    artifact.unlink()
+                            except OSError:
+                                pass
+                            raise
             finally:
                 tmp_path.unlink(missing_ok=True)
         if artifact.read_bytes() != content:

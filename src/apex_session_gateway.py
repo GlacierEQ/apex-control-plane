@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 @dataclass(frozen=True)
 class Recovery:
@@ -52,6 +52,7 @@ def execute_with_recovered_context(
     expected_mission_id: str,
     execute: Callable[[AdmissionReceipt], Any],
     apply_context: Callable[[Any], ContextApplication] | None,
+    fact_keys: Sequence[str] = (),
 ) -> Any:
     """Recover, apply, then execute -- all from host-supplied objects.
 
@@ -72,6 +73,13 @@ def execute_with_recovered_context(
         raise GatewayDenied("recovered context must be a Recovery")
     if recovery.mission_id != expected_mission_id:
         raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
+    # Validate requested fact selectors before applying host context.
+    if isinstance(fact_keys, (str, bytes)) or not isinstance(fact_keys, Sequence):
+        raise GatewayDenied("requested fact keys must be a sequence of text keys")
+    if any(not isinstance(key, str) or not key.strip() for key in fact_keys):
+        raise GatewayDenied("requested fact keys must be nonempty text")
+    if any(key not in recovery.facts for key in fact_keys):
+        raise GatewayDenied("requested fact key missing from recovered source")
     # An empty fresh mission has no historical context to apply. A recovered
     # correction/fact is material even when a caller mislabels the flag false.
     material = bool(recovery.material_context_found or recovery.corrections or recovery.facts)

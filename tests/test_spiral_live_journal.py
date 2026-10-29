@@ -179,7 +179,13 @@ class RealCrossProcessChatTests(unittest.TestCase):
             kernel, recovery, capture,
             authorize=lambda source, route: source == item.source_id,
             ingest_rpc=lambda rpc, args: {
-                "ingest": {"ingest_id": "apex-native-ingest-1"},
+                "ingest": {
+                    "ingest_id": "apex-native-ingest-1",
+                    "source_ref": ":".join((
+                        args["p_source_system"], args["p_account_key"], args["p_external_id"],
+                    )),
+                    "payload_hash": "a" * 64,
+                },
                 "bound": False,
             },
             find_tasks=lambda key: [{"id": "native-owner-1"}],
