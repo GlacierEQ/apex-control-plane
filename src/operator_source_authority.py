@@ -327,3 +327,152 @@ def assess_supplied_material(
         "hidden_harms": harms,
         "hidden_harm_review": "FLAGS_SUPPLIED_NOT_INDEPENDENTLY_AUDITED",
     }
+
+
+def render_operator_hierarchical_distillation(
+    *,
+    source_bindings: list[Mapping[str, Any]],
+    parents: Mapping[str, str | None],
+    source_resolver: SourceResolver,
+    expected_proposition_ids: tuple[str, ...] | None = None,
+) -> dict[str, Any]:
+    """Render a source-linked parent/child outline of Operator words.
+
+    This is a *positive execution route*, not a new startup or permission
+    gate. The caller supplies the parent/child classification; that structure
+    is explicitly derivative and must never be mistaken for Operator speech.
+    Every leaf is independently resolved from original bytes. No memory
+    summary, assistant paraphrase, silent deduplication, or truncated input
+    is promoted to an exact quote.
+    """
+    if not source_bindings:
+        raise OperatorSourceAuthorityError("hierarchical distillation requires original source bindings")
+    if not isinstance(parents, Mapping):
+        raise OperatorSourceAuthorityError("hierarchical distillation parents must be a mapping")
+    if not callable(source_resolver):
+        raise OperatorSourceAuthorityError("hierarchical distillation source resolver required")
+
+    # Source coverage cannot be inferred from whatever subset a model supplies.
+    # An independently inventoried corpus is a HOST responsibility; this optional
+    # expected set verifies consistency with the caller's inventory, not the
+    # independent completeness of that inventory itself.
+    expected_set: set[str] | None = None
+    if expected_proposition_ids is not None:
+        if (not isinstance(expected_proposition_ids, (list, tuple))
+                or not expected_proposition_ids
+                or not all(isinstance(x, str) and x.strip() for x in expected_proposition_ids)
+                or len(set(expected_proposition_ids)) != len(expected_proposition_ids)):
+            raise OperatorSourceAuthorityError("expected source inventory requires unique nonempty identifiers")
+        expected_set = set(expected_proposition_ids)
+
+    rows: dict[str, dict[str, str]] = {}
+    source_order: list[str] = []
+    for position, binding in enumerate(source_bindings):
+        if not isinstance(binding, Mapping):
+            raise OperatorSourceAuthorityError("hierarchical distillation requires typed source bindings")
+        identity = binding.get("proposition_id")
+        if not isinstance(identity, str) or not identity.strip() or identity in rows:
+            raise OperatorSourceAuthorityError("hierarchical distillation needs distinct nonempty proposition identities")
+        verified = verify_source_span_binding(
+            binding, resolver=source_resolver,
+            prefix=f"hierarchical_distillation[{position}]",
+            require_unsuperseded=False,
+            allow_historical_quote_states=True,
+        )
+        if verified.errors or verified.span_text is None:
+            raise OperatorSourceAuthorityError(
+                "hierarchical distillation source verification failed: "
+                + (verified.errors[0] if verified.errors else "source unresolved")
+            )
+        source_order.append(identity)
+        rows[identity] = {
+            "source_ref": str(binding["source_ref"]),
+            "original_text": verified.span_text,
+            "source_state": str(binding["contradiction_state"]),
+            "superseded_by": str(binding.get("superseded_by") or ""),
+            "temporal_context": str(binding.get("temporal_context") or ""),
+        }
+
+    if expected_set is not None and expected_set != set(source_order):
+        missing = sorted(expected_set - set(source_order))
+        extra = sorted(set(source_order) - expected_set)
+        raise OperatorSourceAuthorityError(
+            f"expected source inventory missing={missing!r} unexpected={extra!r}"
+        )
+    if set(parents.keys()) != set(source_order):
+        raise OperatorSourceAuthorityError(
+            "hierarchical distillation parents must exactly cover every original statement"
+        )
+    for identity, parent in parents.items():
+        if parent is not None and parent not in rows:
+            raise OperatorSourceAuthorityError(
+                f"hierarchical distillation unknown parent for {identity!r}"
+            )
+
+    # Iterative parent-chain validation avoids Python recursion limits when
+    # thousands of original Operator statements form a deep hierarchy.
+    seen: set[str] = set()
+    for identity in source_order:
+        if identity in seen:
+            continue
+        path: set[str] = set()
+        current: str | None = identity
+        while current is not None and current not in seen:
+            if current in path:
+                raise OperatorSourceAuthorityError("hierarchical distillation parent cycle")
+            path.add(current)
+            current = parents[current]
+        seen.update(path)
+
+    children: dict[str | None, list[str]] = {None: []}
+    for identity in source_order:
+        children.setdefault(parents[identity], []).append(identity)
+
+    bullets: list[dict[str, Any]] = []
+    markdown_lines: list[str] = []
+    # Preserve preorder and sibling order without a recursive emitter.
+    stack: list[tuple[str, int]] = [
+        (identity, 0) for identity in reversed(children[None])
+    ]
+    while stack:
+        identity, depth = stack.pop()
+        source = rows[identity]
+        bullets.append({
+            "proposition_id": identity,
+            "parent_id": parents[identity],
+            "depth": depth,
+            "original_text": source["original_text"],
+            "source_ref": source["source_ref"],
+            "source_author": "operator_source_record",
+            "structure_author": "derived_organization_only",
+            "source_state": source["source_state"],
+            "superseded_by": source["superseded_by"] or None,
+            "temporal_context": source["temporal_context"],
+            "direction_authority": (
+                "historical_quote_only" if source["source_state"] in {"superseded", "conflicted"}
+                else "source_quote_not_external_fact"
+            ),
+        })
+        indent = "  " * depth
+        # The structured original_text is untouched; continuation indentation
+        # in the Markdown projection only changes formatting, not source data.
+        displayed_text = source["original_text"].replace("\n", "\n" + indent + "  ")
+        markdown_lines.append(
+            f"{indent}- VERBATIM [{identity}] ({source['source_ref']}): {displayed_text}"
+        )
+        stack.extend(
+            (child, depth + 1) for child in reversed(children.get(identity, []))
+        )
+
+    return {
+        "source_count": len(source_order),
+        "bullets": bullets,
+        "markdown": "\n".join(markdown_lines) + "\n",
+        "projection_author": "derived_organization_only",
+        "supplied_binding_coverage": len(bullets) == len(source_order),
+        "complete_source_coverage": expected_set is not None and len(bullets) == len(expected_set),
+        "coverage_scope": (
+            "caller_inventory_match_not_independent_corpus_proof"
+            if expected_set is not None else "supplied_bindings_only"
+        ),
+    }
