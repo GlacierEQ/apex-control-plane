@@ -92,8 +92,10 @@ if __name__ == "__main__":
     if not args:
         print(json.dumps({
             "status": "idle", "executed": False, "routes_run": 0,
+            "mission_complete": False,
             "reason": "no_execution_command_supplied",
         }, sort_keys=True))
+        raise SystemExit(3)
     elif args[0] == "--run-next-local" and len(args) >= 5:
         # Operator supplies a concrete command; the persisted queue supplies
         # the work identity. Never execute instructions extracted from events.
@@ -107,6 +109,7 @@ if __name__ == "__main__":
         else:
             print(json.dumps({
                 "status": "failed", "executed": False, "routes_run": 0,
+                "mission_complete": False,
                 "reason": "usage: --run-next-local STORE CAPABILITY [--verify-file PATH] -- PROGRAM [ARG ...]",
             }, sort_keys=True))
             raise SystemExit(2)
@@ -215,9 +218,25 @@ if __name__ == "__main__":
             capabilities=[capability],
             executor=execute_queued,
         )
+        # A completed local queue item is not proof that the parent mission
+        # achieved its intended external or end-to-end outcome.
+        result["outcome_scope"] = "local_work_item"
+        result["work_item_complete"] = result["status"] == "complete"
+        result["mission_complete"] = False
         print(json.dumps(result, sort_keys=True))
-        if result["status"] in {"retryable_failure", "exhausted"}:
+        if result["status"] == "complete":
+            raise SystemExit(0)
+        # Exit zero must never silently certify an idle, unverified,
+        # unfinished or scheduled-retry invocation as successful work.
+        if result["status"] in {"retryable_failure", "exhausted", "retry_scheduled"}:
             raise SystemExit(result.get("exit_code") or 1)
+        if result["status"] == "idle":
+            raise SystemExit(3)
+        if result["status"] == "awaiting_receipts":
+            raise SystemExit(4)
+        if result["status"] == "unconfirmed":
+            raise SystemExit(5)
+        raise SystemExit(2)
     elif args[0] == "--exec" and len(args) > 1:
         try:
             completed = subprocess.run(
@@ -226,11 +245,15 @@ if __name__ == "__main__":
         except OSError as exc:
             print(json.dumps({
                 "status": "failed", "executed": False, "routes_run": 0,
+                "mission_complete": False, "outcome_verified": False,
                 "error": f"{type(exc).__name__}: {exc}",
             }, sort_keys=True))
             raise SystemExit(127) from exc
         print(json.dumps({
-            "status": "completed" if completed.returncode == 0 else "failed",
+            "status": "process_succeeded_unverified" if completed.returncode == 0 else "failed",
+            "mission_complete": False,
+            "outcome_verified": False,
+            "outcome_scope": "subprocess_exit_only",
             "executed": True,
             "routes_run": 1,
             "exit_code": completed.returncode,
@@ -242,6 +265,7 @@ if __name__ == "__main__":
     else:
         print(json.dumps({
             "status": "failed", "executed": False, "routes_run": 0,
+            "mission_complete": False,
             "reason": "usage: control_plane.py --exec PROGRAM [ARG ...]",
         }, sort_keys=True))
         raise SystemExit(2)
