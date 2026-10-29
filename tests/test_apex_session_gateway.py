@@ -99,6 +99,93 @@ class SessionGatewayTests(unittest.TestCase):
             readback=readback if readback is not None else self.readback,
         )
 
+    def test_context_application_must_match_recovered_source_before_reservation(self):
+        base = {
+            "mission_id": "case-A",
+            "source_ref": "original:user:middle",
+            "cursor": "cursor-7",
+            "corrections": ("preserve the complete mission scope",),
+            "facts": (),
+            "application_ref": "host:applied:source",
+        }
+        invalid = (
+            ("mission_id", "other-case"),
+            ("source_ref", "unrelated:assistant"),
+            ("cursor", "stale-cursor"),
+            ("corrections", ()),
+            ("facts", ("fabricated",)),
+            ("application_ref", ""),
+        )
+        for field, bad in invalid:
+            with self.subTest(field=field):
+                self.events.clear()
+                self.reservations.clear()
+                self.saved.clear()
+                values = dict(base)
+                values[field] = bad
+                def wrong_application(_recovery):
+                    self.events.append("apply")
+                    return ContextApplication(**values)
+                with self.assertRaisesRegex(GatewayDenied, "application|source|cursor|correction|fact"):
+                    self.invoke(apply=wrong_application)
+                self.assertEqual(self.events, ["apply"])
+                self.assertEqual(self.reservations, set())
+                self.assertEqual(self.saved, {})
+
+    def test_fresh_mission_without_historical_context_does_not_require_application(self):
+        from src.apex_session_gateway import execute_with_recovered_context
+        fresh = Recovery("new-mission", "", "", (), (), False)
+        receipts = []
+        result = execute_with_recovered_context(
+            journal=fresh, chat_session_id="new-session", kernel=RecordingKernel(),
+            expected_mission_id="new-mission", apply_context=None,
+            execute=lambda receipt: receipts.append(receipt) or "admitted",
+        )
+        self.assertEqual(result, "admitted")
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(receipts[0].application_ref, "")
+        self.assertIsNone(receipts[0].application)
+
+    def test_fresh_mission_runs_full_gateway_and_persists_without_fake_application(self):
+        fresh = Recovery("new-mission", "", "", (), (), False)
+        result = run_admitted_session(
+            journal=fresh, chat_session_id="fresh-session", kernel=RecordingKernel(),
+            expected_mission_id="new-mission", invocation_id="fresh-turn",
+            apply_context=None,
+            invoke_model=lambda receipt: GatewayModelOutput("fresh response", (), (), ()),
+            resolve_source=self.sources.__getitem__, reserve=self.reserve,
+            persist=self.persist, readback=self.readback,
+        )
+        self.assertEqual(result.text, "fresh response")
+        self.assertEqual(self.events, ["reserve", "persist", "readback"])
+        checkpoint = next(iter(self.saved.values()))
+        self.assertEqual(checkpoint.mission_id, "new-mission")
+        self.assertEqual(checkpoint.corrections, ())
+
+    def test_recovered_correction_cannot_hide_behind_false_material_flag(self):
+        from src.apex_session_gateway import execute_with_recovered_context
+        mislabeled = Recovery("case-A", "original:user:middle", "cursor-7",
+                              ("preserve the complete mission scope",), (), False)
+        with self.assertRaisesRegex(GatewayDenied, "historical context application"):
+            execute_with_recovered_context(
+                journal=mislabeled, chat_session_id="new-session", kernel=RecordingKernel(),
+                expected_mission_id="case-A", apply_context=None,
+                execute=lambda _: self.fail("executor must not run"),
+            )
+
+    def test_recovered_context_without_application_denied_before_reservation(self):
+        with self.assertRaisesRegex(GatewayDenied, "historical context application"):
+            run_admitted_session(
+                journal=ExistingJournal(), chat_session_id="new-session-1",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                invocation_id="turn-1", apply_context=None,
+                invoke_model=self.model, resolve_source=self.sources.__getitem__,
+                reserve=self.reserve, persist=self.persist, readback=self.readback,
+            )
+        self.assertEqual(self.events, [])
+        self.assertEqual(self.reservations, set())
+        self.assertEqual(self.saved, {})
+
     def test_valid_source_matched_correction_precedes_model_and_durable_readback(self):
         output = self.invoke()
         self.assertEqual(output.text, "The user explicitly corrected the assistant interpretation.")
