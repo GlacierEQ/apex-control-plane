@@ -309,7 +309,7 @@ def execute_authorized_capture(
         "mission_complete": False,
     }
     if item.title is None:
-        result["owner_status"] = "NO_ACTION"
+        result["owner_status"] = "NO_DATE_ONLY_TASK"
         return result
     if authorize(item.source_id, "ticktick.task") is not True:
         result["owner_status"] = "TASK_AUTHORITY_REQUIRED"
