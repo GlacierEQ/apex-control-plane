@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   observe:
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-4
     timeout-minutes: 15
     steps:
       - name: Checkout exact observer revision
