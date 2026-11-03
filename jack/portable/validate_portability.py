@@ -133,9 +133,26 @@ def main() -> int:
     require("Operator Asset Sovereignty" in bootstrap_text, "bootstrap lost Operator Asset Sovereignty")
     require("Rediscovery of already-known relevant Operator/project state is not progress." in bootstrap_text, "bootstrap lost rediscovery-is-not-progress invariant")
     require("Tool access is capability. Observation is knowledge. Neither is authority." in bootstrap_text, "bootstrap lost capability/knowledge/authority distinction")
-    require("UNSOLICITED_ASSET_RANKING=FORBIDDEN" in startup_text, "APEX startup lost unsolicited asset-ranking prohibition")
-    require("UNSOLICITED_ASSET_DISPOSITION=FORBIDDEN" in startup_text, "APEX startup lost unsolicited asset-disposition prohibition")
-    require("INSPECTION_SCOPE_EXPANSION=FORBIDDEN" in startup_text, "APEX startup lost inspection-scope prohibition")
+    # The October 2026 overhaul removed APEX_ENFORCED_STARTUP.md. Check the
+    # current AGENTS.md and the still-owned sovereignty source; do not restore
+    # a deleted startup gate just to make a legacy CI assertion turn green.
+    require(source["startup_contract"] == "AGENTS.md", "startup source must be the current operating contract")
+    for invariant in (
+        "triggers run routes",
+        "a worker never grades its own work",
+        "missing evidence renders as no value",
+    ):
+        require(invariant in startup_text, f"current operating source lost invariant: {invariant}")
+    for flag, setting in (
+        ("unsolicited_operator_asset_value_ranking", "false"),
+        ("unsolicited_operator_asset_disposition", "false"),
+        ("inspection_scope_expansion", "false"),
+        ("operator_owned_asset_identity_preserved", "true"),
+    ):
+        require(
+            re.search(r"(?m)^\\s*" + flag + r"\\s*=\\s*" + setting + r"\\s*$", sovereignty_text) is not None,
+            f"operator sovereignty source missing enforced flag: {flag}",
+        )
     require("The phrase `winners vs dead weight`" in sovereignty_text, "asset-sovereignty correction receipt missing")
     require("project_direction_authority: OPERATOR_INTENT" in contract_text, "Jack contract authority drift")
     require("known_state_before_rediscovery: true" in contract_text, "Jack contract lost known-state-first invariant")
@@ -169,12 +186,13 @@ def main() -> int:
     print(
         json.dumps(
             {
-                "status": "verified",
+                "status": "static_contract_validated",
                 "package": manifest["package"],
                 "contract_id": contract_id,
                 "contract_version": contract_version,
                 "continuation_semantics": "reuse-first-material-delta",
-                "operator_asset_sovereignty": "verified",
+                "operator_asset_sovereignty": "source_contract_checked",
+                "runtime_effect_verified": False,
                 "targets": sorted(expected_targets),
             },
             indent=2,
