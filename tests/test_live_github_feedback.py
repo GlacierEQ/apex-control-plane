@@ -21,15 +21,16 @@ def _fake_github(resource: str, *, wrong_readback: bool = False):
     raise AssertionError(f"unexpected provider request: {resource}")
 
 
-def test_real_provider_adapter_persists_verified_learning_across_instances(monkeypatch):
+def test_real_provider_adapter_verifies_commit_without_rewarding_fragment(monkeypatch):
     calls = []
     def native(_repo, resource, _token):
         calls.append(resource)
         return _fake_github(resource)
     monkeypatch.setattr(bridge, "github_get", native)
     result = bridge.prove_live_source_feedback("GlacierEQ/apex-control-plane", "current", "token")
-    assert result["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED"
-    assert result["model_reloaded"] is True
+    assert result["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED_NO_MISSION_REWARD"
+    assert result["positive_reward_recorded"] is False
+    assert result["new_model_sha256"] is None
     assert result["human_mission_complete"] is False
     assert calls.count("commits/current") == 2
     assert calls.count("contents/scripts/fix.py?ref=current") == 2
@@ -72,16 +73,19 @@ def test_cross_run_feedback_reuses_checkpoint_and_prevents_duplicate_learning(tm
     first = bridge.prove_live_source_feedback(
         "GlacierEQ/apex-control-plane", sha, "token", model_state_path=model,
     )
-    assert first["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED"
+    assert first["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED_NO_MISSION_REWARD"
     assert first["prior_model_restored"] is False
-    state_after_first = model.read_bytes()
+    assert not model.exists()
+    checkpoint = (tmp_path / "github-feedback-checkpoint.json").read_bytes()
     second = bridge.prove_live_source_feedback(
         "GlacierEQ/apex-control-plane", sha, "token", model_state_path=model,
     )
-    assert second["status"] == "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED"
-    assert second["prior_model_restored"] is True
+    assert second["status"] == "GITHUB_NATIVE_DELTA_ALREADY_VERIFIED"
+    assert second["prior_model_restored"] is False
     assert second["duplicate_learning_prevented"] is True
-    assert model.read_bytes() == state_after_first
+    assert second["positive_reward_recorded"] is False
+    assert not model.exists()
+    assert (tmp_path / "github-feedback-checkpoint.json").read_bytes() == checkpoint
 
 
 def test_cross_run_new_commit_builds_on_prior_learning(tmp_path, monkeypatch):
@@ -102,12 +106,15 @@ def test_cross_run_new_commit_builds_on_prior_learning(tmp_path, monkeypatch):
     second = bridge.prove_live_source_feedback(
         "GlacierEQ/apex-control-plane", "2" * 40, "token", model_state_path=model,
     )
-    assert first["applied_commit_count"] == 1
-    assert second["applied_commit_count"] == 2
-    assert second["prior_model_restored"] is True
+    assert first["verified_commit_count"] == 1
+    assert second["verified_commit_count"] == 2
+    assert second["prior_model_restored"] is False
+    assert not model.exists()
     import json
     checkpoint = json.loads((tmp_path / "github-feedback-checkpoint.json").read_text())
-    assert checkpoint["applied_commits"] == ["1" * 40, "2" * 40]
+    assert checkpoint["schema_version"] == 2
+    assert checkpoint["positive_reward_recorded"] is False
+    assert checkpoint["verified_commits"] == ["1" * 40, "2" * 40]
 
 
 def test_bad_cached_checkpoint_is_not_silently_accepted(tmp_path, monkeypatch):
@@ -150,6 +157,6 @@ def test_test_code_changes_are_material_to_learning(monkeypatch):
     result = bridge.prove_live_source_feedback(
         "GlacierEQ/apex-control-plane", commit, "token",
     )
-    assert result["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED"
+    assert result["status"] == "GITHUB_NATIVE_CODE_DELTA_VERIFIED_NO_MISSION_REWARD"
     assert result["path"] == "tests/test_learning.py"
-    assert result["model_reloaded"] is True
+    assert result["positive_reward_recorded"] is False

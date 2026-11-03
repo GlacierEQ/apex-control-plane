@@ -33,7 +33,7 @@ jobs:
         run: |
           python -m pip install --upgrade pytest
           PYTHONPATH=src:. python -m pytest -q tests/
-      - name: Restore prior verified GitHub learning checkpoint
+      - name: Restore prior GitHub source observation checkpoint
         id: restore_feedback
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.full_test_suite.outcome == 'success' }}
         uses: actions/cache/restore@v4
@@ -42,7 +42,7 @@ jobs:
           key: glaciereq-github-learning-v1-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             glaciereq-github-learning-v1-
-      - name: Verify GitHub native-feedback integration
+      - name: Verify GitHub source delta without fragment success reward
         id: native_feedback
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.full_test_suite.outcome == 'success' }}
         env:
@@ -62,20 +62,22 @@ jobs:
               if replay.get("status") != "NO_RELEVANT_CODE_DELTA":
                   raise RuntimeError("non-code commits yielded contradictory replay status")
           elif first.get("status") in {
-              "GITHUB_NATIVE_CODE_DELTA_VERIFIED",
-              "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED",
+              "GITHUB_NATIVE_CODE_DELTA_VERIFIED_NO_MISSION_REWARD",
+              "GITHUB_NATIVE_DELTA_ALREADY_VERIFIED",
           }:
-              if replay.get("status") != "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED":
-                  raise RuntimeError("GitHub-native feedback was not idempotent")
+              if replay.get("status") != "GITHUB_NATIVE_DELTA_ALREADY_VERIFIED":
+                  raise RuntimeError("GitHub source observation was not idempotent")
+              if first.get("positive_reward_recorded") is not False or replay.get("positive_reward_recorded") is not False:
+                  raise RuntimeError("source-only delta was falsely rewarded")
               if replay.get("prior_model_sha256") != (
                   first.get("new_model_sha256") or first.get("prior_model_sha256")
               ):
-                  raise RuntimeError("GitHub learning model mutated on duplicate replay")
+                  raise RuntimeError("GitHub reward model mutated on source-only replay")
           else:
               raise RuntimeError("unexpected native feedback status")
-          print("GitHub-native feedback replay independently verified")
+          print("GitHub-native source readback and no-fragment-reward replay verified")
           PY
-      - name: Save verified GitHub learning checkpoint
+      - name: Save native GitHub source-observation checkpoint
         id: save_feedback
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.native_feedback.outcome == 'success' }}
         uses: actions/cache/save@v4

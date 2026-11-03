@@ -1,8 +1,8 @@
-"""Live GitHub-native feedback smoke for APEX's existing adaptive selector.
+"""GitHub-native source readback: verify progress, NEVER reward a fragment.
 
-Runs only with a GitHub Actions token on the owning repository. It is a
-domain-bounded proof of GitHub source mutation and learner readback, NOT proof
-of an unrelated human mission outcome or cross-provider deployment.
+Runs with a GitHub token on the owning repository. A changed source blob is a
+provider-observed intermediate delta, not proof the Operator's mission ended.
+Record replay-safe native verification separately from the adaptive reward model.
 """
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ def prove_live_source_feedback(
     if not after_blob or after_blob == before_blob:
         raise ValueError("GitHub provider did not prove a material file mutation")
 
-    objective = "Independently verify exact GitHub code delta and feed proven result to existing APEX learning"
+    objective = "Independently verify exact GitHub code delta without claiming completed Operator mission"
     candidate = ImpactCandidate(
         candidate_id="github-native-code-delta",
         operation="Verify exact native GitHub code delta",
@@ -103,18 +103,28 @@ def prove_live_source_feedback(
         # This is a bounded, non-sensitive continuity marker paired with the
         # existing learner. Validate source state before considering it applied.
         marker_path = model_path.with_name("github-feedback-checkpoint.json")
+        legacy_reward_checkpoint = False
         if marker_path.exists():
             checkpoint = json.loads(marker_path.read_text(encoding="utf-8"))
-            if (
-                not isinstance(checkpoint, dict)
-                or checkpoint.get("schema_version") != 1
-                or not isinstance(checkpoint.get("applied_commits"), list)
-                or not all(isinstance(value, str) and len(value) == 40 for value in checkpoint["applied_commits"])
+            if not isinstance(checkpoint, dict):
+                raise ValueError("incompatible persisted GitHub feedback checkpoint")
+            schema = checkpoint.get("schema_version")
+            if schema == 1:
+                # Preserve existing learned weights and source history; do not
+                # silently erase old feedback or treat it as a fresh reward.
+                recorded = checkpoint.get("applied_commits")
+                if not model_path.is_file():
+                    raise ValueError("feedback checkpoint exists without its learned model")
+                legacy_reward_checkpoint = True
+            elif schema == 2:
+                recorded = checkpoint.get("verified_commits")
+            else:
+                raise ValueError("incompatible persisted GitHub feedback checkpoint")
+            if not isinstance(recorded, list) or not all(
+                isinstance(value, str) and len(value) == 40 for value in recorded
             ):
                 raise ValueError("incompatible persisted GitHub feedback checkpoint")
-            if not model_path.is_file():
-                raise ValueError("feedback checkpoint exists without its learned model")
-            applied = list(checkpoint["applied_commits"])
+            applied = list(recorded)
         else:
             if model_path.is_file():
                 raise ValueError("learned model exists without the matching feedback checkpoint")
@@ -151,45 +161,54 @@ def prove_live_source_feedback(
                 and receipt.source_state_ref != receipt.after_state_ref
             )
 
-        previous = selector.engine.ranker.score(selector._to_adaptive(candidate)).score
         if commit_sha in applied:
             if not independent_native_readback(attempt):
-                raise RuntimeError("cached learned commit failed provider-native readback")
+                raise RuntimeError("cached source delta failed provider-native readback")
             return {
-                "status": "GITHUB_NATIVE_FEEDBACK_ALREADY_APPLIED",
+                "status": "GITHUB_NATIVE_DELTA_ALREADY_VERIFIED",
                 "commit": commit_sha, "path": path,
-                "prior_model_restored": True,
+                "prior_model_restored": prior_model_restored,
                 "prior_model_sha256": prior_model_sha256,
+                "new_model_sha256": prior_model_sha256,
                 "duplicate_learning_prevented": True,
+                "positive_reward_recorded": False,
+                "legacy_reward_checkpoint_present": legacy_reward_checkpoint,
                 "human_mission_complete": False,
             }
         selector.record_verified_outcome(
             decision=decision, candidates=(candidate,), success=True,
-            reason="GitHub provider independently verified code delta at exact commit",
+            reason="GitHub provider independently verified source delta, not mission outcome",
             provider_attempt=attempt,
             verify_native_readback=independent_native_readback,
         )
-        restarted = ContinuousImpactSelector(model_state_path=model_path)
-        learned = restarted.engine.ranker.score(restarted._to_adaptive(candidate)).score
-        if not model_path.is_file() or not learned > previous:
-            raise RuntimeError("verified feedback did not persist across selector instances")
-        # Only record a completed provider readback. A crash before the marker
-        # retains the valid model for recovery, rather than manufacturing proof.
-        updated = {"schema_version": 1, "applied_commits": [*applied, commit_sha]}
+        # Verification is not a reward. In particular the absent model must
+        # remain absent and a legacy model must remain byte-for-byte unchanged.
+        new_model_sha256 = (
+            sha256(model_path.read_bytes()).hexdigest()
+            if model_path.exists() else None
+        )
+        if new_model_sha256 != prior_model_sha256:
+            raise RuntimeError("a partial GitHub delta mutated the reward model")
+        # The checkpoint is an observation, not proof of applied mission benefit.
+        updated = {
+            "schema_version": 2,
+            "verified_commits": [*applied, commit_sha],
+            "positive_reward_recorded": False,
+        }
         marker_path.write_text(json.dumps(updated, sort_keys=True) + "\n", encoding="utf-8")
         if json.loads(marker_path.read_text(encoding="utf-8")) != updated:
-            raise RuntimeError("feedback checkpoint independent local readback failed")
-        new_model_sha256 = sha256(model_path.read_bytes()).hexdigest()
+            raise RuntimeError("source checkpoint independent local readback failed")
     return {
-        "status": "GITHUB_NATIVE_CODE_DELTA_VERIFIED",
+        "status": "GITHUB_NATIVE_CODE_DELTA_VERIFIED_NO_MISSION_REWARD",
         "commit": commit_sha, "path": path,
         "source_blob": before_blob,
         "readback_blob": after_blob,
-        "model_reloaded": True,
         "prior_model_restored": prior_model_restored,
         "prior_model_sha256": prior_model_sha256,
         "new_model_sha256": new_model_sha256,
-        "applied_commit_count": len(applied) + 1,
+        "positive_reward_recorded": False,
+        "legacy_reward_checkpoint_present": legacy_reward_checkpoint,
+        "verified_commit_count": len(applied) + 1,
         "human_mission_complete": False,
     }
 
