@@ -468,8 +468,9 @@ def test_verified_learning_requires_exact_source_bound_provider_outcome(tmp_path
     before = first.engine.ranker.score(first._to_adaptive(candidate)).score
     first.record_verified_outcome(
         decision=decision, candidates=(candidate,), success=True,
-        reason="readback confirms the intended source-native delta",
-        provider_attempt=attempt, verify_native_readback=lambda _: True,
+        reason="readback confirms the completed mission outcome",
+        provider_attempt=replace(attempt, stage="HUMAN_OUTCOME"),
+        verify_native_readback=lambda _: True,
     )
     second = ContinuousImpactSelector(model_state_path=learned)
     after = second.engine.ranker.score(second._to_adaptive(candidate)).score
@@ -477,6 +478,20 @@ def test_verified_learning_requires_exact_source_bound_provider_outcome(tmp_path
     assert after > before
     # An independent readback reference must survive the decision feedback.
     assert attempt.readback_ref == "github:blob-after"
+
+
+def test_verified_source_fragment_is_not_positive_mission_learning(tmp_path) -> None:
+    selector, candidate, decision, attempt = _learning_case()
+    path = tmp_path / "learning.json"
+    worker = ContinuousImpactSelector(model_state_path=path)
+    before = worker.engine.ranker.score(worker._to_adaptive(candidate)).score
+    worker.record_verified_outcome(
+        decision=decision, candidates=(candidate,), success=True,
+        reason="verified source delta, mission still open",
+        provider_attempt=attempt, verify_native_readback=lambda _: True,
+    )
+    assert not path.exists(), "fragment must not create an earned reward checkpoint"
+    assert worker.engine.ranker.score(worker._to_adaptive(candidate)).score == before
 
 
 @pytest.mark.parametrize("change", [

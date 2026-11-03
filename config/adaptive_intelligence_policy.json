@@ -61,7 +61,8 @@
   },
   "feedback_rewards": {
     "verified_success": 1.0,
-    "strong_partial_success": 0.5,
+    "verified_intermediate_delta_without_mission_outcome": 0.0,
+    "strong_partial_success": 0.0,
     "neutral_or_unresolved": 0.0,
     "failed_execution": -0.6,
     "regression": -0.9,

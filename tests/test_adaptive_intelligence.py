@@ -58,6 +58,7 @@ def test_verified_success_increases_prediction() -> None:
         task_id="task-1",
         candidate=candidate,
         reason="repository source opened and resulting state verified",
+        verify_outcome=lambda: True,
     )
 
     assert event.prediction_after > event.prediction_before
@@ -94,6 +95,7 @@ def test_feedback_is_appended_as_auditable_jsonl(tmp_path) -> None:
         candidate=candidate,
         reason="source matched runtime state",
         metadata={"commit": "abc123"},
+        verify_outcome=lambda: True,
     )
 
     rows = feedback_path.read_text(encoding="utf-8").splitlines()
@@ -112,6 +114,7 @@ def test_model_state_round_trips(tmp_path) -> None:
         task_id="task-4",
         candidate=candidate,
         reason="restored prior valid state",
+        verify_outcome=lambda: True,
     )
     engine.save_model_state(state_path)
 
@@ -243,15 +246,84 @@ def test_nonfinite_feedback_cannot_turn_into_positive_learning(tmp_path, invalid
     assert not model_path.exists()
 
 
-def test_finite_reward_and_feature_clamping_remains_backward_compatible() -> None:
+def test_feature_clamping_preserved_but_rewards_must_be_measured() -> None:
     learner = AdaptiveIntelligenceEngine(ranker=AdaptiveRanker(learning_rate=0.2))
     candidate = _candidate("known-finite", task_relevance=1.5, verification_strength=0.6)
     features = candidate.normalized_features()
     assert features["task_relevance"] == 1.0
     before = learner.ranker.score(candidate).score
     event = learner.record_outcome(
-        task_id="finite-feedback", candidate=candidate, reward=2.0,
-        reason="bounded positive outcome",
+        task_id="finite-feedback", candidate=candidate, reward=1.0,
+        reason="independent confirmation", verify_outcome=lambda: True,
     )
     assert event.reward == 1.0
     assert learner.ranker.score(candidate).score > before
+
+
+@pytest.mark.parametrize("reward", [2.0, -1.2, True, False])
+def test_reward_outside_contract_never_mutates_persistent_state(tmp_path, reward) -> None:
+    path = tmp_path / "learned.json"
+    engine = AdaptiveIntelligenceEngine(model_state_path=path)
+    candidate = _candidate("fake-metric", task_relevance=1.0)
+    original = engine.ranker.score(candidate).score
+    with pytest.raises(ValueError):
+        engine.record_outcome(
+            task_id="bad-metric", candidate=candidate,
+            reward=reward, reason="untrusted grade",
+            verify_outcome=lambda: True,
+        )
+    assert not path.exists()
+    assert engine.ranker.score(candidate).score == original
+
+
+@pytest.mark.parametrize("verifier", [None, lambda: False, lambda: None])
+def test_positive_outcome_without_independent_readback_is_not_learned(tmp_path, verifier) -> None:
+    path = tmp_path / "learned.json"
+    engine = AdaptiveIntelligenceEngine(model_state_path=path)
+    candidate = _candidate("falsely-done", task_relevance=1.0)
+    before = engine.ranker.score(candidate).score
+    with pytest.raises(ValueError, match="independent outcome verification"):
+        engine.record_verified_success(
+            task_id="not-done", candidate=candidate, reason="caller says complete",
+            verify_outcome=verifier,
+        )
+    assert not path.exists()
+    assert engine.ranker.score(candidate).score == before
+
+
+def test_action_fragment_cannot_claim_mission_reward_even_with_native_blob(tmp_path) -> None:
+    engine = AdaptiveIntelligenceEngine(model_state_path=tmp_path / "learning.json")
+    candidate = AdaptiveCandidate("fragment", "action", {"mission_advancement": 1.0})
+    before = engine.ranker.score(candidate).score
+    fragment = {
+        "native_stage": "VERIFIED_MATERIAL_DELTA",
+        "provider_ref": "github:commit", "readback_ref": "github:blob",
+        "source_state_ref": "github:old", "after_state_ref": "github:new",
+    }
+    with pytest.raises(ValueError, match="mission-complete"):
+        engine.record_outcome(
+            task_id="not-closed", candidate=candidate, reward=1.0,
+            reason="PR opened, not merged", metadata=fragment,
+            verify_outcome=lambda: True,
+        )
+    assert not engine.model_state_path.exists()
+    assert engine.ranker.score(candidate).score == before
+
+
+def test_action_verified_mission_outcome_can_be_rewarded(tmp_path) -> None:
+    engine = AdaptiveIntelligenceEngine(model_state_path=tmp_path / "learning.json")
+    candidate = AdaptiveCandidate("delivered", "action", {"task_relevance": 0.9})
+    proof = {
+        "native_stage": "HUMAN_OUTCOME",
+        "provider_ref": "provider:outcome", "readback_ref": "provider:readback",
+        "source_state_ref": "provider:old", "after_state_ref": "provider:new",
+    }
+    before = engine.ranker.score(candidate).score
+    event = engine.record_outcome(
+        task_id="delivered", candidate=candidate, reward=1.0,
+        reason="owner-native confirmed", metadata=proof,
+        verify_outcome=lambda: True,
+    )
+    assert event.reward == 1.0
+    assert engine.ranker.score(candidate).score > before
+    assert engine.model_state_path.exists()
