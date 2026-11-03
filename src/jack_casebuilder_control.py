@@ -224,6 +224,29 @@ def compile_jack_execution_queue(
     return sorted(jobs.values(), key=lambda job: (-job.priority, job.capability, job.object_id))
 
 
+# These labels feed the existing APEX pressure-aware selector; they do not
+# authorize filings, contacts, or provider mutations. Without route_kind,
+# the selector defaults every Jack job to generic execution and cannot
+# distinguish institution-controlled evidence pursuit from repeated analysis.
+_JACK_ESCALATION_CAPABILITIES = frozenset({
+    "legal_discovery", "discovery_projection", "deadline_review",
+    "accountability_projection",
+})
+_JACK_ANALYSIS_CAPABILITIES = frozenset({
+    "legal_element_development", "allegation_hardening",
+    "contradiction_resolution", "legal_authority_mapping", "defense_testing",
+    "causation_development", "remedy_projection", "damage_development",
+})
+
+
+def _impact_route_kind(job: JackJob) -> str:
+    if job.capability in _JACK_ESCALATION_CAPABILITIES:
+        return "escalation"
+    if job.capability in _JACK_ANALYSIS_CAPABILITIES:
+        return "analysis"
+    return "execution"
+
+
 def queue_to_impact_candidates(jobs: Sequence[JackJob]) -> list[ImpactCandidate]:
     """Bridge validated CaseBuilder work into the current impact selector."""
     return [
@@ -241,7 +264,12 @@ def queue_to_impact_candidates(jobs: Sequence[JackJob]) -> list[ImpactCandidate]
                 "failure_risk": 0.1,
             },
             evidence_refs=(f"casebuilder:{job.case_id}:{job.object_id}",),
-            metadata={"capability": job.capability, "object_type": job.object_type},
+            metadata={
+                "capability": job.capability,
+                "object_type": job.object_type,
+                "route_kind": _impact_route_kind(job),
+                "external_action_authorized": False,
+            },
         )
         for job in jobs
     ]
