@@ -137,12 +137,13 @@ def main() -> int:
     # current AGENTS.md and the still-owned sovereignty source; do not restore
     # a deleted startup gate just to make a legacy CI assertion turn green.
     require(source["startup_contract"] == "AGENTS.md", "startup source must be the current operating contract")
+    normalized_startup = " ".join(startup_text.split())
     for invariant in (
         "triggers run routes",
         "a worker never grades its own work",
         "missing evidence renders as no value",
     ):
-        require(invariant in startup_text, f"current operating source lost invariant: {invariant}")
+        require(invariant in normalized_startup, f"current operating source lost invariant: {invariant}")
     for flag, setting in (
         ("unsolicited_operator_asset_value_ranking", "false"),
         ("unsolicited_operator_asset_disposition", "false"),
