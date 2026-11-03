@@ -150,7 +150,7 @@ def main() -> int:
         ("operator_owned_asset_identity_preserved", "true"),
     ):
         require(
-            re.search(r"(?m)^\\s*" + flag + r"\\s*=\\s*" + setting + r"\\s*$", sovereignty_text) is not None,
+            re.search(r"(?m)^\s*" + flag + r"\s*=\s*" + setting + r"\s*$", sovereignty_text) is not None,
             f"operator sovereignty source missing enforced flag: {flag}",
         )
     require("The phrase `winners vs dead weight`" in sovereignty_text, "asset-sovereignty correction receipt missing")
