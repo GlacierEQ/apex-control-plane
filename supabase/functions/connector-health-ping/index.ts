@@ -21,7 +21,7 @@ type PriorStatus = {last_healthy?:string|null; last_failed?:string|null};
 type RunResult = Probe & {connector:string; failures:number; retryAfter:string|null; persisted:boolean; internalError?:string};
 
 const CONNECTORS: Connector[] = [
-  {name:"supabase", url:`${SUPABASE_URL}/rest/v1/`},
+  {name:"supabase", url:`${SUPABASE_URL}/rest/v1/apex_connector_health?select=connector&limit=1`},
   {name:"github", probeMode:"provider_native_external"},
   {name:"notion", url:"https://api.notion.com/v1/users/me", authEnv:"NOTION_API_KEY", authMode:"bearer", extraHeaders:{"Notion-Version":"2026-03-11"}},
   {name:"clickup", url:"https://api.clickup.com/api/v2/user", authEnv:"CLICKUP_API_KEY", authMode:"raw"},

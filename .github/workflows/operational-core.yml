@@ -24,7 +24,7 @@ permissions:
   contents: read
 jobs:
   operate:
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-4
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

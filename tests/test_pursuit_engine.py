@@ -3,7 +3,7 @@ import unittest
 from dataclasses import replace
 from src.pursuit_engine import (
     PursuitFinding, Counterclaim, PursuitHistory, PursuitStage,
-    next_pursuit_step, pursuit_impact_candidate, dispatch_pursuit_step, PursuitViolation,
+    next_pursuit_step, next_pursuit_steps, pursuit_impact_candidate, dispatch_pursuit_step, PursuitViolation,
 )
 from src.connector_mission_router import ConnectorCapability, MissionAdmission, AdmissionDenied
 
@@ -173,6 +173,64 @@ class PursuitTests(unittest.TestCase):
             dispatch_pursuit_step(step, admission=admission, capability=cap, reserve=lambda k:True,
                 execute=lambda:None, readback=lambda r:True,
                 persist_continuation=lambda r:r, verify_continuation=lambda r:True)
+
+    def test_direct_independent_review_skips_institutional_wait(self):
+        h = PursuitHistory(
+            direct_review_available=True,
+            escalation_authorized=True,
+            escalation_route='review:verified-independent-channel',
+        )
+        step = next_pursuit_step(finding(), h)
+        self.assertEqual(step.stage, PursuitStage.INDEPENDENT_REVIEW)
+        self.assertEqual(step.authorized_route, 'review:verified-independent-channel')
+        candidate = pursuit_impact_candidate(step)
+        self.assertEqual(candidate.metadata['route_kind'], 'escalation')
+        admitted = MissionAdmission('test-case-A', 'test-case-A', True, 'cursor-1', ())
+        cap = ConnectorCapability('test-review', 'submit', True, True, True)
+        out = dispatch_pursuit_step(
+            step, admission=admitted, capability=cap,
+            reserve=lambda key: bool(key),
+            execute=lambda: {'native_id': 'review-submission-1'},
+            readback=lambda receipt: receipt['native_id'] == 'review-submission-1',
+            persist_continuation=lambda receipt: receipt,
+            verify_continuation=lambda record:
+                record.native_result['native_id'] == 'review-submission-1',
+        )
+        self.assertEqual(out['native_id'], 'review-submission-1')
+
+    def test_direct_review_without_verified_route_does_not_invent_one(self):
+        h = PursuitHistory(direct_review_available=True, escalation_authorized=True,
+                           escalation_route='not-a-source')
+        step = next_pursuit_step(finding(), h)
+        self.assertEqual(step.stage, PursuitStage.FIND_LAWFUL_ROUTE)
+        self.assertFalse(step.outcome_verified)
+
+    def test_direct_review_requires_boolean_authority_flags(self):
+        with self.assertRaises(PursuitViolation):
+            next_pursuit_step(finding(), PursuitHistory(direct_review_available='yes'))
+
+    def test_every_reported_finding_gets_distinct_action_without_severity_gate(self):
+        small = finding(finding_id='ONE-SECOND', observation='one second of disputed time',
+                        observation_authenticated=False)
+        large = finding(finding_id='LOSS-OF-PROCESS',
+                        observation='denial of meaningful opportunity to participate')
+        another_case = finding(mission_id='CHERRY-SEPARATE',
+                               finding_id='ONE-SECOND',
+                               observation_authenticated=False)
+        histories = {('test-case-A', 'LOSS-OF-PROCESS'):
+                     PursuitHistory(direct_review_available=True,
+                                    escalation_authorized=True,
+                                    escalation_route='review:verified')}
+        steps = next_pursuit_steps((small, large, another_case), histories)
+        self.assertEqual(len(steps), 3)
+        self.assertEqual(tuple(step.stage for step in steps), (
+            PursuitStage.AUTHENTICATE,
+            PursuitStage.INDEPENDENT_REVIEW,
+            PursuitStage.AUTHENTICATE,
+        ))
+        self.assertNotEqual(steps[0].operation_id, steps[2].operation_id)
+        with self.assertRaises(PursuitViolation):
+            next_pursuit_steps((small, small), {})
 
 
 if __name__ == '__main__':

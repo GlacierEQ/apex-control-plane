@@ -20,7 +20,7 @@ permissions:
 jobs:
   validate-portability:
     name: Validate portable APEX Jack contract
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-4
     timeout-minutes: 5
     steps:
       - name: Checkout

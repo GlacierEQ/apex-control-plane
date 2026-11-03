@@ -20,7 +20,7 @@ permissions:
 jobs:
   receipt-projection:
     name: Supabase receipt projection integrity
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-4
     timeout-minutes: 5
     steps:
       - name: Checkout exact source
