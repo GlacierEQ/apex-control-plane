@@ -113,8 +113,6 @@ def prove_live_source_feedback(
                 # Preserve existing learned weights and source history; do not
                 # silently erase old feedback or treat it as a fresh reward.
                 recorded = checkpoint.get("applied_commits")
-                if not model_path.is_file():
-                    raise ValueError("feedback checkpoint exists without its learned model")
                 legacy_reward_checkpoint = True
             elif schema == 2:
                 recorded = checkpoint.get("verified_commits")
@@ -124,6 +122,8 @@ def prove_live_source_feedback(
                 isinstance(value, str) and len(value) == 40 for value in recorded
             ):
                 raise ValueError("incompatible persisted GitHub feedback checkpoint")
+            if legacy_reward_checkpoint and not model_path.is_file():
+                raise ValueError("feedback checkpoint exists without its learned model")
             applied = list(recorded)
         else:
             if model_path.is_file():
