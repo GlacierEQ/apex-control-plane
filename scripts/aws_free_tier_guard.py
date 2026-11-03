@@ -32,10 +32,36 @@ def _records(value: Any) -> list[dict[str, Any]]:
     return [x for x in value if isinstance(x, dict)]
 
 
+def _contains_credential_material(value: Any) -> bool:
+    if isinstance(value, dict):
+        if any(key in value for key in ("SecretString", "SecretBinary", "Plaintext")):
+            return True
+        if (value.get("Type") == "SecureString" and "Value" in value) or (value.get("type") == "SecureString" and "value" in value):
+            return True
+        return any(_contains_credential_material(v) for v in value.values())
+    if isinstance(value, list):
+        return any(_contains_credential_material(v) for v in value)
+    return False
+
+
+def _iam_guard_verified(receipt: Any) -> bool:
+    if not isinstance(receipt, dict) or receipt.get("source") != "aws_iam_simulator":
+        return False
+    if not isinstance(receipt.get("principal"), str) or not receipt["principal"].strip():
+        return False
+    if not isinstance(receipt.get("observed_at"), str) or not receipt["observed_at"].strip():
+        return False
+    decisions = receipt.get("decisions")
+    actions = ("ssm:GetParameter", "ssm:GetParameters", "ssm:GetParameterHistory", "ssm:GetParametersByPath")
+    return isinstance(decisions, dict) and all(decisions.get(action) == "explicitDeny" for action in actions)
+
+
 def assess(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Evaluate only documented metadata. No secret values appear in output."""
     if not isinstance(snapshot, dict):
         raise ValueError("Expected a dictionary snapshot")
+    if _contains_credential_material(snapshot):
+        raise ValueError("Credential material detected in input; supply metadata only")
     regions = snapshot.get("regions")
     findings: list[dict[str, str]] = []
     counts = {
@@ -115,6 +141,11 @@ def assess(snapshot: dict[str, Any]) -> dict[str, Any]:
         findings.append(_entry(
             "SECRET_MIRROR_INCOMPLETE", "ERROR",
             f"{counts['unmirrored_secret_count']} sources have no same-region encrypted Standard mirror metadata.",
+        ))
+    if counts["secure_standard_mirror_count"] and not _iam_guard_verified(snapshot.get("mirror_access_guard")):
+        findings.append(_entry(
+            "MIRROR_IAM_UNVERIFIED", "WARN",
+            "Standard SecureString type alone is not proof of restricted reads; supply a fresh IAM simulator receipt.",
         ))
     if counts["noncompliant_mirror_count"]:
         findings.append(_entry(
