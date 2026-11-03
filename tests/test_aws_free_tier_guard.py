@@ -127,11 +127,38 @@ class FreeTierGuardTests(unittest.TestCase):
         self.assertIn('REGIONAL_INVENTORY_INCOMPLETE', self.codes(report))
         self.assertEqual(1, report['inventory']['missing_region_count'])
 
+    def test_plaintext_credentials_in_snapshot_are_rejected_before_report(self):
+        data = snapshot()
+        data['regions']['us-east-1']['secrets'][0]['SecretString'] = 'NEVER_EMIT_THIS'
+        with self.assertRaisesRegex(ValueError, 'Credential material detected'):
+            module.assess(data)
+
+    def test_mirror_needs_structured_iam_readback(self):
+        data = snapshot(mirror_access_guard=True)
+        report = module.assess(data)
+        self.assertIn('MIRROR_IAM_UNVERIFIED', self.codes(report))
+
+    def test_matching_iam_simulator_receipt_accepted_as_access_evidence(self):
+        data = snapshot(mirror_access_guard={
+            'source': 'aws_iam_simulator',
+            'principal': 'ec2-github-runner-role',
+            'observed_at': '2026-11-02T00:00:00Z',
+            'decisions': {
+                'ssm:GetParameter': 'explicitDeny',
+                'ssm:GetParameters': 'explicitDeny',
+                'ssm:GetParameterHistory': 'explicitDeny',
+                'ssm:GetParametersByPath': 'explicitDeny',
+            },
+        })
+        report = module.assess(data)
+        self.assertNotIn('MIRROR_IAM_UNVERIFIED', self.codes(report))
+
     def test_output_contains_no_secret_values(self):
         data = snapshot()
         data['regions']['us-east-1']['secrets'][0]['SecretString'] = 'NEVER_EMIT_THIS'
-        report = module.assess(data)
-        self.assertNotIn('NEVER_EMIT_THIS', str(report))
+        with self.assertRaises(ValueError) as context:
+            module.assess(data)
+        self.assertNotIn('NEVER_EMIT_THIS', str(context.exception))
 
 
 if __name__ == '__main__':
