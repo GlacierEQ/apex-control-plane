@@ -79,6 +79,8 @@ def assess(snapshot: dict[str, Any]) -> dict[str, Any]:
         "ebs_gb": 0,
         "regions_observed": 0,
         "always_free_categories_reported": 0,
+        "exposed_http_api_count": 0,
+        "unthrottled_http_api_count": 0,
     }
 
     if not isinstance(regions, dict) or not regions:
@@ -120,6 +122,17 @@ def assess(snapshot: dict[str, Any]) -> dict[str, Any]:
             if instance.get("has_public_ip") is True:
                 counts["instance_public_ipv4_assignments"] += 1
         counts["allocated_elastic_ips"] += len(_records(raw.get("addresses")))
+        for api in _records(raw.get("http_apis")):
+            stages = _records(api.get("stages"))
+            if not stages:
+                continue
+            routes = _records(api.get("routes"))
+            has_public_route = any(route.get("authorization") == "NONE" for route in routes)
+            if not has_public_route:
+                continue
+            counts["exposed_http_api_count"] += 1
+            if any(stage.get("throttle_configured") is not True for stage in stages):
+                counts["unthrottled_http_api_count"] += 1
         for volume in _records(raw.get("volumes")):
             size = volume.get("size_gb")
             if isinstance(size, (int, float)) and size >= 0:
@@ -163,6 +176,16 @@ def assess(snapshot: dict[str, Any]) -> dict[str, Any]:
         findings.append(_entry(
             "PUBLIC_IPV4_REVIEW_BILLING", "WARN",
             f"{counts['instance_public_ipv4_assignments']} instance assignments and {counts['allocated_elastic_ips']} Elastic IP allocations need billing review; these can overlap.",
+        ))
+    if counts["exposed_http_api_count"]:
+        findings.append(_entry(
+            "PUBLIC_UNAUTHENTICATED_API", "ERROR",
+            f"{counts['exposed_http_api_count']} deployed HTTP APIs have routes without authentication; inbound traffic can incur charges.",
+        ))
+    if counts["unthrottled_http_api_count"]:
+        findings.append(_entry(
+            "UNTHROTTLED_HTTP_API", "ERROR",
+            f"{counts['unthrottled_http_api_count']} deployed public HTTP APIs lack explicit stage throttling evidence.",
         ))
     if counts["ebs_gb"]:
         findings.append(_entry(
@@ -279,6 +302,26 @@ def collect_live_metadata(session: Any, requested_regions: list[str] | None = No
         reservations = _page_records(region_ec2, "describe_instances", "Reservations")
         volumes = _page_records(region_ec2, "describe_volumes", "Volumes")
         addresses = _page_records(region_ec2, "describe_addresses", "Addresses")
+        gateway = session.client("apigatewayv2", region_name=region)
+        api_metadata = _page_records(gateway, "get_apis", "Items")
+        http_apis: list[dict[str, Any]] = []
+        for api in api_metadata:
+            if api.get("ProtocolType", "HTTP") != "HTTP":
+                continue
+            api_id = api["ApiId"]
+            routes = _page_records(gateway, "get_routes", "Items", ApiId=api_id)
+            stages = _page_records(gateway, "get_stages", "Items", ApiId=api_id)
+            http_apis.append({
+                "name": api.get("Name"),
+                "routes": [{"route": r.get("RouteKey"), "authorization": r.get("AuthorizationType")} for r in routes],
+                "stages": [{
+                    "name": st.get("StageName"),
+                    "throttle_configured": bool(
+                        st.get("DefaultRouteSettings", {}).get("ThrottlingRateLimit")
+                        and st.get("DefaultRouteSettings", {}).get("ThrottlingBurstLimit")
+                    ),
+                } for st in stages],
+            })
         snapshot["regions"][region] = {
             "secrets": [
                 {"name": item.get("Name"), "pending_deletion": bool(item.get("DeletedDate"))}
@@ -297,6 +340,7 @@ def collect_live_metadata(session: Any, requested_regions: list[str] | None = No
                 for item in volumes
             ],
             "addresses": [{"allocated": True} for _ in addresses],
+            "http_apis": http_apis,
         }
     try:
         identity = session.client("sts", region_name=east).get_caller_identity()
