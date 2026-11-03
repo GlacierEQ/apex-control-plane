@@ -127,6 +127,25 @@ class FreeTierGuardTests(unittest.TestCase):
         self.assertIn('REGIONAL_INVENTORY_INCOMPLETE', self.codes(report))
         self.assertEqual(1, report['inventory']['missing_region_count'])
 
+    def test_live_public_api_without_auth_or_throttle_is_cost_risk(self):
+        data = snapshot()
+        data['regions']['us-west-2']['http_apis'] = [{
+            'name': 'app-api', 'routes': [{'route': 'POST /items', 'authorization': 'NONE'}],
+            'stages': [{'name': 'prod', 'throttle_configured': False}],
+        }]
+        report = module.assess(data)
+        self.assertIn('PUBLIC_UNAUTHENTICATED_API', self.codes(report))
+        self.assertIn('UNTHROTTLED_HTTP_API', self.codes(report))
+        self.assertEqual(1, report['inventory']['exposed_http_api_count'])
+
+    def test_unstaged_route_does_not_falsely_claim_live_exposure(self):
+        data = snapshot()
+        data['regions']['us-west-2']['http_apis'] = [{
+            'name': 'app-api', 'routes': [{'route': 'GET /items', 'authorization': 'NONE'}], 'stages': [],
+        }]
+        report = module.assess(data)
+        self.assertNotIn('PUBLIC_UNAUTHENTICATED_API', self.codes(report))
+
     def test_plaintext_credentials_in_snapshot_are_rejected_before_report(self):
         data = snapshot()
         data['regions']['us-east-1']['secrets'][0]['SecretString'] = 'NEVER_EMIT_THIS'
@@ -192,6 +211,12 @@ class LiveMetadataCollectorTests(unittest.TestCase):
                             return {'Volumes': [{'VolumeId': 'vol-a', 'Size': 20, 'State': 'in-use'}]} if region_name == 'us-west-2' else {'Volumes': []}
                         if operation == 'describe_addresses':
                             return {'Addresses': []}
+                        if operation == 'get_apis':
+                            return {'Items': [{'Name': 'app-api', 'ApiId': 'demo-api'}]} if region_name == 'us-west-2' else {'Items': []}
+                        if operation == 'get_routes':
+                            return {'Items': [{'RouteKey': 'GET /items', 'AuthorizationType': 'NONE'}]}
+                        if operation == 'get_stages':
+                            return {'Items': [{'StageName': 'prod', 'DefaultRouteSettings': {}}]}
                         if operation == 'get_caller_identity':
                             return {'Account': '123456789012'}
                         if operation == 'simulate_principal_policy':
@@ -209,6 +234,7 @@ class LiveMetadataCollectorTests(unittest.TestCase):
         self.assertEqual(1, len(out['regions']['us-east-1']['parameters']))
         self.assertEqual('Standard', out['regions']['us-east-1']['parameters'][0]['tier'])
         self.assertEqual('aws_iam_simulator', out['mirror_access_guard']['source'])
+        self.assertEqual('app-api', out['regions']['us-west-2']['http_apis'][0]['name'])
         self.assertTrue(all(x[2] not in {'get_secret_value','get_parameter', 'put_parameter','create_secret', 'update_table','delete_secret'} for x in session.calls))
         self.assertNotIn('ce', {x[0] for x in session.calls})
         self.assertNotIn('secretsmanager-value', str(out))
