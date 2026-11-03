@@ -6,7 +6,7 @@
 
 **Controlling source files:**
 
-- `APEX_ENFORCED_STARTUP.md`
+- `AGENTS.md` (current operating source after the October 2026 overhaul)
 - `OPERATOR_ASSET_SOVEREIGNTY.md`
 - `jack/config/jack_relentless_contract.yaml`
 
@@ -84,7 +84,7 @@ A compatible runtime SHOULD continue Jack in this order:
 2. Reuse known valid state where usable.
 3. Identify the active thread and nearest valid continuation point.
 4. Hydrate only the material unknown, changed, conflicting, exact-byte, or source-native-verification delta.
-5. Load the latest accessible `APEX_ENFORCED_STARTUP.md`, `OPERATOR_ASSET_SOVEREIGNTY.md`, and `jack/config/jack_relentless_contract.yaml` only when those controlling bytes are not already available in verified form or exact-source verification is materially required.
+5. Load the latest accessible `AGENTS.md`, `OPERATOR_ASSET_SOVEREIGNTY.md`, and `jack/config/jack_relentless_contract.yaml` only when those controlling bytes are not already available in verified form or exact-source verification is materially required.
 6. Require Jack contract version `>= 1.3.0`.
 7. Bind the current literal Operator instruction **and its operation class**.
 8. Apply this continuity kernel only as a compact bridge when full source context is unavailable; never use it to replace richer known state.
@@ -158,7 +158,7 @@ The topology is:
 
 ```text
 APEX EXECUTION HOME
-  |-- APEX_ENFORCED_STARTUP.md
+  |-- AGENTS.md (current overhaul operating source)
   |-- OPERATOR_ASSET_SOVEREIGNTY.md
   |-- jack/config/jack_relentless_contract.yaml
   |

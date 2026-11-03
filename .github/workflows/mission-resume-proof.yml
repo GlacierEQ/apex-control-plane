@@ -14,7 +14,7 @@ permissions:
 jobs:
   independent-worker-recovery:
     name: Independent worker crash/readback/no-replay
-    runs-on: runzumi-ubuntu-24.04-x64-4
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:

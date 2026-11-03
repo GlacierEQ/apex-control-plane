@@ -495,9 +495,11 @@ class ContinuousControlPlane:
 
     def claim_next(self, *, worker_id: str, capabilities: Iterable[str],
                    now: datetime | None = None, lease_seconds: int = 90,
-                   external_action: bool | None = None) -> WorkItem | None:
+                   external_action: bool | None = None,
+                   exclude_work_ids: Iterable[str] = ()) -> WorkItem | None:
         instant = _require_aware(now or utc_now(), "now")
         supported = set(capabilities)
+        excluded = set(exclude_work_ids)
         with self.store.transaction():
             self._refresh()
             # A crashed local worker cannot permanently strand an admitted
@@ -541,6 +543,7 @@ class ContinuousControlPlane:
                 # manual ceremony to advance RECEIVED -> HYDRATING -> COMPILED.
                 if item.state in {WorkState.RECEIVED, WorkState.HYDRATING, WorkState.COMPILED}
                 and item.capability in supported
+                and item.work_id not in excluded
                 and (external_action is None or item.external_action is external_action)
                 and (item.not_before is None or item.not_before <= instant)
                 and (item.lease_expires_at is None or item.lease_expires_at <= instant)
@@ -565,6 +568,7 @@ class ContinuousControlPlane:
         capabilities: Iterable[str],
         executor: Callable[[WorkItem], ExecutionReceipt | list[ExecutionReceipt] | tuple[ExecutionReceipt, ...] | None],
         now: datetime | None = None,
+        exclude_work_ids: Iterable[str] = (),
     ) -> dict[str, Any]:
         """Claim and actually execute one nonexternal work item, preserving proof.
 
@@ -576,7 +580,7 @@ class ContinuousControlPlane:
             raise TypeError("an executable worker callback is required")
         item = self.claim_next(
             worker_id=worker_id, capabilities=capabilities, now=now,
-            external_action=False,
+            external_action=False, exclude_work_ids=exclude_work_ids,
         )
         if item is None:
             return {"status": "idle", "executed": False, "routes_run": 0}
@@ -605,6 +609,24 @@ class ContinuousControlPlane:
                 "routes_run": 1, "work_id": item.work_id,
             }
 
+        # Verify the worker's returned receipts belong to the item that was
+        # actually claimed. Checking only against the receipt's own work_id
+        # would allow evidence from one run to be laundered into another item.
+        if any(
+            evidence.work_id != item.work_id
+            or evidence.mission_id != item.mission_id
+            or evidence.correlation_id != item.correlation_id
+            for evidence in receipts
+        ):
+            self.transition(
+                item.work_id, WorkState.RECONCILING,
+                reason="worker_receipt_identity_conflicts_with_claimed_work",
+            )
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id,
+                "error": "worker receipt identity does not match claimed work",
+            }
         for evidence in receipts:
             self.record_receipt(evidence)
         receipt = receipts[-1]
@@ -669,6 +691,59 @@ class ContinuousControlPlane:
         return {
             "status": "complete", "executed": True, "routes_run": 1,
             "work_id": item.work_id, "receipt_id": receipt.receipt_id,
+        }
+
+    def drain_local(
+        self,
+        *,
+        worker_id: str,
+        capabilities: Iterable[str],
+        executor: Callable[[WorkItem], ExecutionReceipt | list[ExecutionReceipt] | tuple[ExecutionReceipt, ...] | None],
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Attempt every independent eligible local item once in this invocation.
+
+        A failed or unconfirmed item never stops another eligible item, but is
+        never retried blindly within the same sweep. Remaining non-complete
+        items, including prior WAITING/VERIFYING/RECONCILING work, prevent a
+        false batch-complete result. This is NOT parent mission completion.
+        """
+        supported = tuple(capabilities)
+        seen: set[str] = set()
+        outcomes: list[dict[str, Any]] = []
+        while True:
+            result = self.execute_next_local(
+                worker_id=worker_id, capabilities=supported,
+                executor=executor, now=now, exclude_work_ids=seen,
+            )
+            if result["status"] == "idle":
+                break
+            work_id = result["work_id"]
+            if work_id in seen:
+                raise RuntimeError("local drain attempted a work item twice")
+            seen.add(work_id)
+            outcomes.append(result)
+
+        self._refresh()
+        remaining = sorted(
+            item.work_id for item in self.work.values()
+            if not item.external_action and item.capability in supported
+            and item.state is not WorkState.COMPLETE
+        )
+        complete_count = sum(row["status"] == "complete" for row in outcomes)
+        status = (
+            "unfinished" if remaining else
+            "local_batch_complete" if outcomes else "idle"
+        )
+        return {
+            "status": status,
+            "executed": bool(outcomes),
+            "routes_run": len(outcomes),
+            "work_items_processed": len(outcomes),
+            "work_items_completed": complete_count,
+            "remaining_unverified_ids": remaining,
+            "item_results": outcomes,
+            "mission_complete": False,
         }
 
     def reawaken_due(self, now: datetime | None = None) -> list[WorkItem]:

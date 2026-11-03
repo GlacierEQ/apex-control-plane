@@ -14,7 +14,7 @@ permissions:
 jobs:
   proactive-suite:
     name: Proactive suite
-    runs-on: runzumi-ubuntu-24.04-x64-4
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
