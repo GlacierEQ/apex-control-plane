@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Read-only, evidence-aware AWS Free Tier risk assessment.
 
-Operates on a metadata-only snapshot. NEVER calls Cost Explorer, reads credential
+Evaluates metadata-only snapshots; optional --live collects AWS metadata.
+NEVER calls Cost Explorer, reads credential
 values, changes resource configurations, creates budgets, or treats an EC2 tag
 as proof of free-tier eligibility. Usage allowances are not dollar budgets.
 
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -205,11 +207,140 @@ def assess(snapshot: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _page_records(client: Any, operation: str, key: str, *, max_page_count: int = 100, **params: Any) -> list[dict[str, Any]]:
+    """Read full metadata pagination; never infer completeness from one page."""
+    items: list[dict[str, Any]] = []
+    seen_tokens: set[str] = set()
+    next_token: str | None = None
+    for _ in range(max_page_count):
+        kwargs = dict(params)
+        if next_token:
+            kwargs["NextToken"] = next_token
+        response = getattr(client, operation)(**kwargs)
+        items.extend(_records(response.get(key)))
+        token = response.get("NextToken") or response.get("nextToken")
+        if not token:
+            return items
+        if token in seen_tokens:
+            raise RuntimeError("AWS metadata pagination token repeated; incomplete scan")
+        seen_tokens.add(token)
+        next_token = token
+    raise RuntimeError("AWS metadata page limit reached; incomplete scan")
+
+
+def collect_live_metadata(session: Any, requested_regions: list[str] | None = None) -> dict[str, Any]:
+    """Explicit one-shot AWS inventory. Read-only; no Cost Explorer or secret values.
+
+    Expects a boto3 Session-like object. Does not install any schedule or alert.
+    Region-filtered captures report missing regions instead of claiming full scan.
+    """
+    east = "us-east-1"
+    ec2 = session.client("ec2", region_name=east)
+    available = [r["RegionName"] for r in ec2.describe_regions()["Regions"]]
+    inspected = available if requested_regions is None else requested_regions
+    if any(r not in available for r in inspected):
+        raise ValueError("Requested region is not enabled in this account")
+    freetier = session.client("freetier", region_name=east)
+    plan = freetier.get_account_plan_state()
+    usage = freetier.get_free_tier_usage(maxResults=100)
+    free_items = list(usage.get("freeTierUsages", []))
+    next_token = usage.get("nextToken")
+    seen: set[str] = set()
+    while next_token:
+        if next_token in seen:
+            raise RuntimeError("AWS free usage pagination repeated")
+        seen.add(next_token)
+        usage = freetier.get_free_tier_usage(maxResults=100, nextToken=next_token)
+        free_items.extend(usage.get("freeTierUsages", []))
+        next_token = usage.get("nextToken")
+    snapshot: dict[str, Any] = {
+        "plan": {
+            "type": plan.get("accountPlanType"),
+            "remaining_credits_usd": plan.get("accountPlanRemainingCredits", {}).get("amount"),
+        },
+        "free_usage": [
+            {"service": item.get("service"), "used": item.get("actualUsageAmount"),
+             "limit": item.get("limit"), "tier": item.get("freeTierType")}
+            for item in free_items
+        ],
+        "expected_regions": available,
+        "regions": {},
+        "collection": {"provenance": "boto3_metadata_only", "cost_explorer_used": False},
+    }
+    for region in inspected:
+        region_ec2 = session.client("ec2", region_name=region)
+        secret_client = session.client("secretsmanager", region_name=region)
+        ssm_client = session.client("ssm", region_name=region)
+        secrets = _page_records(secret_client, "list_secrets", "SecretList", IncludePlannedDeletion=True)
+        parameters = _page_records(
+            ssm_client, "describe_parameters", "Parameters", MaxResults=50,
+            ParameterFilters=[{"Key": "Path", "Option": "Recursive", "Values": [MIRROR_PREFIX[:-1]]}],
+        )
+        reservations = _page_records(region_ec2, "describe_instances", "Reservations")
+        volumes = _page_records(region_ec2, "describe_volumes", "Volumes")
+        addresses = _page_records(region_ec2, "describe_addresses", "Addresses")
+        snapshot["regions"][region] = {
+            "secrets": [
+                {"name": item.get("Name"), "pending_deletion": bool(item.get("DeletedDate"))}
+                for item in secrets
+            ],
+            "parameters": [
+                {"name": item.get("Name"), "type": item.get("Type"), "tier": item.get("Tier", "Standard")}
+                for item in parameters
+            ],
+            "instances": [
+                {"state": item.get("State", {}).get("Name"), "has_public_ip": bool(item.get("PublicIpAddress"))}
+                for reservation in reservations for item in _records(reservation.get("Instances"))
+            ],
+            "volumes": [
+                {"size_gb": item.get("Size"), "state": item.get("State")}
+                for item in volumes
+            ],
+            "addresses": [{"allocated": True} for _ in addresses],
+        }
+    try:
+        identity = session.client("sts", region_name=east).get_caller_identity()
+        account = identity["Account"]
+        role_name = "ec2-github-runner-role"
+        policy = session.client("iam", region_name=east).simulate_principal_policy(
+            PolicySourceArn=f"arn:aws:iam::{account}:role/{role_name}",
+            ActionNames=[
+                "ssm:GetParameter", "ssm:GetParameters", "ssm:GetParameterHistory", "ssm:GetParametersByPath"
+            ],
+            ResourceArns=[f"arn:aws:ssm:us-east-1:{account}:parameter/glaciereq/secure-mirror/canary"],
+        )
+        snapshot["mirror_access_guard"] = {
+            "source": "aws_iam_simulator", "principal": role_name,
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+            "decisions": {
+                x["EvalActionName"]: x["EvalDecision"] for x in policy.get("EvaluationResults", [])
+            },
+        }
+    except Exception:
+        # Explicit unknown is safer than pretending IAM permissions were reviewed.
+        snapshot["mirror_access_guard"] = None
+    return snapshot
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Assess a metadata-only AWS free-tier snapshot without AWS API calls")
-    parser.add_argument("snapshot", type=Path, help="JSON metadata snapshot; do not include credentials")
+    parser = argparse.ArgumentParser(description="Audit AWS Free Tier metadata; --live makes read-only service metadata calls (not Cost Explorer)")
+    parser.add_argument("snapshot", type=Path, nargs="?", help="metadata-only JSON snapshot")
+    parser.add_argument("--live", action="store_true", help="single read-only AWS metadata capture (no scheduled polling)")
+    parser.add_argument("--regions", nargs="+", help="limit live capture; partial coverage stays marked incomplete")
     arguments = parser.parse_args()
-    report = assess(json.loads(arguments.snapshot.read_text(encoding="utf-8")))
+    if bool(arguments.snapshot) == bool(arguments.live):
+        parser.error("Specify exactly one JSON snapshot or --live")
+    if arguments.regions and not arguments.live:
+        parser.error("--regions requires --live")
+    if arguments.live:
+        try:
+            import boto3  # Optional; imported only for operator-invoked live collection.
+            metadata = collect_live_metadata(boto3.Session(), requested_regions=arguments.regions)
+        except Exception:
+            parser.exit(2, "AWS read-only metadata collection failed; no completeness claim\n")
+    else:
+        metadata = json.loads(arguments.snapshot.read_text(encoding="utf-8"))
+    report = assess(metadata)
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["status"] == "REVIEW" else 1
 
