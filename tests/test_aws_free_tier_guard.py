@@ -161,5 +161,70 @@ class FreeTierGuardTests(unittest.TestCase):
         self.assertNotIn('NEVER_EMIT_THIS', str(context.exception))
 
 
+class LiveMetadataCollectorTests(unittest.TestCase):
+    class Session:
+        def __init__(self, *, fail_secrets=False):
+            self.calls = []
+            self.fail_secrets = fail_secrets
+
+        def client(self, service, region_name=None):
+            outer = self
+
+            class Client:
+                def __getattr__(self, operation):
+                    def call(**kwargs):
+                        outer.calls.append((service, region_name, operation, kwargs))
+                        if outer.fail_secrets and service == 'secretsmanager':
+                            raise PermissionError('metadata unavailable')
+                        if operation == 'describe_regions':
+                            return {'Regions': [{'RegionName': 'us-east-1'}, {'RegionName': 'us-west-2'}]}
+                        if operation == 'get_account_plan_state':
+                            return {'accountPlanType': 'PAID', 'accountPlanRemainingCredits': {'amount': 0}}
+                        if operation == 'get_free_tier_usage':
+                            return {'freeTierUsages': [{'service': 'Amazon Simple Queue Service', 'freeTierType': 'Always Free', 'actualUsageAmount': 40, 'limit': 1000000}]}
+                        if operation == 'list_secrets':
+                            return {'SecretList': [{'Name': 'glaciereq/only'}] if region_name == 'us-east-1' else []}
+                        if operation == 'describe_parameters':
+                            return {'Parameters': [{'Name': '/glaciereq/secure-mirror/only', 'Type': 'SecureString', 'Tier': 'Standard'}] if region_name == 'us-east-1' else []}
+                        if operation == 'describe_instances':
+                            return {'Reservations': [{'Instances': [{'InstanceId': 'i-a', 'State': {'Name': 'stopped'}}]}]} if region_name == 'us-west-2' else {'Reservations': []}
+                        if operation == 'describe_volumes':
+                            return {'Volumes': [{'VolumeId': 'vol-a', 'Size': 20, 'State': 'in-use'}]} if region_name == 'us-west-2' else {'Volumes': []}
+                        if operation == 'describe_addresses':
+                            return {'Addresses': []}
+                        if operation == 'get_caller_identity':
+                            return {'Account': '123456789012'}
+                        if operation == 'simulate_principal_policy':
+                            return {'EvaluationResults': [{'EvalActionName': k, 'EvalDecision': 'explicitDeny'} for k in (
+                                'ssm:GetParameter','ssm:GetParameters','ssm:GetParameterHistory','ssm:GetParametersByPath')]}
+                        raise AssertionError((service, operation, kwargs))
+                    return call
+            return Client()
+
+    def test_live_collector_only_uses_metadata_apis(self):
+        session = self.Session()
+        out = module.collect_live_metadata(session)
+        self.assertEqual('PAID', out['plan']['type'])
+        self.assertEqual(2, len(out['regions']))
+        self.assertEqual(1, len(out['regions']['us-east-1']['parameters']))
+        self.assertEqual('Standard', out['regions']['us-east-1']['parameters'][0]['tier'])
+        self.assertEqual('aws_iam_simulator', out['mirror_access_guard']['source'])
+        self.assertTrue(all(x[2] not in {'get_secret_value','get_parameter', 'put_parameter','create_secret', 'update_table','delete_secret'} for x in session.calls))
+        self.assertNotIn('ce', {x[0] for x in session.calls})
+        self.assertNotIn('secretsmanager-value', str(out))
+        report = module.assess(out)
+        self.assertNotIn('MIRROR_IAM_UNVERIFIED', {x['code'] for x in report['findings']})
+
+    def test_live_collector_does_not_claim_success_when_provider_denies_metadata(self):
+        session = self.Session(fail_secrets=True)
+        with self.assertRaises(PermissionError):
+            module.collect_live_metadata(session)
+
+    def test_partial_region_request_exposes_missing_coverage(self):
+        out = module.collect_live_metadata(self.Session(), requested_regions=['us-east-1'])
+        self.assertEqual(['us-east-1'], list(out['regions']))
+        self.assertIn('REGIONAL_INVENTORY_INCOMPLETE', {x['code'] for x in module.assess(out)['findings']})
+
+
 if __name__ == '__main__':
     unittest.main()
