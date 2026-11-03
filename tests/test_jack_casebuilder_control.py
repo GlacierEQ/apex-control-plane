@@ -99,6 +99,39 @@ def test_queue_bridges_into_current_impact_selector_contract() -> None:
     assert all(candidate.evidence_refs for candidate in candidates)
 
 
+
+def test_pressure_routing_distinguishes_institutional_pursuit_from_analysis() -> None:
+    """The real APEX selector must see Jack job types, not generic execution."""
+    from prosecution_pressure import (
+        ProsecutionSignal, assess_prosecution_pressure, pressure_adjusted_features,
+    )
+
+    candidates = queue_to_impact_candidates(compile_jack_execution_queue(graph(), conversion=conversion()))
+    by_capability = {candidate.metadata["capability"]: candidate for candidate in candidates}
+
+    discovery = by_capability["legal_discovery"]
+    analysis = by_capability["allegation_hardening"]
+    materialization = by_capability["pleading_projection"]
+
+    assert discovery.metadata["route_kind"] == "escalation"
+    assert analysis.metadata["route_kind"] == "analysis"
+    assert materialization.metadata["route_kind"] == "execution"
+    assert all(candidate.metadata["external_action_authorized"] is False for candidate in candidates)
+
+    pressure = assess_prosecution_pressure(
+        ProsecutionSignal(consecutive_nonprogress=3, operator_escalation_directive=True)
+    )
+    discovery_features = pressure_adjusted_features(
+        discovery.features, metadata=discovery.metadata, pressure=pressure
+    )
+    analysis_features = pressure_adjusted_features(
+        analysis.features, metadata=analysis.metadata, pressure=pressure
+    )
+    assert discovery_features["mission_advancement"] > discovery.features["mission_advancement"]
+    assert analysis_features["meta_substitution_risk"] > analysis.features.get("meta_substitution_risk", 0)
+
+
+
 def test_dispatch_is_internal_capability_routing_only() -> None:
     jobs = compile_jack_execution_queue(graph())
     plane = ControlPlane()
