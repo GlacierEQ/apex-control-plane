@@ -147,11 +147,14 @@ class AdaptiveRanker:
         Returns the predicted score before and after the update.
         """
 
+        if type(reward) not in (int, float):
+            raise ValueError("adaptive learning reward must be a real number")
         measured_reward = float(reward)
         if not math.isfinite(measured_reward):
             raise ValueError("adaptive learning reward must be finite")
-        bounded_reward = max(-1.0, min(1.0, measured_reward))
-        target = (bounded_reward + 1.0) / 2.0
+        if not -1.0 <= measured_reward <= 1.0:
+            raise ValueError("adaptive learning reward must be within [-1, 1]")
+        target = (measured_reward + 1.0) / 2.0
         before = self.score(candidate).score
         error = target - before
         features = candidate.normalized_features()
@@ -314,7 +317,27 @@ class AdaptiveIntelligenceEngine:
         reward: float,
         reason: str,
         metadata: Mapping[str, object] | None = None,
+        verify_outcome: Callable[[], bool] | None = None,
     ) -> FeedbackEvent:
+        # A positive reward changes durable future decisions: it cannot come
+        # solely from a caller-supplied success flag, label, or progress note.
+        if type(reward) not in (int, float):
+            raise ValueError("adaptive learning reward must be a real number")
+        if not math.isfinite(reward):
+            raise ValueError("adaptive learning reward must be finite")
+        if not -1.0 <= reward <= 1.0:
+            raise ValueError("adaptive learning reward must be within [-1, 1]")
+        if reward > 0:
+            if not callable(verify_outcome) or verify_outcome() is not True:
+                raise ValueError("positive learning requires independent outcome verification")
+            if candidate.kind == "action":
+                proof = metadata or {}
+                if (proof.get("native_stage") != "HUMAN_OUTCOME"
+                        or not all(isinstance(proof.get(key), str) and proof[key].strip()
+                                   for key in ("provider_ref", "readback_ref",
+                                               "source_state_ref", "after_state_ref"))
+                        or proof["source_state_ref"] == proof["after_state_ref"]):
+                    raise ValueError("action reward requires mission-complete native proof, not a fragment")
         if self.model_state_path is None:
             return self._record_outcome_unlocked(
                 task_id=task_id, candidate=candidate, reward=reward,
@@ -346,7 +369,7 @@ class AdaptiveIntelligenceEngine:
             task_id=task_id,
             candidate_id=candidate.candidate_id,
             kind=candidate.kind,
-            reward=max(-1.0, min(1.0, float(reward))),
+            reward=float(reward),
             reason=reason,
             prediction_before=before,
             prediction_after=after,
@@ -379,6 +402,7 @@ class AdaptiveIntelligenceEngine:
         candidate: AdaptiveCandidate,
         reason: str,
         metadata: Mapping[str, object] | None = None,
+        verify_outcome: Callable[[], bool] | None = None,
     ) -> FeedbackEvent:
         return self.record_outcome(
             task_id=task_id,
@@ -386,6 +410,7 @@ class AdaptiveIntelligenceEngine:
             reward=1.0,
             reason=f"verified_success:{reason}",
             metadata=metadata,
+            verify_outcome=verify_outcome,
         )
 
     def save_model_state(self, path: str | Path) -> None:

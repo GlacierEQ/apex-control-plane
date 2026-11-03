@@ -377,7 +377,12 @@ class ContinuousImpactSelector:
             raise ImpactSelectionViolation("provider-native independent readback not verified")
         if success:
             if provider_attempt.stage not in {"VERIFIED_MATERIAL_DELTA", "HUMAN_OUTCOME"}:
-                raise ImpactSelectionViolation("cannot reinforce an action without a verified material outcome")
+                raise ImpactSelectionViolation("cannot reinforce an action without verified outcome evidence")
+            if provider_attempt.stage == "VERIFIED_MATERIAL_DELTA":
+                # A source delta can be valid intermediate progress without
+                # completing the Operator's mission. Retain its journal receipt,
+                # but never train the ranker that the mission succeeded.
+                return
         elif provider_attempt.stage not in {"BLOCKED", "NO_DELTA"}:
             raise ImpactSelectionViolation("negative outcome must be a provider-confirmed blocked/no-delta state")
         self.engine.record_outcome(
@@ -394,6 +399,8 @@ class ContinuousImpactSelector:
                 "after_state_ref": provider_attempt.after_state_ref,
                 "native_stage": provider_attempt.stage,
             },
+            verify_outcome=(lambda: verify_native_readback(provider_attempt))
+            if success else None,
         )
 
     def record_operator_correction(
