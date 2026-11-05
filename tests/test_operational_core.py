@@ -20,6 +20,8 @@ class FakeProvider:
 
     def execute(self, payload, operation_id):
         self.calls += 1
+        if self.behavior == "fail_once" and self.calls == 1:
+            raise TimeoutError("transient provider failure before write")
         if self.behavior == "crash_after_write":
             self.effects[payload["key"]] = payload["value"]
             raise TimeoutError("response lost after provider accepted")
@@ -113,6 +115,58 @@ class CoreTests(unittest.TestCase):
         self.core.db.execute("UPDATE operations SET state='running', attempts=1, lease_until='2000-01-01T00:00:00+00:00' WHERE id='op7'")
         self.assertTrue(self.core.run("op7").verified)
         self.assertEqual(self.provider.calls, 0)
+
+
+    def test_full_cycle_recovers_transient_failure(self):
+        self.provider.behavior = "fail_once"
+        self.core.submit("cycle1", "provider", {"key": "k", "value": 5})
+        result = self.core.run_to_verified("cycle1")
+        self.assertTrue(result.verified)
+        self.assertEqual(self.provider.effects.get("k"), 5)
+        self.assertEqual(self.provider.calls, 2)
+        self.assertEqual(result.attempts, 2)
+
+    def test_full_cycle_does_not_spin_on_identical_permanent_failure(self):
+        self.provider.behavior = "crash_before_write"
+        self.core.submit("cycle2", "provider", {"key": "k", "value": 7})
+        result = self.core.run_to_verified("cycle2")
+        self.assertEqual(result.state, "retryable")
+        self.assertFalse(result.verified)
+        self.assertEqual(self.provider.calls, 2)
+        self.assertNotIn("k", self.provider.effects)
+
+    def test_full_cycle_repairs_original_failure_before_retesting(self):
+        self.provider.behavior = "crash_before_write"
+        self.core.submit("cycle3", "provider", {"key": "k", "value": 9})
+        repairs = []
+        def repair(result):
+            repairs.append(result.error_type)
+            self.provider.behavior = "success"
+            return "provider-route-restored"
+        result = self.core.run_to_verified("cycle3", repair=repair)
+        self.assertTrue(result.verified)
+        self.assertEqual(self.provider.effects.get("k"), 9)
+        self.assertEqual(repairs, ["TimeoutError"])
+        self.assertEqual(self.provider.calls, 2)
+
+    def test_full_cycle_never_blindly_replays_ambiguous_write(self):
+        self.provider.behavior = "no_readback"
+        self.core.submit("cycle4", "provider", {"key": "k", "value": 11})
+        result = self.core.run_to_verified("cycle4")
+        self.assertEqual(result.state, "uncertain")
+        self.assertEqual(self.provider.calls, 1)
+        self.provider.behavior = "success"
+        result = self.core.run_to_verified("cycle4")
+        self.assertTrue(result.verified)
+        self.assertEqual(self.provider.calls, 1)
+
+    def test_full_cycle_non_idempotent_effect_needs_reconciliation(self):
+        self.provider.idempotent = False
+        self.provider.behavior = "crash_before_write"
+        self.core.submit("cycle5", "provider", {"key": "k", "value": 2})
+        result = self.core.run_to_verified("cycle5")
+        self.assertEqual(result.state, "needs_reconciliation")
+        self.assertEqual(self.provider.calls, 1)
 
     def test_file_write_effect_and_integrity(self):
         target = self.root / "sub" / "result.txt"
