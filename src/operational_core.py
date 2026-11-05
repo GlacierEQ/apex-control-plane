@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 import sqlite3
 import tempfile
-from typing import Any, Mapping, Protocol
+from typing import Any, Callable, Mapping, Protocol
 
 
 def _now() -> datetime:
@@ -229,6 +229,53 @@ class OperationalCore:
                                 error_type=failure or "desired_effect_missing")
         return self._finish(operation_id, "needs_reconciliation", result_sha256=result_hash,
                             error_type=failure or "desired_effect_missing")
+
+    def run_to_verified(
+        self,
+        operation_id: str,
+        *,
+        repair: Callable[[Status], str | None] | None = None,
+    ) -> Status:
+        """Execute, independently test, repair and retest the same work unit.
+
+        A recoverable idempotent provider failure triggers a safe replay only
+        after run() has independently confirmed the desired effect is absent.
+        No global attempt quota: an unchanged failure fingerprint with no new
+        repair path is an actual exhausted path, not a reason to fabricate
+        success. Unknown readbacks and non-idempotent actions are NEVER
+        blindly replayed. A caller-provided repair is limited to the existing
+        authorization; its unique receipt identifies a material route change,
+        not a verified user benefit. Only provider readback can verify success.
+        """
+        seen_failures: set[tuple[str, str | None]] = set()
+        repaired_routes: set[str] = set()
+        while True:
+            result = self.run(operation_id)
+            if result.verified or result.state == "running":
+                return result
+
+            if repair is not None:
+                try:
+                    repair_receipt = repair(result)
+                except Exception as exc:
+                    self._event(operation_id, "repair_failed", type(exc).__name__)
+                    return result
+                if repair_receipt is not None:
+                    if not isinstance(repair_receipt, str) or not repair_receipt.strip():
+                        raise ValueError("repair must return a distinct nonempty route receipt or None")
+                    if repair_receipt not in repaired_routes:
+                        repaired_routes.add(repair_receipt)
+                        seen_failures.clear()
+                        self._event(operation_id, "repair", repair_receipt)
+                        continue
+
+            if result.state == "retryable" and self.adapters[result.adapter].idempotent:
+                fingerprint = (result.state, result.error_type)
+                if fingerprint not in seen_failures:
+                    seen_failures.add(fingerprint)
+                    self._event(operation_id, "retest", result.error_type or "missing_effect")
+                    continue
+            return result
 
     def _finish(self, operation_id: str, state: str, *,
                 result_sha256: str | None = None, error_type: str | None = None,
