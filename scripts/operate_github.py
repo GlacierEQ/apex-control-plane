@@ -30,7 +30,7 @@ def main() -> int:
     try:
         with OperationalCore(args.state, {"github.contents": GitHubContentsAdapter(token)}) as core:
             core.submit(args.id, "github.contents", payload)
-            status = core.run(args.id)
+            status = core.run_to_verified(args.id)
         print(json.dumps(status.as_dict(), sort_keys=True))
         return 0 if status.verified else 1
     except (KeyError, ValueError, OSError) as error:
