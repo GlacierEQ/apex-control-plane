@@ -19,6 +19,8 @@ class FakeGithub(GitHubContentsAdapter):
         self.writes = 0
         self.calls = []
         self.fail_reads = False
+        self.fail_first_put = False
+        self.put_attempts = 0
 
     def _request(self, method, url, body=None):
         self.calls.append((method, url))
@@ -33,6 +35,9 @@ class FakeGithub(GitHubContentsAdapter):
                     "content": base64.b64encode(value).decode(), "sha": "existing-sha"}
         if method == "PUT":
             path = url.split("/contents/")[1]
+            self.put_attempts += 1
+            if self.fail_first_put and self.put_attempts == 1:
+                raise HTTPError(url, 503, "Transient upstream failure", {}, None)
             self.writes += 1
             self.data[path] = base64.b64decode(body["content"])
             return {"commit": {"sha": "remote-commit"}}
@@ -78,6 +83,17 @@ class GithubTests(unittest.TestCase):
         self.core.submit("bad", "github", payload)
         self.assertFalse(self.core.run("bad").verified)
         self.assertEqual(self.remote.writes, 0)
+
+
+    def test_github_transient_put_retries_after_native_readback(self):
+        self.remote.fail_first_put = True
+        self.core.submit("github-transient", "github", self.payload)
+        result = self.core.run_to_verified("github-transient")
+        self.assertTrue(result.verified)
+        self.assertEqual(result.attempts, 2)
+        self.assertEqual(self.remote.put_attempts, 2)
+        self.assertEqual(self.remote.writes, 1)
+        self.assertEqual(self.remote.data["proof/result.txt"], b"operating")
 
     def test_token_required(self):
         with self.assertRaises(ValueError):
