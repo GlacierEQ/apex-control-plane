@@ -33,9 +33,9 @@ def main() -> int:
                 content = args.content if args.content is not None else args.content_file.read_text(encoding="utf-8")
                 result = core.submit(args.id, "file.write", {"path": str(args.path), "content": content})
                 if not args.queue_only:
-                    result = core.run(args.id)
+                    result = core.run_to_verified(args.id)
             elif args.command == "run":
-                result = core.run(args.id)
+                result = core.run_to_verified(args.id)
             else:
                 result = core.status(args.id)
         print(json.dumps(result.as_dict(), sort_keys=True))
