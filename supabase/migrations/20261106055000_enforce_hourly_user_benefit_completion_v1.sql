@@ -74,3 +74,58 @@ $block$;
 -- attempted premature 'completed' UPDATE was rejected with SQLSTATE 23514.
 -- Native readback kept both invocation and bundle queued (1 unfinished item).
 -- This does NOT prove ChatGPT's native scheduler calls this APEX path.
+
+-- Second live deployed migration: enforce_hourly_user_benefit_invocation_completion_v1.
+-- An operator cannot bypass the guarded bundle by writing the parent plugin
+-- invocation status directly. This continues to affect only the named task.
+
+CREATE OR REPLACE FUNCTION private.enforce_hourly_user_benefit_invocation_completion_v1()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path TO pg_catalog, public, private
+AS $function$
+BEGIN
+  IF NEW.scope_key = 'automation:6ae8e3c2dafc8191ab6a582f1a74c71a'
+     AND NEW.status = 'completed'
+     AND OLD.status IS DISTINCT FROM 'completed'
+  THEN
+    PERFORM 1 FROM public.connector_work_bundles AS b
+    WHERE b.id = NEW.bundle_id
+      AND b.scope_key = NEW.scope_key
+      AND b.status = 'completed'
+      AND b.item_count > 0
+      AND b.completed_item_count >= b.item_count
+      AND b.result_summary = NEW.result
+      AND b.result_summary ->> 'verification_state' = 'VERIFIED_USER_BENEFIT'
+      AND b.result_summary ->> 'before_state' = 'failed'
+      AND b.result_summary ->> 'after_state' = 'restored';
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION USING ERRCODE='check_violation',
+      MESSAGE='hourly_user_benefit_invocation_requires_verified_completed_bundle';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DO $block$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_trigger AS t
+    WHERE t.tgrelid = 'public.everything_mcp_plugin_invocations'::pg_catalog.regclass
+      AND t.tgname = 'trg_enforce_hourly_user_benefit_invocation_completion_v1'
+      AND NOT t.tgisinternal
+  ) THEN
+    CREATE TRIGGER trg_enforce_hourly_user_benefit_invocation_completion_v1
+    BEFORE UPDATE OF status ON public.everything_mcp_plugin_invocations
+    FOR EACH ROW
+    EXECUTE FUNCTION private.enforce_hourly_user_benefit_invocation_completion_v1();
+  END IF;
+END;
+$block$;
+
+-- Native negative test: direct parent status='completed' rejected with SQLSTATE
+-- 23514 hourly_user_benefit_invocation_requires_verified_completed_bundle.
+-- Exact invocation c985fd4f-fb3c-4473-a65a-eb18f600c623 remained queued.
