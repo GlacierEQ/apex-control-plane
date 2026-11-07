@@ -122,5 +122,16 @@
     "operator_asset_sovereignty_is_mandatory": true
   },
   "onnx_condition_input": "current_blocker_present",
-  "onnx_types": "boolean"
+  "onnx_types": "boolean",
+  "independent_work_routing": {
+    "rule": "A_LOCAL_BLOCKER_NEVER_STOPS_AN_INDEPENDENT_AUTHORIZED_LANE",
+    "route_ready_requires": [
+      "authority_valid",
+      "safety_boundary_clear",
+      "objective_preserved",
+      "independent_work_identity_and_authorization"
+    ],
+    "global_completion_unmodified": true,
+    "legacy_evaluator_without_lane_input": "PRESERVE_EXISTING_BEHAVIOR"
+  }
 }
