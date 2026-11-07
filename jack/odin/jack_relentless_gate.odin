@@ -78,15 +78,27 @@ resume_ready :: proc(g: Gate_State) -> bool {
            g.next_state_resumable
 }
 
-evaluate :: proc(g: Gate_State, exact_blocker_present: bool) -> Execution_Status {
-    if exact_blocker_present {
+independent_execution_ready :: proc(g: Gate_State, available: bool) -> bool {
+    return available && g.authority_valid && g.safety_boundary_clear && g.objective_preserved
+}
+
+evaluate_with_independent_work :: proc(
+    g: Gate_State, exact_blocker_present: bool, independent_work_available: bool,
+) -> Execution_Status {
+    independent := independent_execution_ready(g, independent_work_available)
+    if exact_blocker_present && !independent {
         return .BLOCKED
     }
-    if completion_ready(g) {
+    if completion_ready(g) && !exact_blocker_present {
         return .COMPLETE
     }
-    if !execution_ready(g) {
-        return .RECOVERING
+    if execution_ready(g) || independent {
+        return .EXECUTING
     }
-    return .EXECUTING
+    return .RECOVERING
+}
+
+// Legacy callers retain their original two-argument behavior.
+evaluate :: proc(g: Gate_State, exact_blocker_present: bool) -> Execution_Status {
+    return evaluate_with_independent_work(g, exact_blocker_present, false)
 }
