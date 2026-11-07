@@ -41,3 +41,18 @@ asset_sovereignty_is_preflight_required :: proc(t: ^testing.T) {
     g.operator_asset_sovereignty_preserved = false
     testing.expect_value(t, evaluate(g, false), Execution_Status.RECOVERING)
 }
+
+@(test)
+unrelated_blocker_does_not_stop_independent_work :: proc(t: ^testing.T) {
+    g := all_true_gate_state()
+    g.continuity_loaded = false
+    testing.expect_value(t, evaluate_with_independent_work(g, true, true), Execution_Status.EXECUTING)
+    testing.expect_value(t, evaluate_with_independent_work(g, true, false), Execution_Status.BLOCKED)
+}
+
+@(test)
+independent_work_cannot_bypass_safety :: proc(t: ^testing.T) {
+    g := all_true_gate_state()
+    g.safety_boundary_clear = false
+    testing.expect_value(t, evaluate_with_independent_work(g, true, true), Execution_Status.BLOCKED)
+}
