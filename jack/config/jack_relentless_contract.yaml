@@ -125,6 +125,15 @@ decision_law:
   disposition_or_subordination: EXPLICIT_OPERATOR_DIRECTION_REQUIRED
   unresolved_topology_conflict: BLOCK_MUTATION_AND_RECONCILE
   capability_reduction: OPERATOR_DIRECTION_REQUIRED
+independent_work_routing:
+  rule: A_LOCAL_BLOCKER_NEVER_STOPS_AN_INDEPENDENT_AUTHORIZED_LANE
+  route_ready_requires:
+  - authority_valid
+  - safety_boundary_clear
+  - objective_preserved
+  - independent_work_identity_and_authorization
+  global_completion_unmodified: true
+  legacy_evaluator_without_lane_input: PRESERVE_EXISTING_BEHAVIOR
 gates:
   execution_ready:
   - authority_valid
@@ -173,7 +182,9 @@ status_machine:
     expanding beyond the Operator's requested operation class.
   BLOCKED: >
     A genuine external/authority/safety/source blocker is exactly identified with
-    receipt; preserve state and next executable workaround.
+    receipt and no independently authorized executable lane remains. Localize a
+    blocked dependent lane, preserve its evidence and next workaround, and keep
+    independent authorized work in EXECUTING without promoting parent completion.
   COMPLETE: >
     Every completion_ready gate is true and readback verifies the result.
   FORBIDDEN:
