@@ -4,6 +4,8 @@ from jack.src.jack_relentless_gate import (
     GateState,
     Status,
     completion_ready,
+    independent_execution_ready,
+    progress_ready,
     evaluate,
     from_mapping,
     missing,
@@ -258,3 +260,62 @@ def test_receipt_accepts_consistent_complete_with_independent_authority():
 def test_receipt_accepts_current_blocker_only_as_blocked():
     receipt = _receipt(_all_true(), "BLOCKED", ["current provider hold"])
     validate_receipt(receipt)
+
+
+def test_independent_work_allows_progress_while_noncritical_preflight_is_missing():
+    values = _all_true()
+    values["continuity_loaded"] = False
+    g = GateState(**values)
+    assert not completion_ready(g)
+    assert not bool(g.continuity_loaded)
+    assert independent_execution_ready(g, independent_work_available=True)
+    assert progress_ready(g, independent_work_available=True)
+    assert evaluate(g, independent_work_available=True) == Status.EXECUTING
+    assert evaluate(g) == Status.RECOVERING
+
+
+def test_independent_work_survives_unrelated_exact_blocker():
+    values = _all_true()
+    values["resources_invoked"] = False
+    g = GateState(**values)
+    assert evaluate(g, exact_blockers=["unrelated provider unavailable"]) == Status.BLOCKED
+    assert evaluate(
+        g, exact_blockers=["unrelated provider unavailable"],
+        independent_work_available=True
+    ) == Status.EXECUTING
+    assert not completion_ready(g)
+
+
+def test_safety_authority_objective_are_not_bypassed_by_independent_lane():
+    for field in ("authority_valid", "safety_boundary_clear", "objective_preserved"):
+        values = _all_true()
+        values[field] = False
+        g = GateState(**values)
+        assert not independent_execution_ready(g, independent_work_available=True)
+        assert evaluate(
+            g, exact_blockers=["provider unavailable"], independent_work_available=True
+        ) == Status.BLOCKED
+
+
+def test_receipt_accepts_sourced_independent_route_when_other_lane_blocked():
+    values = _all_true()
+    values["continuity_loaded"] = False
+    receipt = _receipt(values, "EXECUTING", ["unrelated external custodian offline"])
+    receipt["independent_work"] = [
+        {"action": "inspect", "target": "sibling repository", "owner": "GlacierEQ/sibling",
+         "authorized": True}
+    ]
+    validate_receipt(receipt)
+
+
+def test_receipt_rejects_self_certified_independent_route_without_identity():
+    values = _all_true()
+    values["continuity_loaded"] = False
+    receipt = _receipt(values, "EXECUTING", ["unrelated external custodian offline"])
+    receipt["independent_work"] = [{"action": "inspect", "target": "sibling repository"}]
+    try:
+        validate_receipt(receipt)
+    except ValueError as exc:
+        assert "independent_work[0] requires" in str(exc)
+    else:
+        raise AssertionError("Unidentified independent route was accepted")
