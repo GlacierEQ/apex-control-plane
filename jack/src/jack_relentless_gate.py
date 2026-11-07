@@ -103,6 +103,30 @@ def execution_ready(g: GateState) -> bool:
     return _all(g, PRE_FLIGHT)
 
 
+def independent_execution_ready(
+    g: GateState, *, independent_work_available: bool = False
+) -> bool:
+    """Allow an independent authorized lane without treating optional recovery as a stop.
+
+    This only authorizes continuation, not an evidence/completion promotion.
+    Authority, safety and the Operator's actual objective remain mandatory.
+    """
+    return bool(
+        independent_work_available
+        and g.authority_valid
+        and g.safety_boundary_clear
+        and g.objective_preserved
+    )
+
+
+def progress_ready(
+    g: GateState, *, independent_work_available: bool = False
+) -> bool:
+    return execution_ready(g) or independent_execution_ready(
+        g, independent_work_available=independent_work_available
+    )
+
+
 def completion_ready(g: GateState) -> bool:
     return _all(g, COMPLETION)
 
@@ -115,15 +139,23 @@ def missing(g: GateState, names: list[str] = COMPLETION) -> list[str]:
     return [name for name in names if not bool(getattr(g, name))]
 
 
-def evaluate(g: GateState, *, exact_blockers: list[str] | None = None) -> Status:
+def evaluate(
+    g: GateState,
+    *,
+    exact_blockers: list[str] | None = None,
+    independent_work_available: bool = False,
+) -> Status:
     blockers = [str(value).strip() for value in (exact_blockers or []) if str(value).strip()]
-    if blockers:
+    independent = independent_execution_ready(
+        g, independent_work_available=independent_work_available
+    )
+    if blockers and not independent:
         return Status.BLOCKED
-    if completion_ready(g):
+    if completion_ready(g) and not blockers:
         return Status.COMPLETE
-    if not execution_ready(g):
-        return Status.RECOVERING
-    return Status.EXECUTING
+    if progress_ready(g, independent_work_available=independent_work_available):
+        return Status.EXECUTING
+    return Status.RECOVERING
 
 
 def from_mapping(data: Mapping[str, object]) -> GateState:
@@ -262,6 +294,19 @@ def validate_receipt(
     if not isinstance(resolved_blockers, list):
         raise ValueError("resolved_blockers must be a list when present")
 
+    independent_work = receipt.get("independent_work", [])
+    if not isinstance(independent_work, list):
+        raise ValueError("independent_work must be a list when present")
+    for index, route in enumerate(independent_work):
+        if not isinstance(route, Mapping) or any(
+            not isinstance(route.get(key), str) or not str(route[key]).strip()
+            for key in ("action", "target", "owner")
+        ) or route.get("authorized") is not True:
+            raise ValueError(
+                f"independent_work[{index}] requires authorized=true and action/target/owner"
+            )
+    independent_work_available = bool(independent_work)
+
     sources = _receipt_list(receipt, "sources_opened")
     actions = _receipt_list(receipt, "actions_executed")
     verification = _receipt_list(receipt, "verification")
@@ -307,15 +352,21 @@ def validate_receipt(
     ):
         raise ValueError("readback_verified requires readback_receipts")
 
-    expected = evaluate(gates, exact_blockers=normalized_blockers)
+    expected = evaluate(
+        gates,
+        exact_blockers=normalized_blockers,
+        independent_work_available=independent_work_available,
+    )
     if status is not expected:
         raise ValueError(
             f"receipt status {status.value} contradicts gate state; expected {expected.value}"
         )
     if status is Status.COMPLETE and not completion_ready(gates):
         raise ValueError("COMPLETE requires every completion gate")
-    if status is Status.EXECUTING and not execution_ready(gates):
-        raise ValueError("EXECUTING requires every preflight gate")
+    if status is Status.EXECUTING and not progress_ready(
+        gates, independent_work_available=independent_work_available
+    ):
+        raise ValueError("EXECUTING requires full preflight or an authorized independent lane")
     if status is Status.BLOCKED and not normalized_blockers:
         raise ValueError("BLOCKED requires at least one exact blocker")
 
