@@ -1,4 +1,5 @@
--- Source mirror of already-deployed Supabase migration.
+-- Source mirror of deployed Supabase compiler, reconciled with native correction migration 20261107083000.
+-- Source-only correction: hydration is not downstream application; the original provider migration remains recorded.
 -- Existing owner: GlacierEQ/apex-control-plane (kjebemdgvjvuutzvhbtp).
 -- Native SQL fallback for the HTTP 402 memory-context compiler.
 -- Reuses memory_authoritative_candidates_v1, memory_context_packets_v1,
@@ -170,7 +171,7 @@ BEGIN
       p_packet_snapshot_hash=>v_packet.snapshot_hash,
       p_context_created_at=>v_packet.created_at,
       p_context_expires_at=>v_packet.expires_at,
-      p_recovery_debt=>jsonb_build_object('edge_http_402_unresolved',true,'native_sql_fallback_applied',true),
+      p_recovery_debt=>jsonb_build_object('edge_http_402_unresolved',true,'native_sql_fallback_hydrated_only',true,'downstream_application_unverified',true),
       p_retrieval_status=>v_packet.retrieval_status,
       p_metadata=>jsonb_build_object(
         'native_sql_fallback_packet',v_packet.packet_id,
