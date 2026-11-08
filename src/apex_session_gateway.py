@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 @dataclass(frozen=True)
 class Recovery:
@@ -52,6 +52,7 @@ def execute_with_recovered_context(
     expected_mission_id: str,
     execute: Callable[[AdmissionReceipt], Any],
     apply_context: Callable[[Any], ContextApplication] | None,
+    fact_keys: Sequence[str] = (),
 ) -> Any:
     """Recover, apply, then execute -- all from host-supplied objects.
 
@@ -60,10 +61,25 @@ def execute_with_recovered_context(
     This replaces the deleted admission module with a local, minimal
     equivalent; it does not resurrect that module.
     """
+    # Explicitly requested fact keys must be recovered, not silently dropped.
+    # This bridge accepts already-admitted Recovery snapshots as well as hosts
+    # with a fact-key-aware journal recovery method.
+    if isinstance(fact_keys, (str, bytes)) or not isinstance(fact_keys, Sequence):
+        raise GatewayDenied("fact_keys must be a sequence of nonempty strings")
+    requested_facts = tuple(fact_keys)
+    if any(not isinstance(key, str) or not key.strip() for key in requested_facts):
+        raise GatewayDenied("fact_keys must contain nonempty strings")
     if isinstance(journal, Recovery):
         recovery = journal
     elif hasattr(journal, "recover"):
-        recovery = journal.recover(chat_session_id, expected_mission_id)
+        if requested_facts:
+            try:
+                recovery = journal.recover(chat_session_id, expected_mission_id,
+                                           fact_keys=requested_facts)
+            except TypeError as exc:
+                raise GatewayDenied("journal cannot recover requested fact_keys") from exc
+        else:
+            recovery = journal.recover(chat_session_id, expected_mission_id)
     elif hasattr(journal, "recovery"):
         recovery = journal.recovery
     else:
@@ -72,6 +88,8 @@ def execute_with_recovered_context(
         raise GatewayDenied("recovered context must be a Recovery")
     if recovery.mission_id != expected_mission_id:
         raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
+    if requested_facts and not set(requested_facts).issubset(set(recovery.facts)):
+        raise GatewayDenied("requested fact_keys were not recovered from this mission")
     # An empty fresh mission has no historical context to apply. A recovered
     # correction/fact is material even when a caller mislabels the flag false.
     material = bool(recovery.material_context_found or recovery.corrections or recovery.facts)
