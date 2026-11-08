@@ -390,13 +390,23 @@ class AdaptiveIntelligenceEngine:
                 self.ranker = _read_learning_state(self.model_state_path)
             if reward_receipt in self.ranker.reward_receipts:
                 raise ValueError("positive outcome already rewarded; replay rejected")
-            event = self._record_outcome_unlocked(
-                task_id=task_id, candidate=candidate, reward=reward,
-                reason=reason, metadata=metadata,
-            )
-            if reward_receipt is not None:
-                self.ranker.reward_receipts.add(reward_receipt)
-            _write_learning_state(self.model_state_path, self.ranker)
+            # Do not log a paid outcome before its durable checkpoint is
+            # committed. Work on a copy so a failed save cannot train the
+            # active worker or leave a false success event in the journal.
+            original_ranker = self.ranker
+            self.ranker = AdaptiveRanker.from_state(original_ranker.export_state())
+            try:
+                event = self._record_outcome_unlocked(
+                    task_id=task_id, candidate=candidate, reward=reward,
+                    reason=reason, metadata=metadata, append_feedback=False,
+                )
+                if reward_receipt is not None:
+                    self.ranker.reward_receipts.add(reward_receipt)
+                _write_learning_state(self.model_state_path, self.ranker)
+            except BaseException:
+                self.ranker = original_ranker
+                raise
+            self._append_feedback(event)
             return event
 
     def _record_outcome_unlocked(
@@ -407,6 +417,7 @@ class AdaptiveIntelligenceEngine:
         reward: float,
         reason: str,
         metadata: Mapping[str, object] | None = None,
+        append_feedback: bool = True,
     ) -> FeedbackEvent:
         before, after = self.ranker.observe(candidate, reward)
         event = FeedbackEvent(
@@ -420,7 +431,8 @@ class AdaptiveIntelligenceEngine:
             timestamp=datetime.now(timezone.utc).isoformat(),
             metadata=dict(metadata or {}),
         )
-        self._append_feedback(event)
+        if append_feedback:
+            self._append_feedback(event)
         return event
 
     def record_operator_correction(
