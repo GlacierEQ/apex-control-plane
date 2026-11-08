@@ -115,12 +115,20 @@ def assess(records: list[dict[str, Any]], aws_assessor: Callable[[dict[str, Any]
             'zero_cost_verified': False}
 
 
+def resolve_aws_assessor(records: list[dict[str, Any]]) -> Callable[[dict[str, Any]], dict[str, Any]] | None:
+    """Delegate AWS observations to the owning guard, never reimplement its rules."""
+    if not any(isinstance(x, dict) and x.get('provider') == 'aws' for x in records):
+        return None
+    from aws_free_tier_guard import assess as aws_assess
+    return aws_assess
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description='Assess provider-native, metadata-only account snapshots')
     parser.add_argument('input', type=Path)
     args = parser.parse_args()
     records = json.loads(args.input.read_text(encoding='utf-8'))
-    print(json.dumps(assess(records), indent=2))
+    print(json.dumps(assess(records, aws_assessor=resolve_aws_assessor(records)), indent=2))
     return 0
 
 
