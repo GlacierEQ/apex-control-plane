@@ -77,7 +77,7 @@ AS $function$
     )
   ORDER BY s.catalog_noise_rank ASC, s.recall_score DESC, s.authority_rank ASC, s.importance_score DESC, s.created_at DESC
   LIMIT GREATEST(1,LEAST(COALESCE(p_limit,24),100));
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.memory_authoritative_candidates_v1(text,text,integer) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.memory_authoritative_candidates_v1(text,text,integer) TO service_role;
