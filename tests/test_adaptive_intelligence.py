@@ -327,3 +327,102 @@ def test_action_verified_mission_outcome_can_be_rewarded(tmp_path) -> None:
     assert event.reward == 1.0
     assert engine.ranker.score(candidate).score > before
     assert engine.model_state_path.exists()
+
+
+def _native_action_proof(*, after: str = "provider:state-two") -> dict[str, str]:
+    return {
+        "native_stage": "HUMAN_OUTCOME",
+        "provider_ref": "provider:successful-outcome",
+        "readback_ref": "provider:independent-readback",
+        "source_state_ref": "provider:state-one",
+        "after_state_ref": after,
+    }
+
+
+def test_provider_outcome_cannot_earn_twice_across_workers_or_tasks(tmp_path) -> None:
+    path = tmp_path / "learning.json"
+    first = AdaptiveIntelligenceEngine(model_state_path=path)
+    stale = AdaptiveIntelligenceEngine(model_state_path=path)
+    a = AdaptiveCandidate("first", "action", {"task_relevance": 1.0})
+    b = AdaptiveCandidate("second", "action", {"task_relevance": 1.0})
+    proof = _native_action_proof()
+    first.record_verified_success(
+        task_id="mission-one", candidate=a, reason="provider verified",
+        metadata=proof, verify_outcome=lambda: True,
+    )
+    checkpoint = path.read_bytes()
+    assert len(json.loads(checkpoint)["reward_receipts"]) == 1
+    with pytest.raises(ValueError, match="already rewarded"):
+        stale.record_verified_success(
+            task_id="different-mission", candidate=b, reason="receipt relabeled",
+            metadata=proof, verify_outcome=lambda: True,
+        )
+    restarted = AdaptiveIntelligenceEngine(model_state_path=path)
+    with pytest.raises(ValueError, match="already rewarded"):
+        restarted.record_outcome(
+            task_id="third-mission", candidate=a, reward=1.0, reason="replay",
+            metadata=proof, verify_outcome=lambda: True,
+        )
+    assert path.read_bytes() == checkpoint
+    restarted.record_verified_success(
+        task_id="mission-two", candidate=b, reason="distinct native state",
+        metadata=_native_action_proof(after="provider:state-three"),
+        verify_outcome=lambda: True,
+    )
+    assert len(json.loads(path.read_text())["reward_receipts"]) == 2
+
+
+def test_in_memory_replay_rejected_but_negative_feedback_survives() -> None:
+    engine = AdaptiveIntelligenceEngine()
+    candidate = AdaptiveCandidate("route", "action", {"task_relevance": 0.9})
+    proof = _native_action_proof()
+    engine.record_verified_success(
+        task_id="mission", candidate=candidate, reason="native verified",
+        metadata=proof, verify_outcome=lambda: True,
+    )
+    score = engine.ranker.score(candidate).score
+    with pytest.raises(ValueError, match="already rewarded"):
+        engine.record_verified_success(
+            task_id="mission", candidate=candidate, reason="duplicate",
+            metadata=proof, verify_outcome=lambda: True,
+        )
+    assert engine.ranker.score(candidate).score == score
+    assert engine.record_operator_correction(
+        task_id="mission", candidate=candidate, reason="regression",
+    ).reward == -1.0
+    assert engine.ranker.score(candidate).score < score
+
+
+def test_replayed_context_observation_does_not_earn_again(tmp_path) -> None:
+    path = tmp_path / "learning.json"
+    engine = AdaptiveIntelligenceEngine(model_state_path=path)
+    candidate = _candidate("retrieval", task_relevance=1.0)
+    engine.record_verified_success(
+        task_id="one", candidate=candidate, reason="source read",
+        metadata={"commit": "abc123"}, verify_outcome=lambda: True,
+    )
+    with pytest.raises(ValueError, match="already rewarded"):
+        engine.record_verified_success(
+            task_id="one", candidate=candidate, reason="renamed",
+            metadata={"commit": "abc123"}, verify_outcome=lambda: True,
+        )
+    engine.record_verified_success(
+        task_id="one", candidate=candidate, reason="new source",
+        metadata={"commit": "def456"}, verify_outcome=lambda: True,
+    )
+    assert len(json.loads(path.read_text())["reward_receipts"]) == 2
+
+
+def test_legacy_model_preserved_and_corrupted_reward_receipts_rejected(tmp_path) -> None:
+    path = tmp_path / "learning.json"
+    original = AdaptiveRanker().export_state()
+    original.pop("reward_receipts")
+    path.write_text(json.dumps(original))
+    engine = AdaptiveIntelligenceEngine(model_state_path=path)
+    assert engine.ranker.weights == original["weights"]
+    assert engine.ranker.reward_receipts == set()
+    invalid = dict(original, reward_receipts=["not-a-real-digest"])
+    path.write_text(json.dumps(invalid))
+    with pytest.raises(ValueError, match="reward receipt history"):
+        AdaptiveIntelligenceEngine(model_state_path=path)
+    assert json.loads(path.read_text()) == invalid
