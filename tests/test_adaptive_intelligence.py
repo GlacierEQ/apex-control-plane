@@ -434,3 +434,36 @@ def test_legacy_model_preserved_and_corrupted_reward_receipts_rejected(tmp_path)
     with pytest.raises(ValueError, match="reward receipt history"):
         AdaptiveIntelligenceEngine(model_state_path=path)
     assert json.loads(path.read_text()) == invalid
+
+
+def test_failed_persistent_checkpoint_cannot_create_false_reward_log(tmp_path, monkeypatch) -> None:
+    import src.adaptive_intelligence as learning_module
+
+    path = tmp_path / "learning.json"
+    log = tmp_path / "feedback.jsonl"
+    engine = AdaptiveIntelligenceEngine(model_state_path=path, feedback_path=log)
+    candidate = AdaptiveCandidate("atomic", "action", {"task_relevance": 1.0})
+    proof = _native_action_proof()
+    before = engine.ranker.score(candidate).score
+    original_writer = learning_module._write_learning_state
+
+    def fail_write(*args):
+        raise OSError("simulated checkpoint failure")
+
+    monkeypatch.setattr(learning_module, "_write_learning_state", fail_write)
+    with pytest.raises(OSError, match="checkpoint failure"):
+        engine.record_verified_success(
+            task_id="mission", candidate=candidate, reason="verified",
+            metadata=proof, verify_outcome=lambda: True,
+        )
+    assert engine.ranker.score(candidate).score == before
+    assert not path.exists()
+    assert not log.exists()
+
+    monkeypatch.setattr(learning_module, "_write_learning_state", original_writer)
+    engine.record_verified_success(
+        task_id="mission", candidate=candidate, reason="verified",
+        metadata=proof, verify_outcome=lambda: True,
+    )
+    assert len(log.read_text().splitlines()) == 1
+    assert len(json.loads(path.read_text())["reward_receipts"]) == 1
