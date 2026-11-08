@@ -36,7 +36,7 @@ jobs:
       - name: Restore prior GitHub source observation checkpoint
         id: restore_feedback
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.full_test_suite.outcome == 'success' }}
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .apex/learning
           key: glaciereq-github-learning-v1-${{ github.run_id }}-${{ github.run_attempt }}
@@ -80,7 +80,7 @@ jobs:
       - name: Save native GitHub source-observation checkpoint
         id: save_feedback
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.native_feedback.outcome == 'success' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .apex/learning
           key: glaciereq-github-learning-v1-${{ github.run_id }}-${{ github.run_attempt }}
