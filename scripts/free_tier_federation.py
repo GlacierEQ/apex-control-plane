@@ -13,6 +13,7 @@ from typing import Any, Callable
 
 KNOWN = frozenset({'aws', 'neon', 'render', 'railway', 'supabase', 'vercel', 'netlify', 'sprites'})
 FORBIDDEN_KEYS = frozenset({'api_key', 'apikey', 'token', 'secret_value', 'secretstring', 'secretbinary', 'password', 'private_key', 'authorization', 'credentials', 'plaintext'})
+ALLOWED_FIELDS = frozenset({'provider', 'source', 'checked_at', 'plan', 'resource_count', 'project_count', 'free_service_count', 'shared_instance_hours', 'cold_count', 'failed_deployments', 'billing_readback', 'suspend_timeout_seconds', 'snapshot'})
 
 
 def _scan_sensitive(value: Any) -> bool:
@@ -44,6 +45,11 @@ def assess(records: list[dict[str, Any]], aws_assessor: Callable[[dict[str, Any]
         if not isinstance(provider, str) or provider not in KNOWN:
             emit(str(provider), 'UNSUPPORTED_PROVIDER', 'ERROR', 'No matching integration; capacity cannot be assumed free')
             continue
+        extra = set(record) - ALLOWED_FIELDS
+        if extra:
+            raise ValueError('Unexpected provider evidence fields; metadata allowlist enforced')
+        if provider == 'render' and record.get('free_service_count', 0) > record.get('resource_count', 0):
+            raise ValueError('free_service_count exceeds resource_count')
         if provider in seen:
             emit(provider, 'DUPLICATE_PROVIDER_EVIDENCE', 'ERROR', 'Duplicate provider snapshots cannot inflate counts')
             continue
