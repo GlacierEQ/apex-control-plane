@@ -87,6 +87,14 @@ class FreeTierFederationTests(unittest.TestCase):
         result=module.assess([obs('aws', snapshot={'regions':{}})])
         self.assertIn('AWS_GUARD_UNAVAILABLE', {x['code'] for x in result['findings']})
 
+    def test_rejects_unexpected_fields_that_might_contain_secrets(self):
+        with self.assertRaisesRegex(ValueError, 'Unexpected'):
+            module.assess([obs('railway', plan='unknown', resource_count=1, SERVICE_TOKEN='sensitive')])
+
+    def test_render_free_count_cannot_exceed_total(self):
+        with self.assertRaisesRegex(ValueError, 'free_service_count'):
+            module.assess([obs('render', plan='free', resource_count=1, free_service_count=50)])
+
     def test_bad_quantities_rejected(self):
         with self.assertRaises(ValueError):
             module.assess([obs('render', plan='free', resource_count=-3, free_service_count=4)])
