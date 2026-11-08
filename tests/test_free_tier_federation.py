@@ -95,6 +95,26 @@ class FreeTierFederationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'free_service_count'):
             module.assess([obs('render', plan='free', resource_count=1, free_service_count=50)])
 
+    def test_auto_delegates_aws_to_existing_guard_for_cli(self):
+        import sys
+        import types
+        marker = types.ModuleType('aws_free_tier_guard')
+        marker.assess = lambda _: {'findings': [{'code': 'MISSING_READBACK', 'severity': 'ERROR', 'detail': 'AWS runtime incomplete'}]}
+        old = sys.modules.get('aws_free_tier_guard')
+        try:
+            sys.modules['aws_free_tier_guard'] = marker
+            guard = module.resolve_aws_assessor([obs('aws', snapshot={'regions':{}})])
+            result = module.assess([obs('aws', snapshot={'regions':{}})], aws_assessor=guard)
+            self.assertIn('AWS_MISSING_READBACK', {x['code'] for x in result['findings']})
+        finally:
+            if old is None:
+                sys.modules.pop('aws_free_tier_guard', None)
+            else:
+                sys.modules['aws_free_tier_guard'] = old
+
+    def test_skips_aws_import_if_absent(self):
+        self.assertIsNone(module.resolve_aws_assessor([obs('neon', plan='free', project_count=2)]))
+
     def test_bad_quantities_rejected(self):
         with self.assertRaises(ValueError):
             module.assess([obs('render', plan='free', resource_count=-3, free_service_count=4)])
