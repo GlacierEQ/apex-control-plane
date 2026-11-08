@@ -364,6 +364,14 @@ def test_provider_outcome_cannot_earn_twice_across_workers_or_tasks(tmp_path) ->
             metadata=proof, verify_outcome=lambda: True,
         )
     assert path.read_bytes() == checkpoint
+    second_readback = dict(proof, readback_ref="provider:corroborating-readback")
+    with pytest.raises(ValueError, match="already rewarded"):
+        restarted.record_verified_success(
+            task_id="same-outcome-new-evidence", candidate=b,
+            reason="readback changed, outcome did not", metadata=second_readback,
+            verify_outcome=lambda: True,
+        )
+    assert path.read_bytes() == checkpoint
     restarted.record_verified_success(
         task_id="mission-two", candidate=b, reason="distinct native state",
         metadata=_native_action_proof(after="provider:state-three"),
