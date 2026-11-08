@@ -19,6 +19,7 @@ import tempfile
 from datetime import datetime, timezone
 import json
 import math
+from hashlib import sha256
 from pathlib import Path
 from typing import Callable, Iterable, Mapping, Sequence
 
@@ -111,7 +112,9 @@ class AdaptiveRanker:
         bias: float = 0.0,
         learning_rate: float = 0.08,
         weight_limit: float = 4.0,
+        reward_receipts: Iterable[str] | None = None,
     ) -> None:
+        self.reward_receipts = set(reward_receipts or ())
         self.weights = dict(DEFAULT_WEIGHTS if weights is None else weights)
         self.bias = float(bias)
         self.learning_rate = float(learning_rate)
@@ -179,6 +182,7 @@ class AdaptiveRanker:
             "bias": self.bias,
             "learning_rate": self.learning_rate,
             "weight_limit": self.weight_limit,
+            "reward_receipts": sorted(self.reward_receipts),
         }
 
     @classmethod
@@ -191,6 +195,7 @@ class AdaptiveRanker:
             bias=float(state.get("bias", 0.0)),
             learning_rate=float(state.get("learning_rate", 0.08)),
             weight_limit=float(state.get("weight_limit", 4.0)),
+            reward_receipts=state.get("reward_receipts", []),
         )
 
 
@@ -230,6 +235,13 @@ def _read_learning_state(path: Path) -> AdaptiveRanker:
     weights = state.get("weights")
     if not isinstance(weights, dict) or not weights:
         raise ValueError("persisted learning weights are missing")
+    receipts = state.get("reward_receipts", [])
+    if (not isinstance(receipts, list)
+            or any(not isinstance(value, str) or len(value) != 64
+                   or any(char not in "0123456789abcdef" for char in value)
+                   for value in receipts)
+            or len(set(receipts)) != len(receipts)):
+        raise ValueError("persisted reward receipt history is malformed")
     try:
         ranker = AdaptiveRanker.from_state(state)
     except (TypeError, ValueError, OverflowError) as exc:
@@ -327,6 +339,7 @@ class AdaptiveIntelligenceEngine:
             raise ValueError("adaptive learning reward must be finite")
         if not -1.0 <= reward <= 1.0:
             raise ValueError("adaptive learning reward must be within [-1, 1]")
+        reward_receipt = None
         if reward > 0:
             if not callable(verify_outcome) or verify_outcome() is not True:
                 raise ValueError("positive learning requires independent outcome verification")
@@ -338,21 +351,62 @@ class AdaptiveIntelligenceEngine:
                                                "source_state_ref", "after_state_ref"))
                         or proof["source_state_ref"] == proof["after_state_ref"]):
                     raise ValueError("action reward requires mission-complete native proof, not a fragment")
+                # An outcome cannot earn additional rewards by changing task,
+                # candidate or reason while replaying identical provider facts.
+                # A second independent readback corroborates one outcome;
+                # it does not create a second outcome eligible for payment.
+                identity = {key: proof[key] for key in (
+                    "native_stage", "provider_ref",
+                    "source_state_ref", "after_state_ref",
+                )}
+            else:
+                # A new task or genuinely different source observation may be
+                # learned; rephrasing the same observation is not a new reward.
+                proof = metadata or {}
+                identity = {
+                    "task_id": task_id, "candidate_id": candidate.candidate_id,
+                    "kind": candidate.kind,
+                    **{key: proof.get(key) if isinstance(proof.get(key), str) else None
+                       for key in ("provider_ref", "readback_ref",
+                                   "source_state_ref", "after_state_ref", "commit")},
+                }
+            reward_receipt = sha256(
+                json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest()
         if self.model_state_path is None:
-            return self._record_outcome_unlocked(
+            if reward_receipt in self.ranker.reward_receipts:
+                raise ValueError("positive outcome already rewarded; replay rejected")
+            event = self._record_outcome_unlocked(
                 task_id=task_id, candidate=candidate, reward=reward,
                 reason=reason, metadata=metadata,
             )
+            if reward_receipt is not None:
+                self.ranker.reward_receipts.add(reward_receipt)
+            return event
         with _exclusive_learning_state(self.model_state_path):
             # Always rebase on the persisted state while holding the lock.
             # This prevents another active worker from overwriting corrections.
             if self.model_state_path.exists():
                 self.ranker = _read_learning_state(self.model_state_path)
-            event = self._record_outcome_unlocked(
-                task_id=task_id, candidate=candidate, reward=reward,
-                reason=reason, metadata=metadata,
-            )
-            _write_learning_state(self.model_state_path, self.ranker)
+            if reward_receipt in self.ranker.reward_receipts:
+                raise ValueError("positive outcome already rewarded; replay rejected")
+            # Do not log a paid outcome before its durable checkpoint is
+            # committed. Work on a copy so a failed save cannot train the
+            # active worker or leave a false success event in the journal.
+            original_ranker = self.ranker
+            self.ranker = AdaptiveRanker.from_state(original_ranker.export_state())
+            try:
+                event = self._record_outcome_unlocked(
+                    task_id=task_id, candidate=candidate, reward=reward,
+                    reason=reason, metadata=metadata, append_feedback=False,
+                )
+                if reward_receipt is not None:
+                    self.ranker.reward_receipts.add(reward_receipt)
+                _write_learning_state(self.model_state_path, self.ranker)
+            except BaseException:
+                self.ranker = original_ranker
+                raise
+            self._append_feedback(event)
             return event
 
     def _record_outcome_unlocked(
@@ -363,6 +417,7 @@ class AdaptiveIntelligenceEngine:
         reward: float,
         reason: str,
         metadata: Mapping[str, object] | None = None,
+        append_feedback: bool = True,
     ) -> FeedbackEvent:
         before, after = self.ranker.observe(candidate, reward)
         event = FeedbackEvent(
@@ -376,7 +431,8 @@ class AdaptiveIntelligenceEngine:
             timestamp=datetime.now(timezone.utc).isoformat(),
             metadata=dict(metadata or {}),
         )
-        self._append_feedback(event)
+        if append_feedback:
+            self._append_feedback(event)
         return event
 
     def record_operator_correction(
@@ -423,8 +479,7 @@ class AdaptiveIntelligenceEngine:
 
     @staticmethod
     def load_model_state(path: str | Path) -> AdaptiveRanker:
-        state = json.loads(Path(path).read_text(encoding="utf-8"))
-        return AdaptiveRanker.from_state(state)
+        return _read_learning_state(Path(path))
 
     def _append_feedback(self, event: FeedbackEvent) -> None:
         if self.feedback_path is None:
