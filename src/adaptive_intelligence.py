@@ -353,8 +353,10 @@ class AdaptiveIntelligenceEngine:
                     raise ValueError("action reward requires mission-complete native proof, not a fragment")
                 # An outcome cannot earn additional rewards by changing task,
                 # candidate or reason while replaying identical provider facts.
+                # A second independent readback corroborates one outcome;
+                # it does not create a second outcome eligible for payment.
                 identity = {key: proof[key] for key in (
-                    "native_stage", "provider_ref", "readback_ref",
+                    "native_stage", "provider_ref",
                     "source_state_ref", "after_state_ref",
                 )}
             else:
