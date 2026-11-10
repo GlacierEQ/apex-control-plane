@@ -86,18 +86,47 @@ def execute_with_recovered_context(
         raise GatewayDenied("journal supplies no recoverable context")
     if not isinstance(recovery, Recovery):
         raise GatewayDenied("recovered context must be a Recovery")
+    # Transcribed from PR #344: a frozen dataclass does not validate field
+    # types, and a host callback can otherwise mutate list-backed bindings.
+    if (
+        not isinstance(recovery.mission_id, str)
+        or not isinstance(recovery.source_ref, str)
+        or not isinstance(recovery.cursor, str)
+        or type(recovery.material_context_found) is not bool
+        or not isinstance(recovery.corrections, tuple)
+        or not isinstance(recovery.facts, tuple)
+        or any(not isinstance(item, str) for item in recovery.corrections)
+        or any(not isinstance(item, str) for item in recovery.facts)
+    ):
+        raise GatewayDenied("recovered context must have immutable typed source bindings")
+    original_bindings = (
+        recovery.mission_id, recovery.source_ref, recovery.cursor,
+        recovery.corrections, recovery.facts, recovery.material_context_found,
+    )
     if recovery.mission_id != expected_mission_id:
         raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
     if requested_facts and not set(requested_facts).issubset(set(recovery.facts)):
         raise GatewayDenied("requested fact_keys were not recovered from this mission")
     # An empty fresh mission has no historical context to apply. A recovered
     # correction/fact is material even when a caller mislabels the flag false.
-    material = bool(recovery.material_context_found or recovery.corrections or recovery.facts)
+    # A genuine resume cursor is material even when the host sets its flag
+    # false. Unlike a source ref, the cursor cannot denote just a new mission.
+    material = bool(
+        recovery.material_context_found or recovery.cursor.strip()
+        or recovery.corrections or recovery.facts
+    )
     application = None
     if material:
         if not callable(apply_context):
             raise GatewayDenied("historical context application callback required")
         application = apply_context(recovery)
+        # Attest to the original journal recovery, never to a rewritten copy.
+        # object.__setattr__ can mutate even frozen dataclass instances.
+        if (
+            recovery.mission_id, recovery.source_ref, recovery.cursor,
+            recovery.corrections, recovery.facts, recovery.material_context_found,
+        ) != original_bindings:
+            raise GatewayDenied("context application callback mutated recovered source bindings")
         if not isinstance(application, ContextApplication):
             raise GatewayDenied("context application must be a ContextApplication")
         if (not isinstance(application.application_ref, str)

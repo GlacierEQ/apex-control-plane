@@ -162,6 +162,64 @@ class SessionGatewayTests(unittest.TestCase):
         self.assertEqual(checkpoint.mission_id, "new-mission")
         self.assertEqual(checkpoint.corrections, ())
 
+    def test_resume_cursor_requires_application_even_when_flag_false(self):
+        # PR #344 donor: a real continuation cursor is history even if a host
+        # incorrectly reports material_context_found=False.
+        from src.apex_session_gateway import execute_with_recovered_context
+        resumed = Recovery(
+            mission_id="case-A", source_ref="", cursor="checkpoint-42",
+            corrections=(), facts=(), material_context_found=False,
+        )
+        with self.assertRaisesRegex(GatewayDenied, "historical context application"):
+            execute_with_recovered_context(
+                journal=resumed, chat_session_id="another-chat",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                execute=lambda receipt: self.events.append("executed"),
+                apply_context=None,
+            )
+        self.assertEqual(self.events, [])
+
+    def test_context_callback_cannot_rewrite_recovered_corrections(self):
+        # PR #344 donor: frozen dataclasses can still be modified with
+        # object.__setattr__. Attestation must match the pre-callback snapshot.
+        from src.apex_session_gateway import execute_with_recovered_context
+        recovered = Recovery(
+            mission_id="case-A", source_ref="original:user:middle",
+            cursor="checkpoint-42", corrections=("preserve all evidence",),
+            facts=(), material_context_found=True,
+        )
+        def rewrite_then_attest(value):
+            object.__setattr__(value, "corrections", ("rewritten by host",))
+            return ContextApplication(
+                value.mission_id, value.source_ref, value.cursor,
+                value.corrections, value.facts, "host:forged-application",
+            )
+        with self.assertRaisesRegex(GatewayDenied, "mutated recovered"):
+            execute_with_recovered_context(
+                journal=recovered, chat_session_id="another-chat",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                execute=lambda receipt: self.events.append("executed"),
+                apply_context=rewrite_then_attest,
+            )
+        self.assertEqual(self.events, [])
+
+    def test_mutable_recovery_fields_are_rejected_before_application(self):
+        # PR #344 donor: dataclass annotations do not enforce immutability.
+        from src.apex_session_gateway import execute_with_recovered_context
+        malformed = Recovery(
+            mission_id="case-A", source_ref="original:user:middle",
+            cursor="checkpoint-42", corrections=["mutable correction"],
+            facts=(), material_context_found=True,
+        )
+        with self.assertRaisesRegex(GatewayDenied, "immutable typed source bindings"):
+            execute_with_recovered_context(
+                journal=malformed, chat_session_id="another-chat",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                execute=lambda receipt: self.events.append("executed"),
+                apply_context=self.apply,
+            )
+        self.assertEqual(self.events, [])
+
     def test_recovered_correction_cannot_hide_behind_false_material_flag(self):
         from src.apex_session_gateway import execute_with_recovered_context
         mislabeled = Recovery("case-A", "original:user:middle", "cursor-7",
