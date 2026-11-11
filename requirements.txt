@@ -2,6 +2,6 @@ requests>=2.31.0
 python-dotenv>=1.2.4
 rich>=13.7.0
 typer>=0.27.3
-pydantic>=2.7.0
+pydantic>=2.14.3
 gitpython>=3.2.1
 tzdata
