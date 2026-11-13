@@ -90,7 +90,11 @@
         "drive.search",
         "document.read",
         "spreadsheet.read",
-        "presentation.read"
+        "presentation.read",
+        "drive.metadata.read",
+        "drive.revisions.read",
+        "spreadsheet.range.read",
+        "file.comments.read"
       ],
       "write_operations": {
         "document.create": {
