@@ -108,6 +108,12 @@
           "authorization_required": true,
           "idempotency_required": true,
           "terminal_readback_required": true
+        },
+        "presentation.update": {
+          "enabled": true,
+          "authorization_required": true,
+          "idempotency_required": true,
+          "terminal_readback_required": true
         }
       }
     },
