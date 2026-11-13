@@ -37,6 +37,56 @@ _GWS_WRITE_TOOLS: dict[str, tuple[str, str, str]] = {
     "document.update": ("docs", "documents", "batchUpdate"),
 }
 
+
+_GOOGLE_NATIVE_WRITE_TOOLS: dict[str, tuple[str, str, str]] = {
+    "document.update": ("batch_update_document", "document_id", "document.read"),
+    "presentation.update": ("batch_update_presentation", "presentation_id", "presentation.read"),
+}
+
+
+def _native_google_write_method(action: ApprovedConnectorAction) -> tuple[str, str]:
+    """Require a single provider resource, exact scoped request and CAS revision."""
+    try:
+        method, resource_key, readback = _GOOGLE_NATIVE_WRITE_TOOLS[action.operation]
+    except KeyError as exc:
+        raise ApprovedSessionDispatchError(
+            f"no native Google Workspace write mapping for {action.operation}"
+        ) from exc
+    args = action.provider_input
+    unexpected = set(args) - {
+        "link_id", resource_key, "requests", "write_control", "image_uris",
+    }
+    if unexpected:
+        raise ApprovedSessionDispatchError(
+            f"unsupported native Google write arguments: {sorted(unexpected)}"
+        )
+    _required_text(args.get("link_id"), "native Google link_id")
+    resource_id = _required_text(args.get(resource_key), f"native Google {resource_key}")
+    if resource_id != action.target.get(resource_key):
+        raise ApprovedSessionDispatchError("native Google resource identity mismatch")
+    requests = args.get("requests")
+    if not isinstance(requests, list) or not requests:
+        raise ApprovedSessionDispatchError("native Google requires non-empty requests")
+    if any(not isinstance(request, Mapping) or len(request) != 1
+           for request in requests):
+        raise ApprovedSessionDispatchError(
+            "native Google requires exactly one request type per operation"
+        )
+    controls = args.get("write_control")
+    if not isinstance(controls, Mapping) or set(controls) != {"requiredRevisionId"}:
+        raise ApprovedSessionDispatchError(
+            "native Google requires write_control.requiredRevisionId only"
+        )
+    _required_text(controls.get("requiredRevisionId"),
+                   "native Google write_control.requiredRevisionId")
+    if "image_uris" in args and not (
+        isinstance(args["image_uris"], list)
+        and all(isinstance(item, str) and item.strip() for item in args["image_uris"])
+    ):
+        raise ApprovedSessionDispatchError("native Google image_uris must be a list of paths")
+    return method, readback
+
+
 _GITHUB_WRITE_TOOLS: dict[str, str] = {
     "issue.create": "issue.create",
     "pull_request.create": "pull_request.create",
@@ -125,6 +175,15 @@ def build_approved_session_operation_plan(*, action_request: Mapping[str, Any], 
         return _plan(action=action, provider_kind="browser_session", provider_name="github", provider_operation=operation, readback="provider_object.read")
 
     if action.connector == "google_workspace":
+        route = action.target.get("provider_route", "gws")
+        if route == "google_drive.native":
+            method, readback = _native_google_write_method(action)
+            return _plan(
+                action=action, provider_kind="mcp", provider_name="google_drive",
+                provider_operation=method, readback=readback,
+            )
+        if route != "gws":
+            raise ApprovedSessionDispatchError(f"unknown Google Workspace write route: {route}")
         try:
             service, resource, method = _GWS_WRITE_TOOLS[action.operation]
         except KeyError as exc:
