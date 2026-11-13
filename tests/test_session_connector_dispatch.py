@@ -139,3 +139,63 @@ def test_plan_and_receipt_refuse_action_claims():
 
     with pytest.raises(SessionDispatchError, match="non-authorizing"):
         build_session_operation_plan(request=payload, catalog=catalog)
+
+
+# Native Google Workspace: exact authenticated connector adapters, never permission union.
+@pytest.mark.parametrize(
+    "operation,provider_input,tool",
+    [
+        ("drive.search", {"query": "APEX", "topn": 2}, "search"),
+        ("drive.metadata.read", {"fileId": "file-123"}, "get_file_metadata"),
+        ("drive.revisions.read", {"fileId": "file-123"}, "list_file_revisions"),
+        ("document.read", {"document_id": "doc-123"}, "get_document_text"),
+        ("spreadsheet.read", {"spreadsheet_id": "sheet-123"}, "get_spreadsheet_metadata"),
+        ("spreadsheet.range.read", {"spreadsheet_id": "sheet-123", "sheet_name": "Cases", "range": "A1:C3"}, "get_spreadsheet_range"),
+        ("presentation.read", {"presentation_url": "https://docs.google.com/presentation/d/a"}, "get_presentation_outline"),
+        ("file.comments.read", {"id": "file-123"}, "get_file_comments"),
+    ],
+)
+def test_native_google_workspace_maps_to_actual_authenticated_connector(operation, provider_input, tool):
+    bound = {**provider_input, "link_id": "link_account_one"}
+    catalog, payload = request("google_workspace", operation, "current_source_review", bound)
+    payload["target"]["provider_route"] = "google_drive.native"
+    plan = build_session_operation_plan(request=payload, catalog=catalog)
+    assert (plan.provider_kind, plan.provider_name, plan.provider_operation) == ("mcp", "google_drive", tool)
+    assert plan.provider_input == bound
+    assert plan.external_action_authorized is False
+    assert plan.source_ref.startswith(f"mcp://google_drive/{tool}/")
+
+
+def test_native_google_workspace_requires_explicit_account_binding():
+    catalog, payload = request("google_workspace", "drive.search", "current_source_review", {"query": "APEX"})
+    payload["target"]["provider_route"] = "google_drive.native"
+    with pytest.raises(SessionDispatchError, match="link_id"):
+        build_session_operation_plan(request=payload, catalog=catalog)
+
+
+@pytest.mark.parametrize("bad_input", [
+    {"link_id": "link_account_one", "query": "APEX", "permission_override": True},
+    {"link_id": "link_account_one", "query": "APEX", "upload_mode": "delete"},
+])
+def test_native_google_workspace_rejects_unknown_provider_arguments(bad_input):
+    catalog, payload = request("google_workspace", "drive.search", "current_source_review", bad_input)
+    payload["target"]["provider_route"] = "google_drive.native"
+    with pytest.raises(SessionDispatchError, match="unsupported"):
+        build_session_operation_plan(request=payload, catalog=catalog)
+
+
+def test_native_google_workspace_refuses_undeclared_transport():
+    catalog, payload = request("google_workspace", "drive.search", "current_source_review", {"query": "APEX", "link_id": "link_account_one"})
+    payload["target"]["provider_route"] = "google_workspace.magic"
+    with pytest.raises(SessionDispatchError, match="unknown Google Workspace route"):
+        build_session_operation_plan(request=payload, catalog=catalog)
+
+
+def test_native_google_workspace_receipt_contains_digest_not_retrieved_content():
+    catalog, payload = request("google_workspace", "document.read", "current_source_review", {"document_id": "doc-123", "link_id": "link_account_one"})
+    payload["target"]["provider_route"] = "google_drive.native"
+    plan = build_session_operation_plan(request=payload, catalog=catalog)
+    receipt = receipt_from_observation(request=payload, plan=plan, provider_material='{"secret_private_content":"never-persist"}', catalog=catalog, observed_at=NOW)
+    assert receipt["content_sha256"]
+    assert "never-persist" not in str(receipt)
+    assert validate_read_receipt(receipt, catalog, now=NOW).operation == "document.read"
