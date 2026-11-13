@@ -316,3 +316,98 @@ def test_supabase_insert_maps_after_exact_approval_and_single_statement_guard():
     assert plan.provider_name == "supabase"
     assert plan.provider_operation == "execute_sql"
     assert plan.external_action_authorized is True
+
+
+@pytest.mark.parametrize(
+    "operation,file_id,method,readback",
+    [
+        ("document.update", "doc-123", "batch_update_document", "document.read"),
+        ("presentation.update", "slide-123", "batch_update_presentation", "presentation.read"),
+    ],
+)
+def test_native_google_revision_guarded_write_plan(operation, file_id, method, readback):
+    catalog = load_connector_catalog(CATALOG_PATH)
+    id_key = "document_id" if operation == "document.update" else "presentation_id"
+    request = approved_action(
+        action_request_id="action-google-native-write",
+        connector="google_workspace",
+        operation=operation,
+        target={id_key: file_id, "provider_route": "google_drive.native"},
+        provider_input={
+            id_key: file_id,
+            "link_id": "link_account_one",
+            "requests": [{"insertText": {"text": "Safe test fixture"}}],
+            "write_control": {"requiredRevisionId": "revision-42"},
+        },
+        execution_evidence={
+            **approved_action()["execution_evidence"],
+            "operation": f"google_workspace.{operation}",
+        },
+    )
+    plan = build_approved_session_operation_plan(
+        action_request=request, catalog=catalog, now=NOW
+    )
+    assert (plan.provider_kind, plan.provider_name, plan.provider_operation) == (
+        "mcp", "google_drive", method
+    )
+    assert plan.required_readback_operation == readback
+    assert plan.idempotency_key == request["idempotency_key"]
+    assert plan.external_action_authorized is True
+
+
+@pytest.mark.parametrize("change,reason", [
+    ({"write_control": {}}, "requiredRevisionId"),
+    ({"write_control": {"targetRevisionId": "revision-42"}}, "requiredRevisionId"),
+    ({"requests": []}, "non-empty requests"),
+    ({"requests": [{"insertText": {}, "deleteContentRange": {}}]}, "one request type"),
+    ({"document_id": "different-doc"}, "resource identity"),
+    ({"unknown": "surprise"}, "unsupported"),
+    ({"link_id": ""}, "link_id"),
+])
+def test_native_google_document_write_fails_closed(change, reason):
+    catalog = load_connector_catalog(CATALOG_PATH)
+    provider = {
+        "document_id": "doc-123",
+        "link_id": "link_account_one",
+        "requests": [{"insertText": {"text": "Safe test fixture"}}],
+        "write_control": {"requiredRevisionId": "revision-42"},
+    }
+    provider.update(change)
+    request = approved_action(
+        action_request_id="action-google-rejected",
+        connector="google_workspace",
+        operation="document.update",
+        target={"document_id": "doc-123", "provider_route": "google_drive.native"},
+        provider_input=provider,
+        execution_evidence={
+            **approved_action()["execution_evidence"],
+            "operation": "google_workspace.document.update",
+        },
+    )
+    with pytest.raises(ApprovedSessionDispatchError, match=reason):
+        build_approved_session_operation_plan(
+            action_request=request, catalog=catalog, now=NOW
+        )
+
+
+def test_native_google_write_requires_exact_original_approval_scope():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    request = approved_action(
+        connector="google_workspace",
+        operation="document.update",
+        target={"document_id": "doc-123", "provider_route": "google_drive.native"},
+        provider_input={
+            "document_id": "doc-123", "link_id": "link_account_one",
+            "write_control": {"requiredRevisionId": "revision-42"},
+            "requests": [{"insertText": {"text": "Before approval"}}],
+        },
+        execution_evidence={
+            **approved_action()["execution_evidence"],
+            "operation": "google_workspace.document.update",
+        },
+    )
+    request["provider_input"]["requests"][0]["insertText"]["text"] = "After approval"
+    with pytest.raises(ApprovedSessionDispatchError, match="approval scope"):
+        build_approved_session_operation_plan(
+            action_request=request, catalog=catalog, now=NOW
+        )

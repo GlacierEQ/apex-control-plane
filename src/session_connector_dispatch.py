@@ -51,6 +51,95 @@ _GWS_READ_TOOLS: dict[str, tuple[str, str, str]] = {
 }
 
 
+
+# Explicit adapter contracts for the currently installed Google Drive plugin.
+# A declared route is not a proof of permission, connection, success, or readback.
+# Existing gws CLI routing remains available without implicit permission union.
+_NATIVE_GOOGLE_READ_TOOLS: dict[str, tuple[str, frozenset[str], tuple[str, ...]]] = {
+    "drive.search": (
+        "search",
+        frozenset({
+            "query", "topn", "special_filter_query_str", "best_effort_fetch",
+            "fetch_ttl", "require_viewed_by_user", "item_type", "page_token",
+        }),
+        (),
+    ),
+    "drive.metadata.read": (
+        "get_file_metadata",
+        frozenset({
+            "fileId", "fields", "supportsAllDrives", "supportsTeamDrives",
+            "includePermissionsForView", "includeLabels",
+        }),
+        ("fileId",),
+    ),
+    "drive.revisions.read": (
+        "list_file_revisions",
+        frozenset({"fileId", "pageSize", "pageToken"}),
+        ("fileId",),
+    ),
+    "document.read": (
+        "get_document_text",
+        frozenset({"document_id", "document_url", "tab_id"}),
+        (),
+    ),
+    "spreadsheet.read": (
+        "get_spreadsheet_metadata",
+        frozenset({
+            "spreadsheet_id", "spreadsheet_url", "charts_only",
+            "include_conditional_format_rules",
+        }),
+        (),
+    ),
+    "spreadsheet.range.read": (
+        "get_spreadsheet_range",
+        frozenset({
+            "spreadsheet_id", "spreadsheet_url", "sheet_name",
+            "range", "value_render_option",
+        }),
+        ("range", "sheet_name"),
+    ),
+    "presentation.read": (
+        "get_presentation_outline",
+        frozenset({"presentation_url"}),
+        ("presentation_url",),
+    ),
+    "file.comments.read": (
+        "get_file_comments",
+        frozenset({"id", "url", "include_deleted", "page_size", "page_token"}),
+        (),
+    ),
+}
+
+
+def _native_google_read_tool(operation: str, provider_input: Mapping[str, Any]) -> str:
+    """Validate one exact native provider method and account-scoped arguments."""
+    try:
+        tool, allowed, required = _NATIVE_GOOGLE_READ_TOOLS[operation]
+    except KeyError as exc:
+        raise SessionDispatchError(f"no native Google Workspace mapping for {operation}") from exc
+    unexpected = set(provider_input) - allowed - {"link_id"}
+    if unexpected:
+        raise SessionDispatchError(
+            f"unsupported native Google provider arguments: {sorted(unexpected)}"
+        )
+    for name in ("link_id", *required):
+        if name not in provider_input or (
+            provider_input[name] is None and name != "sheet_name"
+        ) or (isinstance(provider_input[name], str) and not provider_input[name].strip()):
+            raise SessionDispatchError(f"native Google provider_input.{name} is required")
+    for op, fields in {
+        "document.read": ("document_id", "document_url"),
+        "spreadsheet.read": ("spreadsheet_id", "spreadsheet_url"),
+        "spreadsheet.range.read": ("spreadsheet_id", "spreadsheet_url"),
+        "file.comments.read": ("id", "url"),
+    }.items():
+        if operation == op and sum(bool(provider_input.get(field)) for field in fields) != 1:
+            raise SessionDispatchError(
+                f"native Google {operation} requires exactly one of {fields}"
+            )
+    return tool
+
+
 @dataclass(frozen=True, slots=True)
 class SessionOperationPlan:
     """One provider read for an authenticated task host to perform directly."""
@@ -123,6 +212,22 @@ def build_session_operation_plan(
     digest = sha256(canonical_json(target).encode("utf-8")).hexdigest()
 
     if connector == "google_workspace":
+        route = target.get("provider_route", "gws")
+        if route == "google_drive.native":
+            method = _native_google_read_tool(operation, provider_input)
+            return SessionOperationPlan(
+                connector=connector,
+                operation=operation,
+                profile=profile,
+                request_id=str(request["request_id"]),
+                provider_kind="mcp",
+                provider_name="google_drive",
+                provider_operation=method,
+                provider_input=provider_input,
+                source_ref=f"mcp://google_drive/{method}/{digest}",
+            )
+        if route != "gws":
+            raise SessionDispatchError(f"unknown Google Workspace route: {route}")
         try:
             service, resource, method = _GWS_READ_TOOLS[operation]
         except KeyError as exc:
