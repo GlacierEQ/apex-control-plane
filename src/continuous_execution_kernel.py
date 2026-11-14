@@ -135,7 +135,11 @@ class ContinuousExecutionKernel:
     def missing_receipts(self, work_id: str) -> tuple[str, ...]:
         item = self.work[work_id]
         present = {r.receipt_kind for r in self.receipts.values() if r.work_id == work_id and r.status.lower() in {"success", "verified", "complete"}}
-        return tuple(kind for kind in item.required_receipts if kind not in present)
+        # An empty receipt configuration must not turn a newly submitted
+        # work item into a completed outcome. Keep verification as the minimal
+        # default rather than interpreting an empty tuple as "no proof needed".
+        required = item.required_receipts or ("verification",)
+        return tuple(kind for kind in required if kind not in present)
 
     def complete(self, work_id: str) -> DurableWork:
         missing = self.missing_receipts(work_id)

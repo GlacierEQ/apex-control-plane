@@ -748,3 +748,25 @@ def test_drain_rejects_cross_item_receipt_without_contaminating_another_item(tmp
     assert cp.work[second.work_id].state is WorkState.COMPLETE
     assert all(not r.details.get("malicious_cross_item") for r in cp.receipts.values())
     assert result["item_results"][0]["status"] == "unconfirmed"
+
+
+def test_unspecified_receipts_cannot_turn_execution_only_into_completion(tmp_path):
+    cp = plane(tmp_path)
+    item = cp.submit_work(
+        mission_id="mission-output-first", correlation_id="corr-output-first",
+        domain="engineering", capability="local.produce", objective="deliver actual artifact",
+        idempotency_key="no-result-only-exit", required_receipt_kinds=(),
+    )
+    result = cp.execute_next_local(
+        worker_id="worker", capabilities=[item.capability], now=NOW,
+        executor=lambda work: ExecutionReceipt(
+            work_id=work.work_id, mission_id=work.mission_id,
+            correlation_id=work.correlation_id, receipt_kind="execution",
+            status="success", source_system="local-process", details={"exit_code": 0},
+        ),
+    )
+    assert result["status"] == "awaiting_receipts"
+    assert result["missing_receipt_kinds"] == ["verification"]
+    assert cp.work[item.work_id].state is WorkState.VERIFYING
+    with pytest.raises(RuntimeError, match="verification"):
+        cp.transition(item.work_id, WorkState.COMPLETE, reason="no final result")

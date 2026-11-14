@@ -459,7 +459,10 @@ class ContinuousControlPlane:
                     r.receipt_kind for r in self.receipts.values()
                     if r.work_id == work_id and r.status.casefold() in {"pass", "passed", "success", "succeeded", "verified"}
                 }
-                missing = sorted(set(current.required_receipt_kinds) - present)
+                # No configured receipt kinds is NOT permission to complete
+                # a work item without any verified output.
+                required = set(current.required_receipt_kinds) or {"verification"}
+                missing = sorted(required - present)
                 if missing:
                     raise RuntimeError("completion denied; missing receipt kinds: " + ", ".join(missing))
             active_lease = target in {WorkState.DISPATCHED, WorkState.EXECUTING}
@@ -666,7 +669,7 @@ class ContinuousControlPlane:
                         reason="local_receipt_identity_reconciled")
         self.transition(item.work_id, WorkState.VERIFYING,
                         reason="validate_local_execution_receipts")
-        required = set(item.required_receipt_kinds)
+        required = set(item.required_receipt_kinds) or {"verification"}
         # Same-run completion requires evidence returned by THIS invocation.
         # Historical receipts remain in the ledger for reconciliation but
         # cannot certify a later unrelated execution.

@@ -72,3 +72,21 @@ def test_expired_lease_reenters_waiting_without_dropping_work():
     assert reconciled.state is ExecutionState.WAITING
     assert reconciled.lease_owner is None
     assert reconciled.work_id == item.work_id
+
+
+def test_default_work_does_not_complete_without_verified_output():
+    kernel = ContinuousExecutionKernel()
+    item = kernel.submit(DurableWork("mission", "corr", "deliver tangible result", "idem-no-output"))
+    with pytest.raises(RuntimeError, match="verification"):
+        kernel.complete(item.work_id)
+    assert kernel.work[item.work_id].state is ExecutionState.RECEIVED
+
+    kernel.record_receipt(ProviderReceipt(
+        item.work_id, "execution", "local-process", "success", provider_receipt_id="exit:0"
+    ))
+    with pytest.raises(RuntimeError, match="verification"):
+        kernel.complete(item.work_id)
+    kernel.record_receipt(ProviderReceipt(
+        item.work_id, "verification", "local-process", "verified", provider_receipt_id="readback:1"
+    ))
+    assert kernel.complete(item.work_id).state is ExecutionState.COMPLETE
