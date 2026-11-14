@@ -91,8 +91,13 @@ def execute_with_recovered_context(
     if requested_facts and not set(requested_facts).issubset(set(recovery.facts)):
         raise GatewayDenied("requested fact_keys were not recovered from this mission")
     # An empty fresh mission has no historical context to apply. A recovered
-    # correction/fact is material even when a caller mislabels the flag false.
-    material = bool(recovery.material_context_found or recovery.corrections or recovery.facts)
+    # correction/fact OR a resumable checkpoint cursor is material even when
+    # a caller mislabels the flag false. Otherwise cursor-only continuity can
+    # bypass application and execute with stale runtime context.
+    if not isinstance(recovery.cursor, str):
+        raise GatewayDenied("recovered cursor must be text")
+    material = bool(recovery.material_context_found or recovery.corrections
+                    or recovery.facts or recovery.cursor.strip())
     application = None
     if material:
         if not callable(apply_context):

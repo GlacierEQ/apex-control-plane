@@ -162,6 +162,35 @@ class SessionGatewayTests(unittest.TestCase):
         self.assertEqual(checkpoint.mission_id, "new-mission")
         self.assertEqual(checkpoint.corrections, ())
 
+    def test_resume_cursor_only_requires_real_context_application(self):
+        from src.apex_session_gateway import execute_with_recovered_context
+        resumed = Recovery("case-A", "spiral-journal:checkpoint", "cursor-7",
+                           (), (), False)
+        with self.assertRaisesRegex(GatewayDenied, "historical context application"):
+            execute_with_recovered_context(
+                journal=resumed, chat_session_id="continued-session",
+                kernel=RecordingKernel(), expected_mission_id="case-A",
+                apply_context=None,
+                execute=lambda _: self.fail("cursor-only resumption bypassed application"),
+            )
+
+        applied = []
+        receipts = []
+        def apply(recovery):
+            applied.append(recovery.cursor)
+            return ContextApplication(recovery.mission_id, recovery.source_ref,
+                                      recovery.cursor, recovery.corrections,
+                                      recovery.facts, "application:cursor-bound")
+
+        result = execute_with_recovered_context(
+            journal=resumed, chat_session_id="continued-session",
+            kernel=RecordingKernel(), expected_mission_id="case-A",
+            apply_context=apply, execute=lambda receipt: receipts.append(receipt) or "applied",
+        )
+        self.assertEqual(result, "applied")
+        self.assertEqual(applied, ["cursor-7"])
+        self.assertEqual(receipts[0].application_ref, "application:cursor-bound")
+
     def test_recovered_correction_cannot_hide_behind_false_material_flag(self):
         from src.apex_session_gateway import execute_with_recovered_context
         mislabeled = Recovery("case-A", "original:user:middle", "cursor-7",
