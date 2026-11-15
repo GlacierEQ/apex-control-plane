@@ -22,6 +22,15 @@ class ResumeError(ValueError):
     """Invalid or unreconcilable mission recovery state."""
 
 
+def _validated_native_receipt(value: Any) -> str | None:
+    """Require the adapter to return a nonblank reference, not a tool status."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ResumeError("provider readback requires a nonblank receipt reference")
+    return value
+
+
 def _canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -167,7 +176,7 @@ class MissionCheckpointStore:
         unreadable: set[str] = set()
         for row in snapshots:
             try:
-                native_receipt = readback(row['key'], row['expected'])
+                native_receipt = _validated_native_receipt(readback(row['key'], row['expected']))
             except Exception:
                 # Failure is local to this provider/task. Never dispatch a READY task
                 # when its live provider state cannot be checked; other lanes continue.
@@ -299,7 +308,7 @@ class MissionCheckpointStore:
         ):
             raise ResumeError("provider guarantee mismatch or missing native evidence")
         try:
-            native_receipt = readback(row["key"], row["expected"])
+            native_receipt = _validated_native_receipt(readback(row["key"], row["expected"]))
         except Exception as exc:
             raise ResumeError("provider readback unavailable: ambiguous claim unchanged") from exc
         with self._connect() as c:
