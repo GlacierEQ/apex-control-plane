@@ -44,6 +44,13 @@ _GOOGLE_NATIVE_WRITE_TOOLS: dict[str, tuple[str, str, str]] = {
 }
 
 
+def _native_google_text(value: Any, name: str) -> str:
+    """Reject malformed provider identifiers instead of coercing objects to text."""
+    if not isinstance(value, str) or not value.strip():
+        raise ApprovedSessionDispatchError(f"{name} must be a non-empty string")
+    return value.strip()
+
+
 def _native_google_write_method(action: ApprovedConnectorAction) -> tuple[str, str]:
     """Require a single provider resource, exact scoped request and CAS revision."""
     try:
@@ -60,8 +67,13 @@ def _native_google_write_method(action: ApprovedConnectorAction) -> tuple[str, s
         raise ApprovedSessionDispatchError(
             f"unsupported native Google write arguments: {sorted(unexpected)}"
         )
-    _required_text(args.get("link_id"), "native Google link_id")
-    resource_id = _required_text(args.get(resource_key), f"native Google {resource_key}")
+    link_id = _native_google_text(args.get("link_id"), "native Google link_id")
+    target_link_id = action.target.get("link_id")
+    if target_link_id is not None and (
+        not isinstance(target_link_id, str) or target_link_id != link_id
+    ):
+        raise ApprovedSessionDispatchError("native Google account identity mismatch")
+    resource_id = _native_google_text(args.get(resource_key), f"native Google {resource_key}")
     if resource_id != action.target.get(resource_key):
         raise ApprovedSessionDispatchError("native Google resource identity mismatch")
     requests = args.get("requests")
@@ -77,8 +89,8 @@ def _native_google_write_method(action: ApprovedConnectorAction) -> tuple[str, s
         raise ApprovedSessionDispatchError(
             "native Google requires write_control.requiredRevisionId only"
         )
-    _required_text(controls.get("requiredRevisionId"),
-                   "native Google write_control.requiredRevisionId")
+    _native_google_text(controls.get("requiredRevisionId"),
+                        "native Google write_control.requiredRevisionId")
     if "image_uris" in args and not (
         isinstance(args["image_uris"], list)
         and all(isinstance(item, str) and item.strip() for item in args["image_uris"])
