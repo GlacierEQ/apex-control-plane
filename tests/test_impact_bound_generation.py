@@ -13,6 +13,7 @@ from impact_bound_generation import (  # noqa: E402
     ImpactBoundGenerationViolation,
     IMPACT_FEATURE_NAMES,
 )
+from continuous_impact_selection import ImpactAttempt  # noqa: E402
 
 
 BOUND_CLASS = "repair_runtime_selection"
@@ -121,6 +122,9 @@ def test_proposal_output_never_becomes_action_without_selection() -> None:
 
     assert turn.decision.selected_candidate_id == "wire-selection"
     assert turn.output["content"] == "executed selected operation"
+    # A response claiming execution cannot self-certify a provider side effect.
+    assert turn.native_effect is None
+    assert turn.native_verified is False
     frames = [
         row
         for row in seen_execution_messages
@@ -305,3 +309,112 @@ def test_all_operation_class_drift_fails_before_execution() -> None:
         )
 
     assert executed == []
+
+
+def _native_attempt(decision, *, candidate_id=None, stage="VERIFIED_MATERIAL_DELTA"):
+    return ImpactAttempt(
+        mission_sha256=decision.mission_sha256,
+        candidate_id=candidate_id or decision.selected_candidate_id,
+        method_id="provider-dispatch-with-reservation",
+        source_state_ref="github:blob:before",
+        stage=stage,
+        provider_ref="github:commit:after",
+        after_state_ref="github:blob:after",
+        readback_ref="github:readback:after",
+        source_class="source_native",
+    )
+
+
+def test_effectful_turn_fails_preflight_without_both_native_callbacks() -> None:
+    seen = []
+    def never_propose(messages):
+        seen.append(messages)
+        return _proposal_model(messages)
+
+    with pytest.raises(ImpactBoundGenerationViolation, match="requires native execution"):
+        ImpactBoundGenerationHost().run_turn(
+            task_id="real-effect", mission="change provider state",
+            operation_class=BOUND_CLASS, state_version="source:before",
+            base_messages=(), propose=never_propose, evaluate=_evaluation_model,
+            execute=lambda _: {"content": "not allowed"},
+            require_native_effect=True,
+        )
+    assert not seen
+
+
+def test_verified_native_effect_is_proven_before_model_describes_result() -> None:
+    seen = []
+    calls = []
+    def perform(decision):
+        calls.append(("perform", decision.selected_candidate_id))
+        return _native_attempt(decision)
+
+    def verify(receipt):
+        calls.append(("readback", receipt.provider_ref))
+        return receipt.readback_ref == "github:readback:after"
+
+    def execute(messages):
+        calls.append(("respond", None))
+        seen.extend(messages)
+        return {"content": "provider delta confirmed; mission still open"}
+
+    turn = ImpactBoundGenerationHost().run_turn(
+        task_id="native-effect", mission="repair a real provider",
+        operation_class=BOUND_CLASS, state_version="source:before",
+        base_messages=(), propose=_proposal_model, evaluate=_evaluation_model,
+        execute=execute, require_native_effect=True,
+        perform_selected=perform, verify_native_readback=verify,
+    )
+    assert turn.decision.selected_candidate_id == "wire-selection"
+    assert turn.native_verified is True
+    assert turn.native_effect is not None
+    assert turn.native_effect.stage == "VERIFIED_MATERIAL_DELTA"
+    assert [name for name, _ in calls] == ["perform", "readback", "respond"]
+    proofs = [message for message in seen if message.get("type") == "verified_native_effect"]
+    assert len(proofs) == 1
+    evidence = json.loads(proofs[0]["content"])
+    assert evidence["provider_ref"] == "github:commit:after"
+    assert evidence["mission_complete"] is False
+
+
+def test_wrong_native_receipt_cannot_be_passed_to_response_model() -> None:
+    called = []
+    with pytest.raises(ImpactBoundGenerationViolation, match="does not match selected"):
+        ImpactBoundGenerationHost().run_turn(
+            task_id="wrong-native", mission="repair runtime",
+            operation_class=BOUND_CLASS, state_version="source:before",
+            base_messages=(), propose=_proposal_model, evaluate=_evaluation_model,
+            execute=lambda _: called.append("respond") or {"content": "done"},
+            require_native_effect=True,
+            perform_selected=lambda decision: _native_attempt(decision, candidate_id="more-rules"),
+            verify_native_readback=lambda _: called.append("readback") or True,
+        )
+    assert not called
+
+
+def test_failed_provider_readback_cannot_generate_success_response() -> None:
+    called = []
+    with pytest.raises(ImpactBoundGenerationViolation, match="not independently verified"):
+        ImpactBoundGenerationHost().run_turn(
+            task_id="readback-failed", mission="repair runtime",
+            operation_class=BOUND_CLASS, state_version="source:before",
+            base_messages=(), propose=_proposal_model, evaluate=_evaluation_model,
+            execute=lambda _: called.append("respond") or {"content": "done"},
+            require_native_effect=True,
+            perform_selected=_native_attempt,
+            verify_native_readback=lambda _: False,
+        )
+    assert not called
+
+
+def test_material_delta_cannot_be_invented_from_blocked_provider_attempt() -> None:
+    with pytest.raises(ImpactBoundGenerationViolation, match="no independently verified effect"):
+        ImpactBoundGenerationHost().run_turn(
+            task_id="blocked-native", mission="repair runtime",
+            operation_class=BOUND_CLASS, state_version="source:before",
+            base_messages=(), propose=_proposal_model, evaluate=_evaluation_model,
+            execute=lambda _: {"content": "done"},
+            require_native_effect=True,
+            perform_selected=lambda decision: _native_attempt(decision, stage="BLOCKED"),
+            verify_native_readback=lambda _: True,
+        )
