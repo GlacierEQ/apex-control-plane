@@ -411,3 +411,77 @@ def test_native_google_write_requires_exact_original_approval_scope():
         build_approved_session_operation_plan(
             action_request=request, catalog=catalog, now=NOW
         )
+
+@pytest.mark.parametrize(
+    ("field", "invalid", "reason"),
+    [
+        ("link_id", {"unexpected": "object"}, "link_id"),
+        ("link_id", 123, "link_id"),
+        ("document_id", ["doc-123"], "document_id"),
+        ("write_control", {"requiredRevisionId": 42}, "requiredRevisionId"),
+    ],
+)
+def test_native_google_write_rejects_non_string_provider_identifiers(field, invalid, reason):
+    catalog = load_connector_catalog(CATALOG_PATH)
+    provider_input = {
+        "document_id": "doc-123",
+        "link_id": "link_account_one",
+        "requests": [{"insertText": {"text": "Hello"}}],
+        "write_control": {"requiredRevisionId": "revision-42"},
+    }
+    provider_input[field] = invalid
+    request = approved_action(
+        connector="google_workspace",
+        operation="document.update",
+        target={"document_id": "doc-123", "link_id": "link_account_one", "provider_route": "google_drive.native"},
+        provider_input=provider_input,
+        execution_evidence={
+            **approved_action()["execution_evidence"],
+            "operation": "google_workspace.document.update",
+        },
+    )
+    with pytest.raises(ApprovedSessionDispatchError, match=reason):
+        build_approved_session_operation_plan(action_request=request, catalog=catalog, now=NOW)
+
+
+def test_native_google_write_rejects_wrong_account_even_with_valid_action_scope():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    request = approved_action(
+        connector="google_workspace",
+        operation="document.update",
+        target={"document_id": "doc-123", "link_id": "link_account_two", "provider_route": "google_drive.native"},
+        provider_input={
+            "document_id": "doc-123",
+            "link_id": "link_account_one",
+            "requests": [{"insertText": {"text": "Hello"}}],
+            "write_control": {"requiredRevisionId": "revision-42"},
+        },
+        execution_evidence={
+            **approved_action()["execution_evidence"],
+            "operation": "google_workspace.document.update",
+        },
+    )
+    with pytest.raises(ApprovedSessionDispatchError, match="account identity mismatch"):
+        build_approved_session_operation_plan(action_request=request, catalog=catalog, now=NOW)
+
+
+def test_native_google_write_accepts_matching_account_and_resource_binding():
+    catalog = load_connector_catalog(CATALOG_PATH)
+    request = approved_action(
+        connector="google_workspace",
+        operation="document.update",
+        target={"document_id": "doc-123", "link_id": "link_account_one", "provider_route": "google_drive.native"},
+        provider_input={
+            "document_id": "doc-123",
+            "link_id": "link_account_one",
+            "requests": [{"insertText": {"text": "Hello"}}],
+            "write_control": {"requiredRevisionId": "revision-42"},
+        },
+        execution_evidence={
+            **approved_action()["execution_evidence"],
+            "operation": "google_workspace.document.update",
+        },
+    )
+    plan = build_approved_session_operation_plan(action_request=request, catalog=catalog, now=NOW)
+    assert plan.provider_input["link_id"] == request["target"]["link_id"]
+    assert plan.required_readback_operation == "document.read"
