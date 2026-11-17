@@ -26,6 +26,7 @@ from src.spiral_live_journal import (
     resume_authenticated_chat_in_apex,
 )
 from src.spiral_chat_handoff import recover_existing_chat_session
+from src.continuity_action_gate import execute_recovered_action
 
 def fail(reason):
     raise ValueError(reason)
@@ -141,6 +142,8 @@ def main():
     read.add_argument("--session-id", required=True)
     admit = sub.add_parser("admit", help="Recover authenticated journal and admit context into a real APEX runtime kernel")
     admit.add_argument("--session-id", required=True)
+    dispatch = sub.add_parser("dispatch", help="Authenticated recovery followed by a registered downstream read-only action")
+    dispatch.add_argument("--session-id", required=True)
     for action in ("correct", "checkpoint", "fact"):
         s = sub.add_parser(action)
         if action == "correct":
@@ -191,7 +194,7 @@ def main():
     for folder in folders.values():
         secure_dir(folder)
     # Stable owner-only file lock covers authenticated read, append, and head update.
-    with mission_lock(paths["lock"], read_only=(args.command in ("recover", "admit"))):
+    with mission_lock(paths["lock"], read_only=(args.command in ("recover", "admit", "dispatch"))):
         manifest = json.loads(read_bytes(paths["manifest"]))
         anchor = json.loads(read_bytes(paths["anchor"]))
         secret = read_bytes(paths["key"])
@@ -255,12 +258,12 @@ def main():
             return
         journal, recovery = open_authenticated_chat(
             paths["journal"], spiral_source_root=args.spiral_root, 
-            chat_session_id=(args.session_id if args.command in ("recover", "admit") else "bridge-update"),
+            chat_session_id=(args.session_id if args.command in ("recover", "admit", "dispatch") else "bridge-update"),
             mission_id=args.mission_id, objective=manifest["objective"],
             terminal_outcome=manifest["terminal_outcome"],
             integrity_key=secret, expected_head=anchor["head"]
         )
-        if args.command in ("recover", "admit"):
+        if args.command in ("recover", "admit", "dispatch"):
             verified_fact_keys = tuple(dict.fromkeys(
                 event["data"]["key"] for event in journal.events
                 if event["kind"] in ("verified_fact", "superseded_fact")
@@ -276,6 +279,36 @@ def main():
                     "corrections":recovery.corrections, "facts":recovery.facts,
                     "requires_actual_action_application":True,
                     "automatic_chatgpt_host_hook_verified":False
+                }, indent=2))
+                return
+            if args.command == "dispatch":
+                # Only a pre-registered, non-mutating operation is exposed here.
+                # This callback consumes actual recovered state and produces a
+                # verifiable continuation plan, never an external side effect.
+                def continue_from_cursor(state):
+                    return {
+                        "next_cursor": state.cursor,
+                        "binding": state.source_ref,
+                        "instructions_to_apply": list(state.corrections),
+                        "verified_facts": state.facts,
+                        "objective": state.objective,
+                    }
+                receipt = execute_recovered_action(
+                    recovery,
+                    expected_mission_id=args.mission_id,
+                    expected_source_ref="spiral-journal:" + anchor["head"],
+                    registry={"continue": continue_from_cursor},
+                )
+                print(json.dumps({
+                    "status": "RECOVERED_ACTION_DISPATCHED",
+                    "mission_id": receipt.mission_id,
+                    "head": anchor["head"],
+                    "action_name": receipt.action_name,
+                    "cursor": receipt.cursor,
+                    "result": receipt.result,
+                    "downstream_action_executed": True,
+                    "external_side_effect_executed": False,
+                    "automatic_chatgpt_host_hook_verified": False,
                 }, indent=2))
                 return
             kernel = create_verified_runtime_kernel()
