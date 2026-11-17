@@ -188,11 +188,19 @@ def _provider_outcome(result: Any) -> tuple[str, str | None]:
     if result is True:
         return "success", None
     if isinstance(result, Mapping):
+        # Inspect both provider status fields. A wrapper may report a generic
+        # status while its underlying operation is still running in "state".
+        # Pending evidence takes precedence over negative completion flags to
+        # prevent replay of a potentially active side effect.
+        states = {
+            str(result.get(key) or "").strip().lower()
+            for key in ("status", "state")
+        }
         state = str(result.get("status") or result.get("state") or "").strip().lower()
         # An asynchronous state is evidence that work may already be running.
         # Some provider adapters set ok=False until completion; interpreting
         # that flag as definitive failure would replay a live side effect.
-        if state in {"queued", "pending", "accepted", "submitted", "scheduled", "running", "processing", "in_progress"}:
+        if states & {"queued", "pending", "accepted", "submitted", "scheduled", "running", "processing", "in_progress"}:
             return "pending", None
         if result.get("ok") is False or result.get("success") is False:
             return "failed", str(result.get("error") or state or "provider_reported_failure")
