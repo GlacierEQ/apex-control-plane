@@ -293,11 +293,29 @@ def main():
                         "verified_facts": state.facts,
                         "objective": state.objective,
                     }
+                def inspect_recovered_fact(state):
+                    # A persisted inspect:<fact-key> cursor selects a sourced fact.
+                    # No inferred or unsourced fact is permitted as a fallback.
+                    key = state.cursor.partition(":")[2]
+                    if not key or key not in state.facts:
+                        fail("requested verified fact is not present in recovered context")
+                    fact = state.facts[key]
+                    if not isinstance(fact, dict) or not fact.get("source"):
+                        fail("recovered fact has no provenance")
+                    return {
+                        "key": key,
+                        "fact": fact,
+                        "binding": state.source_ref,
+                        "instructions_to_apply": list(state.corrections),
+                    }
                 receipt = execute_recovered_action(
                     recovery,
                     expected_mission_id=args.mission_id,
                     expected_source_ref="spiral-journal:" + anchor["head"],
-                    registry={"continue": continue_from_cursor},
+                    registry={
+                        "continue": continue_from_cursor,
+                        "inspect": inspect_recovered_fact,
+                    },
                 )
                 print(json.dumps({
                     "status": "RECOVERED_ACTION_DISPATCHED",
