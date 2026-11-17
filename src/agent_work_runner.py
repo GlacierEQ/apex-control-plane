@@ -33,7 +33,8 @@ def run_work_unit(
     if timeout_seconds <= 0:
         raise ValueError("timeout must be positive")
 
-    command_identity = hashlib.sha256(json.dumps(command, ensure_ascii=False).encode("utf-8")).hexdigest()\n    workload = Workload(workload_id, objective + " [argv-sha256:" + command_identity + "]", frozenset({"local_process"}))
+    command_identity = hashlib.sha256(json.dumps(command, ensure_ascii=False).encode("utf-8")).hexdigest()
+    workload = Workload(workload_id, objective + " [argv-sha256:" + command_identity + "]", frozenset({"local_process"}))
     observation = SubstrateObservation(
         name="local_process",
         capabilities=frozenset({"local_process"}),
