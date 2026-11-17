@@ -327,6 +327,13 @@ def main():
             paths["journal"], spiral_source_root=args.spiral_root, chat_session_id="bridge-write-readback",
             mission_id=args.mission_id, objective=manifest["objective"],
             terminal_outcome=manifest["terminal_outcome"], integrity_key=secret, expected_head=new_head)
+        # Verify the independently persisted anchor as well as the authenticated
+        # journal before acknowledging a mutation to the caller.
+        persisted_anchor = json.loads(read_bytes(paths["anchor"]))
+        if persisted_anchor != {"mission_id": args.mission_id, "head": new_head}:
+            fail("updated anchor readback does not match authenticated journal")
+        if proof.source_ref != "spiral-journal:" + new_head:
+            fail("mutation readback is not source-matched")
         print(json.dumps({"status":"VERIFIED_UPDATE", "mission_id":proof.mission_id,
                           "head":new_head, "cursor":proof.cursor, "corrections_count":len(proof.corrections)}))
 
