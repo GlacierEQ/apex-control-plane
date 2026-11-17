@@ -243,7 +243,15 @@ class DynamicExecutionFabric:
                 ),
             )
         )
-        eligible = [item for item in ranked if item.eligible]
+        # A registry may emit multiple observations for the same substrate.
+        # Keep its best-ranked candidate once: duplicate entries must never
+        # turn a single provider into its own fallback after a failure.
+        seen_substrates: set[str] = set()
+        eligible = []
+        for item in ranked:
+            if item.eligible and item.substrate not in seen_substrates:
+                seen_substrates.add(item.substrate)
+                eligible.append(item)
         selected = eligible[0].substrate if eligible else None
         fallbacks = tuple(item.substrate for item in eligible[1:])
         return RoutePlan(
