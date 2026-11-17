@@ -97,6 +97,13 @@ def replace_anchor(path, content):
             h.flush()
             os.fsync(h.fileno())
         os.replace(name, path)
+        # Persist the directory entry as well as the file bytes. Without this,
+        # a power loss after a successful rename can lose the independent head.
+        dir_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     finally:
         if os.path.exists(name):
             os.unlink(name)
