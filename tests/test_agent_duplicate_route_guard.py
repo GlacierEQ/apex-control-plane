@@ -23,6 +23,8 @@ def test_duplicate_observations_are_not_fallback_routes():
     plan = fabric.plan(workload, observations)
     assert plan.selected == "primary"
     assert plan.fallbacks == ("secondary",)
+    assert tuple(route.substrate for route in plan.routes if route.eligible) == ("primary", "secondary")
+    assert len(plan.routes) == len({route.substrate for route in plan.routes})
 
     calls = []
 
@@ -56,3 +58,20 @@ def test_duplicate_observations_do_not_repeat_failed_only_provider():
     assert result.status == "route_exhausted"
     assert result.attempted == ("single",)
     assert calls == ["single"]
+
+
+def test_ineligible_duplicate_observations_remain_unique_in_diagnostics():
+    now = datetime(2026, 11, 17, tzinfo=UTC)
+    workload = Workload("dedup-3", "preserve diagnostics", frozenset({"execute"}))
+    unavailable = SubstrateObservation(
+        "offline", frozenset({"execute"}), "unavailable", 0.0,
+        False, False, False, False, now,
+    )
+    plan = DynamicExecutionFabric(now=lambda: now).plan(
+        workload, [unavailable, unavailable],
+    )
+    assert plan.selected is None
+    assert plan.execution_state == "no_current_route"
+    assert len(plan.routes) == 1
+    assert plan.routes[0].substrate == "offline"
+    assert plan.routes[0].eligible is False
