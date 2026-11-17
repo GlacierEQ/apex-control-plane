@@ -247,11 +247,13 @@ class DynamicExecutionFabric:
         # Keep its best-ranked candidate once: duplicate entries must never
         # turn a single provider into its own fallback after a failure.
         seen_substrates: set[str] = set()
-        eligible = []
+        unique_routes: list[RouteCandidate] = []
         for item in ranked:
-            if item.eligible and item.substrate not in seen_substrates:
-                seen_substrates.add(item.substrate)
-                eligible.append(item)
+            if item.substrate in seen_substrates:
+                continue
+            seen_substrates.add(item.substrate)
+            unique_routes.append(item)
+        eligible = [item for item in unique_routes if item.eligible]
         selected = eligible[0].substrate if eligible else None
         fallbacks = tuple(item.substrate for item in eligible[1:])
         return RoutePlan(
@@ -259,7 +261,7 @@ class DynamicExecutionFabric:
             objective=workload.objective,
             selected=selected,
             fallbacks=fallbacks,
-            routes=ranked,
+            routes=tuple(unique_routes),
             execution_state="routable" if selected else "no_current_route",
         )
 
