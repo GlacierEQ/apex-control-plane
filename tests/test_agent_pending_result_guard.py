@@ -49,3 +49,27 @@ def test_explicit_terminal_failure_still_allows_fallback():
     assert result.ok is True
     assert result.attempted == ("primary", "secondary")
     assert calls == ["primary", "secondary"]
+
+
+@pytest.mark.parametrize("wrapper_status", ["unknown", "failed", "error"])
+@pytest.mark.parametrize("underlying_state", ["queued", "running", "in_progress"])
+def test_underlying_pending_state_blocks_fallback_despite_wrapper_status(wrapper_status, underlying_state):
+    fabric = DynamicExecutionFabric(now=lambda: NOW)
+    work = Workload("nested-pending-guard", "avoid replay across wrappers", frozenset({"execute"}))
+    calls = []
+
+    def executor(provider, _work):
+        calls.append(provider)
+        return {
+            "status": wrapper_status,
+            "state": underlying_state,
+            "ok": False,
+            "job_id": "active-456",
+        }
+
+    result = fabric.execute(work, [observation("primary", 0.99), observation("secondary", 0.8)], executor)
+    assert result.status == "pending"
+    assert result.ok is False
+    assert result.attempted == ("primary",)
+    assert result.result["job_id"] == "active-456"
+    assert calls == ["primary"]
