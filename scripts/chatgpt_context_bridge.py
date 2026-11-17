@@ -241,6 +241,10 @@ def main():
             )
             if verified.source_ref != "spiral-journal:" + candidate_head:
                 fail("reconciliation readback is not source-matched")
+            # Reopen the persisted anchor, not only the authenticated journal.
+            persisted_anchor = json.loads(read_bytes(paths["anchor"]))
+            if persisted_anchor != {"mission_id": args.mission_id, "head": candidate_head}:
+                fail("reconciled anchor readback does not match authenticated journal")
             print(json.dumps({
                 "status": "VERIFIED_RECONCILED" if appended else "VERIFIED_UNCHANGED",
                 "mission_id": verified.mission_id, "previous_head": previous_head,
