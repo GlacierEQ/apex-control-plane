@@ -189,12 +189,15 @@ def _provider_outcome(result: Any) -> tuple[str, str | None]:
         return "success", None
     if isinstance(result, Mapping):
         state = str(result.get("status") or result.get("state") or "").strip().lower()
+        # An asynchronous state is evidence that work may already be running.
+        # Some provider adapters set ok=False until completion; interpreting
+        # that flag as definitive failure would replay a live side effect.
+        if state in {"queued", "pending", "accepted", "submitted", "scheduled", "running", "processing", "in_progress"}:
+            return "pending", None
         if result.get("ok") is False or result.get("success") is False:
             return "failed", str(result.get("error") or state or "provider_reported_failure")
         if state in {"failed", "failure", "error", "denied", "rejected", "cancelled", "canceled", "unavailable", "timed_out"}:
             return "failed", str(result.get("error") or state)
-        if state in {"queued", "pending", "accepted", "submitted", "scheduled", "running", "processing", "in_progress"}:
-            return "pending", None
         if result.get("error"):
             return "failed", str(result["error"])
         if state in {"success", "succeeded", "complete", "completed", "verified", "passed", "pass", "ok"} or result.get("ok") is True or result.get("success") is True:
