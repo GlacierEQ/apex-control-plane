@@ -9,10 +9,10 @@ Static policy defines invariants. Live observations decide the route.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from math import isfinite
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from math import isfinite
 from typing import Any, Callable, FrozenSet, Iterable, Sequence
 
 
