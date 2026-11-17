@@ -108,6 +108,14 @@ def replace_anchor(path, content):
         if os.path.exists(name):
             os.unlink(name)
 
+def sync_directory(path):
+    """Persist newly created mission entries before reporting initialization."""
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
 def locations(base, mission):
     slug = hashlib.sha256(mission.encode()).hexdigest()[:32]
     folders = {k: base / k for k in ("journals", "keys", "anchors", "manifests")}
@@ -171,6 +179,12 @@ def main():
         }))
         exclusive_bytes(paths["anchor"], json_bytes({"mission_id": args.mission_id, "head": head}))
         exclusive_bytes(paths["lock"], b"")
+        # Persist every newly created mission entry and its parent directory.
+        # An acknowledged init must not lose its key, journal, manifest or head
+        # merely because their directory entries were not synced.
+        for folder in folders.values():
+            sync_directory(folder)
+        sync_directory(base)
         print(json.dumps({"status":"CREATED", "mission_id":args.mission_id, "head":head}))
         return
     secure_dir(base)
