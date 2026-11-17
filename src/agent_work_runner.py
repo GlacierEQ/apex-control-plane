@@ -10,6 +10,7 @@ Commands are explicit local operator-provided work units, not model-generated sh
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from datetime import UTC, datetime
@@ -32,7 +33,7 @@ def run_work_unit(
     if timeout_seconds <= 0:
         raise ValueError("timeout must be positive")
 
-    workload = Workload(workload_id, objective, frozenset({"local_process"}))
+    command_identity = hashlib.sha256(json.dumps(command, ensure_ascii=False).encode("utf-8")).hexdigest()\n    workload = Workload(workload_id, objective + " [argv-sha256:" + command_identity + "]", frozenset({"local_process"}))
     observation = SubstrateObservation(
         name="local_process",
         capabilities=frozenset({"local_process"}),
