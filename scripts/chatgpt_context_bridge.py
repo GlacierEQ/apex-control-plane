@@ -115,6 +115,7 @@ def main():
     create = sub.add_parser("init")
     create.add_argument("--objective", required=True)
     create.add_argument("--outcome", required=True)
+    sub.add_parser("reconcile", help="Repair interrupted anchor update only for an HMAC-validated journal descendant")
     read = sub.add_parser("recover")
     read.add_argument("--session-id", required=True)
     for action in ("correct", "checkpoint", "fact"):
@@ -167,6 +168,58 @@ def main():
         secret = read_bytes(paths["key"])
         if manifest.get("mission_id") != args.mission_id or anchor.get("mission_id") != args.mission_id:
             fail("mission identity mismatch")
+        if args.command == "reconcile":
+            # A process can fsync an authenticated append, then exit before the
+            # separate anchor rename. Recover that exact interrupted forward
+            # transition, never a rollback, fork, fabricated mission or unauthenticated
+            # journal. The prior anchored head remains the trust root.
+            previous_head = anchor.get("head")
+            if (not isinstance(previous_head, str) or len(previous_head) != 64
+                    or any(ch not in "0123456789abcdef" for ch in previous_head)):
+                fail("independently anchored revision is invalid")
+            # Candidate head is untrusted until validated by the ORIGINAL
+            # upstream Spiral HMAC chain and its protected journal reader.
+            raw = read_bytes(paths["journal"])
+            lines = raw.splitlines()
+            if not lines:
+                fail("cannot reconcile an empty journal")
+            candidate_head = json.loads(lines[-1]).get("sha256")
+            if not isinstance(candidate_head, str):
+                fail("journal candidate head is invalid")
+            journal, proof = open_authenticated_chat(
+                paths["journal"], spiral_source_root=args.spiral_root,
+                chat_session_id="bridge-forward-reconcile",
+                mission_id=args.mission_id, objective=manifest["objective"],
+                terminal_outcome=manifest["terminal_outcome"],
+                integrity_key=secret, expected_head=candidate_head,
+            )
+            observed_heads = tuple(event["sha256"] for event in journal.events)
+            if previous_head not in observed_heads:
+                fail("anchored revision is not an ancestor of authenticated journal")
+            appended = len(observed_heads) - 1 - observed_heads.index(previous_head)
+            if appended:
+                replace_anchor(paths["anchor"], {
+                    "mission_id": args.mission_id, "head": candidate_head,
+                })
+            # A separate authenticated readback confirms the actual durable head,
+            # not simply a successful rename or a previously held object.
+            _, verified = open_authenticated_chat(
+                paths["journal"], spiral_source_root=args.spiral_root,
+                chat_session_id="bridge-forward-readback",
+                mission_id=args.mission_id, objective=manifest["objective"],
+                terminal_outcome=manifest["terminal_outcome"],
+                integrity_key=secret, expected_head=candidate_head,
+            )
+            if verified.source_ref != "spiral-journal:" + candidate_head:
+                fail("reconciliation readback is not source-matched")
+            print(json.dumps({
+                "status": "VERIFIED_RECONCILED" if appended else "VERIFIED_UNCHANGED",
+                "mission_id": verified.mission_id, "previous_head": previous_head,
+                "head": candidate_head, "authenticated_events_recovered": appended,
+                "session_id": verified.chat_session_id,
+                "automatic_chatgpt_host_hook_verified": False,
+            }))
+            return
         journal, recovery = open_authenticated_chat(
             paths["journal"], spiral_source_root=args.spiral_root, 
             chat_session_id=(args.session_id if args.command == "recover" else "bridge-update"),
