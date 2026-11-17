@@ -37,7 +37,7 @@ def secure_dir(path, *, create=False):
     fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         info = os.fstat(fd)
-        if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077:
+        if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077 or info.st_uid != os.geteuid():
             fail("expected owner-private directory: " + str(path))
     finally:
         os.close(fd)
@@ -58,7 +58,7 @@ def read_bytes(path):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     try:
         info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077:
+        if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077 or info.st_uid != os.geteuid():
             fail("required owner-private regular file: " + str(path))
         with os.fdopen(fd, "rb") as handle:
             fd = -1
@@ -72,7 +72,7 @@ def mission_lock(path, *, read_only):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     try:
         info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077:
+        if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077 or info.st_uid != os.geteuid():
             fail("insecure continuity lock")
         fcntl.flock(fd, fcntl.LOCK_SH if read_only else fcntl.LOCK_EX)
         try:
