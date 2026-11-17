@@ -278,11 +278,24 @@ class DynamicExecutionFabric:
             try:
                 result = executor(substrate, workload)
             except Exception as exc:
+                # The executor may have committed a side effect before raising.
+                # Replaying on another provider can duplicate irreversible work.
+                # Require reconciliation instead of assuming an exception means
+                # that no operation occurred.
                 failures.append({
                     "substrate": substrate,
                     "error": str(exc),
                 })
-                continue
+                return ExecutionResult(
+                    ok=False,
+                    status="unconfirmed",
+                    workload_id=workload.workload_id,
+                    objective=workload.objective,
+                    substrate=substrate,
+                    attempted=tuple(attempted),
+                    failures=tuple(failures),
+                    mission_state="unchanged",
+                )
             outcome, reason = _provider_outcome(result)
             if outcome == "failed":
                 failures.append({
