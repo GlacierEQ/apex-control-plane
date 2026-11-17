@@ -10,6 +10,7 @@ Static policy defines invariants. Live observations decide the route.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any, Callable, FrozenSet, Iterable, Sequence
@@ -65,7 +66,7 @@ class SubstrateObservation:
             ("cost_score", self.cost_score),
             ("latency_score", self.latency_score),
         ):
-            if not 0.0 <= value <= 1.0:
+            if not isfinite(value) or not 0.0 <= value <= 1.0:
                 raise ValueError(f"{field_name} must be between 0 and 1")
 
 
