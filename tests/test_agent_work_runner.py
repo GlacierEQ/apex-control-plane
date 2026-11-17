@@ -39,3 +39,14 @@ def test_cli_prints_json_and_executes(tmp_path, capsys):
     ])
     assert code == 0
     assert '"state": "succeeded"' in capsys.readouterr().out
+
+
+def test_same_workload_id_cannot_run_different_command(tmp_path):
+    import pytest
+
+    db = tmp_path / "identity.sqlite"
+    first = [sys.executable, "-c", "print('first')"]
+    second = [sys.executable, "-c", "print('second')"]
+    assert run_work_unit(db, "identity-1", "same description", first)["state"] == "succeeded"
+    with pytest.raises(ValueError, match="different objective"):
+        run_work_unit(db, "identity-1", "same description", second)
