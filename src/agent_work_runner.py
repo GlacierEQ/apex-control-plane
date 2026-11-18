@@ -115,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     if args.readback:
-        record = DurableAgentExecutor(args.database).readback(args.workload_id)
+        record = DurableAgentExecutor.inspect(args.database, args.workload_id)
         print(json.dumps(record, sort_keys=True))
         return 0 if record is not None else 1
     if not args.objective or not args.command:
