@@ -355,6 +355,7 @@ def main():
                     "mission_id": receipt.mission_id,
                     "head": anchor["head"],
                     "action_name": receipt.action_name,
+                    "session_id": recovery.chat_session_id,
                     "apex_runtime_id": snapshot.runtime_id,
                     "apex_phase": snapshot.phase,
                     "apex_receipt_kinds": list(snapshot.receipt_kinds),
