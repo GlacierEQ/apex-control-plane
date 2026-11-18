@@ -169,7 +169,7 @@ def test_rejects_empty_page_after_advertised_full_page():
         calls.append(request)
         if len(calls) == 1:
             return RangeResponse(request.full_url, [node("A")], "0-0/3")
-        return RangeResponse(request.full_url, [], "1-0/3")
+        return Response(request.full_url, [])
     with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
         with pytest.raises(ValueError, match="graph incomplete"):
             fetch_graph("https://example.supabase.co", page_size=1, opener=transport)
