@@ -12,6 +12,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import signal
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -49,22 +51,39 @@ def run_work_unit(
 
     def invoke(_substrate: str, _workload: Workload) -> dict:
         # No shell=True, no interpolation. Each argument is passed literally.
+        # Own the child process group so timeout cleanup includes descendants.
+        # A timed-out process is still uncertain: cleanup does not prove that
+        # its external side effects were rolled back.
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=(os.name == "posix"),
+        )
         try:
-            completed = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                timeout=timeout_seconds,
-                check=False,
-            )
+            stdout, stderr = process.communicate(timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
-            # The process may have committed effects; don't retry automatically.
-            return {"status": "unconfirmed", "error": "process_timeout"}
+            if os.name == "posix":
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            else:
+                process.kill()
+            stdout, stderr = process.communicate()
+            return {
+                "status": "unconfirmed",
+                "error": "process_timeout",
+                "returncode": process.returncode,
+                "stdout": stdout[-16000:],
+                "stderr": stderr[-16000:],
+            }
         return {
-            "status": "success" if completed.returncode == 0 else "failed",
-            "returncode": completed.returncode,
-            "stdout": completed.stdout[-16000:],
-            "stderr": completed.stderr[-16000:],
+            "status": "success" if process.returncode == 0 else "failed",
+            "returncode": process.returncode,
+            "stdout": stdout[-16000:],
+            "stderr": stderr[-16000:],
         }
 
     durable = DurableAgentExecutor(database)
