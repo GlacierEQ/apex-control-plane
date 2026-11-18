@@ -124,3 +124,24 @@ def test_provider_completion_cannot_overwrite_concurrent_reconciliation(tmp_path
     record = executor.readback(work.workload_id)
     assert record["state"] == "cancelled"
     assert record["result"] == {"reconciliation_evidence": "authoritative cancellation receipt"}
+
+
+def test_same_state_authoritative_reconciliation_wins_over_late_provider(tmp_path):
+    database = tmp_path / "claims.sqlite"
+    work, observations = setup()
+    executor = DurableAgentExecutor(database)
+
+    def provider(*_):
+        DurableAgentExecutor(database).reconcile(
+            work.workload_id,
+            authoritative_state="succeeded",
+            evidence="independently verified provider receipt",
+        )
+        return {"status": "success", "receipt": "late-unverified"}
+
+    outcome = executor.execute(work, observations, provider)
+    assert outcome.state == "already_claimed:succeeded"
+    assert outcome.execution is None
+    record = executor.readback(work.workload_id)
+    assert record["state"] == "succeeded"
+    assert record["result"] == {"reconciliation_evidence": "independently verified provider receipt"}
