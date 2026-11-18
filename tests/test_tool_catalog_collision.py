@@ -25,3 +25,9 @@ def test_duplicate_same_kind_fails_closed():
     catalog = [entry("same", "connector"), entry("same", "connector")]
     with pytest.raises(ValueError, match="ambiguous"):
         select(catalog, ["connector:same"])
+
+
+def test_repeated_bare_and_qualified_requests_load_once_in_first_seen_order():
+    catalog = [entry("alpha", "skill"), entry("beta", "connector")]
+    assert select(catalog, ["alpha", "skill:alpha", "beta", "connector:beta", "alpha"]) == catalog
+    assert hot_swap([], catalog, ["connector:beta", "beta", "alpha"]) == [catalog[1], catalog[0]]
