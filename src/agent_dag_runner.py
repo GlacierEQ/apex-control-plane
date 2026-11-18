@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -142,7 +143,6 @@ def inspect_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
     namespace = plan.get("id")
     if not isinstance(namespace, str) or not namespace.strip():
         raise ValueError("plan.id is required")
-    durable = DurableAgentExecutor(database)
     manifest = [
         {
             "id": job["id"], "objective": job["objective"],
@@ -154,14 +154,41 @@ def inspect_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
     fingerprint = hashlib.sha256(
         json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
-    stored = durable.readback(namespace + ":__plan_manifest__")
+    # Inspect without creating a database, schema, or execution claim.
+    records: dict[str, dict[str, Any]] = {}
+    db_path = Path(database)
+    if db_path.exists():
+        connection = sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True)
+        try:
+            table = connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='execution_claims'"
+            ).fetchone()
+            if table:
+                ids = [namespace + ":__plan_manifest__"] + [
+                    namespace + ":" + job["id"] for job in ordered
+                ]
+                for workload_id in ids:
+                    row = connection.execute(
+                        "SELECT objective, state, result_json FROM execution_claims WHERE workload_id=?",
+                        (workload_id,),
+                    ).fetchone()
+                    if row:
+                        records[workload_id] = {
+                            "workload_id": workload_id,
+                            "objective": row[0],
+                            "state": row[1],
+                            "result": json.loads(row[2]) if row[2] else None,
+                        }
+        finally:
+            connection.close()
+    stored = records.get(namespace + ":__plan_manifest__")
     if stored and stored["objective"] != fingerprint:
         raise ValueError("plan id already belongs to a different graph")
     outcomes: dict[str, dict[str, Any]] = {}
     for job in ordered:
         identifier = job["id"]
         deps = job.get("depends_on", [])
-        record = durable.readback(namespace + ":" + identifier)
+        record = records.get(namespace + ":" + identifier)
         if record is not None:
             state = record["state"]
         elif any(outcomes[dep]["state"] != "succeeded" for dep in deps):
