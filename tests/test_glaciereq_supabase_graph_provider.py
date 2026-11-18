@@ -97,3 +97,20 @@ def test_rejects_host_confusion(url):
     with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
         with pytest.raises(ValueError, match="untrusted provider host"):
             fetch_graph(url)
+
+
+def test_rejects_foreign_origin_with_identical_path_and_query():
+    # A hostile transport may preserve the path and query while changing origin.
+    # The previous split('?')[0] check accepted this response.
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        def transport(request, timeout):
+            return Response(request.full_url.replace("example.supabase.co", "evil.supabase.co"), [node("A")])
+        with pytest.raises(ValueError, match="redirect refused"):
+            fetch_graph("https://example.supabase.co", opener=transport)
+
+
+def test_rejects_query_modified_response_url():
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        with pytest.raises(ValueError, match="redirect refused"):
+            fetch_graph("https://example.supabase.co", opener=lambda request, timeout:
+                        Response(request.full_url + "&tampered=1", [node("A")]))
