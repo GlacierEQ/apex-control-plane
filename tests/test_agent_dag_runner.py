@@ -134,3 +134,12 @@ def test_ambiguous_claim_keys_rejected_before_storage_or_dispatch(tmp_path, plan
         execute_plan(database, plan)
     assert not database.exists()
     assert not marker.exists()
+
+
+@pytest.mark.parametrize("command", [[""], ["bad\\x00binary"], [sys.executable, "bad\\x00argument"]])
+def test_dag_rejects_invalid_os_argv_before_manifest_or_dispatch(tmp_path, command):
+    db = tmp_path / "invalid-argv.sqlite"
+    plan = {"id": "bad-argv-plan", "jobs": [{"id": "job", "objective": "reject", "command": command}]}
+    with pytest.raises(ValueError, match="command"):
+        execute_plan(db, plan)
+    assert not db.exists()
