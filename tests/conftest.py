@@ -14,6 +14,82 @@ from typing import Any
 
 import pytest
 
+# ---------------------------------------------------------------------------
+# Interpreter floor
+# ---------------------------------------------------------------------------
+# src/ modules use dataclasses(slots=True) (Python 3.10+) and PEP 604 unions.
+# CI runs 3.12, where this is invisible. The operator host's system python3 is
+# 3.9, where every such import raises:
+#
+#     TypeError: dataclass() got an unexpected keyword argument 'slots'
+#
+# pytest reports that as dozens of separate collection errors with no shared
+# cause. It reads like a broken suite; it is one broken interpreter. This hook
+# fails once, before collection, naming the real cause and the supported floor.
+#
+# It does not skip tests and it does not pin a version. It refuses to let the
+# wrong interpreter produce a misleading result.
+MINIMUM_PYTHON = (3, 10)
+
+_REPRESENTATIVE = (
+    "src/apex_runtime_kernel.py",
+    "src/control_plane_runtime.py",
+    "src/verified_changeset.py",
+)
+
+
+def _interpreter_problem() -> str:
+    current = ".".join(str(part) for part in sys.version_info[:3])
+    floor = ".".join(str(part) for part in MINIMUM_PYTHON)
+    files = "\n".join(f"    {path}" for path in _REPRESENTATIVE)
+    return (
+        "\n"
+        "===========================================================================\n"
+        " APEX Control Plane: unsupported Python interpreter\n"
+        "===========================================================================\n"
+        f"  running : {current}\n"
+        f"  required: >= {floor}\n"
+        "\n"
+        "  src/ modules use dataclasses(slots=True) and PEP 604 unions, which\n"
+        f"  require Python {floor}+. On this interpreter each one fails at import:\n"
+        "\n"
+        "    TypeError: dataclass() got an unexpected keyword argument 'slots'\n"
+        "\n"
+        "  Representative files:\n"
+        f"{files}\n"
+        "\n"
+        "  pytest reports this as many separate collection errors. It is a single\n"
+        "  cause: the interpreter is too old.\n"
+        "\n"
+        "  Fix: run the suite on a supported interpreter.\n"
+        f"    python{floor} -m venv .venv\n"
+        "    .venv/bin/python -m pip install pytest\n"
+        "    PYTHONPATH=src:. .venv/bin/python -m pytest -q tests/\n"
+        "\n"
+        "  Do not 'fix' this by stripping slots=True from src/. That argument is\n"
+        "  a deliberate memory optimization, not an accident.\n"
+        "===========================================================================\n"
+    )
+
+
+def pytest_configure(config) -> None:
+    """Fail closed before collection, with one actionable message.
+
+    Uses ``pytest.UsageError`` rather than ``SystemExit``: pytest catches
+    ``SystemExit`` during configure and wraps it as an INTERNALERROR, which
+    buries the message under traceback noise. ``UsageError`` is reported
+    cleanly and produces exit code 4 (usage error) instead of 3 (internal).
+    """
+    if sys.version_info[:2] < MINIMUM_PYTHON:
+        raise pytest.UsageError(_interpreter_problem())
+
+
+def pytest_report_header(config) -> str:
+    """State the interpreter in the header so the version is never implicit."""
+    current = ".".join(str(part) for part in sys.version_info[:3])
+    floor = ".".join(str(part) for part in MINIMUM_PYTHON)
+    return f"python: {current} (required >= {floor})"
+
 
 def _patch_prime_directive_helper(module: ModuleType) -> None:
     if not hasattr(module, "_record_first_three_stages"):
