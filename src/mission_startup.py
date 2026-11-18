@@ -9,7 +9,7 @@ from src.apex_session_gateway import Recovery, GatewayDenied, run_admitted_sessi
 
 
 def recover_authenticated_mission(*, bridge, store, spiral_root, mission_id, session_id,
-                                  runner=subprocess.run):
+                                  required_fact_keys=(), runner=subprocess.run):
     if not isinstance(mission_id, str) or not mission_id.strip() or not isinstance(session_id, str) or not session_id.strip():
         raise GatewayDenied("explicit mission and session identity required")
     command = [sys.executable, str(bridge), "--store", str(store), "--spiral-root",
@@ -32,6 +32,15 @@ def recover_authenticated_mission(*, bridge, store, spiral_root, mission_id, ses
     # Retain fact provenance in immutable serialized records, not unverified paraphrases.
     if any(not isinstance(k, str) or not isinstance(v, dict) or not isinstance(v.get("source"), str) or not v["source"].strip() for k, v in facts.items()):
         raise GatewayDenied("recovered fact provenance missing")
+    # A resumed inspect cursor must never reach the model without its sourced fact.
+    if cursor.startswith("inspect:") and (not cursor[8:] or cursor[8:] not in facts):
+        raise GatewayDenied("inspection cursor has no recovered sourced fact")
+    if isinstance(required_fact_keys, (str, bytes)) or not isinstance(required_fact_keys, (tuple, list)) or any(
+        not isinstance(key, str) or not key.strip() for key in required_fact_keys
+    ):
+        raise GatewayDenied("required fact keys must be a sequence of nonempty strings")
+    if not set(required_fact_keys).issubset(facts):
+        raise GatewayDenied("required sourced facts missing from recovery")
     fact_records = tuple(json.dumps({"key": k, "record": facts[k]}, sort_keys=True) for k in sorted(facts))
     return Recovery(mission_id, payload["source_ref"], cursor, tuple(corrections),
                     fact_records, bool(cursor or corrections or facts))
@@ -39,11 +48,12 @@ def recover_authenticated_mission(*, bridge, store, spiral_root, mission_id, ses
 
 def run_authenticated_mission(*, bridge, store, spiral_root, mission_id, session_id,
                               invocation_id, apply_context, invoke_model, resolve_source,
-                              reserve, persist, readback, runner=subprocess.run):
+                              reserve, persist, readback, required_fact_keys=(), runner=subprocess.run):
     """Recover first, then require source-matched application and durable readback."""
     recovered = recover_authenticated_mission(
         bridge=bridge, store=store, spiral_root=spiral_root,
-        mission_id=mission_id, session_id=session_id, runner=runner)
+        mission_id=mission_id, session_id=session_id,
+        required_fact_keys=required_fact_keys, runner=runner)
     return run_admitted_session(
         journal=recovered, chat_session_id=session_id, kernel=None,
         expected_mission_id=mission_id, invocation_id=invocation_id,
