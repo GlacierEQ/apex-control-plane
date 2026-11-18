@@ -160,6 +160,9 @@ def inspect_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
     if db_path.exists():
         connection = sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True)
         try:
+            # Pin one SQLite snapshot across manifest and job reads. Without
+            # BEGIN, concurrent reconciliation can produce a mixed-time DAG.
+            connection.execute("BEGIN")
             table = connection.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='execution_claims'"
             ).fetchone()
@@ -179,6 +182,7 @@ def inspect_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
                             "state": row[1],
                             "result": json.loads(row[2]) if row[2] else None,
                         }
+            connection.execute("COMMIT")
         finally:
             connection.close()
     stored = records.get(namespace + ":__plan_manifest__")
