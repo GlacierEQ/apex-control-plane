@@ -82,3 +82,18 @@ def test_readback_missing_claim_is_non_success(tmp_path):
         "--database", str(tmp_path / "empty.sqlite"),
         "--workload-id", "unknown", "--readback",
     ]) == 1
+
+
+def test_failed_subprocess_evidence_survives_restart(tmp_path):
+    from src.durable_agent_executor import DurableAgentExecutor
+
+    db = tmp_path / "failed.sqlite"
+    result = run_work_unit(
+        db, "failure-evidence", "capture failure",
+        [sys.executable, "-c", "import sys; print('diagnostic'); sys.exit(7)"],
+    )
+    assert result["state"] == "needs_reconciliation"
+    assert result["result"]["returncode"] == 7
+    assert "diagnostic" in result["result"]["stdout"]
+    record = DurableAgentExecutor(db).readback("failure-evidence")
+    assert record["result"]["provider_result"]["returncode"] == 7
