@@ -9,7 +9,10 @@ everything.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import argparse
+import json
+import sys
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Sequence
 
@@ -135,3 +138,33 @@ def hot_swap(
     not a ceiling on what can be accessed.
     """
     return select(catalog, wanted)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Operator-invocable discovery and selection boundary; never executes tools.
+
+    Prints deterministic JSON for a downstream loader. A requested capability
+    must resolve exactly once: missing or ambiguous selections fail closed.
+    """
+    parser = argparse.ArgumentParser(description="Discover and resolve agent capabilities")
+    parser.add_argument("--skills", action="append", default=[], metavar="DIR")
+    parser.add_argument("--connectors", action="append", default=[], metavar="DIR")
+    parser.add_argument("--select", action="append", default=[], metavar="KIND:NAME")
+    args = parser.parse_args(argv)
+    catalog = build_catalog(args.skills, args.connectors)
+    try:
+        chosen = select(catalog, args.select) if args.select else catalog
+        if args.select:
+            resolved = {e.name for e in chosen} | {f"{e.kind}:{e.name}" for e in chosen}
+            missing = [name for name in args.select if name not in resolved]
+            if missing:
+                raise ValueError(f"unknown catalog selection: {missing!r}")
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps([asdict(entry) for entry in chosen], sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
