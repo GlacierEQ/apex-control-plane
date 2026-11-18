@@ -26,6 +26,13 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
     # Never send a bearer token to an arbitrary caller-supplied HTTPS host.
     # Custom Supabase domains require an explicit, exact runtime host pin.
     hostname = parsed.hostname.lower()
+    expected_project = os.environ.get("GLACIEREQ_SUPABASE_EXPECTED_PROJECT_REF", "").strip().lower()
+    if expected_project:
+        if (len(expected_project) != 20 or not expected_project.isascii()
+                or not expected_project.isalnum()):
+            raise ValueError("invalid configured Supabase project reference")
+        if hostname != expected_project + ".supabase.co":
+            raise ValueError("provider project does not match configured reference")
     pinned = os.environ.get("GLACIEREQ_SUPABASE_EXPECTED_HOST", "").lower().strip()
     if pinned:
         if hostname != pinned or parsed.port not in (None, 443):

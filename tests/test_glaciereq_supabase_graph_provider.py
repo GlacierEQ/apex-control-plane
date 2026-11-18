@@ -192,3 +192,26 @@ def test_exact_multiple_advertised_total_does_not_issue_extra_range():
         result = fetch_graph("https://example.supabase.co", page_size=1, opener=transport)
     assert [row["source_id"] for row in result] == ["A", "B"]
     assert len(calls) == 2
+
+
+def test_project_reference_pin_rejects_cross_project_before_transport():
+    invoked = []
+    with patch.dict("os.environ", {
+        "GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only",
+        "GLACIEREQ_SUPABASE_EXPECTED_PROJECT_REF": "abcdefghijklmnopqrst",
+    }, clear=True):
+        with pytest.raises(ValueError, match="provider project"):
+            fetch_graph("https://otherproject.supabase.co",
+                        opener=lambda *args, **kwargs: invoked.append(args))
+        assert len(fetch_graph("https://abcdefghijklmnopqrst.supabase.co",
+            opener=lambda request, timeout: Response(request.full_url, [node("A")]))) == 1
+    assert not invoked
+
+
+def test_project_reference_pin_rejects_malformed_configuration():
+    with patch.dict("os.environ", {
+        "GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only",
+        "GLACIEREQ_SUPABASE_EXPECTED_PROJECT_REF": "../../bad",
+    }, clear=True):
+        with pytest.raises(ValueError, match="invalid configured"):
+            fetch_graph("https://example.supabase.co")
