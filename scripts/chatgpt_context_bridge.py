@@ -320,6 +320,16 @@ def main():
                     expected_source_ref="spiral-journal:" + anchor["head"],
                     registry=registry,
                 )
+                # Validate action-specific source requirements before APEX admission.
+                # A registered inspect action is not authorized to admit an
+                # absent or unsourced fact, even if its cursor prefix is valid.
+                if recovery.cursor.split(":", 1)[0] == "inspect":
+                    fact_key = recovery.cursor.partition(":")[2]
+                    fact = recovery.facts.get(fact_key)
+                    if (not fact_key or not isinstance(fact, dict)
+                            or not isinstance(fact.get("source"), str)
+                            or not fact["source"].strip()):
+                        fail("requested verified fact is absent or lacks provenance")
                 # Admit the authenticated recovery into the actual APEX context
                 # gate before invoking the registered downstream callback.
                 kernel = create_verified_runtime_kernel()
