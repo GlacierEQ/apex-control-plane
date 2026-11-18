@@ -4,6 +4,7 @@ The controlling host must call this entrypoint; no native ChatGPT hook is claime
 """
 import json
 import subprocess
+import sys
 from src.apex_session_gateway import Recovery, GatewayDenied, run_admitted_session
 
 
@@ -11,7 +12,7 @@ def recover_authenticated_mission(*, bridge, store, spiral_root, mission_id, ses
                                   runner=subprocess.run):
     if not isinstance(mission_id, str) or not mission_id.strip() or not isinstance(session_id, str) or not session_id.strip():
         raise GatewayDenied("explicit mission and session identity required")
-    command = ["python3", str(bridge), "--store", str(store), "--spiral-root",
+    command = [sys.executable, str(bridge), "--store", str(store), "--spiral-root",
                str(spiral_root), "--mission-id", mission_id, "recover", "--session-id", session_id]
     try:
         result = runner(command, capture_output=True, text=True, check=True, timeout=30)
@@ -20,11 +21,13 @@ def recover_authenticated_mission(*, bridge, store, spiral_root, mission_id, ses
         raise GatewayDenied("authenticated recovery unavailable") from exc
     if not isinstance(payload, dict) or payload.get("status") != "VERIFIED_EXISTING" or payload.get("mission_id") != mission_id or payload.get("session_id") != session_id:
         raise GatewayDenied("recovery identity/status mismatch")
+    if payload.get("requires_actual_action_application") is not True or payload.get("automatic_chatgpt_host_hook_verified") is not False:
+        raise GatewayDenied("recovery capability contract mismatch")
     head = payload.get("head")
     if not isinstance(head, str) or len(head) != 64 or any(c not in "0123456789abcdef" for c in head) or payload.get("source_ref") != "spiral-journal:" + head:
         raise GatewayDenied("recovery source binding mismatch")
     corrections, facts, cursor = payload.get("corrections"), payload.get("facts"), payload.get("cursor")
-    if not isinstance(corrections, list) or any(not isinstance(c, str) for c in corrections) or not isinstance(facts, dict) or not isinstance(cursor, str):
+    if not isinstance(corrections, list) or any(not isinstance(c, str) or not c.strip() for c in corrections) or not isinstance(facts, dict) or not isinstance(cursor, str):
         raise GatewayDenied("malformed recovered context")
     # Retain fact provenance in immutable serialized records, not unverified paraphrases.
     if any(not isinstance(k, str) or not isinstance(v, dict) or not isinstance(v.get("source"), str) or not v["source"].strip() for k, v in facts.items()):
