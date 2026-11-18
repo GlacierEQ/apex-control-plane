@@ -9,9 +9,10 @@ Static policy defines invariants. Live observations decide the route.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from math import isfinite
 from typing import Any, Callable, FrozenSet, Iterable, Sequence
 
 
@@ -65,7 +66,7 @@ class SubstrateObservation:
             ("cost_score", self.cost_score),
             ("latency_score", self.latency_score),
         ):
-            if not 0.0 <= value <= 1.0:
+            if not isfinite(value) or not 0.0 <= value <= 1.0:
                 raise ValueError(f"{field_name} must be between 0 and 1")
 
 
@@ -187,13 +188,24 @@ def _provider_outcome(result: Any) -> tuple[str, str | None]:
     if result is True:
         return "success", None
     if isinstance(result, Mapping):
+        # Inspect both provider status fields. A wrapper may report a generic
+        # status while its underlying operation is still running in "state".
+        # Pending evidence takes precedence over negative completion flags to
+        # prevent replay of a potentially active side effect.
+        states = {
+            str(result.get(key) or "").strip().lower()
+            for key in ("status", "state")
+        }
         state = str(result.get("status") or result.get("state") or "").strip().lower()
+        # An asynchronous state is evidence that work may already be running.
+        # Some provider adapters set ok=False until completion; interpreting
+        # that flag as definitive failure would replay a live side effect.
+        if states & {"queued", "pending", "accepted", "submitted", "scheduled", "running", "processing", "in_progress"}:
+            return "pending", None
         if result.get("ok") is False or result.get("success") is False:
             return "failed", str(result.get("error") or state or "provider_reported_failure")
         if state in {"failed", "failure", "error", "denied", "rejected", "cancelled", "canceled", "unavailable", "timed_out"}:
             return "failed", str(result.get("error") or state)
-        if state in {"queued", "pending", "accepted", "submitted", "scheduled", "running", "processing", "in_progress"}:
-            return "pending", None
         if result.get("error"):
             return "failed", str(result["error"])
         if state in {"success", "succeeded", "complete", "completed", "verified", "passed", "pass", "ok"} or result.get("ok") is True or result.get("success") is True:
@@ -243,7 +255,17 @@ class DynamicExecutionFabric:
                 ),
             )
         )
-        eligible = [item for item in ranked if item.eligible]
+        # A registry may emit multiple observations for the same substrate.
+        # Keep its best-ranked candidate once: duplicate entries must never
+        # turn a single provider into its own fallback after a failure.
+        seen_substrates: set[str] = set()
+        unique_routes: list[RouteCandidate] = []
+        for item in ranked:
+            if item.substrate in seen_substrates:
+                continue
+            seen_substrates.add(item.substrate)
+            unique_routes.append(item)
+        eligible = [item for item in unique_routes if item.eligible]
         selected = eligible[0].substrate if eligible else None
         fallbacks = tuple(item.substrate for item in eligible[1:])
         return RoutePlan(
@@ -251,7 +273,7 @@ class DynamicExecutionFabric:
             objective=workload.objective,
             selected=selected,
             fallbacks=fallbacks,
-            routes=ranked,
+            routes=tuple(unique_routes),
             execution_state="routable" if selected else "no_current_route",
         )
 

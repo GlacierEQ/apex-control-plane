@@ -276,7 +276,7 @@ def test_execute_fails_over_between_ranked_substrates_without_changing_objective
     def execute(substrate: str, _workload: Workload) -> dict:
         calls.append(substrate)
         if substrate == "provider_a":
-            raise RuntimeError("provider_a capacity exhausted")
+            return {"status": "failed", "error": "provider_a capacity exhausted"}
         return {
             "status": "success",
             "receipt": "receipt-b",
@@ -308,7 +308,7 @@ def test_execute_returns_route_exhausted_without_rewriting_mission() -> None:
     result = fabric.execute(
         workload,
         observations,
-        lambda substrate, _workload: (_ for _ in ()).throw(RuntimeError(f"{substrate} failed")),
+        lambda substrate, _workload: {"status": "failed", "error": f"{substrate} failed"},
     )
 
     assert result.ok is False
@@ -348,7 +348,7 @@ def test_stale_route_is_fallback_after_fresh_executor_fails() -> None:
     def invoke(substrate: str, _: Workload) -> dict:
         attempts.append(substrate)
         if substrate == "fresh":
-            raise RuntimeError("fresh route failed")
+            return {"status": "failed", "error": "fresh route failed"}
         return {"receipt": "stale-route-success"}
 
     result = fabric.execute(
