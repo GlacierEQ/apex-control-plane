@@ -127,6 +127,8 @@ def main() -> None:
     parser.add_argument("--spiral-root", type=Path, required=True)
     parser.add_argument("--mission-id", required=True)
     parser.add_argument("--session-id", required=True)
+    parser.add_argument("--legacy-continue-cursor", default=None,
+                        help="Exact persisted legacy cursor; never inferred or rewritten")
     args = parser.parse_args()
     # The default consumer exposes the recovered action receipt to a caller.
     # Other host processes can import start_mission and supply their own consumer.
@@ -134,6 +136,7 @@ def main() -> None:
         store=args.store, spiral_root=args.spiral_root,
         mission_id=args.mission_id, session_id=args.session_id,
         consumer=lambda receipt: print(json.dumps(receipt, sort_keys=True)),
+        legacy_continue_cursor=args.legacy_continue_cursor,
     )
 
 
