@@ -65,13 +65,12 @@ def recover(rows, project):
     explicit = [item for item in candidates if item[2]]
     if len(explicit) > 1:
         raise ValueError("ambiguous canonical cursor")
-    if explicit:
-        key, row, _, action = explicit[0]
-    else:
-        ranked = sorted(candidates, key=lambda item: (
-            {"provider_read_verified": 0, "provider_read_verified_document_exists": 1}.get(
-                item[1]["metadata"].get("confidence"), 2), item[0]))
-        key, row, _, action = ranked[0]
+    if not explicit:
+        # Source-reference next_cursor values are advisory and may be stale.
+        # Never promote an arbitrary draft/reference into an execution directive
+        # when the owning project's canonical cursor is absent.
+        raise ValueError("no canonical project cursor; refuse advisory fallback")
+    key, row, _, action = explicit[0]
     return {
         "project": project,
         "node_key": key,
