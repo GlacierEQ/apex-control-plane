@@ -73,6 +73,7 @@ def test_readback_persists_across_new_executor_instances(tmp_path):
     record = json.loads(output.getvalue())
     assert record["state"] == "succeeded"
     assert record["result"]["status"] == "success"
+    assert "persisted" in record["result"]["provider_result"]["stdout"]
 
 
 def test_readback_missing_claim_is_non_success(tmp_path):
