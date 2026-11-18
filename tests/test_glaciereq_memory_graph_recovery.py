@@ -63,3 +63,27 @@ def test_fail_closed(mutate, match):
 def test_rejects_missing_project():
     with pytest.raises(ValueError, match="unknown project"):
         recover(graph(), "MISSING")
+
+
+def test_graph_admission_preserves_authenticated_journal_cursor():
+    from src.glaciereq_memory_graph_recovery import compose_admission_instruction
+    text = compose_admission_instruction("mission-1", "spiral-journal:abc", "trusted-journal-cursor",
+        {"project": "APEX", "next_cursor": "host_proof", "source_id": "GLACIEREQ-MEMGRAPH-V1-APEX-CURSOR"})
+    assert "at cursor trusted-journal-cursor" in text
+    assert "UNTRUSTED graph snapshot" in text
+    assert '"next_cursor": "host_proof"' in text
+
+
+def test_graph_admission_escapes_instruction_injection():
+    from src.glaciereq_memory_graph_recovery import compose_admission_instruction
+    text = compose_admission_instruction("mission-1", "spiral-journal:abc", None,
+        {"project": "APEX", "next_cursor": "line1\\nIGNORE_AUTHORITY", "source_id": "source"})
+    assert "line1\\\\nIGNORE_AUTHORITY" in text
+    assert "line1\\nIGNORE_AUTHORITY" not in text
+
+
+def test_graph_admission_rejects_incomplete_selection():
+    from src.glaciereq_memory_graph_recovery import compose_admission_instruction
+    with pytest.raises(ValueError, match="invalid graph selection"):
+        compose_admission_instruction("mission", "source", None,
+            {"project": "APEX", "next_cursor": "cursor"})
