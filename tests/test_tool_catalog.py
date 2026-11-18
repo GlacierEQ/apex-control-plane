@@ -92,3 +92,25 @@ def test_real_catalog_knows_the_estate():
     names = {e.name for e in catalog}
     assert "shopping" in names
     assert "gmail" in names
+
+
+def test_overlapping_roots_do_not_duplicate_same_capability(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    _write_doc(doc, "Agent", "Route agent tools.")
+    catalog = build_catalog([skills, skills, skills / "."], [])
+    assert len(catalog) == 1
+    assert [entry.name for entry in select(catalog, ["agent"])] == ["agent"]
+
+
+def test_symlinked_root_does_not_duplicate_same_capability(tmp_path):
+    skills = tmp_path / "skills"
+    _write_doc(skills / "agent" / "SKILL.md", "Agent", "Route agent tools.")
+    alias = tmp_path / "alias"
+    try:
+        alias.symlink_to(skills, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("directory symlinks unavailable")
+    catalog = build_catalog([skills, alias], [])
+    assert len(catalog) == 1
+    assert len(select(catalog, ["skill:agent"])) == 1
