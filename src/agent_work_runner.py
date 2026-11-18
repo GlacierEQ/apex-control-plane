@@ -71,7 +71,10 @@ def run_work_unit(
     outcome = durable.execute(workload, [observation], invoke)
     execution = outcome.execution
     durable_record = durable.readback(workload_id)
-    # Failed provider outcomes are represented by the fabric as route_exhausted.\n    # Preserve the actual subprocess evidence from the durable record rather\n    # than presenting a missing result to the caller.\n    persisted = (durable_record or {}).get("result") or {}\n    provider_result = execution.result if execution and execution.result is not None else persisted.get("provider_result")\n    return {
+    # Failed provider outcomes are represented by the fabric as route_exhausted.
+    # Preserve the actual subprocess evidence from the durable record rather\n    # than presenting a missing result to the caller.
+    persisted = (durable_record or {}).get("result") or {}
+    provider_result = execution.result if execution and execution.result is not None else persisted.get("provider_result")\n    return {
         "workload_id": workload_id,
         "state": outcome.state,
         "status": execution.status if execution else None,
