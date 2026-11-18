@@ -74,3 +74,32 @@ def test_reused_workload_id_cannot_change_objective(tmp_path):
     changed = Workload(work.workload_id, "different objective", work.capabilities)
     with pytest.raises(ValueError, match="different objective"):
         executor.execute(changed, observations, lambda *_: True)
+
+
+
+def test_terminal_receipt_cannot_be_rewritten_by_reconciliation(tmp_path):
+    database = tmp_path / "claims.sqlite"
+    work, observations = setup()
+    executor = DurableAgentExecutor(database)
+    assert executor.execute(work, observations, lambda *_: {"status": "success"}).state == "succeeded"
+    before = executor.readback(work.workload_id)
+    with pytest.raises(ValueError, match="terminal outcomes are immutable"):
+        executor.reconcile(work.workload_id, authoritative_state="failed", evidence="unverified contradictory report")
+    assert executor.readback(work.workload_id) == before
+
+
+def test_reconciled_claim_cannot_be_reconciled_again(tmp_path):
+    database = tmp_path / "claims.sqlite"
+    work, observations = setup()
+    executor = DurableAgentExecutor(database)
+
+    def crash(*_):
+        raise KeyboardInterrupt("unknown result")
+
+    with pytest.raises(KeyboardInterrupt):
+        executor.execute(work, observations, crash)
+    executor.reconcile(work.workload_id, authoritative_state="cancelled", evidence="authoritative provider cancellation receipt")
+    before = executor.readback(work.workload_id)
+    with pytest.raises(ValueError, match="terminal outcomes are immutable"):
+        executor.reconcile(work.workload_id, authoritative_state="succeeded", evidence="conflicting receipt")
+    assert executor.readback(work.workload_id) == before
