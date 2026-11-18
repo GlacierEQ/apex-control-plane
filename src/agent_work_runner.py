@@ -54,13 +54,26 @@ def run_work_unit(
         # Own the child process group so timeout cleanup includes descendants.
         # A timed-out process is still uncertain: cleanup does not prove that
         # its external side effects were rolled back.
-        process = subprocess.Popen(
-            command,
+        try:
+            process = subprocess.Popen(
+                command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            start_new_session=(os.name == "posix"),
-        )
+                start_new_session=(os.name == "posix"),
+            )
+        except OSError as error:
+            # No child was started. Persist actionable failure evidence instead
+            # of leaving an opaque invoking claim after an exception.
+            return {
+                "status": "failed",
+                "error": "process_spawn_failed",
+                "errno": error.errno,
+                "detail": str(error)[:2000],
+                "returncode": None,
+                "stdout": "",
+                "stderr": "",
+            }
         try:
             stdout, stderr = process.communicate(timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
