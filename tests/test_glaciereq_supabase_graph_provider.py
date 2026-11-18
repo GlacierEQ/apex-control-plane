@@ -114,3 +114,30 @@ def test_rejects_query_modified_response_url():
         with pytest.raises(ValueError, match="redirect refused"):
             fetch_graph("https://example.supabase.co", opener=lambda request, timeout:
                         Response(request.full_url + "&tampered=1", [node("A")]))
+
+
+def test_rejects_partial_page_when_provider_advertises_more_rows():
+    class PartialResponse(Response):
+        headers = {"Content-Range": "0-0/3"}
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        with pytest.raises(ValueError, match="truncated page"):
+            fetch_graph("https://example.supabase.co", page_size=2,
+                        opener=lambda request, timeout: PartialResponse(request.full_url, [node("A")]))
+
+
+def test_rejects_inconsistent_provider_content_range():
+    class IncorrectRange(Response):
+        headers = {"Content-Range": "1-1/1"}
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        with pytest.raises(ValueError, match="disagrees"):
+            fetch_graph("https://example.supabase.co", page_size=2,
+                        opener=lambda request, timeout: IncorrectRange(request.full_url, [node("A")]))
+
+
+def test_accepts_complete_short_final_page_with_content_range():
+    class FinalResponse(Response):
+        headers = {"Content-Range": "0-0/1"}
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        result = fetch_graph("https://example.supabase.co", page_size=2,
+                             opener=lambda request, timeout: FinalResponse(request.full_url, [node("A")]))
+    assert [r["source_id"] for r in result] == ["A"]
