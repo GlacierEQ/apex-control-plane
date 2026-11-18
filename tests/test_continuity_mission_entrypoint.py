@@ -123,6 +123,23 @@ class StartupTests(unittest.TestCase):
                 )
         self.assertEqual(called, [])
 
+    def test_cli_forwards_explicit_legacy_cursor(self):
+        from scripts.continuity_mission_entrypoint import main
+        argv = [
+            "continuity_mission_entrypoint.py", "--store", "/tmp/store",
+            "--spiral-root", "/tmp/spiral", "--mission-id", "mission",
+            "--session-id", "fresh-session",
+            "--legacy-continue-cursor", "resume original task",
+        ]
+        with patch("sys.argv", argv), patch(
+            "scripts.continuity_mission_entrypoint.start_mission"
+        ) as start:
+            main()
+        self.assertEqual(
+            start.call_args.kwargs["legacy_continue_cursor"],
+            "resume original task",
+        )
+
     def test_missing_mission_never_invokes_bridge(self):
         with patch("scripts.continuity_mission_entrypoint.subprocess.run") as run:
             with self.assertRaises(ValueError):
