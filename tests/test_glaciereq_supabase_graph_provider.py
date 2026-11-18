@@ -141,3 +141,35 @@ def test_accepts_complete_short_final_page_with_content_range():
         result = fetch_graph("https://example.supabase.co", page_size=2,
                              opener=lambda request, timeout: FinalResponse(request.full_url, [node("A")]))
     assert [r["source_id"] for r in result] == ["A"]
+
+
+def test_rejects_provider_total_shrinking_between_pages():
+    class RangeResponse(Response):
+        def __init__(self, url, rows, content_range):
+            super().__init__(url, rows)
+            self.headers = {"Content-Range": content_range}
+    calls = []
+    def transport(request, timeout):
+        calls.append(request)
+        if len(calls) == 1:
+            return RangeResponse(request.full_url, [node("A")], "0-0/3")
+        return RangeResponse(request.full_url, [node("B")], "1-1/2")
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        with pytest.raises(ValueError, match="total changed"):
+            fetch_graph("https://example.supabase.co", page_size=1, opener=transport)
+
+
+def test_rejects_empty_page_after_advertised_full_page():
+    class RangeResponse(Response):
+        def __init__(self, url, rows, content_range):
+            super().__init__(url, rows)
+            self.headers = {"Content-Range": content_range}
+    calls = []
+    def transport(request, timeout):
+        calls.append(request)
+        if len(calls) == 1:
+            return RangeResponse(request.full_url, [node("A")], "0-0/3")
+        return RangeResponse(request.full_url, [], "1-0/3")
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        with pytest.raises(ValueError, match="graph incomplete"):
+            fetch_graph("https://example.supabase.co", page_size=1, opener=transport)
