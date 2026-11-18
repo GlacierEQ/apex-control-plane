@@ -7,6 +7,7 @@ are read back; uncertain or failed nodes block dependents instead of replaying.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -68,6 +69,41 @@ def execute_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(namespace, str) or not namespace.strip():
         raise ValueError("plan.id is required")
     durable = DurableAgentExecutor(database)
+    # Bind the whole graph to its namespace before any side effect. Otherwise
+    # a resumed plan could silently change dependencies or skip prior jobs.
+    manifest = [
+        {
+            "id": job["id"], "objective": job["objective"],
+            "command": job["command"], "depends_on": sorted(job.get("depends_on", [])),
+            "timeout_seconds": job.get("timeout_seconds", 300),
+        }
+        for job in sorted(ordered, key=lambda item: item["id"])
+    ]
+    fingerprint = hashlib.sha256(
+        json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    manifest_id = namespace + ":__plan_manifest__"
+    # Claim a manifest using the same transactional durable identity mechanism.
+    # This never invokes a provider: the manifest is a persistent identity record.
+    import sqlite3
+    with sqlite3.connect(str(database), timeout=30, isolation_level=None) as db:
+        db.execute("PRAGMA busy_timeout=30000")
+        db.execute("BEGIN IMMEDIATE")
+        try:
+            existing = db.execute(
+                "SELECT objective FROM execution_claims WHERE workload_id=?", (manifest_id,)
+            ).fetchone()
+            if existing and existing[0] != fingerprint:
+                raise ValueError("plan id already belongs to a different graph")
+            if not existing:
+                db.execute(
+                    "INSERT INTO execution_claims(workload_id, objective, state) VALUES (?, ?, 'succeeded')",
+                    (manifest_id, fingerprint),
+                )
+            db.execute("COMMIT")
+        except BaseException:
+            db.execute("ROLLBACK")
+            raise
     outcomes: dict[str, dict[str, Any]] = {}
     for job in ordered:
         identifier = job["id"]
