@@ -124,6 +124,54 @@ def start_registered_mission(
     )
 
 
+def start_context_gated_mission(
+    *, store: Path, spiral_root: Path, mission_id: str, session_id: str,
+    handlers: Mapping[str, Callable[[Mapping[str, Any]], Any]],
+    required_corrections: Mapping[str, tuple[str, ...]],
+    required_fact_keys: Mapping[str, tuple[str, ...]],
+    bridge: Path | None = None,
+    legacy_continue_cursor: str | None = None,
+) -> Any:
+    """Execute only when authenticated recovered policy and evidence allow it.
+
+    The owning caller registers substantive operations explicitly. Recovered
+    corrections are exact-match requirements, not executable instructions.
+    Missing policy or provenance prevents the operation from running.
+    """
+    def guarded(receipt: Mapping[str, Any]) -> Any:
+        action = ("continue" if legacy_continue_cursor is not None
+                  and receipt["cursor"] == legacy_continue_cursor
+                  else receipt["action_name"])
+        handler = handlers.get(action)
+        if handler is None or not callable(handler):
+            raise ValueError("no authorized mission handler")
+        if action not in required_corrections or action not in required_fact_keys:
+            raise ValueError("missing explicit action policy")
+        result = receipt["result"]
+        corrections = result.get("instructions_to_apply")
+        facts = result.get("verified_facts")
+        if not isinstance(corrections, list) or not all(
+            isinstance(item, str) for item in corrections
+        ):
+            raise ValueError("recovered corrections invalid")
+        if not isinstance(facts, dict):
+            raise ValueError("recovered facts invalid")
+        if any(c not in corrections for c in required_corrections[action]):
+            raise ValueError("required recovered correction absent")
+        for key in required_fact_keys[action]:
+            fact = facts.get(key)
+            if (not isinstance(fact, dict)
+                    or not isinstance(fact.get("source"), str)
+                    or not fact["source"].strip()):
+                raise ValueError("required sourced fact absent")
+        return handler(receipt)
+    return start_mission(
+        store=store, spiral_root=spiral_root, mission_id=mission_id,
+        session_id=session_id, consumer=guarded, bridge=bridge,
+        legacy_continue_cursor=legacy_continue_cursor,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Start a mission with mandatory authenticated recovery")
     parser.add_argument("--store", type=Path, required=True)

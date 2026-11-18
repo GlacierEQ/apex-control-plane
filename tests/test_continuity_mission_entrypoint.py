@@ -5,7 +5,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
-from scripts.continuity_mission_entrypoint import start_mission, start_registered_mission
+from scripts.continuity_mission_entrypoint import start_mission, start_registered_mission, start_context_gated_mission
 
 
 class StartupTests(unittest.TestCase):
@@ -139,6 +139,56 @@ class StartupTests(unittest.TestCase):
             start.call_args.kwargs["legacy_continue_cursor"],
             "resume original task",
         )
+
+    def test_recovered_policy_changes_actual_handler_execution(self):
+        base = {
+            "status": "RECOVERED_ACTION_DISPATCHED", "mission_id": "mission",
+            "session_id": "fresh-session", "cursor": "continue:next",
+            "action_name": "continue", "head": "a" * 64,
+            "downstream_action_executed": True, "apex_runtime_id": "apex",
+            "apex_phase": "ready", "apex_receipt_kinds": ["context_recovery"],
+        }
+        calls = []
+        def execute(corrections, facts):
+            result = dict(base, result={
+                "next_cursor": "continue:next",
+                "binding": "spiral-journal:" + "a" * 64,
+                "instructions_to_apply": corrections, "verified_facts": facts,
+            })
+            with patch("scripts.continuity_mission_entrypoint.subprocess.run",
+                       return_value=subprocess.CompletedProcess([], 0, json.dumps(result), "")):
+                return start_context_gated_mission(
+                    store=Path("/tmp/store"), spiral_root=Path("/tmp/spiral"),
+                    mission_id="mission", session_id="fresh-session",
+                    handlers={"continue": lambda r: calls.append(r["cursor"]) or "EXECUTED"},
+                    required_corrections={"continue": ("CONTEXT FIRST",)},
+                    required_fact_keys={"continue": ("owner",)},
+                )
+        good = {"owner": {"source": "github:verified", "value": "APEX"}}
+        self.assertEqual(execute(["CONTEXT FIRST"], good), "EXECUTED")
+        for corrections, facts in (
+            ([], good),
+            (["CONTEXT FIRST"], {"owner": {"value": "APEX"}}),
+            (["CONTEXT FIRST"], {}),
+        ):
+            with self.subTest(corrections=corrections, facts=facts):
+                with self.assertRaises(ValueError):
+                    execute(corrections, facts)
+        self.assertEqual(calls, ["continue:next"])
+
+    def test_missing_policy_rejects_even_authenticated_receipt(self):
+        with patch("scripts.continuity_mission_entrypoint.start_mission",
+                   side_effect=lambda **kw: kw["consumer"]({
+                       "action_name": "continue", "cursor": "continue:next",
+                       "result": {"instructions_to_apply": [], "verified_facts": {}},
+                   })):
+            with self.assertRaisesRegex(ValueError, "missing explicit action policy"):
+                start_context_gated_mission(
+                    store=Path("/tmp/store"), spiral_root=Path("/tmp/spiral"),
+                    mission_id="mission", session_id="session",
+                    handlers={"continue": lambda _: None},
+                    required_corrections={}, required_fact_keys={},
+                )
 
     def test_missing_mission_never_invokes_bridge(self):
         with patch("scripts.continuity_mission_entrypoint.subprocess.run") as run:
