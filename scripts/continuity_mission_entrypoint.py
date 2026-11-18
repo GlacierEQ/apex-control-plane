@@ -52,14 +52,25 @@ def start_mission(
         not isinstance(receipt, dict)
         or receipt.get("status") != "RECOVERED_ACTION_DISPATCHED"
         or receipt.get("mission_id") != mission_id
+        or receipt.get("session_id") != session_id
         or receipt.get("downstream_action_executed") is not True
         or not isinstance(receipt.get("result"), dict)
         or not isinstance(receipt.get("head"), str)
         or len(receipt["head"]) != 64
+        or any(ch not in "0123456789abcdef" for ch in receipt["head"])
+        or not isinstance(receipt.get("cursor"), str)
+        or not receipt["cursor"].strip()
+        or receipt.get("action_name") != receipt["cursor"].split(":", 1)[0]
+        or not isinstance(receipt.get("apex_runtime_id"), str)
+        or not receipt["apex_runtime_id"].strip()
         or receipt.get("apex_phase") != "ready"
         or "context_recovery" not in receipt.get("apex_receipt_kinds", [])
         or receipt["result"].get("binding") != "spiral-journal:" + receipt["head"]
         or receipt.get("action_name") not in ("continue", "inspect")
+        or (receipt["action_name"] == "continue"
+            and receipt["result"].get("next_cursor") != receipt["cursor"])
+        or (receipt["action_name"] == "inspect"
+            and receipt["result"].get("key") != receipt["cursor"].partition(":")[2])
     ):
         raise RuntimeError("startup recovery receipt did not prove dispatch")
     return consumer(receipt)
