@@ -308,6 +308,20 @@ def main():
                         "binding": state.source_ref,
                         "instructions_to_apply": list(state.corrections),
                     }
+                # Admit the authenticated recovery into the actual APEX context
+                # gate before invoking the registered downstream callback.
+                kernel = create_verified_runtime_kernel()
+                snapshot = resume_authenticated_chat_in_apex(
+                    kernel, recovery,
+                    task_instruction=(
+                        f"Continue mission {recovery.mission_id} from "
+                        f"{recovery.source_ref} at cursor {recovery.cursor}"
+                    ),
+                    target_state=recovery.terminal_outcome,
+                    operation_class="chat_context_admission",
+                    applied_to_action=bool(recovery.material_context_found),
+                    expected_mission_id=args.mission_id,
+                )
                 receipt = execute_recovered_action(
                     recovery,
                     expected_mission_id=args.mission_id,
@@ -322,6 +336,9 @@ def main():
                     "mission_id": receipt.mission_id,
                     "head": anchor["head"],
                     "action_name": receipt.action_name,
+                    "apex_runtime_id": snapshot.runtime_id,
+                    "apex_phase": snapshot.phase,
+                    "apex_receipt_kinds": list(snapshot.receipt_kinds),
                     "cursor": receipt.cursor,
                     "result": receipt.result,
                     "downstream_action_executed": True,
