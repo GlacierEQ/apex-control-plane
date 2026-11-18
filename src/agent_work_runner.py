@@ -67,14 +67,17 @@ def run_work_unit(
             "stderr": completed.stderr[-16000:],
         }
 
-    outcome = DurableAgentExecutor(database).execute(workload, [observation], invoke)
+    durable = DurableAgentExecutor(database)
+    outcome = durable.execute(workload, [observation], invoke)
     execution = outcome.execution
+    durable_record = durable.readback(workload_id)
     return {
         "workload_id": workload_id,
         "state": outcome.state,
         "status": execution.status if execution else None,
         "result": execution.result if execution else None,
         "attempted": list(execution.attempted) if execution else [],
+        "durable_record": durable_record,
     }
 
 
@@ -82,10 +85,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Execute a durable GLACIEREQ work unit")
     parser.add_argument("--database", required=True)
     parser.add_argument("--workload-id", required=True)
-    parser.add_argument("--objective", required=True)
+    parser.add_argument("--objective")
+    parser.add_argument("--readback", action="store_true")
     parser.add_argument("--timeout-seconds", type=int, default=300)
-    parser.add_argument("--command", nargs=argparse.REMAINDER, required=True)
+    parser.add_argument("--command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
+    if args.readback:
+        record = DurableAgentExecutor(args.database).readback(args.workload_id)
+        print(json.dumps(record, sort_keys=True))
+        return 0 if record is not None else 1
+    if not args.objective or not args.command:
+        parser.error("--objective and --command required for execution")
     command = args.command
     if command and command[0] == "--":
         command = command[1:]
