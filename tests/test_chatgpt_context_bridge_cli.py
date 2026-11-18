@@ -184,6 +184,67 @@ class ChatGPTContextBridgeTests(unittest.TestCase):
         self.assertFalse(first["automatic_chatgpt_host_hook_verified"])
         self.assertEqual((journal.read_bytes(), anchor.read_bytes()), before)
 
+    def test_admit_applies_explicit_graph_cursor_without_overriding_journal(self):
+        self.initialize()
+        self.cmd("checkpoint", "--cursor", "JOURNAL/verified")
+        snapshot = Path(self.tmp.name) / "graph.json"
+        rows = [
+            {"source_id": "GLACIEREQ-MEMGRAPH-V1-ROOT",
+             "memory_type": "structured_memory_graph_node",
+             "metadata": {"graph_id": "GLACIEREQ-MEMGRAPH-V1", "node_key": "ROOT",
+                          "node_kind": "mission", "parent_key": None}},
+            {"source_id": "GLACIEREQ-MEMGRAPH-V1-APEX",
+             "memory_type": "structured_memory_graph_node",
+             "metadata": {"graph_id": "GLACIEREQ-MEMGRAPH-V1", "node_key": "APEX",
+                          "node_kind": "project", "parent_key": "ROOT"}},
+            {"source_id": "GLACIEREQ-MEMGRAPH-V1-APEX-CURSOR",
+             "memory_type": "structured_memory_graph_node",
+             "authority_status": "draft_strategy",
+             "metadata": {"graph_id": "GLACIEREQ-MEMGRAPH-V1", "node_key": "APEX-CURSOR",
+                          "node_kind": "cursor", "parent_key": "APEX",
+                          "next_transition": "independent_host_consumer_application_proof"}},
+        ]
+        snapshot.write_text(json.dumps(rows))
+        snapshot.chmod(0o600)
+        first = self.cmd("admit", "--session-id", "graph-A", "--graph-snapshot", str(snapshot),
+                         "--graph-project", "APEX")
+        second = self.cmd("admit", "--session-id", "graph-B", "--graph-snapshot", str(snapshot),
+                          "--graph-project", "APEX")
+        self.assertEqual(first["status"], "APEX_CONTEXT_ADMITTED")
+        self.assertEqual(first["cursor"], "JOURNAL/verified")
+        self.assertEqual(first["graph_selection"]["node_key"], "APEX-CURSOR")
+        self.assertEqual(first["graph_selection"]["next_cursor"],
+                         "independent_host_consumer_application_proof")
+        self.assertEqual(first["graph_selection"], second["graph_selection"])
+        self.assertEqual(first["head"], second["head"])
+        self.assertFalse(first["graph_snapshot_provider_authenticated"])
+        self.assertFalse(first["downstream_action_executed"])
+
+    def test_admit_rejects_ambiguous_or_symlinked_graph_snapshot(self):
+        self.initialize()
+        snapshot = Path(self.tmp.name) / "graph.json"
+        rows = [
+            {"source_id": "root", "memory_type": "structured_memory_graph_node",
+             "metadata": {"graph_id": "GLACIEREQ-MEMGRAPH-V1", "node_key": "ROOT",
+                          "node_kind": "mission", "parent_key": None}},
+            {"source_id": "apex", "memory_type": "structured_memory_graph_node",
+             "metadata": {"graph_id": "GLACIEREQ-MEMGRAPH-V1", "node_key": "APEX",
+                          "node_kind": "project", "parent_key": "ROOT"}},
+        ]
+        for key in ("C1", "C2"):
+            rows.append({"source_id": key, "memory_type": "structured_memory_graph_node",
+                         "metadata": {"graph_id": "GLACIEREQ-MEMGRAPH-V1", "node_key": key,
+                                      "node_kind": "cursor", "parent_key": "APEX",
+                                      "next_transition": key}})
+        snapshot.write_text(json.dumps(rows))
+        snapshot.chmod(0o600)
+        self.cmd("admit", "--session-id", "ambiguous", "--graph-snapshot", str(snapshot),
+                 "--graph-project", "APEX", ok=False)
+        link = Path(self.tmp.name) / "graph-link.json"
+        link.symlink_to(snapshot)
+        self.cmd("admit", "--session-id", "symlink", "--graph-snapshot", str(link),
+                 "--graph-project", "APEX", ok=False)
+
     def test_admit_denies_missing_or_stale_authenticated_journal(self):
         self.cmd("admit", "--session-id", "not-yet-created", ok=False)
         init = self.initialize()
