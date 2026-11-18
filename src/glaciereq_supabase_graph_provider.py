@@ -108,6 +108,12 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
                     raise ValueError("provider page exceeds advertised total")
                 if declared > start + len(page) and len(page) < page_size:
                     raise ValueError("provider truncated page before advertised end")
+        # Exact-multiple result sets finish at the advertised total. Do not
+        # issue an extra out-of-range request: PostgREST may answer it with 416.
+        if advertised_total is not None and len(rows) == advertised_total:
+            if not rows:
+                raise ValueError("empty provider graph")
+            return rows
         if len(page) < page_size:
             if advertised_total is not None and len(rows) != advertised_total:
                 raise ValueError("provider graph incomplete against advertised total")
