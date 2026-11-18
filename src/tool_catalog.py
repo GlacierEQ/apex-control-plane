@@ -88,10 +88,24 @@ def search_catalog(catalog: Sequence[CatalogEntry], query: str) -> list[CatalogE
 def select(catalog: Sequence[CatalogEntry], wanted: Sequence[str]) -> list[CatalogEntry]:
     """Per-turn selection by explicit name. No fixed k, no ranker guessing.
 
-    A name that matches nothing returns nothing: refuse-to-guess applies.
+    A name that matches nothing returns nothing: refuse-to-guess applies.\n    Ambiguous names raise ValueError; use kind:name to disambiguate.
     """
-    by_name = {e.name: e for e in catalog}
-    return [by_name[w] for w in wanted if w in by_name]
+    by_name: dict[str, list[CatalogEntry]] = {}
+    by_qualified: dict[str, list[CatalogEntry]] = {}
+    for entry in catalog:
+        by_name.setdefault(entry.name, []).append(entry)
+        by_qualified.setdefault(f"{entry.kind}:{entry.name}", []).append(entry)
+
+    selected: list[CatalogEntry] = []
+    for name in wanted:
+        matches = by_qualified.get(name, []) if ":" in name else by_name.get(name, [])
+        if len(matches) > 1:
+            raise ValueError(
+                f"ambiguous catalog selection {name!r}; specify a unique kind:name"
+            )
+        if matches:
+            selected.append(matches[0])
+    return selected
 
 
 def hot_swap(
