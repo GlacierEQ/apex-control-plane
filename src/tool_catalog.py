@@ -88,7 +88,8 @@ def search_catalog(catalog: Sequence[CatalogEntry], query: str) -> list[CatalogE
 def select(catalog: Sequence[CatalogEntry], wanted: Sequence[str]) -> list[CatalogEntry]:
     """Per-turn selection by explicit name. No fixed k, no ranker guessing.
 
-    A name that matches nothing returns nothing: refuse-to-guess applies.\n    Ambiguous names raise ValueError; use kind:name to disambiguate.
+    A name that matches nothing returns nothing: refuse-to-guess applies.
+    Ambiguous names raise ValueError; use kind:name to disambiguate.
     """
     by_name: dict[str, list[CatalogEntry]] = {}
     by_qualified: dict[str, list[CatalogEntry]] = {}
@@ -99,7 +100,10 @@ def select(catalog: Sequence[CatalogEntry], wanted: Sequence[str]) -> list[Catal
     selected: list[CatalogEntry] = []
     seen: set[tuple[str, str, str]] = set()
     for name in wanted:
-        matches = by_qualified.get(name, []) if ":" in name else by_name.get(name, [])
+        # A literal capability name may contain ":". Resolve both namespaces and
+        # reject collisions rather than silently preferring either one.
+        candidates = by_name.get(name, []) + by_qualified.get(name, [])
+        matches = list(dict.fromkeys(candidates))
         if len(matches) > 1:
             raise ValueError(
                 f"ambiguous catalog selection {name!r}; specify a unique kind:name"
