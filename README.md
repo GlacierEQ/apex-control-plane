@@ -2,6 +2,8 @@
 
 The repository contains local control-plane and audit mechanisms for:
 
+> **Host Boundary (VillAIge L6 Domain Project):** Live Mac host supervision, LaunchAgents, and `HEARTBEAT.md` stay in root [`ops/OPERATING-PLANE.md`](../../ops/OPERATING-PLANE.md) and [`ops/remote-fortress/ORG-FIT.md`](../../ops/remote-fortress/ORG-FIT.md). Do not install parallel host-controller daemons from this project.
+
 - immutable SHA-256 transport envelopes and idempotency keys;
 - explicit separation of facts, allegations, inferences, hypotheses, proposals, and recommendations;
 - deterministic timeline/deadline projections;
