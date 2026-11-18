@@ -30,7 +30,8 @@ def run_work_unit(
     *,
     timeout_seconds: int = 300,
 ) -> dict:
-    if (not isinstance(command, list) or not command or not command[0]\n            or any(not isinstance(arg, str) or "\\x00" in arg for arg in command)):
+    if (not isinstance(command, list) or not command or not command[0]
+            or any(not isinstance(arg, str) or "\\x00" in arg for arg in command)):
         raise ValueError("command must be a nonempty argv string list")
     if type(timeout_seconds) is not int or timeout_seconds <= 0:
         raise ValueError("timeout must be a positive integer")
