@@ -64,3 +64,42 @@ def test_changed_command_under_same_plan_id_rejected(tmp_path):
     changed = {"id": "same-plan", "jobs": [job("a", "print('replacement')")]}
     with pytest.raises(ValueError, match="different objective"):
         execute_plan(db, changed)
+
+
+def test_changed_dependency_graph_rejected_before_new_side_effect(tmp_path):
+    marker = tmp_path / "marker.txt"
+    db = tmp_path / "claims.sqlite"
+    original = {
+        "id": "manifest-guard",
+        "jobs": [job("a", f"from pathlib import Path; Path({str(marker)!r}).write_text('a')")],
+    }
+    assert execute_plan(db, original)["ok"]
+    changed = {
+        "id": "manifest-guard",
+        "jobs": [
+            original["jobs"][0],
+            job("b", f"from pathlib import Path; Path({str(marker)!r}).write_text('BAD')", "a"),
+        ],
+    }
+    with pytest.raises(ValueError, match="different graph"):
+        execute_plan(db, changed)
+    assert marker.read_text() == "a"
+
+
+def test_changed_dependency_edge_rejected_even_if_commands_unchanged(tmp_path):
+    db = tmp_path / "claims.sqlite"
+    original = {"id": "edges", "jobs": [job("a", "pass"), job("b", "pass")]}
+    assert execute_plan(db, original)["ok"]
+    changed = {"id": "edges", "jobs": [job("a", "pass"), job("b", "pass", "a")]}
+    with pytest.raises(ValueError, match="different graph"):
+        execute_plan(db, changed)
+
+
+def test_reordered_equivalent_plan_can_resume(tmp_path):
+    db = tmp_path / "claims.sqlite"
+    a = job("a", "pass")
+    b = job("b", "pass", "a")
+    assert execute_plan(db, {"id": "order", "jobs": [a, b]})["ok"]
+    again = execute_plan(db, {"id": "order", "jobs": [b, a]})
+    assert again["ok"]
+    assert again["jobs"]["a"]["invocation"] == "already_claimed:succeeded"
