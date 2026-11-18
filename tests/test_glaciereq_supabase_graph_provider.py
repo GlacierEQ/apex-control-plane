@@ -66,3 +66,34 @@ def test_reject_unavailable_authentication():
     with patch.dict("os.environ", {}, clear=True):
         with pytest.raises(ValueError, match="authentication unavailable"):
             fetch_graph("https://example.supabase.co")
+
+
+def test_rejects_arbitrary_https_host_before_token_transport():
+    invoked = []
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        with pytest.raises(ValueError, match="untrusted provider host"):
+            fetch_graph("https://attacker.example", opener=lambda *args, **kwargs: invoked.append(args))
+    assert not invoked
+
+
+def test_custom_domain_requires_exact_explicit_pin():
+    invoked = []
+    with patch.dict("os.environ", {
+        "GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only",
+        "GLACIEREQ_SUPABASE_EXPECTED_HOST": "memory.example.org",
+    }, clear=True):
+        with pytest.raises(ValueError, match="configured pin"):
+            fetch_graph("https://other.example.org", opener=lambda *args, **kwargs: invoked.append(args))
+        assert len(fetch_graph("https://memory.example.org",
+            opener=lambda request, timeout: Response(request.full_url, [node("A")]))) == 1
+    assert not invoked
+
+
+@pytest.mark.parametrize("url", [
+    "https://example.supabase.co:444", "https://example.supabase.co.evil.org",
+    "https://supabase.co", "https://sub.sub.supabase.co",
+])
+def test_rejects_host_confusion(url):
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        with pytest.raises(ValueError, match="untrusted provider host"):
+            fetch_graph(url)
