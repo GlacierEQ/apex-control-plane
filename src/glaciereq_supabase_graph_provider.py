@@ -49,6 +49,7 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
     endpoint = base + "/apex_memories?" + params
     rows = []
     seen = set()
+    advertised_total = None
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
             raise ValueError("provider redirect refused")
@@ -98,9 +99,18 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
             first, last, total = match.groups()
             if int(first) != start or int(last) != start + len(page) - 1:
                 raise ValueError("provider Content-Range disagrees with page")
-            if total != "*" and int(total) > start + len(page) and len(page) < page_size:
-                raise ValueError("provider truncated page before advertised end")
+            if total != "*":
+                declared = int(total)
+                if advertised_total is not None and declared != advertised_total:
+                    raise ValueError("provider total changed during pagination")
+                advertised_total = declared
+                if declared < start + len(page):
+                    raise ValueError("provider page exceeds advertised total")
+                if declared > start + len(page) and len(page) < page_size:
+                    raise ValueError("provider truncated page before advertised end")
         if len(page) < page_size:
+            if advertised_total is not None and len(rows) != advertised_total:
+                raise ValueError("provider graph incomplete against advertised total")
             if not rows:
                 raise ValueError("empty provider graph")
             return rows
