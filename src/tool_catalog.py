@@ -150,6 +150,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--skills", action="append", default=[], metavar="DIR")
     parser.add_argument("--connectors", action="append", default=[], metavar="DIR")
     parser.add_argument("--select", action="append", default=[], metavar="KIND:NAME")
+    parser.add_argument("--load-content", action="store_true", help="Read selected capability documents into JSON")
     args = parser.parse_args(argv)
     catalog = build_catalog(args.skills, args.connectors)
     try:
@@ -162,7 +163,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
-    print(json.dumps([asdict(entry) for entry in chosen], sort_keys=True))
+    output = []
+    try:
+        for entry in chosen:
+            record = asdict(entry)
+            if args.load_content:
+                # Resolve all requested documents before emitting any output.
+                # Never return a partially loaded capability set.
+                record["content"] = Path(entry.path).read_text(encoding="utf-8")
+            output.append(record)
+    except (OSError, UnicodeError) as exc:
+        print(f"cannot load capability document: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(output, sort_keys=True))
     return 0
 
 
