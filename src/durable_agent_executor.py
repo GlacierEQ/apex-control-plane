@@ -145,7 +145,7 @@ class DurableAgentExecutor:
         # Never release the claim automatically: even a reported terminal
         # failure can have a provider-side effect or an inconsistent adapter.
         with self._connect() as db:
-            db.execute(
+            updated = db.execute(
                 "UPDATE execution_claims SET state=?, result_json=? WHERE workload_id=? AND state='invoking'",
                 (state, json.dumps({
                     "status": result.status,
@@ -162,7 +162,11 @@ class DurableAgentExecutor:
         # Reconciliation may have finalized the claim while the provider was
         # running. Never report the local result as authoritative in that case.
         persisted = self.readback(workload.workload_id)
-        if persisted is not None and persisted["state"] != state:
+        if updated.rowcount != 1:
+            # A concurrent authoritative reconciliation can have the SAME
+            # terminal state but different evidence. Do not return local output.
+            if persisted is None:
+                raise RuntimeError("execution claim disappeared during completion")
             return ClaimResult("already_claimed:" + persisted["state"], workload.workload_id)
         return ClaimResult(state, workload.workload_id, result)
 
