@@ -115,7 +115,10 @@ class DurableAgentExecutor:
                     "status": result.status,
                     "attempted": result.attempted,
                     "substrate": result.substrate,
-                }), workload.workload_id),
+                    "provider_result": result.result if isinstance(
+                        result.result, (dict, list, str, int, float, bool, type(None))
+                    ) else repr(result.result)[:16000],
+                }, default=str), workload.workload_id),
             )
         return ClaimResult(state, workload.workload_id, result)
 
