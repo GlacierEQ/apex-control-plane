@@ -110,7 +110,7 @@ def prepare_catalog(entries, *, observed_at):
         uri = _url(source.get("url"), provider)
         path = source.get("namespace_path")
         if provider == "dropbox":
-            if not isinstance(path, str) or not re.fullmatch(r"ns:[0-9]+//[^\\r\\n]+", path):
+            if not isinstance(path, str) or not re.fullmatch(r"ns:[0-9]+//.+", path) or any(c in path for c in ("\r", "\n")):
                 raise ValueError("invalid Dropbox namespace path")
         elif path is not None:
             raise ValueError("unexpected namespace path")
