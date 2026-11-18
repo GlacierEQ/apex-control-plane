@@ -103,7 +103,7 @@ def select(catalog: Sequence[CatalogEntry], wanted: Sequence[str]) -> list[Catal
         # A literal capability name may contain ":". Resolve both namespaces and
         # reject collisions rather than silently preferring either one.
         candidates = by_name.get(name, []) + by_qualified.get(name, [])
-        matches = list(dict.fromkeys(candidates))
+        matches = list({id(entry): entry for entry in candidates}.values())
         if len(matches) > 1:
             raise ValueError(
                 f"ambiguous catalog selection {name!r}; specify a unique kind:name"
