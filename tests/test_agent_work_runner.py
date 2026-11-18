@@ -129,7 +129,7 @@ def test_concurrent_workers_invoke_subprocess_at_most_once(tmp_path):
     command = [
         sys.executable, "-c",
         "import pathlib,sys,time; p=pathlib.Path(sys.argv[1]);"
-        " f=p.open('a'); f.write('called\\n'); f.close(); time.sleep(0.2)",
+        "f=p.open('a'); f.write('called\\n'); f.close(); time.sleep(0.2)",
         str(marker),
     ]
     gate = Barrier(6)
