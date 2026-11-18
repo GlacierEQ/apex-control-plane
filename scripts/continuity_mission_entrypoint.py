@@ -69,7 +69,8 @@ def start_mission(
         or not isinstance(receipt.get("apex_runtime_id"), str)
         or not receipt["apex_runtime_id"].strip()
         or receipt.get("apex_phase") != "ready"
-        or "context_recovery" not in receipt.get("apex_receipt_kinds", [])
+        or not isinstance(receipt.get("apex_receipt_kinds"), list)
+        or "context_recovery" not in receipt["apex_receipt_kinds"]
         or receipt["result"].get("binding") != "spiral-journal:" + receipt["head"]
         or (receipt.get("action_name") not in ("continue", "inspect")
             and (legacy_continue_cursor is None
