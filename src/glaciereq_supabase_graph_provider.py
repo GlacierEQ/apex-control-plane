@@ -39,7 +39,11 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
     endpoint = base + "/apex_memories?" + params
     rows = []
     seen = set()
-    transport = opener or urllib.request.urlopen
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            raise ValueError("provider redirect refused")
+
+    transport = opener or urllib.request.build_opener(NoRedirect()).open
     for start in range(0, 100000, page_size):
         request = urllib.request.Request(endpoint, headers={
             "Authorization": "Bearer " + token,
