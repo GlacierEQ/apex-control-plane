@@ -7,6 +7,8 @@ to execute untrusted cloud-file content.
 from __future__ import annotations
 
 import hashlib
+import fcntl
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -101,38 +103,60 @@ def _normalize(item: Mapping[str, Any]) -> tuple[dict[str, Any], bytes | None]:
     }, raw)
 
 
+@contextmanager
+def _ingest_lock(root: Path):
+    """Serialize manifest read-modify-write across independent processes."""
+    lock = root / ".ingest.lock"
+    if lock.is_symlink():
+        raise ValueError("symlink corpus lock refused")
+    flags = os.O_CREAT | os.O_RDWR
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = os.open(lock, flags, 0o600)
+    try:
+        info = os.fstat(fd)
+        if info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError("corpus lock must be owner-private")
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+
+
 def ingest_cloud_snapshot(root: Path, items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """Merge provider observations without overwriting a prior provider revision."""
     root = Path(root)
     _prepare_store(root)
-    state = _manifest(root)
-    existing = {(r["source_id"], r["revision"]): r for r in state["revisions"]}
-    fresh: list[tuple[dict[str, Any], bytes | None]] = []
-    seen: dict[tuple[str, str], dict[str, Any]] = {}
-    for item in items:
-        record, raw = _normalize(item)
-        key = (record["source_id"], record["revision"])
-        if key in existing and existing[key] != record:
-            raise ValueError("same provider revision changed: refuse revision collision")
-        if key in seen and seen[key] != record:
-            raise ValueError("conflicting observations in one provider snapshot")
-        seen[key] = record
-        if key not in existing and all(key != (x["source_id"], x["revision"]) for x, _ in fresh):
-            fresh.append((record, raw))
-    for record, raw in fresh:
-        if raw is not None:
-            target = root / "objects" / (record["text_sha256"] + ".txt")
-            if target.is_symlink():
-                raise ValueError("symlink cloud content object refused")
-            if target.exists():
-                if _sha(target.read_bytes()) != record["text_sha256"]:
-                    raise ValueError("content-addressed object tampered")
-            else:
-                _atomic(target, raw)
-        state["revisions"].append(record)
-    if fresh:
-        _atomic(root / "manifest.json", _json(state))
-    return {"new_revisions": len(fresh), "total_revisions": len(state["revisions"])}
+    with _ingest_lock(root):
+        state = _manifest(root)
+        existing = {(r["source_id"], r["revision"]): r for r in state["revisions"]}
+        fresh: list[tuple[dict[str, Any], bytes | None]] = []
+        seen: dict[tuple[str, str], dict[str, Any]] = {}
+        for item in items:
+            record, raw = _normalize(item)
+            key = (record["source_id"], record["revision"])
+            if key in existing and existing[key] != record:
+                raise ValueError("same provider revision changed: refuse revision collision")
+            if key in seen and seen[key] != record:
+                raise ValueError("conflicting observations in one provider snapshot")
+            seen[key] = record
+            if key not in existing and all(key != (x["source_id"], x["revision"]) for x, _ in fresh):
+                fresh.append((record, raw))
+        for record, raw in fresh:
+            if raw is not None:
+                target = root / "objects" / (record["text_sha256"] + ".txt")
+                if target.is_symlink():
+                    raise ValueError("symlink cloud content object refused")
+                if target.exists():
+                    if _sha(target.read_bytes()) != record["text_sha256"]:
+                        raise ValueError("content-addressed object tampered")
+                else:
+                    _atomic(target, raw)
+            state["revisions"].append(record)
+        if fresh:
+            _atomic(root / "manifest.json", _json(state))
+        return {"new_revisions": len(fresh), "total_revisions": len(state["revisions"])}
 
 
 def recover_cloud_context(
