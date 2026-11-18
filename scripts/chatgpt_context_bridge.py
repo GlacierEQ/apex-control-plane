@@ -26,7 +26,7 @@ from src.spiral_live_journal import (
     resume_authenticated_chat_in_apex,
 )
 from src.spiral_chat_handoff import recover_existing_chat_session
-from src.continuity_action_gate import execute_recovered_action
+from src.continuity_action_gate import execute_recovered_action, validate_recovered_action
 
 def fail(reason):
     raise ValueError(reason)
@@ -308,6 +308,18 @@ def main():
                         "binding": state.source_ref,
                         "instructions_to_apply": list(state.corrections),
                     }
+                registry = {
+                    "continue": continue_from_cursor,
+                    "inspect": inspect_recovered_fact,
+                }
+                # Reject unknown/malformed cursors BEFORE creating an APEX
+                # admission receipt. The actual callback still runs after admission.
+                validate_recovered_action(
+                    recovery,
+                    expected_mission_id=args.mission_id,
+                    expected_source_ref="spiral-journal:" + anchor["head"],
+                    registry=registry,
+                )
                 # Admit the authenticated recovery into the actual APEX context
                 # gate before invoking the registered downstream callback.
                 kernel = create_verified_runtime_kernel()
@@ -326,10 +338,7 @@ def main():
                     recovery,
                     expected_mission_id=args.mission_id,
                     expected_source_ref="spiral-journal:" + anchor["head"],
-                    registry={
-                        "continue": continue_from_cursor,
-                        "inspect": inspect_recovered_fact,
-                    },
+                    registry=registry,
                 )
                 print(json.dumps({
                     "status": "RECOVERED_ACTION_DISPATCHED",
