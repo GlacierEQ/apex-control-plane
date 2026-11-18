@@ -135,13 +135,56 @@ def execute_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+
+def inspect_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
+    """Read DAG progress without claiming, dispatching, or executing any job."""
+    ordered = validate_plan(plan)
+    namespace = plan.get("id")
+    if not isinstance(namespace, str) or not namespace.strip():
+        raise ValueError("plan.id is required")
+    durable = DurableAgentExecutor(database)
+    manifest = [
+        {
+            "id": job["id"], "objective": job["objective"],
+            "command": job["command"], "depends_on": sorted(job.get("depends_on", [])),
+            "timeout_seconds": job.get("timeout_seconds", 300),
+        }
+        for job in sorted(ordered, key=lambda item: item["id"])
+    ]
+    fingerprint = hashlib.sha256(
+        json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    stored = durable.readback(namespace + ":__plan_manifest__")
+    if stored and stored["objective"] != fingerprint:
+        raise ValueError("plan id already belongs to a different graph")
+    outcomes: dict[str, dict[str, Any]] = {}
+    for job in ordered:
+        identifier = job["id"]
+        deps = job.get("depends_on", [])
+        record = durable.readback(namespace + ":" + identifier)
+        if record is not None:
+            state = record["state"]
+        elif any(outcomes[dep]["state"] != "succeeded" for dep in deps):
+            state = "blocked_dependency"
+        else:
+            state = "not_started"
+        outcomes[identifier] = {"state": state, "record": record}
+    return {
+        "plan_id": namespace,
+        "manifest_recorded": stored is not None,
+        "ok": bool(stored) and all(item["state"] == "succeeded" for item in outcomes.values()),
+        "jobs": outcomes,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Execute a durable dependency DAG")
     parser.add_argument("--database", required=True)
     parser.add_argument("--plan", required=True, help="JSON plan file")
+    parser.add_argument("--readback", action="store_true", help="Inspect persisted DAG without executing")
     args = parser.parse_args(argv)
     plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
-    result = execute_plan(args.database, plan)
+    result = inspect_plan(args.database, plan) if args.readback else execute_plan(args.database, plan)
     print(json.dumps(result, sort_keys=True))
     return 0 if result["ok"] else 1
 
