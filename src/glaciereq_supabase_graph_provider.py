@@ -23,6 +23,16 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
             or parsed.password or parsed.query or parsed.fragment
             or parsed.path.rstrip("/") not in ("", "/rest/v1")):
         raise ValueError("expected exact HTTPS Supabase project base or /rest/v1 URL")
+    # Never send a bearer token to an arbitrary caller-supplied HTTPS host.
+    # Custom Supabase domains require an explicit, exact runtime host pin.
+    hostname = parsed.hostname.lower()
+    pinned = os.environ.get("GLACIEREQ_SUPABASE_EXPECTED_HOST", "").lower().strip()
+    if pinned:
+        if hostname != pinned or parsed.port not in (None, 443):
+            raise ValueError("provider host does not match configured pin")
+    elif (not hostname.endswith(".supabase.co") or hostname.count(".") != 2
+          or parsed.port not in (None, 443)):
+        raise ValueError("untrusted provider host; configure an exact host pin")
     if not isinstance(page_size, int) or not 1 <= page_size <= 1000:
         raise ValueError("invalid page size")
     token = os.environ.get(token_env, "")
