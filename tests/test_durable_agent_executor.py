@@ -103,3 +103,24 @@ def test_reconciled_claim_cannot_be_reconciled_again(tmp_path):
     with pytest.raises(ValueError, match="terminal outcomes are immutable"):
         executor.reconcile(work.workload_id, authoritative_state="succeeded", evidence="conflicting receipt")
     assert executor.readback(work.workload_id) == before
+
+
+def test_provider_completion_cannot_overwrite_concurrent_reconciliation(tmp_path):
+    database = tmp_path / "claims.sqlite"
+    work, observations = setup()
+    executor = DurableAgentExecutor(database)
+
+    def provider(*_):
+        # Simulate independent authoritative readback arriving while the
+        # original provider call is still outstanding.
+        DurableAgentExecutor(database).reconcile(
+            work.workload_id, authoritative_state="cancelled",
+            evidence="authoritative cancellation receipt",
+        )
+        return {"status": "success", "receipt": "late"}
+
+    outcome = executor.execute(work, observations, provider)
+    assert outcome.state == "already_claimed:cancelled"
+    record = executor.readback(work.workload_id)
+    assert record["state"] == "cancelled"
+    assert record["result"] == {"reconciliation_evidence": "authoritative cancellation receipt"}
