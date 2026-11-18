@@ -76,6 +76,41 @@ def start_mission(
     return consumer(receipt)
 
 
+def start_registered_mission(
+    *,
+    store: Path,
+    spiral_root: Path,
+    mission_id: str,
+    session_id: str,
+    handlers: Mapping[str, Callable[[Mapping[str, Any]], Any]],
+    bridge: Path | None = None,
+) -> Any:
+    """Run the *selected* authorized mission operation after verified startup.
+
+    A persisted cursor chooses the handler; there is no default handler and no
+    execution before the authenticated bridge receipt passes all startup gates.
+    The entire recovery receipt is passed through, including corrections and
+    provenance, so handlers can apply current instructions and source facts.
+    """
+    if not isinstance(handlers, Mapping) or not handlers:
+        raise ValueError("explicit nonempty mission handler registry required")
+    if any(not isinstance(name, str) or not name or not callable(handler)
+           for name, handler in handlers.items()):
+        raise ValueError("invalid mission handler registry")
+
+    def dispatch_to_handler(receipt: Mapping[str, Any]) -> Any:
+        action = receipt["action_name"]
+        handler = handlers.get(action)
+        if handler is None:
+            raise ValueError("recovered action has no authorized mission handler")
+        return handler(receipt)
+
+    return start_mission(
+        store=store, spiral_root=spiral_root, mission_id=mission_id,
+        session_id=session_id, consumer=dispatch_to_handler, bridge=bridge,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Start a mission with mandatory authenticated recovery")
     parser.add_argument("--store", type=Path, required=True)
