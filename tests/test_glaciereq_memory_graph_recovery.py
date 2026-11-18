@@ -87,3 +87,21 @@ def test_graph_admission_rejects_incomplete_selection():
     with pytest.raises(ValueError, match="invalid graph selection"):
         compose_admission_instruction("mission", "source", None,
             {"project": "APEX", "next_cursor": "cursor"})
+
+
+def test_advisory_reference_cannot_replace_missing_canonical_cursor():
+    rows = graph()
+    rows[3]["metadata"]["next_transition"] = ""
+    rows.append(node("APEX-DRAFT", "source_reference", "APEX",
+                     next_cursor="dangerous_stale_draft",
+                     confidence="provider_read_verified"))
+    with pytest.raises(ValueError, match="no canonical project cursor"):
+        recover(rows, "APEX")
+
+
+def test_advisory_reference_cannot_replace_missing_cursor_node():
+    rows = [r for r in graph() if r["metadata"]["node_key"] != "APEX-CURSOR"]
+    rows.append(node("APEX-OLDER", "evidence", "APEX",
+                     next_cursor="outdated_action"))
+    with pytest.raises(ValueError, match="no canonical project cursor"):
+        recover(rows, "APEX")
