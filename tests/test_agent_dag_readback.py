@@ -62,3 +62,28 @@ def test_cli_readback_never_runs_job(tmp_path, capsys):
     output = json.loads(capsys.readouterr().out)
     assert output["jobs"]["first"]["state"] == "not_started"
     assert not marker.exists()
+
+
+def test_readback_does_not_create_database_or_schema(tmp_path):
+    db = tmp_path / "missing.sqlite"
+    p = plan(tmp_path / "marker")
+    assert inspect_plan(db, p)["manifest_recorded"] is False
+    assert not db.exists()
+
+    import sqlite3
+    with sqlite3.connect(db) as connection:
+        connection.execute("CREATE TABLE unrelated (id INTEGER)")
+    assert inspect_plan(db, p)["jobs"]["first"]["state"] == "not_started"
+    with sqlite3.connect(db) as connection:
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE name='execution_claims'"
+        ).fetchone() is None
+
+
+def test_readback_on_readonly_database(tmp_path):
+    db = tmp_path / "readonly.sqlite"
+    marker = tmp_path / "marker"
+    p = plan(marker)
+    assert execute_plan(db, p)["ok"]
+    db.chmod(0o444)
+    assert inspect_plan(db, p)["ok"]
