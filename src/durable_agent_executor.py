@@ -98,8 +98,15 @@ class DurableAgentExecutor:
                 db.execute("ROLLBACK")
                 raise
 
+        last_provider_result: Any = None
+
+        def capturing_executor(substrate: str, work: Workload) -> Any:
+            nonlocal last_provider_result
+            last_provider_result = executor(substrate, work)
+            return last_provider_result
+
         try:
-            result = self.fabric.execute(workload, observations, executor)
+            result = self.fabric.execute(workload, observations, capturing_executor)
         except BaseException:
             # Unknown side effects: leave invoking claim for reconciliation.
             raise
@@ -115,9 +122,12 @@ class DurableAgentExecutor:
                     "status": result.status,
                     "attempted": result.attempted,
                     "substrate": result.substrate,
-                    "provider_result": result.result if isinstance(
-                        result.result, (dict, list, str, int, float, bool, type(None))
-                    ) else repr(result.result)[:16000],
+                    "provider_result": (
+                        result.result if result.result is not None else last_provider_result
+                    ) if isinstance(
+                        result.result if result.result is not None else last_provider_result,
+                        (dict, list, str, int, float, bool, type(None))
+                    ) else repr(last_provider_result)[:16000],
                 }, default=str), workload.workload_id),
             )
         return ClaimResult(state, workload.workload_id, result)
