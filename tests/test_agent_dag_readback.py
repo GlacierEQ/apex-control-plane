@@ -87,3 +87,13 @@ def test_readback_on_readonly_database(tmp_path):
     assert execute_plan(db, p)["ok"]
     db.chmod(0o444)
     assert inspect_plan(db, p)["ok"]
+
+
+@pytest.mark.parametrize("namespace", ["alpha:beta", "alpha:__plan_manifest__"])
+def test_readback_rejects_ambiguous_namespace_before_opening_database(tmp_path, namespace):
+    db = tmp_path / "claims.sqlite"
+    p = plan(tmp_path / "marker")
+    p["id"] = namespace
+    with pytest.raises(ValueError, match="unambiguous"):
+        inspect_plan(db, p)
+    assert not db.exists()
