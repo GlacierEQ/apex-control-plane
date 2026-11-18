@@ -46,6 +46,7 @@ def build_catalog(
     job; deciding what to load for a turn is the caller's.
     """
     entries: list[CatalogEntry] = []
+    seen_docs: set[tuple[str, Path]] = set()
     for kind, dirs, fname in (
         ("skill", skill_dirs, "SKILL.md"),
         ("connector", connector_dirs, "CONNECTOR.md"),
@@ -57,6 +58,11 @@ def build_catalog(
             for child in sorted(base.iterdir(), key=lambda p: p.name):
                 doc = child / fname
                 if child.is_dir() and doc.is_file():
+                    # Overlapping roots and aliases must not manufacture ambiguity.
+                    identity = (kind, doc.resolve())
+                    if identity in seen_docs:
+                        continue
+                    seen_docs.add(identity)
                     entries.append(
                         CatalogEntry(
                             name=child.name,
