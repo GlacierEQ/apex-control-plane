@@ -24,8 +24,8 @@ class StartupTests(unittest.TestCase):
     def test_authenticated_dispatch_precedes_consumer(self):
         receipt = {
             "status": "RECOVERED_ACTION_DISPATCHED", "mission_id": "mission",
-            "head": "a" * 64, "downstream_action_executed": True,
-            "result": {"next_cursor": "continue:next"},
+            "head": "a" * 64, "downstream_action_executed": True,\n            "apex_phase": "ready", "apex_receipt_kinds": ["context_recovery"],\n            "action_name": "continue",
+            "result": {"next_cursor": "continue:next",\n                       "binding": "spiral-journal:" + "a" * 64},
         }
         result, called = self.invoke(subprocess.CompletedProcess([], 0, json.dumps(receipt), ""))
         self.assertEqual(result["next_cursor"], "continue:next")
