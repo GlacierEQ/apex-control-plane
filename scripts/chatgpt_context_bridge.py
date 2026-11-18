@@ -26,7 +26,8 @@ from src.spiral_live_journal import (
     resume_authenticated_chat_in_apex,
 )
 from src.spiral_chat_handoff import recover_existing_chat_session
-from src.glaciereq_memory_graph_recovery import recover as recover_memory_graph
+from src.glaciereq_memory_graph_recovery import (recover as recover_memory_graph,
+                                                 compose_admission_instruction)
 
 def fail(reason):
     raise ValueError(reason)
@@ -296,14 +297,8 @@ def main():
             snapshot = resume_authenticated_chat_in_apex(
                 kernel,
                 recovery,
-                task_instruction=(
-                    f"Continue mission {recovery.mission_id} from {recovery.source_ref} "
-                    f"at cursor {recovery.cursor or 'initial'}"
-                    + (f"; separate untrusted graph snapshot suggests project "
-                       f"{graph_selection['project']} cursor {graph_selection['next_cursor']} "
-                       f"from {graph_selection['source_id']}; verify owning source before action"
-                       if graph_selection else "")
-                ),
+                task_instruction=compose_admission_instruction(
+                    recovery.mission_id, recovery.source_ref, recovery.cursor, graph_selection),
                 target_state=recovery.terminal_outcome,
                 operation_class="chat_context_admission",
                 applied_to_action=applied,
