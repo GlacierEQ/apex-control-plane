@@ -179,6 +179,8 @@ class DurableAgentExecutor:
                 ).fetchone()
                 if row is None:
                     raise KeyError(workload_id)
+                if row[0] not in {"invoking", "needs_reconciliation"}:
+                    raise ValueError("only uncertain claims may be reconciled; terminal outcomes are immutable")
                 db.execute(
                     "UPDATE execution_claims SET state=?, result_json=? WHERE workload_id=?",
                     (authoritative_state, json.dumps({"reconciliation_evidence": evidence}),
