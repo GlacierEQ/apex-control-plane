@@ -30,7 +30,7 @@ def validate_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(identifier, str) or not identifier.strip() or identifier in ids or identifier == "__plan_manifest__" or ":" in identifier:
             raise ValueError("job ids must be unique nonempty strings")
         argv = job.get("command")
-        if not isinstance(argv, list) or not argv or any(not isinstance(x, str) for x in argv):
+        if (not isinstance(argv, list) or not argv or not argv[0]\n                or any(not isinstance(x, str) or "\\x00" in x for x in argv)):
             raise ValueError("command must be a nonempty argv string list")
         if not isinstance(job.get("objective"), str) or not job["objective"].strip():
             raise ValueError("job objective is required")
