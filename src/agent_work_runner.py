@@ -28,12 +28,12 @@ def run_work_unit(
     *,
     timeout_seconds: int = 300,
 ) -> dict:
-    if not command:
-        raise ValueError("nonempty command required")
-    if timeout_seconds <= 0:
-        raise ValueError("timeout must be positive")
+    if not isinstance(command, list) or not command or any(not isinstance(arg, str) for arg in command):
+        raise ValueError("command must be a nonempty argv string list")
+    if type(timeout_seconds) is not int or timeout_seconds <= 0:
+        raise ValueError("timeout must be a positive integer")
 
-    command_identity = hashlib.sha256(json.dumps(command, ensure_ascii=False).encode("utf-8")).hexdigest()
+    command_identity = hashlib.sha256(json.dumps({"argv": command, "timeout_seconds": timeout_seconds}, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
     workload = Workload(workload_id, objective + " [argv-sha256:" + command_identity + "]", frozenset({"local_process"}))
     observation = SubstrateObservation(
         name="local_process",
