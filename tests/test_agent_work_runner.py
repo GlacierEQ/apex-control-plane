@@ -232,3 +232,13 @@ def test_missing_executable_preserves_spawn_error_in_durable_record(tmp_path):
     assert record["result"]["provider_result"]["error"] == "process_spawn_failed"
     second = run_work_unit(db, "spawn-1", "missing executable", command)
     assert second["state"] == "already_claimed:needs_reconciliation"
+
+
+def test_invalid_os_argv_rejected_before_claim_or_database(tmp_path):
+    import pytest
+
+    for index, command in enumerate(([""], ["bad\\x00binary"], [sys.executable, "bad\\x00argument"])):
+        db = tmp_path / f"invalid-os-argv-{index}.sqlite"
+        with pytest.raises(ValueError, match="command"):
+            run_work_unit(db, "bad-argv", "reject malformed argv", command)
+        assert not db.exists()
