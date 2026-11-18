@@ -119,3 +119,18 @@ def test_reserved_manifest_identifier_rejected_before_execution(tmp_path):
     item = job("__plan_manifest__", "pass")
     with pytest.raises(ValueError, match="job ids"):
         execute_plan(tmp_path / "claims.sqlite", {"id": "reserved", "jobs": [item]})
+
+
+@pytest.mark.parametrize("plan_id,job_id", [
+    ("alpha:beta", "job"),
+    ("alpha", "beta:job"),
+    ("alpha", "job:__plan_manifest__"),
+])
+def test_ambiguous_claim_keys_rejected_before_storage_or_dispatch(tmp_path, plan_id, job_id):
+    database = tmp_path / "claims.sqlite"
+    marker = tmp_path / "side_effect.txt"
+    plan = {"id": plan_id, "jobs": [job(job_id, f"from pathlib import Path; Path({str(marker)!r}).write_text('BAD')")]}
+    with pytest.raises(ValueError):
+        execute_plan(database, plan)
+    assert not database.exists()
+    assert not marker.exists()
