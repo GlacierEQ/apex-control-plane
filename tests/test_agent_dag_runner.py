@@ -62,7 +62,7 @@ def test_changed_command_under_same_plan_id_rejected(tmp_path):
     first = {"id": "same-plan", "jobs": [job("a", "print('original')")]}
     assert execute_plan(db, first)["ok"]
     changed = {"id": "same-plan", "jobs": [job("a", "print('replacement')")]}
-    with pytest.raises(ValueError, match="different objective"):
+    with pytest.raises(ValueError, match="different graph"):
         execute_plan(db, changed)
 
 
@@ -103,3 +103,19 @@ def test_reordered_equivalent_plan_can_resume(tmp_path):
     again = execute_plan(db, {"id": "order", "jobs": [b, a]})
     assert again["ok"]
     assert again["jobs"]["a"]["invocation"] == "already_claimed:succeeded"
+
+
+@pytest.mark.parametrize("invalid_timeout", [0, -1, True, 1.5, "30"])
+def test_invalid_timeout_rejected_before_execution(tmp_path, invalid_timeout):
+    marker = tmp_path / "must-not-exist.txt"
+    item = job("a", f"from pathlib import Path; Path({str(marker)!r}).write_text('bad')")
+    item["timeout_seconds"] = invalid_timeout
+    with pytest.raises(ValueError, match="timeout_seconds"):
+        execute_plan(tmp_path / "claims.sqlite", {"id": "timeout-invalid", "jobs": [item]})
+    assert not marker.exists()
+
+
+def test_reserved_manifest_identifier_rejected_before_execution(tmp_path):
+    item = job("__plan_manifest__", "pass")
+    with pytest.raises(ValueError, match="job ids"):
+        execute_plan(tmp_path / "claims.sqlite", {"id": "reserved", "jobs": [item]})
