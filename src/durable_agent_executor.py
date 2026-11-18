@@ -146,7 +146,7 @@ class DurableAgentExecutor:
         # failure can have a provider-side effect or an inconsistent adapter.
         with self._connect() as db:
             db.execute(
-                "UPDATE execution_claims SET state=?, result_json=? WHERE workload_id=?",
+                "UPDATE execution_claims SET state=?, result_json=? WHERE workload_id=? AND state='invoking'",
                 (state, json.dumps({
                     "status": result.status,
                     "attempted": result.attempted,
@@ -159,6 +159,11 @@ class DurableAgentExecutor:
                     ) else repr(last_provider_result)[:16000],
                 }, default=str), workload.workload_id),
             )
+        # Reconciliation may have finalized the claim while the provider was
+        # running. Never report the local result as authoritative in that case.
+        persisted = self.readback(workload.workload_id)
+        if persisted is not None and persisted["state"] != state:
+            return ClaimResult("already_claimed:" + persisted["state"], workload.workload_id)
         return ClaimResult(state, workload.workload_id, result)
 
     def reconcile(self, workload_id: str, *, authoritative_state: str, evidence: str) -> None:
