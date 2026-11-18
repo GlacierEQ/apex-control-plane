@@ -50,3 +50,34 @@ def test_same_workload_id_cannot_run_different_command(tmp_path):
     assert run_work_unit(db, "identity-1", "same description", first)["state"] == "succeeded"
     with pytest.raises(ValueError, match="different objective"):
         run_work_unit(db, "identity-1", "same description", second)
+
+
+def test_readback_persists_across_new_executor_instances(tmp_path):
+    import json
+
+    db = tmp_path / "readback.sqlite"
+    command = [sys.executable, "-c", "print('persisted')"]
+    first = run_work_unit(db, "readback-1", "readback", command)
+    assert first["state"] == "succeeded"
+    assert first["durable_record"]["state"] == "succeeded"
+    assert first["durable_record"]["result"]["attempted"] == ["local_process"]
+    replay = run_work_unit(db, "readback-1", "readback", command)
+    assert replay["durable_record"]["state"] == "succeeded"
+    assert replay["state"] == "already_claimed:succeeded"
+    from src.agent_work_runner import main
+    from io import StringIO
+    from contextlib import redirect_stdout
+    output = StringIO()
+    with redirect_stdout(output):
+        assert main(["--database", str(db), "--workload-id", "readback-1", "--readback"]) == 0
+    record = json.loads(output.getvalue())
+    assert record["state"] == "succeeded"
+    assert record["result"]["status"] == "success"
+
+
+def test_readback_missing_claim_is_non_success(tmp_path):
+    from src.agent_work_runner import main
+    assert main([
+        "--database", str(tmp_path / "empty.sqlite"),
+        "--workload-id", "unknown", "--readback",
+    ]) == 1
