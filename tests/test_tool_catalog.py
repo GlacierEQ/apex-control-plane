@@ -114,3 +114,31 @@ def test_symlinked_root_does_not_duplicate_same_capability(tmp_path):
     catalog = build_catalog([skills, alias], [])
     assert len(catalog) == 1
     assert len(select(catalog, ["skill:agent"])) == 1
+
+
+def test_cli_json_selection_and_fail_closed(tmp_path, capsys):
+    import json
+    from tool_catalog import main
+
+    skills = tmp_path / "skills"
+    _write_doc(skills / "agent" / "SKILL.md", "Agent", "Route tools.")
+    assert main(["--skills", str(skills), "--select", "skill:agent"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert len(payload) == 1
+    assert payload[0]["name"] == "agent"
+    assert payload[0]["kind"] == "skill"
+    assert main(["--skills", str(skills), "--select", "missing"]) == 2
+    assert "unknown catalog selection" in capsys.readouterr().err
+
+
+def test_cli_ambiguous_selection_never_emits_partial_json(tmp_path, capsys):
+    from tool_catalog import main
+
+    skills = tmp_path / "skills"
+    connectors = tmp_path / "connectors"
+    _write_doc(skills / "same" / "SKILL.md", "Same", "A skill.")
+    _write_doc(connectors / "same" / "CONNECTOR.md", "Same", "A connector.")
+    assert main(["--skills", str(skills), "--connectors", str(connectors), "--select", "same"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "ambiguous" in captured.err
