@@ -97,3 +97,47 @@ def test_readback_rejects_ambiguous_namespace_before_opening_database(tmp_path, 
     with pytest.raises(ValueError, match="unambiguous"):
         inspect_plan(db, p)
     assert not db.exists()
+
+
+def test_readback_uses_one_snapshot_during_concurrent_reconciliation(tmp_path, monkeypatch):
+    """A writer committing between row reads cannot create a mixed-time DAG."""
+    import sqlite3
+    from src import agent_dag_runner
+
+    db = tmp_path / "snapshot.sqlite"
+    p = plan(tmp_path / "marker")
+    assert execute_plan(db, p)["ok"]
+    original_connect = sqlite3.connect
+    changed = []
+
+    class ObservedConnection:
+        def __init__(self, inner):
+            self.inner = inner
+
+        def execute(self, statement, parameters=()):
+            result = self.inner.execute(statement, parameters)
+            if (statement.startswith("SELECT objective, state, result_json")
+                    and parameters[0].endswith(":first") and not changed):
+                with original_connect(db) as writer:
+                    writer.execute(
+                        "UPDATE execution_claims SET state='failed' WHERE workload_id=?",
+                        ("inspect-1:second",),
+                    )
+                changed.append(True)
+            return result
+
+        def close(self):
+            return self.inner.close()
+
+    monkeypatch.setattr(
+        agent_dag_runner.sqlite3, "connect",
+        lambda *args, **kwargs: ObservedConnection(original_connect(*args, **kwargs)),
+    )
+    observed = inspect_plan(db, p)
+    assert changed
+    assert observed["jobs"]["first"]["state"] == "succeeded"
+    assert observed["jobs"]["second"]["state"] == "succeeded"
+    with original_connect(db) as reader:
+        assert reader.execute(
+            "SELECT state FROM execution_claims WHERE workload_id='inspect-1:second'"
+        ).fetchone()[0] == "failed"
