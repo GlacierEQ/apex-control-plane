@@ -75,7 +75,9 @@ def start_mission(
         or (receipt.get("action_name") not in ("continue", "inspect")
             and (legacy_continue_cursor is None
                  or receipt.get("cursor") != legacy_continue_cursor))
-        or (receipt["action_name"] == "continue"
+        or ((receipt["action_name"] == "continue"
+             or (legacy_continue_cursor is not None
+                 and receipt["cursor"] == legacy_continue_cursor))
             and receipt["result"].get("next_cursor") != receipt["cursor"])
         or (receipt["action_name"] == "inspect"
             and receipt["result"].get("key") != receipt["cursor"].partition(":")[2])
