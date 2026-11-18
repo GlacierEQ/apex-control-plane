@@ -97,6 +97,7 @@ def select(catalog: Sequence[CatalogEntry], wanted: Sequence[str]) -> list[Catal
         by_qualified.setdefault(f"{entry.kind}:{entry.name}", []).append(entry)
 
     selected: list[CatalogEntry] = []
+    seen: set[tuple[str, str, str]] = set()
     for name in wanted:
         matches = by_qualified.get(name, []) if ":" in name else by_name.get(name, [])
         if len(matches) > 1:
@@ -104,7 +105,11 @@ def select(catalog: Sequence[CatalogEntry], wanted: Sequence[str]) -> list[Catal
                 f"ambiguous catalog selection {name!r}; specify a unique kind:name"
             )
         if matches:
-            selected.append(matches[0])
+            entry = matches[0]
+            identity = (entry.kind, entry.name, entry.path)
+            if identity not in seen:
+                selected.append(entry)
+                seen.add(identity)
     return selected
 
 
