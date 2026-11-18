@@ -184,3 +184,34 @@ def test_timeout_kills_descendant_processes_on_posix(tmp_path):
     assert result["state"] == "needs_reconciliation"
     time.sleep(1.3)
     assert not marker.exists()
+
+
+def test_cli_readback_missing_database_does_not_create_it(tmp_path, capsys):
+    db = tmp_path / "never-created.sqlite"
+    assert main(["--database", str(db), "--workload-id", "missing", "--readback"]) == 1
+    assert capsys.readouterr().out.strip() == "null"
+    assert not db.exists()
+
+
+def test_cli_readback_unrelated_database_does_not_create_claim_table(tmp_path, capsys):
+    import sqlite3
+
+    db = tmp_path / "unrelated.sqlite"
+    with sqlite3.connect(db) as connection:
+        connection.execute("CREATE TABLE unrelated (id INTEGER)")
+    assert main(["--database", str(db), "--workload-id", "missing", "--readback"]) == 1
+    assert capsys.readouterr().out.strip() == "null"
+    with sqlite3.connect(db) as connection:
+        tables = [row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+    assert tables == ["unrelated"]
+
+
+def test_cli_readback_existing_database_is_immutable(tmp_path, capsys):
+    import hashlib
+
+    db = tmp_path / "read-only.sqlite"
+    assert run_work_unit(db, "claim-1", "inspect", [sys.executable, "-c", "print('ok')"])["state"] == "succeeded"
+    before = hashlib.sha256(db.read_bytes()).hexdigest()
+    assert main(["--database", str(db), "--workload-id", "claim-1", "--readback"]) == 0
+    assert '"state": "succeeded"' in capsys.readouterr().out
+    assert hashlib.sha256(db.read_bytes()).hexdigest() == before
