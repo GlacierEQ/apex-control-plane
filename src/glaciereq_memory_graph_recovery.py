@@ -81,3 +81,21 @@ def recover(rows, project):
         "authority": row.get("authority_status", "unresolved"),
         "automatic_host_invocation_verified": False,
     }
+
+
+def compose_admission_instruction(mission_id, source_ref, journal_cursor, graph_selection=None):
+    """Preserve authenticated journal precedence; annotate separate graph provenance."""
+    instruction = (f"Continue mission {mission_id} from {source_ref} "
+                   f"at cursor {journal_cursor or 'initial'}")
+    if graph_selection is not None:
+        for field in ("project", "next_cursor", "source_id"):
+            if not isinstance(graph_selection.get(field), str) or not graph_selection[field].strip():
+                raise ValueError("invalid graph selection field: " + field)
+        # JSON-escaped representation prevents control characters from forging a
+        # second task instruction. A graph export is not an authenticated fact.
+        import json
+        provenance = {field: graph_selection[field] for field in ("project", "next_cursor", "source_id")}
+        instruction += ("; separate UNTRUSTED graph snapshot suggests " +
+                        json.dumps(provenance, sort_keys=True) +
+                        "; verify owning source before action")
+    return instruction
