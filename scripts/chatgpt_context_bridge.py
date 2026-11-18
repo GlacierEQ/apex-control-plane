@@ -144,6 +144,7 @@ def main():
     admit.add_argument("--session-id", required=True)
     dispatch = sub.add_parser("dispatch", help="Authenticated recovery followed by a registered downstream read-only action")
     dispatch.add_argument("--session-id", required=True)
+    dispatch.add_argument("--legacy-continue-cursor", help="Explicit exact-match authorization for an existing free-form cursor")
     for action in ("correct", "checkpoint", "fact"):
         s = sub.add_parser(action)
         if action == "correct":
@@ -312,6 +313,15 @@ def main():
                     "continue": continue_from_cursor,
                     "inspect": inspect_recovered_fact,
                 }
+                # An existing free-form cursor may be resumed only when the
+                # invoking owner explicitly names its exact authenticated value.
+                # Do not rewrite the journal or silently interpret arbitrary text.
+                legacy = args.legacy_continue_cursor
+                if legacy is not None:
+                    if (not legacy.strip() or legacy != recovery.cursor
+                            or recovery.cursor.split(":", 1)[0] in registry):
+                        fail("legacy cursor authorization mismatch")
+                    registry[legacy] = continue_from_cursor
                 # Reject unknown/malformed cursors BEFORE creating an APEX
                 # admission receipt. The actual callback still runs after admission.
                 validate_recovered_action(
