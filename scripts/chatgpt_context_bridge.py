@@ -26,6 +26,7 @@ from src.spiral_live_journal import (
     resume_authenticated_chat_in_apex,
 )
 from src.spiral_chat_handoff import recover_existing_chat_session
+from src.glaciereq_memory_graph_recovery import recover as recover_memory_graph
 
 def fail(reason):
     raise ValueError(reason)
@@ -141,6 +142,8 @@ def main():
     read.add_argument("--session-id", required=True)
     admit = sub.add_parser("admit", help="Recover authenticated journal and admit context into a real APEX runtime kernel")
     admit.add_argument("--session-id", required=True)
+    admit.add_argument("--graph-snapshot", type=Path, help="Owner-private, explicit JSON row export; not a provider-authenticated fetch")
+    admit.add_argument("--graph-project", help="Canonical graph project key to select; requires --graph-snapshot")
     for action in ("correct", "checkpoint", "fact"):
         s = sub.add_parser(action)
         if action == "correct":
@@ -152,6 +155,8 @@ def main():
             s.add_argument("--value", required=True)
             s.add_argument("--source", required=True)
     args = parser.parse_args()
+    if args.command == "admit" and bool(args.graph_snapshot) != bool(args.graph_project):
+        fail("--graph-snapshot and --graph-project must be supplied together")
     if not args.mission_id.strip():
         fail("nonempty explicit mission ID required")
     base = args.store.expanduser()
@@ -278,6 +283,14 @@ def main():
                     "automatic_chatgpt_host_hook_verified":False
                 }, indent=2))
                 return
+            graph_selection = None
+            if args.graph_snapshot is not None:
+                # Never treat an arbitrary graph export as an authenticated Spiral fact.
+                # Secure read enforces owner-private, no symlink and no path recreation.
+                rows = json.loads(read_bytes(args.graph_snapshot.expanduser()))
+                graph_selection = recover_memory_graph(rows, args.graph_project)
+                if graph_selection["node_key"] == args.graph_project:
+                    fail("graph cursor cannot be project root")
             kernel = create_verified_runtime_kernel()
             applied = bool(recovery.material_context_found)
             snapshot = resume_authenticated_chat_in_apex(
@@ -286,6 +299,10 @@ def main():
                 task_instruction=(
                     f"Continue mission {recovery.mission_id} from {recovery.source_ref} "
                     f"at cursor {recovery.cursor or 'initial'}"
+                    + (f"; separate untrusted graph snapshot suggests project "
+                       f"{graph_selection['project']} cursor {graph_selection['next_cursor']} "
+                       f"from {graph_selection['source_id']}; verify owning source before action"
+                       if graph_selection else "")
                 ),
                 target_state=recovery.terminal_outcome,
                 operation_class="chat_context_admission",
@@ -307,6 +324,8 @@ def main():
                 "apex_phase": snapshot.phase,
                 "apex_receipt_kinds": list(snapshot.receipt_kinds),
                 "recovered_context_applied_to_apex_instruction": applied,
+                "graph_selection": graph_selection,
+                "graph_snapshot_provider_authenticated": False,
                 "downstream_action_executed": False,
                 "automatic_chatgpt_host_hook_verified": False,
             }, indent=2))
