@@ -57,9 +57,9 @@ def run_work_unit(
         try:
             process = subprocess.Popen(
                 command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
                 start_new_session=(os.name == "posix"),
             )
         except OSError as error:
