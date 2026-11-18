@@ -56,6 +56,10 @@ def start_mission(
         or not isinstance(receipt.get("result"), dict)
         or not isinstance(receipt.get("head"), str)
         or len(receipt["head"]) != 64
+        or receipt.get("apex_phase") != "ready"
+        or "context_recovery" not in receipt.get("apex_receipt_kinds", [])
+        or receipt["result"].get("binding") != "spiral-journal:" + receipt["head"]
+        or receipt.get("action_name") not in ("continue", "inspect")
     ):
         raise RuntimeError("startup recovery receipt did not prove dispatch")
     return consumer(receipt)
