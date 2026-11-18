@@ -105,3 +105,31 @@ def test_advisory_reference_cannot_replace_missing_cursor_node():
                      next_cursor="outdated_action"))
     with pytest.raises(ValueError, match="no canonical project cursor"):
         recover(rows, "APEX")
+
+
+def test_rejects_superseded_canonical_cursor():
+    rows = graph()
+    rows[3]["metadata"]["superseded_by"] = "APEX-NEW"
+    with pytest.raises(ValueError, match="superseded"):
+        recover(rows, "APEX")
+
+
+def test_rejects_stale_canonical_cursor_at_admission_boundary():
+    rows = graph()
+    rows[3]["metadata"]["source_updated_at"] = "2026-09-03T00:00:00Z"
+    with pytest.raises(ValueError, match="predates"):
+        recover(rows, "APEX", not_before="2026-11-01T00:00:00Z")
+
+
+def test_accepts_fresh_source_dated_canonical_cursor():
+    rows = graph()
+    rows[3]["metadata"]["source_updated_at"] = "2026-11-18T13:00:00+00:00"
+    assert recover(rows, "APEX", not_before="2026-11-01T00:00:00Z")["next_cursor"] == "host_proof"
+
+
+@pytest.mark.parametrize("timestamp", [None, "yesterday", "2026-11-18T13:00:00"])
+def test_freshness_requires_valid_timezone_qualified_source_date(timestamp):
+    rows = graph()
+    rows[3]["metadata"]["source_updated_at"] = timestamp
+    with pytest.raises(ValueError, match="dated provenance|timestamp"):
+        recover(rows, "APEX", not_before="2026-11-01T00:00:00Z")

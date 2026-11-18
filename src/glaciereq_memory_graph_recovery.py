@@ -8,7 +8,7 @@ from __future__ import annotations
 GRAPH = "GLACIEREQ-MEMGRAPH-V1"
 
 
-def recover(rows, project):
+def recover(rows, project, *, not_before=None):
     if not isinstance(rows, list):
         raise ValueError("rows must be a list")
     nodes = {}
@@ -71,6 +71,23 @@ def recover(rows, project):
         # when the owning project's canonical cursor is absent.
         raise ValueError("no canonical project cursor; refuse advisory fallback")
     key, row, _, action = explicit[0]
+    meta = row["metadata"]
+    if meta.get("superseded_by") or meta.get("revoked") is True:
+        raise ValueError("canonical cursor superseded or revoked")
+    if not_before is not None:
+        from datetime import datetime, timezone
+        def timestamp(value):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("canonical cursor missing dated provenance")
+            try:
+                parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ValueError("invalid canonical cursor timestamp") from exc
+            if parsed.tzinfo is None:
+                raise ValueError("canonical cursor timestamp lacks timezone")
+            return parsed.astimezone(timezone.utc)
+        if timestamp(meta.get("source_updated_at")) < timestamp(not_before):
+            raise ValueError("canonical cursor predates required freshness boundary")
     return {
         "project": project,
         "node_key": key,

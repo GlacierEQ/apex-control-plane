@@ -148,6 +148,7 @@ def main():
     admit.add_argument("--graph-snapshot", type=Path, help="Owner-private, explicit JSON row export; not a provider-authenticated fetch")
     admit.add_argument("--graph-project", help="Canonical graph project key to select; requires --graph-snapshot")
     admit.add_argument("--graph-supabase-url", help="Configured HTTPS Supabase project URL; retrieves graph using existing runtime environment authentication")
+    admit.add_argument("--graph-not-before", help="Fail closed unless canonical cursor source_updated_at meets this ISO-8601 boundary")
     admit.add_argument("--graph-sha256", help="Optional independently obtained canonical JSON SHA-256; rejects altered graph export")
     for action in ("correct", "checkpoint", "fact"):
         s = sub.add_parser(action)
@@ -164,6 +165,8 @@ def main():
         fail("choose snapshot or authenticated provider, not both")
     if args.command == "admit" and bool(args.graph_snapshot or args.graph_supabase_url) != bool(args.graph_project):
         fail("--graph-snapshot and --graph-project must be supplied together")
+    if args.command == "admit" and args.graph_not_before and not (args.graph_snapshot or args.graph_supabase_url):
+        fail("--graph-not-before requires a graph source")
     if args.command == "admit" and args.graph_sha256 and not (args.graph_snapshot or args.graph_supabase_url):
         fail("--graph-sha256 requires --graph-snapshot")
     if not args.mission_id.strip():
@@ -301,7 +304,7 @@ def main():
                         else json.loads(read_bytes(args.graph_snapshot.expanduser())))
                 if args.graph_sha256:
                     graph_integrity_sha256 = verify_graph_digest(rows, args.graph_sha256)
-                graph_selection = recover_memory_graph(rows, args.graph_project)
+                graph_selection = recover_memory_graph(rows, args.graph_project, not_before=args.graph_not_before)
                 if graph_selection["node_key"] == args.graph_project:
                     fail("graph cursor cannot be project root")
             kernel = create_verified_runtime_kernel()
