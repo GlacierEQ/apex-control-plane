@@ -31,6 +31,28 @@ def execute_recovered_action(
     before supplying recovery. A callback is the actual downstream operation;
     no arbitrary shell command, eval, or unregistered action is permitted.
     """
+    action = validate_recovered_action(
+        recovery, expected_mission_id=expected_mission_id,
+        expected_source_ref=expected_source_ref, registry=registry,
+    )
+    result = action(recovery)
+    return ActionReceipt(
+        mission_id=recovery.mission_id,
+        source_ref=recovery.source_ref,
+        cursor=recovery.cursor,
+        action_name=recovery.cursor.split(":", 1)[0],
+        result=result,
+    )
+
+
+def validate_recovered_action(
+    recovery: Any,
+    *,
+    expected_mission_id: str,
+    expected_source_ref: str,
+    registry: Mapping[str, Callable[[Any], Any]],
+) -> Callable[[Any], Any]:
+    """Fail closed before admitting any unregistered continuation into APEX."""
     if not expected_mission_id or recovery.mission_id != expected_mission_id:
         raise ValueError("mission identity mismatch")
     if (not isinstance(expected_source_ref, str)
@@ -50,11 +72,4 @@ def execute_recovered_action(
         raise ValueError("recovered corrections unavailable")
     if not isinstance(recovery.facts, Mapping):
         raise ValueError("recovered facts unavailable")
-    result = action(recovery)
-    return ActionReceipt(
-        mission_id=recovery.mission_id,
-        source_ref=recovery.source_ref,
-        cursor=recovery.cursor,
-        action_name=action_name,
-        result=result,
-    )
+    return action
