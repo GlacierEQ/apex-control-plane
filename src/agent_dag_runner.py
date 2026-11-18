@@ -141,8 +141,8 @@ def inspect_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
     """Read DAG progress without claiming, dispatching, or executing any job."""
     ordered = validate_plan(plan)
     namespace = plan.get("id")
-    if not isinstance(namespace, str) or not namespace.strip():
-        raise ValueError("plan.id is required")
+    if not isinstance(namespace, str) or not namespace.strip() or ":" in namespace:
+        raise ValueError("plan.id must be a nonempty unambiguous identifier")
     manifest = [
         {
             "id": job["id"], "objective": job["objective"],
