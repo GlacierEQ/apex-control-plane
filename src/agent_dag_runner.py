@@ -27,7 +27,7 @@ def validate_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(job, dict):
             raise ValueError("each job must be an object")
         identifier = job.get("id")
-        if not isinstance(identifier, str) or not identifier.strip() or identifier in ids or identifier == "__plan_manifest__":
+        if not isinstance(identifier, str) or not identifier.strip() or identifier in ids or identifier == "__plan_manifest__" or ":" in identifier:
             raise ValueError("job ids must be unique nonempty strings")
         argv = job.get("command")
         if not isinstance(argv, list) or not argv or any(not isinstance(x, str) for x in argv):
@@ -70,7 +70,7 @@ def execute_plan(database: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
     # Validate the entire DAG before executing any command.
     ordered = validate_plan(plan)
     namespace = plan.get("id")
-    if not isinstance(namespace, str) or not namespace.strip():
+    if not isinstance(namespace, str) or not namespace.strip() or ":" in namespace:
         raise ValueError("plan.id is required")
     durable = DurableAgentExecutor(database)
     # Bind the whole graph to its namespace before any side effect. Otherwise
