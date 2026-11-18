@@ -321,7 +321,7 @@ def main():
                     if (not legacy.strip() or legacy != recovery.cursor
                             or recovery.cursor.split(":", 1)[0] in registry):
                         fail("legacy cursor authorization mismatch")
-                    registry[legacy] = continue_from_cursor
+                    registry[legacy.split(":", 1)[0]] = continue_from_cursor
                 # Reject unknown/malformed cursors BEFORE creating an APEX
                 # admission receipt. The actual callback still runs after admission.
                 validate_recovered_action(
