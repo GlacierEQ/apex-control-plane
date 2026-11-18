@@ -25,6 +25,8 @@ class StartupTests(unittest.TestCase):
         receipt = {
             "status": "RECOVERED_ACTION_DISPATCHED", "mission_id": "mission",
             "head": "a" * 64, "downstream_action_executed": True,
+            "session_id": "fresh-session", "cursor": "continue:next",
+            "apex_runtime_id": "apex-test-runtime",
             "apex_phase": "ready", "apex_receipt_kinds": ["context_recovery"],
             "action_name": "continue",
             "result": {"next_cursor": "continue:next",
@@ -46,6 +48,32 @@ class StartupTests(unittest.TestCase):
             with self.subTest(completed=completed):
                 with self.assertRaises(RuntimeError):
                     self.invoke(completed)
+
+
+    def test_substituted_session_and_action_receipts_never_reach_consumer(self):
+        valid = {
+            "status": "RECOVERED_ACTION_DISPATCHED", "mission_id": "mission",
+            "session_id": "fresh-session", "cursor": "continue:next",
+            "head": "a" * 64, "downstream_action_executed": True,
+            "apex_runtime_id": "apex-test-runtime", "apex_phase": "ready",
+            "apex_receipt_kinds": ["context_recovery"],
+            "action_name": "continue",
+            "result": {"next_cursor": "continue:next",
+                       "binding": "spiral-journal:" + "a" * 64},
+        }
+        for patch_fields in (
+            {"session_id": "other-session"},
+            {"cursor": "inspect:owner"},
+            {"result": {"next_cursor": "continue:wrong",
+                        "binding": "spiral-journal:" + "a" * 64}},
+            {"apex_runtime_id": ""},
+            {"head": "z" * 64},
+        ):
+            with self.subTest(patch_fields=patch_fields):
+                altered = dict(valid, **patch_fields)
+                with self.assertRaises(RuntimeError):
+                    self.invoke(subprocess.CompletedProcess(
+                        [], 0, json.dumps(altered), ""))
 
     def test_missing_mission_never_invokes_bridge(self):
         with patch("scripts.continuity_mission_entrypoint.subprocess.run") as run:
