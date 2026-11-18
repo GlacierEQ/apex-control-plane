@@ -26,13 +26,16 @@ def validate_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(job, dict):
             raise ValueError("each job must be an object")
         identifier = job.get("id")
-        if not isinstance(identifier, str) or not identifier.strip() or identifier in ids:
+        if not isinstance(identifier, str) or not identifier.strip() or identifier in ids or identifier == "__plan_manifest__":
             raise ValueError("job ids must be unique nonempty strings")
         argv = job.get("command")
         if not isinstance(argv, list) or not argv or any(not isinstance(x, str) for x in argv):
             raise ValueError("command must be a nonempty argv string list")
         if not isinstance(job.get("objective"), str) or not job["objective"].strip():
             raise ValueError("job objective is required")
+        timeout = job.get("timeout_seconds", 300)
+        if type(timeout) is not int or timeout <= 0:
+            raise ValueError("timeout_seconds must be a positive integer")
         deps = job.get("depends_on", [])
         if not isinstance(deps, list) or any(not isinstance(x, str) for x in deps) or len(deps) != len(set(deps)):
             raise ValueError("depends_on must contain unique job ids")
