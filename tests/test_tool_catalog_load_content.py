@@ -1,0 +1,42 @@
+"""Subprocess acceptance for atomic capability document loading."""
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+SCRIPT = Path(__file__).resolve().parents[1] / "src" / "tool_catalog.py"
+
+
+def invoke(*args):
+    return subprocess.run([sys.executable, str(SCRIPT), *map(str, args)], capture_output=True, text=True)
+
+
+def test_selected_document_content_is_actually_loaded(tmp_path):
+    root = tmp_path / "skills"
+    doc = root / "alpha" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# Alpha\\n- performs alpha\\n", encoding="utf-8")
+    result = invoke("--skills", root, "--select", "skill:alpha", "--load-content")
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert len(payload) == 1
+    assert payload[0]["content"] == doc.read_text(encoding="utf-8")
+    assert payload[0]["kind"] == "skill"
+
+
+def test_missing_selection_never_leaks_partial_content(tmp_path):
+    root = tmp_path / "skills"
+    doc = root / "alpha" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("alpha", encoding="utf-8")
+    result = invoke("--skills", root, "--select", "skill:alpha", "--select", "missing", "--load-content")
+    assert result.returncode == 2
+    assert result.stdout == ""
+
+
+def test_disappearing_document_never_emits_partial_json(tmp_path, monkeypatch, capsys):
+    from src import tool_catalog
+    entry = tool_catalog.CatalogEntry("gone", "skill", "", str(tmp_path / "gone.md"))
+    monkeypatch.setattr(tool_catalog, "build_catalog", lambda *_: [entry])
+    assert tool_catalog.main(["--select", "skill:gone", "--load-content"]) == 2
+    assert capsys.readouterr().out == ""
