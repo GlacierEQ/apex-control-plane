@@ -69,6 +69,35 @@ class DurableAgentExecutor:
             "result": json.loads(row[2]) if row[2] else None,
         }
 
+    @staticmethod
+    def inspect(database: str | Path, workload_id: str) -> dict[str, Any] | None:
+        """Inspect an existing claim without creating or modifying SQLite state.
+
+        Missing databases and absent claim tables return None. Other database
+        errors propagate instead of being mistaken for an empty execution.
+        """
+        db_path = Path(database)
+        if not db_path.is_file():
+            return None
+        with sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True) as db:
+            exists = db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='execution_claims'"
+            ).fetchone()
+            if not exists:
+                return None
+            row = db.execute(
+                "SELECT objective, state, result_json FROM execution_claims WHERE workload_id=?",
+                (workload_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            "workload_id": workload_id,
+            "objective": row[0],
+            "state": row[1],
+            "result": json.loads(row[2]) if row[2] else None,
+        }
+
     def execute(
         self,
         workload: Workload,
