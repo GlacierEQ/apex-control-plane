@@ -97,3 +97,49 @@ def test_failed_subprocess_evidence_survives_restart(tmp_path):
     assert "diagnostic" in result["result"]["stdout"]
     record = DurableAgentExecutor(db).readback("failure-evidence")
     assert record["result"]["provider_result"]["returncode"] == 7
+
+
+def test_timeout_change_rejected_before_reexecution(tmp_path):
+    import pytest
+
+    db = tmp_path / "timeout-identity.sqlite"
+    command = [sys.executable, "-c", "print('done')"]
+    assert run_work_unit(db, "timeout-identity", "same objective", command, timeout_seconds=5)["state"] == "succeeded"
+    with pytest.raises(ValueError, match="different objective"):
+        run_work_unit(db, "timeout-identity", "same objective", command, timeout_seconds=6)
+
+
+def test_invalid_command_and_timeout_do_not_create_claim(tmp_path):
+    import pytest
+    from src.durable_agent_executor import DurableAgentExecutor
+
+    db = tmp_path / "invalid.sqlite"
+    for argv, timeout in [(["echo", 1], 3), ([], 3), (["echo"], True), (["echo"], 0)]:
+        with pytest.raises(ValueError):
+            run_work_unit(db, "invalid-1", "invalid", argv, timeout_seconds=timeout)
+    assert DurableAgentExecutor(db).readback("invalid-1") is None
+
+
+def test_concurrent_workers_invoke_subprocess_at_most_once(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    db = tmp_path / "concurrent.sqlite"
+    marker = tmp_path / "calls.txt"
+    command = [
+        sys.executable, "-c",
+        "import pathlib,sys,time; p=pathlib.Path(sys.argv[1]);"
+        " f=p.open('a'); f.write('called\\n'); f.close(); time.sleep(0.2)",
+        str(marker),
+    ]
+    gate = Barrier(6)
+
+    def worker(_):
+        gate.wait()
+        return run_work_unit(db, "shared-claim", "single side effect", command)["state"]
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        states = list(pool.map(worker, range(6)))
+    assert states.count("succeeded") == 1
+    assert all(s == "succeeded" or s.startswith("already_claimed:") for s in states)
+    assert marker.read_text().splitlines() == ["called"]
