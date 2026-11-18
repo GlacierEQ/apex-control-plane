@@ -67,7 +67,7 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
             # An injected/custom transport must never turn a foreign-host response
             # into apparently authenticated Supabase provenance.
             if response.geturl() != endpoint:
-                raise ValueError("provider response URL mismatch")
+                raise ValueError("provider redirect refused: response URL mismatch")
             status = response.status
             if status not in (200, 206):
                 raise ValueError("provider returned unexpected status")
