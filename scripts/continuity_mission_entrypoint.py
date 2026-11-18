@@ -21,6 +21,7 @@ def start_mission(
     session_id: str,
     consumer: Callable[[Mapping[str, Any]], Any],
     bridge: Path | None = None,
+    legacy_continue_cursor: str | None = None,
 ) -> Any:
     """Authenticate, admit and dispatch persisted context BEFORE consumer work.
 
@@ -38,6 +39,10 @@ def start_mission(
         "--spiral-root", str(spiral_root), "--mission-id", mission_id,
         "dispatch", "--session-id", session_id,
     ]
+    if legacy_continue_cursor is not None:
+        if not isinstance(legacy_continue_cursor, str) or not legacy_continue_cursor.strip():
+            raise ValueError("explicit nonempty legacy cursor required")
+        cmd.extend(["--legacy-continue-cursor", legacy_continue_cursor])
     completed = subprocess.run(
         cmd, capture_output=True, text=True, check=False, timeout=60,
     )
@@ -66,7 +71,9 @@ def start_mission(
         or receipt.get("apex_phase") != "ready"
         or "context_recovery" not in receipt.get("apex_receipt_kinds", [])
         or receipt["result"].get("binding") != "spiral-journal:" + receipt["head"]
-        or receipt.get("action_name") not in ("continue", "inspect")
+        or (receipt.get("action_name") not in ("continue", "inspect")
+            and (legacy_continue_cursor is None
+                 or receipt.get("cursor") != legacy_continue_cursor))
         or (receipt["action_name"] == "continue"
             and receipt["result"].get("next_cursor") != receipt["cursor"])
         or (receipt["action_name"] == "inspect"
@@ -84,6 +91,7 @@ def start_registered_mission(
     session_id: str,
     handlers: Mapping[str, Callable[[Mapping[str, Any]], Any]],
     bridge: Path | None = None,
+    legacy_continue_cursor: str | None = None,
 ) -> Any:
     """Run the *selected* authorized mission operation after verified startup.
 
@@ -100,7 +108,8 @@ def start_registered_mission(
 
     def dispatch_to_handler(receipt: Mapping[str, Any]) -> Any:
         action = receipt["action_name"]
-        handler = handlers.get(action)
+        handler = handlers.get("continue" if legacy_continue_cursor is not None
+                               and receipt["cursor"] == legacy_continue_cursor else action)
         if handler is None:
             raise ValueError("recovered action has no authorized mission handler")
         return handler(receipt)
@@ -108,6 +117,7 @@ def start_registered_mission(
     return start_mission(
         store=store, spiral_root=spiral_root, mission_id=mission_id,
         session_id=session_id, consumer=dispatch_to_handler, bridge=bridge,
+        legacy_continue_cursor=legacy_continue_cursor,
     )
 
 
