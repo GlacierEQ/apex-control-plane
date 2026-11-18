@@ -69,6 +69,7 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
             if response.geturl() != endpoint:
                 raise ValueError("provider redirect refused: response URL mismatch")
             status = response.status
+            content_range = response.headers.get("Content-Range") if hasattr(response, "headers") else None
             if status not in (200, 206):
                 raise ValueError("provider returned unexpected status")
             payload = response.read(4_000_001)
@@ -89,6 +90,16 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
                 raise ValueError("duplicate or missing provider source")
             seen.add(source)
             rows.append(row)
+        if content_range is not None:
+            import re
+            match = re.fullmatch(r"(?:items )?(\\d+)-(\\d+)/(\\d+|\\*)", content_range.strip())
+            if not match:
+                raise ValueError("malformed provider Content-Range")
+            first, last, total = match.groups()
+            if int(first) != start or int(last) != start + len(page) - 1:
+                raise ValueError("provider Content-Range disagrees with page")
+            if total != "*" and int(total) > start + len(page) and len(page) < page_size:
+                raise ValueError("provider truncated page before advertised end")
         if len(page) < page_size:
             if not rows:
                 raise ValueError("empty provider graph")
