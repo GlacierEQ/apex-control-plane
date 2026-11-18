@@ -86,8 +86,13 @@ def recover(rows, project, *, not_before=None):
             if parsed.tzinfo is None:
                 raise ValueError("canonical cursor timestamp lacks timezone")
             return parsed.astimezone(timezone.utc)
-        if timestamp(meta.get("source_updated_at")) < timestamp(not_before):
+        source_time = timestamp(meta.get("source_updated_at"))
+        if source_time < timestamp(not_before):
             raise ValueError("canonical cursor predates required freshness boundary")
+        # A future-dated source is not evidence of fresh authority. Do not
+        # let a malformed or manipulated timestamp defeat the age gate.
+        if source_time > datetime.now(timezone.utc):
+            raise ValueError("canonical cursor provenance is future-dated")
     return {
         "project": project,
         "node_key": key,
