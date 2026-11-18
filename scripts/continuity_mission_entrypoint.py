@@ -172,6 +172,55 @@ def start_context_gated_mission(
     )
 
 
+
+def start_cloud_context_gated_mission(
+    *, store: Path, spiral_root: Path, mission_id: str, session_id: str,
+    cloud_store: Path, cloud_namespace: str,
+    handlers: Mapping[str, Callable[[Mapping[str, Any]], Any]],
+    cloud_sources_by_action: Mapping[str, tuple[str, ...]],
+    required_corrections: Mapping[str, tuple[str, ...]],
+    required_fact_keys: Mapping[str, tuple[str, ...]],
+    bridge: Path | None = None,
+    legacy_continue_cursor: str | None = None,
+) -> Any:
+    """Admit Spiral context AND authenticated cloud excerpts before consumer work.
+
+    Connector clients separately collect source-bound documents into cloud_store.
+    The cloud body is untrusted evidence, not commands, permissions or operator
+    instructions. Only explicitly registered handlers can use it.
+    """
+    from src.cloud_continuity_corpus import recover_cloud_context
+
+    wrapped: dict[str, Callable[[Mapping[str, Any]], Any]] = {}
+    for action, handler in handlers.items():
+        if not callable(handler):
+            raise ValueError("cloud mission handler must be registered and callable")
+
+        def cloud_guarded(
+            receipt: Mapping[str, Any], *, _action: str = action,
+            _handler: Callable[[Mapping[str, Any]], Any] = handler,
+        ) -> Any:
+            source_ids = cloud_sources_by_action.get(_action)
+            if (not isinstance(source_ids, (list, tuple)) or not source_ids
+                    or not all(isinstance(i, str) and i for i in source_ids)):
+                raise ValueError("missing explicit cloud source policy for action")
+            cloud_context = recover_cloud_context(
+                cloud_store, namespace=cloud_namespace,
+                required_source_ids=source_ids, require_text=True,
+            )
+            return _handler({"recovery": receipt, "cloud_context": cloud_context})
+
+        wrapped[action] = cloud_guarded
+
+    return start_context_gated_mission(
+        store=store, spiral_root=spiral_root,
+        mission_id=mission_id, session_id=session_id,
+        handlers=wrapped, required_corrections=required_corrections,
+        required_fact_keys=required_fact_keys, bridge=bridge,
+        legacy_continue_cursor=legacy_continue_cursor,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Start a mission with mandatory authenticated recovery")
     parser.add_argument("--store", type=Path, required=True)
