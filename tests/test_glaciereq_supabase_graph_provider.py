@@ -173,3 +173,22 @@ def test_rejects_empty_page_after_advertised_full_page():
     with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
         with pytest.raises(ValueError, match="graph incomplete"):
             fetch_graph("https://example.supabase.co", page_size=1, opener=transport)
+
+
+def test_exact_multiple_advertised_total_does_not_issue_extra_range():
+    class RangeResponse(Response):
+        def __init__(self, url, rows, content_range):
+            super().__init__(url, rows)
+            self.headers = {"Content-Range": content_range}
+    calls = []
+    def transport(request, timeout):
+        calls.append(request)
+        if len(calls) == 1:
+            return RangeResponse(request.full_url, [node("A")], "0-0/2")
+        if len(calls) == 2:
+            return RangeResponse(request.full_url, [node("B")], "1-1/2")
+        raise AssertionError("unexpected out-of-range provider request")
+    with patch.dict("os.environ", {"GLACIEREQ_SUPABASE_ACCESS_TOKEN": "fixture-only"}, clear=True):
+        result = fetch_graph("https://example.supabase.co", page_size=1, opener=transport)
+    assert [row["source_id"] for row in result] == ["A", "B"]
+    assert len(calls) == 2
