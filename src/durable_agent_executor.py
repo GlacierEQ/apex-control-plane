@@ -53,6 +53,22 @@ class DurableAgentExecutor:
             ).fetchone()
         return row[0] if row else None
 
+    def readback(self, workload_id: str) -> dict[str, Any] | None:
+        """Read the durable claim and outcome without invoking any provider."""
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT objective, state, result_json FROM execution_claims WHERE workload_id=?",
+                (workload_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            "workload_id": workload_id,
+            "objective": row[0],
+            "state": row[1],
+            "result": json.loads(row[2]) if row[2] else None,
+        }
+
     def execute(
         self,
         workload: Workload,
