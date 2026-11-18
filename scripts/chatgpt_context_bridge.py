@@ -28,6 +28,7 @@ from src.spiral_live_journal import (
 from src.spiral_chat_handoff import recover_existing_chat_session
 from src.glaciereq_memory_graph_recovery import (recover as recover_memory_graph,
                                                  compose_admission_instruction)
+from src.glaciereq_memory_snapshot_integrity import verify_graph_digest
 
 def fail(reason):
     raise ValueError(reason)
@@ -145,6 +146,7 @@ def main():
     admit.add_argument("--session-id", required=True)
     admit.add_argument("--graph-snapshot", type=Path, help="Owner-private, explicit JSON row export; not a provider-authenticated fetch")
     admit.add_argument("--graph-project", help="Canonical graph project key to select; requires --graph-snapshot")
+    admit.add_argument("--graph-sha256", help="Optional independently obtained canonical JSON SHA-256; rejects altered graph export")
     for action in ("correct", "checkpoint", "fact"):
         s = sub.add_parser(action)
         if action == "correct":
@@ -158,6 +160,8 @@ def main():
     args = parser.parse_args()
     if args.command == "admit" and bool(args.graph_snapshot) != bool(args.graph_project):
         fail("--graph-snapshot and --graph-project must be supplied together")
+    if args.command == "admit" and args.graph_sha256 and not args.graph_snapshot:
+        fail("--graph-sha256 requires --graph-snapshot")
     if not args.mission_id.strip():
         fail("nonempty explicit mission ID required")
     base = args.store.expanduser()
@@ -285,10 +289,13 @@ def main():
                 }, indent=2))
                 return
             graph_selection = None
+            graph_integrity_sha256 = None
             if args.graph_snapshot is not None:
                 # Never treat an arbitrary graph export as an authenticated Spiral fact.
                 # Secure read enforces owner-private, no symlink and no path recreation.
                 rows = json.loads(read_bytes(args.graph_snapshot.expanduser()))
+                if args.graph_sha256:
+                    graph_integrity_sha256 = verify_graph_digest(rows, args.graph_sha256)
                 graph_selection = recover_memory_graph(rows, args.graph_project)
                 if graph_selection["node_key"] == args.graph_project:
                     fail("graph cursor cannot be project root")
@@ -321,6 +328,8 @@ def main():
                 "recovered_context_applied_to_apex_instruction": applied,
                 "graph_selection": graph_selection,
                 "graph_snapshot_provider_authenticated": False,
+                "graph_export_sha256_matched": graph_integrity_sha256 is not None,
+                "graph_export_sha256": graph_integrity_sha256,
                 "downstream_action_executed": False,
                 "automatic_chatgpt_host_hook_verified": False,
             }, indent=2))
