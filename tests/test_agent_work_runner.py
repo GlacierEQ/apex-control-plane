@@ -215,3 +215,20 @@ def test_cli_readback_existing_database_is_immutable(tmp_path, capsys):
     assert main(["--database", str(db), "--workload-id", "claim-1", "--readback"]) == 0
     assert '"state": "succeeded"' in capsys.readouterr().out
     assert hashlib.sha256(db.read_bytes()).hexdigest() == before
+
+
+def test_missing_executable_preserves_spawn_error_in_durable_record(tmp_path):
+    from src.durable_agent_executor import DurableAgentExecutor
+
+    db = tmp_path / "spawn.sqlite"
+    command = [str(tmp_path / "nonexistent-executable")]
+    first = run_work_unit(db, "spawn-1", "missing executable", command)
+    assert first["state"] == "needs_reconciliation"
+    assert first["result"]["error"] == "process_spawn_failed"
+    assert first["result"]["errno"] is not None
+    assert first["result"]["returncode"] is None
+    record = DurableAgentExecutor.inspect(db, "spawn-1")
+    assert record["state"] == "needs_reconciliation"
+    assert record["result"]["provider_result"]["error"] == "process_spawn_failed"
+    second = run_work_unit(db, "spawn-1", "missing executable", command)
+    assert second["state"] == "already_claimed:needs_reconciliation"
