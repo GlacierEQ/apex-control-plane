@@ -92,7 +92,7 @@ def fetch_graph(url, *, token_env="GLACIEREQ_SUPABASE_ACCESS_TOKEN", page_size=5
             rows.append(row)
         if content_range is not None:
             import re
-            match = re.fullmatch(r"(?:items )?(\\d+)-(\\d+)/(\\d+|\\*)", content_range.strip())
+            match = re.fullmatch(r"(?:items )?(\d+)-(\d+)/(\d+|\*)", content_range.strip())
             if not match:
                 raise ValueError("malformed provider Content-Range")
             first, last, total = match.groups()
