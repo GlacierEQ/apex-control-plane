@@ -29,6 +29,7 @@ from src.spiral_chat_handoff import recover_existing_chat_session
 from src.glaciereq_memory_graph_recovery import (recover as recover_memory_graph,
                                                  compose_admission_instruction)
 from src.glaciereq_memory_snapshot_integrity import verify_graph_digest
+from src.glaciereq_supabase_graph_provider import fetch_graph
 
 def fail(reason):
     raise ValueError(reason)
@@ -146,6 +147,7 @@ def main():
     admit.add_argument("--session-id", required=True)
     admit.add_argument("--graph-snapshot", type=Path, help="Owner-private, explicit JSON row export; not a provider-authenticated fetch")
     admit.add_argument("--graph-project", help="Canonical graph project key to select; requires --graph-snapshot")
+    admit.add_argument("--graph-supabase-url", help="Configured HTTPS Supabase project URL; retrieves graph using existing runtime environment authentication")
     admit.add_argument("--graph-sha256", help="Optional independently obtained canonical JSON SHA-256; rejects altered graph export")
     for action in ("correct", "checkpoint", "fact"):
         s = sub.add_parser(action)
@@ -158,9 +160,11 @@ def main():
             s.add_argument("--value", required=True)
             s.add_argument("--source", required=True)
     args = parser.parse_args()
-    if args.command == "admit" and bool(args.graph_snapshot) != bool(args.graph_project):
+    if args.command == "admit" and args.graph_snapshot and args.graph_supabase_url:
+        fail("choose snapshot or authenticated provider, not both")
+    if args.command == "admit" and bool(args.graph_snapshot or args.graph_supabase_url) != bool(args.graph_project):
         fail("--graph-snapshot and --graph-project must be supplied together")
-    if args.command == "admit" and args.graph_sha256 and not args.graph_snapshot:
+    if args.command == "admit" and args.graph_sha256 and not (args.graph_snapshot or args.graph_supabase_url):
         fail("--graph-sha256 requires --graph-snapshot")
     if not args.mission_id.strip():
         fail("nonempty explicit mission ID required")
@@ -290,10 +294,11 @@ def main():
                 return
             graph_selection = None
             graph_integrity_sha256 = None
-            if args.graph_snapshot is not None:
-                # Never treat an arbitrary graph export as an authenticated Spiral fact.
+            if args.graph_snapshot is not None or args.graph_supabase_url is not None:
+                # A provider read is source-qualified, but never a verified Spiral fact.
                 # Secure read enforces owner-private, no symlink and no path recreation.
-                rows = json.loads(read_bytes(args.graph_snapshot.expanduser()))
+                rows = (fetch_graph(args.graph_supabase_url) if args.graph_supabase_url is not None
+                        else json.loads(read_bytes(args.graph_snapshot.expanduser())))
                 if args.graph_sha256:
                     graph_integrity_sha256 = verify_graph_digest(rows, args.graph_sha256)
                 graph_selection = recover_memory_graph(rows, args.graph_project)
@@ -327,7 +332,7 @@ def main():
                 "apex_receipt_kinds": list(snapshot.receipt_kinds),
                 "recovered_context_applied_to_apex_instruction": applied,
                 "graph_selection": graph_selection,
-                "graph_snapshot_provider_authenticated": False,
+                "graph_snapshot_provider_authenticated": args.graph_supabase_url is not None,
                 "graph_export_sha256_matched": graph_integrity_sha256 is not None,
                 "graph_export_sha256": graph_integrity_sha256,
                 "downstream_action_executed": False,
