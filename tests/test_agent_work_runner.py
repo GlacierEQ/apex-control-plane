@@ -143,3 +143,44 @@ def test_concurrent_workers_invoke_subprocess_at_most_once(tmp_path):
     assert states.count("succeeded") == 1
     assert all(s == "succeeded" or s.startswith("already_claimed:") for s in states)
     assert marker.read_text().splitlines() == ["called"]
+
+
+def test_timed_out_process_is_reaped_and_never_replayed(tmp_path):
+    import time
+    from src.durable_agent_executor import DurableAgentExecutor
+
+    db = tmp_path / "timed-out.sqlite"
+    marker = tmp_path / "late-marker.txt"
+    command = [
+        sys.executable, "-c",
+        "import pathlib,sys,time; time.sleep(2); pathlib.Path(sys.argv[1]).write_text('late')",
+        str(marker),
+    ]
+    first = run_work_unit(db, "timeout-1", "no late side effects", command, timeout_seconds=1)
+    assert first["state"] == "needs_reconciliation"
+    assert first["result"]["error"] == "process_timeout"
+    assert first["result"]["returncode"] is not None
+    assert DurableAgentExecutor(db).readback("timeout-1")["state"] == "needs_reconciliation"
+    assert run_work_unit(db, "timeout-1", "no late side effects", command, timeout_seconds=1)["state"].startswith("already_claimed:")
+    time.sleep(1.3)
+    assert not marker.exists()
+
+
+def test_timeout_kills_descendant_processes_on_posix(tmp_path):
+    import os
+    import time
+    import pytest
+
+    if os.name != "posix":
+        pytest.skip("POSIX process groups required")
+    db = tmp_path / "descendants.sqlite"
+    marker = tmp_path / "descendant-marker.txt"
+    child = "import pathlib,sys,time; time.sleep(2); pathlib.Path(sys.argv[1]).write_text('orphan')"
+    parent = "import subprocess,sys,time; subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]]); time.sleep(10)"
+    result = run_work_unit(
+        db, "descendant-1", "terminate whole group",
+        [sys.executable, "-c", parent, child, str(marker)], timeout_seconds=1,
+    )
+    assert result["state"] == "needs_reconciliation"
+    time.sleep(1.3)
+    assert not marker.exists()
