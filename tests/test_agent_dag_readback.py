@@ -107,6 +107,8 @@ def test_readback_uses_one_snapshot_during_concurrent_reconciliation(tmp_path, m
     db = tmp_path / "snapshot.sqlite"
     p = plan(tmp_path / "marker")
     assert execute_plan(db, p)["ok"]
+    with sqlite3.connect(db) as setup:
+        setup.execute("PRAGMA journal_mode=WAL")
     original_connect = sqlite3.connect
     changed = []
 
