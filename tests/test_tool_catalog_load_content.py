@@ -1,4 +1,5 @@
 """Subprocess acceptance for atomic capability document loading."""
+import hashlib
 import json
 import subprocess
 import sys
@@ -22,6 +23,7 @@ def test_selected_document_content_is_actually_loaded(tmp_path):
     assert len(payload) == 1
     assert payload[0]["content"] == doc.read_text(encoding="utf-8")
     assert payload[0]["kind"] == "skill"
+    assert payload[0]["sha256"] == hashlib.sha256(doc.read_bytes()).hexdigest()
 
 
 def test_missing_selection_never_leaks_partial_content(tmp_path):
