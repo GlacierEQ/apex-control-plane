@@ -360,3 +360,30 @@ def test_sigkill_preserves_launched_process_identity_and_blocks_retry(tmp_path):
                 pass
         parent.stdout.close()
         parent.stderr.close()
+
+
+def test_command_sees_durable_launched_receipt_before_its_first_instruction(tmp_path):
+    """Real consumer child verifies durable launch record exists before exec."""
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# Agent\n", encoding="utf-8")
+    receipt = tmp_path / "launch.json"
+    digest = hashlib.sha256(doc.read_bytes()).hexdigest()
+    script = (
+        "import json,pathlib,sys;"
+        "r=json.loads(pathlib.Path(sys.argv[1]).read_text());"
+        "assert r['status']=='launched_unverified',r;"
+        "assert r['pid']>0;"
+        "print('LAUNCH_COMMITTED_BEFORE_EXEC')"
+    )
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent", "--sha256", digest,
+        "--receipt-path", receipt, "--",
+        sys.executable, "-c", script, receipt,
+    )
+    assert result.returncode == 0, result.stderr
+    output = json.loads(result.stdout)
+    assert "LAUNCH_COMMITTED_BEFORE_EXEC" in output["stdout"]
+    assert json.loads(receipt.read_text())["status"] == "process_succeeded_unverified"
