@@ -42,3 +42,25 @@ def test_disappearing_document_never_emits_partial_json(tmp_path, monkeypatch, c
     monkeypatch.setattr(tool_catalog, "build_catalog", lambda *_: [entry])
     assert tool_catalog.main(["--select", "skill:gone", "--load-content"]) == 2
     assert capsys.readouterr().out == ""
+
+
+def test_pinned_digest_rejects_changed_document_without_partial_output(tmp_path):
+    root = tmp_path / "skills"
+    doc = root / "alpha" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("original", encoding="utf-8")
+    digest = hashlib.sha256(doc.read_bytes()).hexdigest()
+    good = invoke("--skills", root, "--select", "skill:alpha", "--load-content", "--expect-sha256", digest)
+    assert good.returncode == 0, good.stderr
+    assert json.loads(good.stdout)[0]["sha256"] == digest
+    doc.write_text("changed", encoding="utf-8")
+    bad = invoke("--skills", root, "--select", "skill:alpha", "--load-content", "--expect-sha256", digest)
+    assert bad.returncode == 2
+    assert bad.stdout == ""
+    assert "digest mismatch" in bad.stderr
+
+
+def test_digest_pin_requires_explicit_matching_selection(tmp_path):
+    result = invoke("--skills", tmp_path, "--expect-sha256", "0" * 64)
+    assert result.returncode == 2
+    assert result.stdout == ""
