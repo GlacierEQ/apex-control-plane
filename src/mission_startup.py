@@ -16,7 +16,15 @@ def recover_authenticated_mission(*, bridge, store, spiral_root, mission_id, ses
                str(spiral_root), "--mission-id", mission_id, "recover", "--session-id", session_id]
     try:
         result = runner(command, capture_output=True, text=True, check=True, timeout=30)
-        payload = json.loads(result.stdout)
+        # Reject duplicate JSON members that could override source bindings.
+        def unique_members(pairs):
+            obj = {}
+            for key, value in pairs:
+                if key in obj:
+                    raise ValueError('duplicate recovery JSON member')
+                obj[key] = value
+            return obj
+        payload = json.loads(result.stdout, object_pairs_hook=unique_members)
     except (subprocess.SubprocessError, OSError, ValueError, TypeError) as exc:
         raise GatewayDenied("authenticated recovery unavailable") from exc
     if not isinstance(payload, dict) or payload.get("status") != "VERIFIED_EXISTING" or payload.get("mission_id") != mission_id or payload.get("session_id") != session_id:
