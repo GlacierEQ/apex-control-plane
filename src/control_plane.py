@@ -404,6 +404,7 @@ if __name__ == "__main__":
         stdout_bytes = stderr_bytes = 0
         stdout_truncated = stderr_truncated = False
         output_incomplete = False
+        cleanup_error = None
         try:
             # A process timeout must also terminate descendant workers.
             # start_new_session isolates the operator-selected child into its
@@ -469,6 +470,12 @@ if __name__ == "__main__":
                             # has reached durable storage.
                             os.write(gate_write, b"G")
                     except OSError as exc:
+                        # Release the pre-exec gate by EOF before waiting: if
+                        # process-group signaling fails, the trampoline must
+                        # still exit rather than block on the inherited pipe.
+                        if gate_write is not None:
+                            os.close(gate_write)
+                            gate_write = None
                         # Never replace a pending receipt if the launched
                         # receipt failed to become durable. Its uncertainty
                         # must survive even if a later write would succeed.
@@ -478,6 +485,11 @@ if __name__ == "__main__":
                                 os.killpg(child.pid, signal.SIGKILL)
                             except ProcessLookupError:
                                 pass
+                            except PermissionError:
+                                # A denied group signal cannot be treated as
+                                # containment. Kill the direct gated child;
+                                # its command has not been released.
+                                child.kill()
                         else:
                             child.kill()
                         # Receipt persistence failed: never let an inherited
@@ -545,6 +557,11 @@ if __name__ == "__main__":
                             os.killpg(child.pid, signal.SIGKILL)
                         except ProcessLookupError:
                             pass
+                        except PermissionError as exc:
+                            # Group containment failed: attempt direct child
+                            # termination and preserve the containment error.
+                            cleanup_error = f"{type(exc).__name__}: {exc}"
+                            child.kill()
                     else:
                         child.kill()
                     try:
@@ -553,7 +570,10 @@ if __name__ == "__main__":
                         # A failed reap is not evidence that the process tree
                         # stopped. Keep the timeout classification and mark
                         # the uncertainty instead of hanging this executor.
-                        cleanup_error = "TimeoutExpired: child did not reap after termination"
+                        cleanup_error = (
+                            (cleanup_error + "; " if cleanup_error else "")
+                            + "TimeoutExpired: child did not reap after termination"
+                        )
                         stop_drains.set()
                 finally:
                     stop_input.set()

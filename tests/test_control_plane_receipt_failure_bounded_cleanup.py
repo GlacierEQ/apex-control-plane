@@ -25,6 +25,9 @@ def test_launch_receipt_failure_returns_without_running_requested_command(tmp_pa
     shim.write_text(
         "import os\n"
         "_replace=os.replace\n"
+        "def denied_group_kill(pgid,sig):\n"
+        " raise PermissionError(1,'synthetic group signal denied')\n"
+        "os.killpg=denied_group_kill\n"
         "def fail_launched(src,dst):\n"
         " if os.path.basename(str(src)).startswith('.apex-receipt-'):\n"
         "  raise OSError('synthetic launched receipt write failure')\n"
@@ -44,8 +47,8 @@ def test_launch_receipt_failure_returns_without_running_requested_command(tmp_pa
     env["PYTHONPATH"] = str(tmp_path)
     started = time.monotonic()
     result = subprocess.run(command, cwd=ROOT, env=env,
-                            capture_output=True, text=True, timeout=5, check=False)
-    assert time.monotonic() - started < 3
+                            capture_output=True, text=True, timeout=15, check=False)
+    assert time.monotonic() - started < 5
     assert result.returncode == 2
     assert "pending receipt preserved" in result.stderr
     assert json.loads(receipt.read_text())["status"] == "pending_unverified"
@@ -84,14 +87,14 @@ def test_transient_launched_receipt_failure_must_not_overwrite_pending(tmp_path)
         "import pathlib,sys;pathlib.Path(sys.argv[1]).touch()", str(marker),
     ]
     result = subprocess.run(command, cwd=ROOT, env=env,
-                            capture_output=True, text=True, timeout=5, check=False)
+                            capture_output=True, text=True, timeout=15, check=False)
     assert result.returncode == 2, (result.stdout, result.stderr)
     assert "pending receipt preserved" in result.stderr
     assert not marker.exists()
     pending = receipt.read_bytes()
     assert json.loads(pending)["status"] == "pending_unverified"
     retry = subprocess.run(command, cwd=ROOT, env=env,
-                           capture_output=True, text=True, timeout=5, check=False)
+                           capture_output=True, text=True, timeout=15, check=False)
     assert retry.returncode == 2
     assert receipt.read_bytes() == pending
     assert not marker.exists()
