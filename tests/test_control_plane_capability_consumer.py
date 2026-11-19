@@ -78,3 +78,61 @@ def test_existing_exec_path_remains_compatible():
     response = json.loads(result.stdout)
     assert response["stdout"].strip() == "existing path"
     assert response["outcome_verified"] is False
+
+
+def test_timeout_kills_hung_child_and_reports_unverified(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("capability context", encoding="utf-8")
+    digest = hashlib.sha256(doc.read_bytes()).hexdigest()
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent", "--sha256", digest,
+        "--timeout-seconds", "0.15", "--",
+        sys.executable, "-c", "import time; time.sleep(5)",
+    )
+    assert result.returncode == 124, result.stderr
+    response = json.loads(result.stdout)
+    assert response["timed_out"] is True
+    assert response["executed"] is True
+    assert response["routes_run"] == 1
+    assert response["outcome_verified"] is False
+    assert response["mission_complete"] is False
+
+
+def test_invalid_timeout_rejected_before_child(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("context", encoding="utf-8")
+    marker = tmp_path / "should-not-exist"
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent",
+        "--sha256", hashlib.sha256(doc.read_bytes()).hexdigest(),
+        "--timeout-seconds", "nan", "--",
+        sys.executable, "-c",
+        "import pathlib,sys;pathlib.Path(sys.argv[1]).touch()", marker,
+    )
+    assert result.returncode == 2
+    assert not marker.exists()
+    assert result.stdout == ""
+
+
+def test_child_exit_127_is_still_recorded_as_executed(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("context", encoding="utf-8")
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent",
+        "--sha256", hashlib.sha256(doc.read_bytes()).hexdigest(),
+        "--", sys.executable, "-c", "import sys; sys.exit(127)",
+    )
+    assert result.returncode == 127
+    response = json.loads(result.stdout)
+    assert response["executed"] is True
+    assert response["routes_run"] == 1
+    assert response["timed_out"] is False
