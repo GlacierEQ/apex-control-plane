@@ -24,7 +24,11 @@ def recover_authenticated_mission(*, bridge, store, spiral_root, mission_id, ses
                     raise ValueError('duplicate recovery JSON member')
                 obj[key] = value
             return obj
-        payload = json.loads(result.stdout, object_pairs_hook=unique_members)
+        # Reject Python's nonstandard NaN/Infinity JSON extensions before context admission.
+        def reject_nonfinite(value):
+            raise ValueError("non-finite recovery JSON constant")
+        payload = json.loads(result.stdout, object_pairs_hook=unique_members,
+                             parse_constant=reject_nonfinite)
     except (subprocess.SubprocessError, OSError, ValueError, TypeError) as exc:
         raise GatewayDenied("authenticated recovery unavailable") from exc
     if not isinstance(payload, dict) or payload.get("status") != "VERIFIED_EXISTING" or payload.get("mission_id") != mission_id or payload.get("session_id") != session_id:
