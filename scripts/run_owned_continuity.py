@@ -7,6 +7,8 @@ indexing via Spiral -> APEX gateway, then SQLite checkpoint and readback.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import sqlite3
 import json
 import os
 from pathlib import Path
@@ -88,6 +90,66 @@ def load_profile(path: Path) -> dict:
     return profile
 
 
+def persist_startup_decision(path: Path, *, session_id: str, invocation_id: str,
+                             prior_session_id: str, prior_invocation_id: str,
+                             decision: dict) -> dict:
+    """Atomically preserve a replay-safe causal startup receipt in the existing private DB."""
+    profile = load_profile(path)
+    for value in (session_id, invocation_id, prior_session_id, prior_invocation_id):
+        if not isinstance(value, str) or not value.strip() or ":" in value:
+            raise ValueError("unambiguous startup identity required")
+    dbpath = Path(profile["checkpoint_db"])
+    # Validate owner-only SQLite storage using the existing gateway's security boundary.
+    store = GatewayCheckpointStore(dbpath, mission_id=profile["mission_id"])
+    key = ":".join((profile["mission_id"], "startup", session_id, invocation_id))
+    payload = {"schema": "glaciereq.startup-decision/1", "key": key,
+               "prior_session_id": prior_session_id, "prior_invocation_id": prior_invocation_id,
+               "decision": decision["decision"], "checkpoint_digest": decision["checkpoint_digest"],
+               "journal_source_ref": decision["journal_source_ref"],
+               "recovered_cursor": decision["recovered_cursor"],
+               "index_executed": False}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    digest = "sha256:" + hashlib.sha256(encoded.encode()).hexdigest()
+    with store._connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        db.execute("""CREATE TABLE IF NOT EXISTS glaciereq_startup_decisions (
+            operation_key TEXT PRIMARY KEY, mission_id TEXT NOT NULL,
+            payload_json TEXT NOT NULL, payload_digest TEXT NOT NULL)""")
+        prior = db.execute("SELECT payload_json,payload_digest FROM glaciereq_startup_decisions WHERE operation_key=?", (key,)).fetchone()
+        if prior is not None:
+            if prior["payload_json"] != encoded or prior["payload_digest"] != digest:
+                raise ValueError("startup decision replay conflict")
+        else:
+            db.execute("INSERT INTO glaciereq_startup_decisions VALUES (?,?,?,?)", (key, profile["mission_id"], encoded, digest))
+    return {"startup_receipt_key": key, "startup_receipt_digest": digest}
+
+
+def read_startup_decision(path: Path, *, session_id: str, invocation_id: str) -> dict:
+    profile = load_profile(path)
+    if any(not isinstance(v, str) or not v.strip() or ":" in v for v in (session_id, invocation_id)):
+        raise ValueError("unambiguous startup identity required")
+    dbpath = Path(profile["checkpoint_db"])
+    if not dbpath.is_file() or dbpath.is_symlink():
+        raise ValueError("existing startup database required")
+    store = GatewayCheckpointStore(dbpath, mission_id=profile["mission_id"])
+    key = ":".join((profile["mission_id"], "startup", session_id, invocation_id))
+    with store._connect() as db:
+        row = db.execute("SELECT * FROM glaciereq_startup_decisions WHERE operation_key=?", (key,)).fetchone()
+    if row is None or row["mission_id"] != profile["mission_id"]:
+        raise ValueError("startup decision not found")
+    digest = "sha256:" + hashlib.sha256(row["payload_json"].encode()).hexdigest()
+    if digest != row["payload_digest"]:
+        raise ValueError("startup receipt checksum mismatch")
+    payload = json.loads(row["payload_json"])
+    if payload.get("key") != key or payload.get("schema") != "glaciereq.startup-decision/1":
+        raise ValueError("startup receipt identity mismatch")
+    decision = decide_next_action(path, session_id=payload["prior_session_id"], invocation_id=payload["prior_invocation_id"])
+    if any(payload[k] != decision[v] for k, v in (("decision", "decision"), ("checkpoint_digest", "checkpoint_digest"),
+             ("journal_source_ref", "journal_source_ref"), ("recovered_cursor", "recovered_cursor"))):
+        raise ValueError("startup receipt no longer agrees with authenticated source")
+    return {**payload, "startup_receipt_digest": digest, "status": "STARTUP_DECISION_VERIFIED"}
+
+
 def run_profile(path: Path, *, session_id: str, invocation_id: str,
                 previous_session_id: str | None = None,
                 previous_invocation_id: str | None = None) -> dict:
@@ -99,7 +161,12 @@ def run_profile(path: Path, *, session_id: str, invocation_id: str,
                                       invocation_id=previous_invocation_id)
         # The actual mission-start execution path consumes the authenticated
         # prior result before any indexing side effect or new reservation.
-        return {**decision, "status": "STARTUP_PRIOR_ACTION_APPLIED",
+        receipt = persist_startup_decision(path, session_id=session_id,
+                                           invocation_id=invocation_id,
+                                           prior_session_id=previous_session_id,
+                                           prior_invocation_id=previous_invocation_id,
+                                           decision=decision)
+        return {**decision, **receipt, "status": "STARTUP_PRIOR_ACTION_APPLIED",
                 "new_session_id": session_id, "new_invocation_id": invocation_id,
                 "index_executed": False}
     return run_owned_cloud_mission(
@@ -208,6 +275,10 @@ def main() -> None:
     resume.add_argument("--profile", type=Path, required=True)
     resume.add_argument("--session-id", required=True)
     resume.add_argument("--invocation-id", required=True)
+    startup = sub.add_parser("startup-readback", help="Verify durable startup decision and original authenticated checkpoint")
+    startup.add_argument("--profile", type=Path, required=True)
+    startup.add_argument("--session-id", required=True)
+    startup.add_argument("--invocation-id", required=True)
     args = parser.parse_args()
     try:
         if args.command == "run":
@@ -215,6 +286,9 @@ def main() -> None:
                                  invocation_id=args.invocation_id,
                                  previous_session_id=args.previous_session_id,
                                  previous_invocation_id=args.previous_invocation_id)
+        elif args.command == "startup-readback":
+            result = read_startup_decision(args.profile, session_id=args.session_id,
+                                           invocation_id=args.invocation_id)
         elif args.command == "resume":
             result = decide_next_action(args.profile, session_id=args.session_id,
                                         invocation_id=args.invocation_id)

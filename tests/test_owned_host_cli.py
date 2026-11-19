@@ -160,7 +160,10 @@ class ResumeDecisionTests(ProfileTests):
 class StartupRecoveryTests(ProfileTests):
     def test_prior_completion_changes_real_run_path_without_index(self):
         module = entrypoint()
-        decision = {"decision": "DO_NOT_REPEAT_COMPLETED_INDEX", "checkpoint_digest": "proof"}
+        self.policy["checkpoint_db"] = str(self.path.parent / "receipts.db")
+        self.path.write_text(json.dumps(self.policy))
+        decision = {"decision": "DO_NOT_REPEAT_COMPLETED_INDEX", "checkpoint_digest": "proof",
+                    "journal_source_ref": "spiral-journal:head", "recovered_cursor": "continue:exact"}
         with mock.patch.object(module, "decide_next_action", return_value=decision) as recover, mock.patch.object(module, "run_owned_cloud_mission") as index:
             result = module.run_profile(self.path, session_id="new-session", invocation_id="new-turn", previous_session_id="old-session", previous_invocation_id="old-turn")
         self.assertEqual(result["status"], "STARTUP_PRIOR_ACTION_APPLIED")
@@ -181,3 +184,26 @@ class StartupRecoveryTests(ProfileTests):
             with self.assertRaises(ValueError):
                 module.run_profile(self.path, session_id="new", invocation_id="turn", previous_session_id="old")
         index.assert_not_called()
+
+
+class DurableStartupReceiptTests(ProfileTests):
+    def test_restart_readback_and_conflicting_replay(self):
+        module = entrypoint()
+        self.policy["checkpoint_db"] = str(self.path.parent / "receipts.db")
+        self.path.write_text(json.dumps(self.policy))
+        decision = {"decision": "DO_NOT_REPEAT_COMPLETED_INDEX", "checkpoint_digest": "proof",
+                    "journal_source_ref": "spiral-journal:head", "recovered_cursor": "continue:exact"}
+        with mock.patch.object(module, "decide_next_action", return_value=decision):
+            receipt = module.persist_startup_decision(self.path, session_id="new", invocation_id="turn",
+                prior_session_id="old", prior_invocation_id="done", decision=decision)
+            verified = module.read_startup_decision(self.path, session_id="new", invocation_id="turn")
+            self.assertEqual(verified["status"], "STARTUP_DECISION_VERIFIED")
+            self.assertEqual(verified["startup_receipt_digest"], receipt["startup_receipt_digest"])
+            self.assertEqual(module.persist_startup_decision(self.path, session_id="new", invocation_id="turn",
+                prior_session_id="old", prior_invocation_id="done", decision=decision), receipt)
+            with self.assertRaisesRegex(ValueError, "replay conflict"):
+                module.persist_startup_decision(self.path, session_id="new", invocation_id="turn",
+                    prior_session_id="different", prior_invocation_id="done", decision=decision)
+        with mock.patch.object(module, "decide_next_action", return_value={**decision, "checkpoint_digest": "changed"}):
+            with self.assertRaisesRegex(ValueError, "no longer agrees"):
+                module.read_startup_decision(self.path, session_id="new", invocation_id="turn")
