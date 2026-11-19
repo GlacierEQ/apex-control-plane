@@ -168,3 +168,46 @@ def test_timeout_terminates_descendant_process_group(tmp_path):
     assert receipt["executed"] is True
     time.sleep(1.4)
     assert not marker.exists(), "delegated worker survived parent timeout"
+
+
+def test_large_subprocess_output_is_bounded_without_false_success(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "noisy" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# noisy", encoding="utf-8")
+    digest = hashlib.sha256(doc.read_bytes()).hexdigest()
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:noisy", "--sha256", digest, "--",
+        sys.executable, "-c",
+        "import sys;sys.stdout.write('A'*300000);sys.stderr.write('B'*240000)",
+    )
+    assert result.returncode == 0, result.stderr
+    receipt = json.loads(result.stdout)
+    assert receipt["stdout_bytes"] == 300000
+    assert receipt["stderr_bytes"] == 240000
+    assert receipt["stdout_truncated"] is True
+    assert receipt["stderr_truncated"] is True
+    assert len(receipt["stdout"]) == receipt["capture_limit_bytes"] == 65536
+    assert len(receipt["stderr"]) == 65536
+    assert receipt["outcome_verified"] is False
+    assert receipt["mission_complete"] is False
+
+
+def test_bounded_capture_preserves_small_output(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "small" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# small", encoding="utf-8")
+    digest = hashlib.sha256(doc.read_bytes()).hexdigest()
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:small", "--sha256", digest, "--",
+        sys.executable, "-c", "import sys;print('OK');print('ERR',file=sys.stderr)",
+    )
+    assert result.returncode == 0, result.stderr
+    receipt = json.loads(result.stdout)
+    assert receipt["stdout"] == "OK\\n".replace("\\n", "\n")
+    assert receipt["stderr"] == "ERR\\n".replace("\\n", "\n")
+    assert receipt["stdout_truncated"] is False
+    assert receipt["stderr_truncated"] is False
