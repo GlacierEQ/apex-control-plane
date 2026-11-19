@@ -336,9 +336,12 @@ if __name__ == "__main__":
                 if os.path.exists(staging):
                     os.unlink(staging)
 
+        import uuid
+        invocation_id = uuid.uuid4().hex
         if options.receipt_path is not None:
             try:
                 write_receipt({
+                    "invocation_id": invocation_id,
                     "status": "pending_unverified", "executed": False,
                     "outcome_verified": False, "mission_complete": False,
                     "capability": {"qualified_name": f"{entry.kind}:{entry.name}", "sha256": actual},
@@ -366,6 +369,33 @@ if __name__ == "__main__":
                     stderr=err_file, start_new_session=(os.name == "posix"),
                 )
                 executed = True
+                # Durable diagnostic process identity; not authorization to retry.
+                if options.receipt_path is not None:
+                    import datetime
+                    launched = {
+                        "status": "launched_unverified", "executed": True,
+                        "outcome_verified": False, "mission_complete": False,
+                        "pid": child.pid,
+                        "process_group_id": child.pid if os.name == "posix" else None,
+                        "invocation_id": invocation_id,
+                        "launched_at_utc": datetime.datetime.now(
+                            datetime.timezone.utc).isoformat(),
+                        "capability": {
+                            "qualified_name": f"{entry.kind}:{entry.name}",
+                            "sha256": actual,
+                        },
+                        "command": command,
+                        "note": "Process identity is diagnostic; never automatically retry.",
+                    }
+                    try:
+                        write_receipt(launched)
+                    except OSError:
+                        if os.name == "posix":
+                            os.killpg(child.pid, signal.SIGKILL)
+                        else:
+                            child.kill()
+                        child.communicate()
+                        raise
                 try:
                     child.communicate(input=document, timeout=options.timeout_seconds)
                     code = child.returncode
@@ -391,6 +421,7 @@ if __name__ == "__main__":
         except OSError as exc:
             code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
         final_receipt = {
+            "invocation_id": invocation_id,
             "status": "process_succeeded_unverified" if code == 0 else "failed",
             "executed": executed,
             "timed_out": timed_out,
