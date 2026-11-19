@@ -73,6 +73,17 @@ def load_profile(path: Path) -> dict:
             raise ValueError("mission policy has missing or malformed source bindings")
     if not all(Path(profile[k]).is_absolute() for k in PATH_FIELDS):
         raise ValueError("mission paths must be absolute")
+    for field in ("required_fact_values", "required_fact_sources"):
+        policy = profile.get(field, {})
+        if not isinstance(policy, dict) or any(
+            not isinstance(key, str) or not key.strip() for key in policy
+        ):
+            raise ValueError("invalid owner fact policy")
+        if field == "required_fact_sources" and any(
+            not isinstance(value, str) or not value.strip()
+            for value in policy.values()
+        ):
+            raise ValueError("invalid owner fact source policy")
     return profile
 
 
@@ -89,6 +100,8 @@ def run_profile(path: Path, *, session_id: str, invocation_id: str) -> dict:
         expected_cursor=profile["expected_cursor"],
         required_corrections=profile["required_corrections"],
         required_fact_keys=profile["required_fact_keys"],
+        required_fact_values=profile.get("required_fact_values", {}),
+        required_fact_sources=profile.get("required_fact_sources", {}),
     )
 
 

@@ -13,7 +13,7 @@ from pathlib import Path
 import sqlite3
 import stat
 import subprocess
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from .apex_session_gateway import ContextApplication, GatewayDenied, GatewayModelOutput
 from .apex_session_gateway_store import GatewayCheckpointStore
@@ -157,6 +157,8 @@ def run_owned_cloud_mission(
     cloud_index_db: Path, checkpoint_db: Path, namespace: str,
     source_ids: Sequence[str], expected_cursor: str,
     required_corrections: Sequence[str], required_fact_keys: Sequence[str] = (),
+    required_fact_values: Mapping[str, Any] | None = None,
+    required_fact_sources: Mapping[str, str] | None = None,
     runner=subprocess.run,
 ) -> dict[str, Any]:
     """Real controlled-host action: authenticated recovery -> index -> checkpoint.
@@ -179,6 +181,24 @@ def run_owned_cloud_mission(
             raise GatewayDenied("persisted cursor differs from approved action policy")
         if any(c not in recovery.corrections for c in required_corrections):
             raise GatewayDenied("required original correction absent")
+        fact_map = {}
+        for encoded in recovery.facts:
+            entry = json.loads(encoded)
+            if entry["key"] in fact_map:
+                raise GatewayDenied("duplicate recovered fact")
+            fact_map[entry["key"]] = entry["record"]
+        for key, expected in (required_fact_values or {}).items():
+            fact = fact_map.get(key)
+            if (not isinstance(fact, dict) or "value" not in fact
+                    or type(fact["value"]) is not type(expected)
+                    or fact["value"] != expected):
+                raise GatewayDenied("recovered fact value conflicts with owner policy")
+        for key, expected in (required_fact_sources or {}).items():
+            fact = fact_map.get(key)
+            if (not isinstance(expected, str) or not expected.strip()
+                    or not isinstance(fact, dict)
+                    or fact.get("source") != expected):
+                raise GatewayDenied("recovered fact source conflicts with owner policy")
         context = recover_cloud_context(
             cloud_store, namespace=namespace,
             required_source_ids=source_ids, max_chars=2_000_000,

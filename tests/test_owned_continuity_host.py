@@ -91,6 +91,21 @@ class OwnedHostTests(unittest.TestCase):
             self.execute(required_corrections=("contradictory instruction",))
         self.assertFalse(self.index.exists())
 
+    def test_owner_fact_value_and_source_gate_actual_index_action(self):
+        self.execute(required_fact_values={"owner": "APEX"},
+                     required_fact_sources={"owner": "notion:operator"})
+        self.assertTrue(self.index.exists())
+
+    def test_conflicting_fact_value_blocks_index_before_write(self):
+        with self.assertRaisesRegex(GatewayDenied, "fact value"):
+            self.execute(required_fact_values={"owner": "OTHER"})
+        self.assertFalse(self.index.exists())
+
+    def test_substituted_fact_source_blocks_index_before_write(self):
+        with self.assertRaisesRegex(GatewayDenied, "fact source"):
+            self.execute(required_fact_sources={"owner": "github:other"})
+        self.assertFalse(self.index.exists())
+
     def test_cross_namespace_cloud_source_denied(self):
         with self.assertRaises(ValueError):
             self.execute(namespace="legal")
