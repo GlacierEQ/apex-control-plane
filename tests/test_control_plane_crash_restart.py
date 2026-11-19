@@ -38,8 +38,10 @@ def test_sigkill_pending_receipt_blocks_duplicate_execution(tmp_path):
         assert receipt.exists() and marker.exists(), "did not reach launched/pending boundary"
         pending_bytes = receipt.read_bytes()
         pending = json.loads(pending_bytes)
-        assert pending["status"] == "pending_unverified"
+        assert pending["status"] == "launched_unverified"
         assert pending["outcome_verified"] is False
+        assert pending["pid"] == int(marker.read_text())
+        assert pending["process_group_id"] == pending["pid"]
         parent.kill()
         parent.wait(timeout=5)
         retry = subprocess.run(base + [
@@ -49,7 +51,7 @@ def test_sigkill_pending_receipt_blocks_duplicate_execution(tmp_path):
         assert retry.returncode == 2
         assert not second.exists()
         assert receipt.read_bytes() == pending_bytes
-        assert json.loads(receipt.read_bytes())["status"] == "pending_unverified"
+        assert json.loads(receipt.read_bytes())["status"] == "launched_unverified"
     finally:
         if parent.poll() is None:
             parent.kill()
