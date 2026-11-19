@@ -36,6 +36,17 @@ class StartupTests(unittest.TestCase):
         self.assertEqual(result["next_cursor"], "continue:next")
         self.assertEqual(len(called), 1)
 
+    def test_ambiguous_or_nonfinite_receipt_never_reaches_consumer(self):
+        for payload in (
+            '{"status":"RECOVERED_ACTION_DISPATCHED","status":"DENIED"}',
+            '{"result":{"binding":"trusted","binding":"forged"}}',
+            '{"result":{"score":NaN}}',
+            '{"result":{"score":Infinity}}',
+        ):
+            with self.subTest(payload=payload):
+                with self.assertRaisesRegex(RuntimeError, "invalid startup recovery receipt"):
+                    self.invoke(subprocess.CompletedProcess([], 0, payload, ""))
+
     def test_rejected_dispatch_never_calls_consumer(self):
         for completed in (
             subprocess.CompletedProcess([], 1, "", "FAIL_CLOSED"),

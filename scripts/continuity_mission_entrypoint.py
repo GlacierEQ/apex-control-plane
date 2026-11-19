@@ -49,9 +49,19 @@ def start_mission(
     if completed.returncode:
         raise RuntimeError("authenticated startup recovery failed: " +
                            completed.stderr.strip()[:1000])
+    def reject_duplicate_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate startup receipt field")
+            result[key] = value
+        return result
+
     try:
-        receipt = json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
+        receipt = json.loads(completed.stdout, object_pairs_hook=reject_duplicate_keys,
+                             parse_constant=lambda _: (_ for _ in ()).throw(
+                                 ValueError("non-finite startup receipt number")))
+    except (json.JSONDecodeError, ValueError) as exc:
         raise RuntimeError("invalid startup recovery receipt") from exc
     if (
         not isinstance(receipt, dict)
