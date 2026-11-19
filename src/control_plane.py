@@ -78,6 +78,9 @@ if __name__ == "__main__":
     import subprocess
 
     args = sys.argv[1:]
+    if args and args[0] == "--inspect-receipt":
+        from inspect_execution_receipt import main as inspect_receipt
+        raise SystemExit(inspect_receipt(args[1:]))
     if args and args[0] == "run-internal":
         from execute_now import main as run_internal
         raise SystemExit(run_internal(args[1:]))
@@ -251,6 +254,251 @@ if __name__ == "__main__":
         if result["status"] == "unconfirmed":
             raise SystemExit(5)
         raise SystemExit(2)
+    elif args[0] == "--exec-capability":
+        # Real, operator-invoked runtime consumer of the capability catalog.
+        # Capability text enters the child process ONLY as stdin data; it is
+        # never interpreted as a shell command or elevated into permission.
+        import argparse
+        import hashlib
+        from tool_catalog import build_catalog, select
+
+        def reject(reason: str) -> None:
+            print(reason, file=sys.stderr)
+            raise SystemExit(2)
+
+        try:
+            separator = args.index("--")
+        except ValueError:
+            reject("--exec-capability requires -- PROGRAM [ARG ...]")
+        command = args[separator + 1:]
+        if not command:
+            reject("--exec-capability requires an executable")
+        cli = argparse.ArgumentParser(prog="control_plane.py --exec-capability")
+        cli.add_argument("--skills-root", action="append", default=[])
+        cli.add_argument("--connectors-root", action="append", default=[])
+        cli.add_argument("--select", required=True)
+        cli.add_argument("--sha256", required=True)
+        cli.add_argument("--timeout-seconds", type=float, default=60.0)
+        cli.add_argument("--receipt-path", type=Path)
+        options = cli.parse_args(args[1:separator])
+        if not 0 < options.timeout_seconds <= 3600 or not __import__("math").isfinite(options.timeout_seconds):
+            reject("timeout-seconds must be finite and between 0 and 3600")
+        expected = options.sha256
+        if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
+            reject("expected SHA-256 must be 64 lowercase hexadecimal characters")
+        try:
+            catalog = build_catalog(options.skills_root, options.connectors_root)
+            chosen = select(catalog, [options.select])
+            if len(chosen) != 1:
+                reject(f"unknown capability selection: {options.select!r}")
+            entry = chosen[0]
+            base_dirs = (options.skills_root if entry.kind == "skill"
+                         else options.connectors_root)
+            doc = Path(entry.path).resolve(strict=True)
+            if not any(doc.is_relative_to(Path(root).resolve(strict=True))
+                       for root in base_dirs):
+                reject("capability document escaped its authorized root")
+            document = doc.read_bytes()
+            actual = hashlib.sha256(document).hexdigest()
+            if actual != expected:
+                reject(f"capability document digest mismatch: {entry.kind}:{entry.name}")
+            document.decode("utf-8")
+        except (OSError, UnicodeError, ValueError) as exc:
+            reject(f"cannot load capability document: {exc}")
+        # Optional durable receipt: pending is committed before subprocess launch.
+        # A crash leaves explicit unverified evidence rather than false success.
+        def write_receipt(record: dict[str, Any], *, initial: bool = False) -> None:
+            if options.receipt_path is None:
+                return
+            import tempfile as _tempfile
+            target = options.receipt_path
+            parent = target.parent.resolve(strict=True)
+            if target.is_symlink():
+                reject("receipt path must not be a symlink")
+            payload = (json.dumps(record, sort_keys=True) + "\n").encode("utf-8")
+            fd, staging = _tempfile.mkstemp(prefix=".apex-receipt-", dir=parent)
+            try:
+                with os.fdopen(fd, "wb") as handle:
+                    handle.write(payload)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                if initial:
+                    # Exclusive creation preserves a prior pending/final receipt.
+                    # A retry must not erase uncertainty about a previous run.
+                    os.link(staging, target)
+                    os.unlink(staging)
+                else:
+                    os.replace(staging, target)
+                if hasattr(os, "O_DIRECTORY"):
+                    directory_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+                    try:
+                        os.fsync(directory_fd)
+                    finally:
+                        os.close(directory_fd)
+            finally:
+                if os.path.exists(staging):
+                    os.unlink(staging)
+
+        import uuid
+        invocation_id = uuid.uuid4().hex
+        if options.receipt_path is not None:
+            try:
+                write_receipt({
+                    "invocation_id": invocation_id,
+                    "status": "pending_unverified", "executed": False,
+                    "outcome_verified": False, "mission_complete": False,
+                    "capability": {"qualified_name": f"{entry.kind}:{entry.name}", "sha256": actual},
+                    "command": command,
+                    "note": "A pending receipt after interruption does not prove whether the child ran.",
+                }, initial=True)
+            except OSError as exc:
+                reject(f"cannot initialize durable receipt: {exc}")
+        executed = False
+        timed_out = False
+        # Capture to disk, not unbounded subprocess pipes. A noisy child
+        # must not exhaust the agent host's memory or inflate JSON receipts.
+        import tempfile
+        max_output_bytes = 65536
+        # POSIX file-size resource limit applies to both disk-backed output
+        # streams in the child. This bounds disk consumption even if the child
+        # produces data indefinitely or catches SIGXFSZ.
+        max_spool_bytes = 8 * 1024 * 1024
+        child_file_limit = None
+        if os.name == "posix":
+            import resource
+            def child_file_limit() -> None:
+                soft, hard = resource.getrlimit(resource.RLIMIT_FSIZE)
+                cap = min(max_spool_bytes, hard) if hard != resource.RLIM_INFINITY else max_spool_bytes
+                resource.setrlimit(resource.RLIMIT_FSIZE, (cap, hard))
+        stdout_bytes = stderr_bytes = 0
+        stdout_truncated = stderr_truncated = False
+        try:
+            # A process timeout must also terminate descendant workers.
+            # start_new_session isolates the operator-selected child into its
+            # own POSIX process group, leaving the caller's group untouched.
+            import signal
+            with tempfile.TemporaryFile() as out_file, tempfile.TemporaryFile() as err_file:
+                # For durable POSIX executions, the first child is a gated
+                # exec trampoline. The requested command cannot begin until
+                # the launched receipt has been fsynced. If the parent dies
+                # first, pipe EOF makes the trampoline exit without exec.
+                gate_read = gate_write = None
+                launch_command = command
+                if options.receipt_path is not None and os.name == "posix":
+                    gate_read, gate_write = os.pipe()
+                    trampoline = (
+                        "import os,sys; "
+                        "fd=int(sys.argv[1]); "
+                        "token=os.read(fd,1); os.close(fd); "
+                        "os._exit(125) if token!=b'G' else None; "
+                        "os.execvp(sys.argv[2],sys.argv[2:])"
+                    )
+                    launch_command = [
+                        sys.executable, "-c", trampoline,
+                        str(gate_read), *command,
+                    ]
+                try:
+                    child = subprocess.Popen(
+                        launch_command, stdin=subprocess.PIPE, stdout=out_file,
+                        stderr=err_file, start_new_session=(os.name == "posix"),
+                        pass_fds=(gate_read,) if gate_read is not None else (),
+                        preexec_fn=child_file_limit,
+                    )
+                finally:
+                    if gate_read is not None:
+                        os.close(gate_read)
+                executed = True
+                # Durable diagnostic process identity; not authorization to retry.
+                if options.receipt_path is not None:
+                    import datetime
+                    launched = {
+                        "status": "launched_unverified", "executed": True,
+                        "outcome_verified": False, "mission_complete": False,
+                        "pid": child.pid,
+                        "process_group_id": child.pid if os.name == "posix" else None,
+                        "invocation_id": invocation_id,
+                        "launched_at_utc": datetime.datetime.now(
+                            datetime.timezone.utc).isoformat(),
+                        "capability": {
+                            "qualified_name": f"{entry.kind}:{entry.name}",
+                            "sha256": actual,
+                        },
+                        "command": command,
+                        "note": "Process identity is diagnostic; never automatically retry.",
+                    }
+                    try:
+                        write_receipt(launched)
+                        if gate_write is not None:
+                            # Only release the child after the launch receipt
+                            # has reached durable storage.
+                            os.write(gate_write, b"G")
+                    except OSError:
+                        if os.name == "posix":
+                            try:
+                                os.killpg(child.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+                        else:
+                            child.kill()
+                        child.communicate()
+                        raise
+                    finally:
+                        if gate_write is not None:
+                            os.close(gate_write)
+                try:
+                    child.communicate(input=document, timeout=options.timeout_seconds)
+                    code = child.returncode
+                except subprocess.TimeoutExpired:
+                    timed_out, code = True, 124
+                    if os.name == "posix":
+                        try:
+                            os.killpg(child.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                    else:
+                        child.kill()
+                    child.communicate()
+                out_file.seek(0, os.SEEK_END)
+                err_file.seek(0, os.SEEK_END)
+                stdout_bytes, stderr_bytes = out_file.tell(), err_file.tell()
+                stdout_truncated = stdout_bytes > max_output_bytes
+                stderr_truncated = stderr_bytes > max_output_bytes
+                out_file.seek(0)
+                err_file.seek(0)
+                stdout = out_file.read(max_output_bytes).decode("utf-8", errors="replace")
+                stderr = err_file.read(max_output_bytes).decode("utf-8", errors="replace")
+        except OSError as exc:
+            code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
+        final_receipt = {
+            "invocation_id": invocation_id,
+            "status": "process_succeeded_unverified" if code == 0 else "failed",
+            "executed": executed,
+            "timed_out": timed_out,
+            "mission_complete": False,
+            "outcome_verified": False,
+            "outcome_scope": "subprocess_exit_only",
+            "routes_run": 1 if executed else 0,
+            "exit_code": code,
+            "command": command,
+            "capability": {
+                "qualified_name": f"{entry.kind}:{entry.name}",
+                "sha256": actual,
+                "content_bytes": len(document),
+                "delivery": "subprocess_stdin",
+            },
+            "stdout": stdout, "stderr": stderr,
+            "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
+            "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
+            "capture_limit_bytes": max_output_bytes,
+            "spool_limit_bytes_per_stream": max_spool_bytes if os.name == "posix" else None,
+        }
+        try:
+            write_receipt(final_receipt)
+        except OSError as exc:
+            print(f"cannot finalize durable receipt: {exc}", file=sys.stderr)
+            raise SystemExit(2) from exc
+        print(json.dumps(final_receipt, sort_keys=True))
+        raise SystemExit(code)
     elif args[0] == "--exec" and len(args) > 1:
         try:
             completed = subprocess.run(

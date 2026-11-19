@@ -1,0 +1,181 @@
+# Agent tool routing collision repair — 2026-11-18
+
+Owner: apex-control-plane, standalone `src/tool_catalog.py`. No Omni_Engine provider or continuity bridge modified.
+
+## Recovered source behavior
+`select()` constructed a dictionary keyed only by entry name, so two entries named alike (skill vs connector, or duplicated connector) silently selected the last enumerated entry. `hot_swap()` delegates to `select()`, propagating the same wrong-tool routing hazard.
+
+## Change and acceptance
+- Preserve bare-name selection for unique names and unknown-name omission.
+- Accept explicit `skill:name` / `connector:name` routing.
+- Reject ambiguous bare names and even duplicate qualified names with a deterministic `ValueError`, rather than silently invoking the wrong tool.
+- Preserve catalog enumeration, no caps, and hot-swap behavior.
+
+Implementation: `src/tool_catalog.py`. Regression tests: `tests/test_tool_catalog_collision.py`.
+
+## Verification boundary / next cursor
+Provider-native GitHub write and file readback required; regression tests are authored but no changed-head CI or runtime execution is claimed here. Next: execute `python -m pytest -q tests/test_tool_catalog_collision.py` plus existing catalog tests on exact branch head, inspect output and exercise consumer integration. Do not merge or deploy without authorization.
+
+## Follow-on correction — repeated selection deduplication (2026-11-18)
+`select()` now keeps the first occurrence of each unique `(kind, name, path)` capability when callers repeat a bare name, qualified name, or both. This prevents redundant loading of the same agent capability while preserving first-request ordering, unique-name compatibility, collision rejection, and hot-swap semantics. Added regression coverage for mixed bare/qualified duplicates and hot swap. Provider commits: `5eb529acc19538312a2c0b0822f7cc0f4831a08a` (implementation) and `796130307700e50a209e9fec2fafbde9ca5fe9e4` (test). Exact changed-head test execution and live consumer routing remain unverified. Next: run existing and new catalog tests at head `7961303`, then exercise the actual loader with repeated selection requests and confirm only one capability is loaded. No merge/deploy.
+
+## 2026-11-18 exact-head execution and colon-name repair
+Recovered PR #377 and cloned the branch onto the connected Mac under `/Users/kcbflux/Documents/GlacierEQ-Agent-Engineering-20261118/apex-control-plane`. The pre-change head `d5097b70` passed the full repository test suite (1054 passed, 29 skipped, 8 subtests). Found an additional live routing defect: literal capability names containing colons could not be selected as bare names. Fixed namespace resolution to consider both literal and qualified matches, reject conflicting interpretations, and preserve distinct duplicate-entry rejection. The first attempt incorrectly collapsed equal-valued distinct entries; changed-head regression detected this (1 failed), and the correction now deduplicates only the same entry object observed through both lookup indexes.
+
+GitHub implementation commits: `eefba53cf7c6438e0fecc5f4fd18a6da1a44f94b`, `de182fb8032115a23f84203d8de0106410e06d39`, `399ba0371f45dc4c5b63646e5caaba2f7bd3f240`. Exact changed-head Mac test at `399ba0371f45dc4c5b63646e5caaba2f7bd3f240`: `uv run --no-project --with pytest python -m pytest -q tests` -> **1056 passed, 29 skipped, 8 subtests passed**. No deployment or real agent host invocation verified. Continuation: inspect whether production consumer imports `src/tool_catalog.py` or another router; test actual consumer tool-loading boundary before claiming integrated capability. No merge or task changes.
+
+## 2026-11-18 independent exact-head verification
+Independently fetched GitHub branch head `34604026313bade3be301a9fe771752c6e6c4e27` using `git ls-remote`, cloned into `/Users/kcbflux/Documents/GlacierEQ-Agent-Validation/apex-control-plane`, and checked out that exact revision. The initial `python3` invocation used Homebrew Python 3.15 without pytest; switched to installed Python 3.13 instead of treating this environment mismatch as a source defect. `python3.13 -m pytest -q tests/test_tool_catalog.py`: **6 passed, 1 skipped**. Full exact-head `python3.13 -m pytest -q`: **1083 passed, 29 skipped, 8 subtests passed**, exit 0, in 5.99 seconds. This supersedes the earlier unverified test claim for this branch head; it does not establish deployed host integration. Default-branch GitHub code search found `tool_catalog` referenced in documentation and tests, but no consumer calling `select()` beyond tests; README says the proactive engine was intentionally removed on 2026-10-24 following failed live-job proof. Do not resurrect that removed engine or claim a live loader. Next: recover the currently authorized runtime's actual capability-loading entrypoint and integrate the tested routing behavior there, with a real boundary test. No merge, deployment, automation edits, or other workstream changes.
+
+
+## 2026-11-18 overlapping-root discovery repair
+Recovered PR #377, branch implementation, catalog tests, and the default-branch absence of a real catalog consumer. Identified a new operational catalog failure: when agent discovery receives overlapping skill/connector roots or an alias to the same root, `build_catalog()` emits the same underlying document multiple times. The existing fail-closed `select()` then rejects a valid unique capability as ambiguous. This is a source-level discoverability defect, not a reason to weaken collision detection.
+
+Changed `build_catalog()` to deduplicate by (kind, resolved document path), preserving distinct files with the same name as genuine ambiguity. Implementation commit `60c2871ad8911781bfd18e836da3f8c376c7ea4d`; regression tests commit `6d97d2b0be363dc4f1f47e08f5789bb78cd74995`. On connected Mac, checked out exact GitHub revision `6d97d2b`: focused catalog suites **14 passed, 1 skipped**, full repository **1085 passed, 29 skipped, 8 subtests passed**, exit 0. This fixes duplicate discovery for any caller of `build_catalog()`; it does not establish host invocation or a production loader. Next: identify an actually authorized active capability discovery consumer and test end-to-end loading; do not revive the removed proactive engine. No merge, deployment, task or permission changes.
+
+## 2026-11-18 executable JSON resolution boundary
+Recovered the existing branch and prior full-suite receipt before changing the owner. Implemented `python src/tool_catalog.py --skills DIR --connectors DIR --select kind:name` as a directly executable read-only capability-resolution interface. It emits deterministic JSON descriptors for downstream loaders; unknown or ambiguous requested capabilities fail with exit 2 and no partial JSON on stdout. It does **not** execute a connector or imply a deployed host integration. Implementation commit `8667892bccae156e245c73cd645166d19a0fd7f6`; regression commit `37de1e36ca26f075cfc8055cc2c4e00222fb7106`. On connected Mac, fetched exact revision `37de1e3`, focused catalog tests **16 passed, 1 skipped**, full repository **1087 passed, 29 skipped, 8 subtests passed**, exit 0. Next: validate CLI subprocess output against real on-disk capability roots, then identify and integrate with an authorized host loader without restoring the removed proactive engine. No merge, deployment, credential, or task changes.
+
+Additional exact-head subprocess check: invoked `python3.13 src/tool_catalog.py` with a real temporary SKILL.md; valid qualified selection returned parseable JSON, and unknown selection returned exit 2 with empty stdout. Both passed at `37de1e36`. Notes update itself is separate from the tested code head.
+
+## 2026-11-18 atomic selected-document loading
+Added `--load-content` to the existing resolver CLI. This moves beyond metadata-only routing: the operator can request the actual UTF-8 contents of selected SKILL.md / CONNECTOR.md documents as JSON, with the existing ambiguous/unknown fail-closed checks. Loading is atomic: read failure exits 2 with no partial JSON on stdout. Existing metadata-only behavior is unchanged. Source commit `70829e3d9ec8b2bd801ae9a6ca50fcc0385b1751`; subprocess and read-failure regression tests commit `2ef3b0c320ccdbe66a96096eee6d8cc67f26c182`. GitHub provider readback and exact-head test execution still required. No production host invocation or deployment claimed. Next: run focused and full tests at this head, then verify the CLI against actual authorized capability roots and connect a real consumer if available.
+
+## 2026-11-18 loaded-document byte provenance
+Recovered owner branch at `7b3c88452733de08812dbc09ea68f7ede83cf998` and ran the full Python 3.13 suite: **1090 passed, 29 skipped, 8 subtests passed**. Added a SHA-256 digest of the *exact bytes read* for each `--load-content` record, enabling downstream agent loaders to verify capability content provenance without trusting a mutable path or recomputing from normalized text. Metadata-only CLI output remains unchanged. Source commit `fca961f0d178033bb7590fe2f0e40e0435da129f`; regression commit `999d206541f5d2240ceff59ec0d72c764571022f`. Checked out exact `999d206` on connected Mac; full repository suite **1090 passed, 29 skipped, 8 subtests passed**, exit 0; compileall passed. This is a working operator-invocable loader improvement, not a claim of automatic agent-host invocation. Continuation cursor: identify a currently authorized consuming agent host and wire content+sha256 validation into its real loading boundary; verify host-level use without reviving removed proactive engine. No merge/deploy/automation changes.
+
+
+## Explicit content-loading gate — 2026-11-18
+The executable CLI previously allowed `--load-content` without any `--select`, which read and emitted the entire discovered inventory, violating the per-turn least-content-loading boundary. The resolver now returns code 2 with empty stdout unless at least one selection is explicit; normal inventory enumeration remains available without `--load-content`. Added a regression exercising both rejection and selected loading. Source commit `5c6ad059feb7f5e2f12795ea6e187bc9a8735606`; test commit `0736fa912f1154c23cf104bf7102ade4800fdd52`. GitHub write receipts obtained. Connected Mac command execution returned an internal connector error, so changed-head test execution and actual host consumption are NOT verified. Next: run `python3.13 -m pytest -q tests/test_tool_catalog_collision.py` and full repository suite on exact branch head, then validate a real agent loader consumes explicit selection JSON. Do not merge or deploy.
+
+
+## 2026-11-18 pinned document integrity gate
+Recovered PR #377 and existing source, tests, and notes. Reverified prior exact branch head 7b9fe08 on connected Mac: 1091 passed, 29 skipped, 8 subtests passed. Implemented optional `--expect-sha256 DIGEST` for each explicit `--select` with `--load-content`. When supplied, a changed capability document now fails closed with exit 2 and empty stdout instead of silently loading drifted instructions. Unpinned discovery/loading behavior remains unchanged. Source commit `0576787dbf1e2dd0fe536f980c6d6de763f5c22c`; regression commit `698878f02993581b2e6781b456a07b8ed8de6b75`. Exact changed-head connected-Mac focused tests: 12 passed; full suite: **1093 passed, 29 skipped, 8 subtests passed**, exit 0. This is an operator-invocable document integrity gate, not a claim of automatic host consumption. Next: find authorized active consumer, pass known digests through its invocation, and test host-level drift rejection. No merge/deploy/credentials/automation edits.
+
+
+## 2026-11-18 actual control-plane consumer integration — operator request to make plans real
+
+Recovered PR #377 and the existing executable `src/control_plane.py` entrypoint; recovered `src/tool_catalog.py` and the deliberate 2026-10-24 removal of the unproven proactive engine. Preserved that removal. No autonomous host injection claimed.
+
+**Red test before implementation:** Added `tests/test_control_plane_capability_consumer.py`, commit `406a3c5b32817e02df6b6586554f5b3b4835a58d`. Against prior consumer, 3 tests failed (no `--exec-capability` route), 1 existing execution regression passed. Exact Mac isolated worktree: `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`.
+
+**Implementation:** Commit `19502f4a9cc59d844d73ce9203eaa1aba7b7468c` connects catalog selection to the **actual** control-plane local executable. `--exec-capability --skills-root DIR --select skill:name --sha256 SHA -- PROGRAM [ARGS]` resolves exactly one skill/connector, ensures its document remains inside its supplied root, loads exact UTF-8 bytes and validates the supplied SHA-256 **before** running the operator-supplied command. It sends selected document bytes via subprocess stdin (data, never a shell instruction), returns local execution receipt JSON with capability name, digest, subprocess output and explicit `outcome_verified=false`. Ambiguous names, unknown names, digest drift, and malformed args fail with exit 2 before invoking a child. Existing `--exec` behavior remains unchanged. No app credentials, cloud mutations, deployment or scheduler changes.
+
+**Changed-head tests:** `python3.13 -m pytest -q tests/test_control_plane_capability_consumer.py tests/test_tool_catalog.py tests/test_tool_catalog_collision.py` => **21 passed, 1 skipped**. Full repo `python3.13 -m pytest -q` => **1097 passed, 29 skipped, 8 subtests passed**, exit 0; `compileall` passed, at exact commit `19502f4`.
+
+**Real execution through the new consumer:** On connected Mac, created a local read-only `cloud-catalog/SKILL.md` under `/Users/kcbflux/Documents/GlacierEQ-Cloud-Collection-20261118/capabilities`, fingerprint `81a013cab4fe6fbec41f137f1ea67a568943e3ba5e66f0173bec2bacc1f698ac`. Invoked new `control_plane.py --exec-capability` with exact pin, routed explicit Python command to existing private FILEBOSS SQLite cloud catalog. The actual returned JSON reported `executed=true`, exit code 0, selected capability digest match and catalog `total_objects=125` (Google Drive 100, Dropbox 5, OneDrive 20, provider-root reads previously captured), `staged_files=1`. The collection is partial (Drive root capped); no external host autopilot, live cloud download completeness, or mission completion is claimed. Private cloud names/metadata remain on Mac; not committed.
+
+**Next cursor:** Improve authorized orchestration only through a verified existing runtime owner. A real explicit command can now receive a pinned capability context and run against real local collected cross-cloud state. For future cloud collection, expand provider traversal with authenticated paginated reads, preserve partial/incomplete flags, and verify native provider download receipts; do not conflate this with automatic ChatGPT host dispatch. No merge, deployment, permissions, secrets, external messages, or automation edits.
+
+
+## 2026-11-18 capability-executor bounded-runtime repair
+
+**Source:** `src/control_plane.py` commit `517a4c36eeda98883601f58d3d9b0e899c424eee`, regression tests `tests/test_control_plane_capability_consumer.py` commit `47e0c378a432275de0434585fc3ec8ecd46149a1`.
+
+**Defect:** `--exec-capability` could block forever on a hung child; it also used `exit_code != 127` to infer whether execution occurred, incorrectly labeling a real child that exits 127 as never executed.
+
+**Repair:** Add a finite, validated `--timeout-seconds` (default 60, max 3600) to the existing pinned capability consumer. The child is terminated by Python's subprocess timeout mechanism; the CLI returns exit 124 with `timed_out=true`, `executed=true`, `outcome_verified=false`, and `mission_complete=false`. Track whether the child actually started rather than guessing from its exit code. Invalid/nonfinite timeouts fail before child launch. No scheduling, credential, permission, merge, deployment or external action.
+
+**Tests added:** actual subprocess timeout and truthful receipt; invalid NaN timeout rejected without child side effects; real child exit 127 recorded as executed. Existing capability pin, collision and old `--exec` tests retained.
+
+**Verification state:** GitHub accepted both source and test commits. Both connected Mac terminal tools failed internally before running any commands, so changed-head focused/full tests are **not yet verified**. This is a tool-access failure, not evidence of a code defect. Prior full-suite pass (1097) applies only to earlier commit `19502f4`, not this change.
+
+**Exact continuation cursor:** on connected Mac `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`, fetch branch `engineering/catalog-ambiguous-selection-20261118`, checkout head containing `47e0c378`, run `/opt/homebrew/bin/python3.13 -m pytest -q tests/test_control_plane_capability_consumer.py` then full `-m pytest -q` and `compileall`. Repair any failures, then independently read back GitHub and exercise a real pinned cloud-catalog command with a bounded timeout. Do not claim production-host integration.
+
+
+## 2026-11-18 agent execution process-tree timeout repair
+
+Recovered owner-native PR #377 head `c268a6d3`, the real `src/control_plane.py --exec-capability` consumer, existing timeout tests, and Mac worktree `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`. Baseline exact-head focused tests **7 passed** and full repo **1100 passed, 29 skipped, 8 subtests passed**. Found a real operational gap: `subprocess.run(... timeout=...)` terminates the direct child but may leave spawned descendant workers alive, permitting post-timeout side effects and lingering work.
+
+Implementation `933e2df6c397a1f6238f3b1970956e3f761be1f0`: the actual pinned capability execution consumer now starts the child in a new POSIX process group, uses `Popen.communicate(timeout=...)`, and sends SIGKILL to that isolated group on timeout, reaping the child. Non-POSIX fallback kills direct child. Preserves 124 timeout receipt, `executed=true`, `outcome_verified=false`, exact capability pin, and existing operator-invoked execution behavior. No new automatic host or task authority.
+
+Regression `e59458536e4b3aa58cebf9d2cafdfbb8d10b6958`: actual subprocess spawns a grandchild scheduled to write a marker after the parent's timeout. Verified the parent returns 124 and, after waiting beyond the grandchild delay, marker remains absent. Exact changed-head Mac tests: **8 focused passed**, **1101 full-suite passed, 29 skipped, 8 subtests passed**, exit 0. No mocks for this process-tree test.
+
+Next cursor: independent GitHub readback of the notes/source/test commit; further capability orchestration should prove bounded output handling and durable receipts without confusing subprocess success with mission completion. POSIX descendants that deliberately detach into a new session are outside this process-group guarantee; avoid claiming universal containment. No merges, deployment, credentials, permissions, external messages or automation changes.
+
+
+## 2026-11-18 bounded subprocess output capture — verified engineering transition
+
+Recovered PR #377 at head `95771e4053272c90c0500f1aa242d89029055504`, current `src/control_plane.py --exec-capability`, the prior process-group timeout fix, and the existing Mac worktree. Identified a real runtime reliability defect: `Popen.communicate()` captured arbitrarily large stdout/stderr into RAM, then serialized all bytes into the CLI receipt. A noisy child could exhaust agent memory or blow up downstream structured output.
+
+**Functional repair:** `src/control_plane.py` commit `b3ba3212ce64f9a06531b9380c1ff7898837b419` replaces unbounded stdout/stderr pipes with temporary disk-backed file descriptors, keeps the verified process-group timeout kill, and emits only the first 65,536 bytes per stream. Receipt includes `stdout_bytes`, `stderr_bytes`, truncation booleans, and `capture_limit_bytes`. Output remains marked `outcome_verified=false`; subprocess exit 0 does not imply mission completion. Temp files close automatically. This bounds *in-memory and JSON* output, not disk usage by a continuously noisy child before timeout; the existing maximum runtime remains the outer bound.
+
+**Tests:** `tests/test_control_plane_capability_consumer.py` commit `dfc4fcf5559f4adbf15b2d116c8981b88d008c08` adds real 300,000-byte stdout / 240,000-byte stderr subprocess test with exact byte counts, truncation, and bounded receipt; and an intact small-output test. On connected Mac at exact changed head `dfc4fcf`: **10 focused tests passed**, full repository **1103 passed, 29 skipped, 8 subtests passed**, and `python3.13 -m compileall -q src/control_plane.py` succeeded. No mocks were used for noisy subprocess behavior.
+
+**Next cursor:** Add durable, crash-consistent execution receipts and bounded disk-spool quota if needed for untrusted/high-output workers, then verify interrupted/restarted execution with native readback. Keep the execution boundary explicit; do not claim host autopilot, provider completion, or production deployment. No merge, secrets, permissions, task configurations, or external messages changed.
+
+
+## 2026-11-18 durable capability-execution receipt transition
+
+Recovered open PR #377 head `b35c88f2`, existing pinned `--exec-capability` consumer, bounded output capture, POSIX process-group timeout behavior, and regression suite. Highest-leverage unfinished deficiency: subprocess receipts existed only on stdout, so interrupted sessions could lose evidence and invite false completion claims.
+
+**Implementation on existing owner branch:** `src/control_plane.py` now supports optional `--receipt-path PATH`. After pin validation and before launching the child, it writes a `pending_unverified` receipt to a temporary sibling file, flushes/fsyncs, atomically replaces the target, and fsyncs the parent directory on supported POSIX hosts. After execution it atomically replaces that receipt with the exact JSON response. A crash leaves pending evidence explicitly stating that child execution is uncertain, not false success. Invalid/missing receipt parent fails before launching a child. No receipt path preserves prior stdout-only behavior. Commits `b1c589e2` (implementation), `f0d1d63c` (two subprocess tests), `bf99b167` (correct newline-delimited JSON serialization).
+
+**Regression coverage added:** exact final receipt equals subprocess stdout JSON; output and mission-status remain scoped; no staging file remains; receipt initialization failure prevents side-effecting subprocess. Existing tests cover timeout, process-group descendants, bounded stdout/stderr and pin mismatch.
+
+**Verification boundary:** GitHub provider accepted source/test changes; connected Mac Desktop Commander reported device offline (last seen 18 minutes earlier), and isolated container could not resolve GitHub. Consequently **changed-head tests and real Mac execution are not verified**. This is an execution-environment access failure, not a passing test. Independent GitHub readback of source/test/notes is still required after this notes commit.
+
+**Exact next transition:** When Mac returns, use existing worktree `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`; fetch branch `engineering/catalog-ambiguous-selection-20261118`; checkout latest head; run Python 3.13 focused `tests/test_control_plane_capability_consumer.py`, full `pytest -q`, and `compileall`. Exercise a real `--exec-capability --receipt-path` command, kill the parent after pending write, inspect pending JSON and restart readback, then repair failures. Do not claim crash recovery or host-level automatic invocation without this proof. No merge, deployment, credentials, permissions, external messages or automation configuration changes.
+
+
+## 2026-11-18 durable receipt restart overwrite prevention
+
+Recovered provider-native open PR #377 head `9d4cdf3e`, its actual `src/control_plane.py --exec-capability` consumer and regression suite. Connected Mac was offline (last seen approximately one hour before this run), so prior interrupted-execution test remains unverified.
+
+**Defect and operational impact:** Previously `write_receipt` used unconditional `os.replace` for both initial and final receipts. Reusing `--receipt-path` after a crash silently replaced an existing `pending_unverified` receipt, erasing uncertainty about whether the first subprocess ran. It also allowed a completed receipt to be overwritten by another attempt. This undermined recovery and could cause duplicate side effects.
+
+**Implementation:** `src/control_plane.py` commit `4f76f6a3cdd8faddb0fab738a908b0cd0337d230` uses an exclusive hard-link creation for the initial pending receipt, failing closed if the destination exists; final receipt replacement is still atomic for the same invocation. Existing pending/final records are not silently overwritten on a repeated invocation. On filesystems without hard-link support, receipt initialization fails closed before the child launches. Caller must explicitly choose a fresh receipt path or independently reconcile the old attempt. This preserves audit provenance without granting retry authority.
+
+**Regression tests:** `tests/test_control_plane_capability_consumer.py` commit `ddafc0ded5461b7d343e21977f08e112dee14acf` adds real subprocess scenarios for pre-existing pending and final receipts. Both require exit 2, unchanged receipt bytes, no executed side effect, and no leaked staging file for pending case.
+
+**Verification boundary:** GitHub accepted implementation and tests. The Mac execution tool was unavailable and no changed-head pytest or crash/restart run was possible in this invocation. Do not carry forward the prior 1103-test result as proof for this revision. No merge, deployment, credential, permissions, external message, or automation changes.
+
+**Exact continuation cursor:** Fetch PR #377 branch `engineering/catalog-ambiguous-selection-20261118` into existing isolated Mac worktree `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`; run `/opt/homebrew/bin/python3.13 -m pytest -q tests/test_control_plane_capability_consumer.py`, full `-m pytest -q`, and `compileall`. Verify initial receipt exclusive creation, final atomic replacement, duplicate-path refusal, and forced parent kill after pending write, then independently read back owner-native results. Consider per-attempt unique IDs and explicit reconciliation before safe retry; never infer nonexecution from pending.
+
+
+## 2026-11-18 22:26 HST — real crash/restart boundary validated
+
+Recovered PR #377 at `f0770b2d72e6a37534c2811db7858c67504cb5cb`, then reconnected to the Mac's existing isolated worktree `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`. First ran existing focused tests (14 passed) and full Python 3.13 suite (1107 passed, 29 skipped, 8 subtests passed) on the recovered head.
+
+Added `tests/test_control_plane_crash_restart.py`, commits `78eee7f` and `e668277`. The regression launches the **real** `src/control_plane.py --exec-capability --receipt-path`, waits for both pending receipt and child marker, sends SIGKILL to the control-plane parent, independently rereads the pending receipt, then retries the identical receipt path with a second marker command. It asserts exit 2, no duplicate marker, byte-identical original pending receipt, and continued `outcome_verified=false`. Test cleans up its own orphaned child process group. This is actual local process interruption, not a mocked crash.
+
+At exact changed head `e668277ac1d83945cae2a7621e3345d162e50155`: focused **15 passed**; complete Python 3.13 suite **1108 passed, 29 skipped, 8 subtests passed**. The existing executor implementation is unchanged by these two test commits. This establishes local pending-receipt crash preservation and duplicate prevention, not restart completion or remote provider success.
+
+**Newly observed limitation:** Killing the control-plane parent with SIGKILL does not automatically kill an already launched child process group. The crash test explicitly terminates that test-owned child during cleanup. A pending receipt therefore correctly indicates unknown child outcome. Do not auto-replay; next authorized engineering transition is a bounded recovery/reconciliation command with process identity and provenance, and explicit operator-selected recovery policy, before any retry. Do not treat PID reuse or receipt presence alone as proof of process state. Preserve existing no-merge/no-deployment/no-scheduler-change boundary.
+
+
+## 2026-11-18 process-identity recovery stage (verified)
+
+Recovered current PR #377 at `3e57e88b`, existing executable and real SIGKILL regression. Implemented `launched_unverified` durable receipt after `Popen`, before `communicate`, with per-invocation UUID, child PID, POSIX process-group ID, UTC launch timestamp, selected capability pin and command. Pending is still committed before spawn; final receipt still records subprocess outcome. A failed launch-stage receipt write kills and reaps the child instead of silently leaving an untracked worker. This is **diagnostic identity**, not evidence of successful mission completion or authorization for automatic retry.
+
+Commits: implementation `7cfed4c2`, new live SIGKILL/retry regression `67a8e1a8`, adjusted older crash regression for launched stage `405e06dd`. The first exact-head full suite revealed the old regression's stale expectation (`pending_unverified` after a child had already started); repaired the test to require `launched_unverified` and matching actual child PID, preserving its duplicate-blocking assertions. **Mac changed-head full suite at `405e06dd`: 1,109 passed, 29 skipped, 8 subtests passed, exit 0; compileall passed.** Focused capability suite 15 passed. New SIGKILL test checks persisted child PID/group and invocation ID, kills parent, confirms byte-identical receipt and refusal of duplicate child, then kills test-owned process group.
+
+Remaining: process ID can be reused; a child can exit or detach before inspection, and crash between spawn and launched write still leaves only pending. No automatic replay/reconciliation is authorized. Next: implement read-only process identity inspection with reliable birth-time checks and explicit unknown state, and investigate a bounded pre-spawn handshake to close the crash-before-launched gap. Never infer external side-effect completion from a local PID or exit code. No merge, deploy, credential, permission, external message or scheduled-task change.
+
+
+## 2026-11-19 — read-only process birth-time inspection wired into actual APEX CLI
+
+Recovered PR #377 head `2935f168c364dc64b02d9640faa3de3aae5dc5de`, the real `src/control_plane.py` capability executor, and the earlier launched/pending durable receipt behavior. Added `src/inspect_execution_receipt.py` and exposed `control_plane.py --inspect-receipt PATH` in commits `9886a998` and `0e436916`. The inspector opens a regular receipt with no-follow semantics and a 1 MiB size ceiling; for a launched receipt it checks the PID's BSD/macOS `ps lstart` birth time against the recorded UTC launch timestamp, distinguishing consistent identity, mismatch/reuse, missing process and insufficient evidence. It never kills, replays, or authorizes retries. Pending records with no PID remain uncertain. Completed receipts remain receipt claims, not independently verified mission outcomes.
+
+Added four real CLI regression tests in commit `1b4a3b4b0ab6ac31afe92f38c4b1d4078517567f`: live subprocess birth-time consistency, stale PID birth mismatch, pending without identity, and missing receipt failure. On connected Mac isolated worktree `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`, focused suite **19 passed**, full changed-head suite **1113 passed, 29 skipped, 8 subtests passed**, compilation passed. No merge or deployment.
+
+**Continuation cursor:** Process birth-time is second-resolution diagnostic evidence, not an identity token or a completion proof. There remains a launch-before-launched-receipt crash window; do not automatically retry pending or launched work. Next strengthen process identity capture with platform-native birth timestamps and address the launch-recording gap without creating duplicate external side effects; test actual crash windows and preserve non-replay semantics.
+
+
+## 2026-11-19 — close requested-command launch/receipt crash window
+
+Recovered PR #377 head `2678b3f4` and the existing POSIX receipt path. Prior implementation created the requested subprocess before fsyncing its launched receipt, leaving a crash window where external work could begin while only `pending_unverified` survived.
+
+**Actual consumer repair:** `src/control_plane.py` now uses a POSIX pipe-gated Python exec trampoline **only when --receipt-path is requested**. The child blocks before `execvp` of the operator command. The parent first commits the `launched_unverified` receipt (including PID and invocation ID) with existing atomic write/fsync, then sends a single release byte. If the parent dies before release, the gate closes with EOF and the requested program does not start. On receipt-write error, the child process group is killed and no release is sent. Without receipt-path, the original execution route is unchanged. This prevents the requested program from beginning before durable launch evidence; it does not prove mission completion or protect against detached descendants after release.
+
+**Provider-native commits:** `4638e145e51cab8642e130cd510144e656a2f250` (consumer fix), `2a1868371346078b3e8a87a9ce39dc11ce7945a3` (real execution regression). Test invokes the actual CLI and has the child inspect the on-disk launched receipt as its first operation, then checks final receipt. Connected Mac exact-head Python 3.13 full suite: **1114 passed, 29 skipped, 8 subtests passed**, exit 0; compileall passed.
+
+**Limit:** The launch gate has not been subjected to a deterministic SIGKILL specifically between child creation and gate release; existing SIGKILL restart tests and new live first-instruction ordering test passed. POSIX process gate applies only to receipt-enabled execution. Keep automatic retries disabled.
+
+**Next cursor:** Add deterministic fault injection at the pre-release boundary in a test-only harness and verify SIGKILL leaves pending/launched unverified evidence and zero requested-program side effects; address unbounded disk spool separately. Preserve existing PR and do not merge/deploy or change automations.
+
+## 2026-11-19 bounded disk-spool enforcement (agent-system engineering)
+
+Recovered open PR #377 at 00d0fb578fb6f162cb06134958747a4a10e34cbd and real control_plane.py capability execution. The existing 64 KiB JSON truncation did not bound temporary disk-spool writes: a noisy process could fill the disk before its timeout. Implemented POSIX child RLIMIT_FSIZE of 8 MiB per output stream before exec, respecting an existing stricter hard limit. This bounds child output files while retaining 64 KiB JSON preview and existing process-group timeout. The cap is inherited by descendants and may constrain unrelated child-created files; non-POSIX remains unbounded (explicit null receipt field). No credential, deployment, scheduler or provider changes.
+
+New real-subprocess regression writes 12 MiB and confirms nonzero termination, stdout_bytes <= 8 MiB, accurate quota receipt, and no false outcome verification. Changed-head focused 17 passed; full Python 3.13 suite 1115 passed, 29 skipped, 8 subtests passed; compileall and git diff --check passed on the connected Mac. Exact continuation: deterministic SIGKILL before pre-exec gate release; evaluate bounded capture without RLIMIT_FSIZE inheritance side effects, then add portable spool quota enforcement. Never interpret process exit as mission completion.
