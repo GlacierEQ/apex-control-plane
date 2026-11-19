@@ -10,6 +10,7 @@ everything.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from dataclasses import asdict, dataclass
@@ -170,7 +171,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.load_content:
                 # Resolve all requested documents before emitting any output.
                 # Never return a partially loaded capability set.
-                record["content"] = Path(entry.path).read_text(encoding="utf-8")
+                content = Path(entry.path).read_bytes()
+                record["content"] = content.decode("utf-8")
+                record["sha256"] = hashlib.sha256(content).hexdigest()
             output.append(record)
     except (OSError, UnicodeError) as exc:
         print(f"cannot load capability document: {exc}", file=sys.stderr)
