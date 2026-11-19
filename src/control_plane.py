@@ -303,33 +303,45 @@ if __name__ == "__main__":
             reject(f"cannot load capability document: {exc}")
         executed = False
         timed_out = False
+        # Capture to disk, not unbounded subprocess pipes. A noisy child
+        # must not exhaust the agent host's memory or inflate JSON receipts.
+        import tempfile
+        max_output_bytes = 65536
+        stdout_bytes = stderr_bytes = 0
+        stdout_truncated = stderr_truncated = False
         try:
             # A process timeout must also terminate descendant workers.
             # start_new_session isolates the operator-selected child into its
             # own POSIX process group, leaving the caller's group untouched.
             import signal
-            child = subprocess.Popen(
-                command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, start_new_session=(os.name == "posix"),
-            )
-            executed = True
-            try:
-                out, err = child.communicate(
-                    input=document, timeout=options.timeout_seconds,
+            with tempfile.TemporaryFile() as out_file, tempfile.TemporaryFile() as err_file:
+                child = subprocess.Popen(
+                    command, stdin=subprocess.PIPE, stdout=out_file,
+                    stderr=err_file, start_new_session=(os.name == "posix"),
                 )
-                code = child.returncode
-            except subprocess.TimeoutExpired:
-                timed_out, code = True, 124
-                if os.name == "posix":
-                    try:
-                        os.killpg(child.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
-                else:
-                    child.kill()
-                out, err = child.communicate()
-            stdout = out.decode("utf-8", errors="replace")
-            stderr = err.decode("utf-8", errors="replace")
+                executed = True
+                try:
+                    child.communicate(input=document, timeout=options.timeout_seconds)
+                    code = child.returncode
+                except subprocess.TimeoutExpired:
+                    timed_out, code = True, 124
+                    if os.name == "posix":
+                        try:
+                            os.killpg(child.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                    else:
+                        child.kill()
+                    child.communicate()
+                out_file.seek(0, os.SEEK_END)
+                err_file.seek(0, os.SEEK_END)
+                stdout_bytes, stderr_bytes = out_file.tell(), err_file.tell()
+                stdout_truncated = stdout_bytes > max_output_bytes
+                stderr_truncated = stderr_bytes > max_output_bytes
+                out_file.seek(0)
+                err_file.seek(0)
+                stdout = out_file.read(max_output_bytes).decode("utf-8", errors="replace")
+                stderr = err_file.read(max_output_bytes).decode("utf-8", errors="replace")
         except OSError as exc:
             code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
         print(json.dumps({
@@ -349,6 +361,9 @@ if __name__ == "__main__":
                 "delivery": "subprocess_stdin",
             },
             "stdout": stdout, "stderr": stderr,
+            "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
+            "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
+            "capture_limit_bytes": max_output_bytes,
         }, sort_keys=True))
         raise SystemExit(code)
     elif args[0] == "--exec" and len(args) > 1:
