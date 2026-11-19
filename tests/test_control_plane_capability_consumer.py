@@ -297,3 +297,66 @@ def test_existing_final_receipt_is_never_overwritten(tmp_path):
     assert result.returncode == 2
     assert receipt_path.read_text(encoding="utf-8") == original
     assert "should never run" not in result.stdout
+
+
+def test_sigkill_preserves_launched_process_identity_and_blocks_retry(tmp_path):
+    """A real interrupted parent retains child identity, but never certifies success."""
+    import os
+    import signal
+    import time
+    if os.name != "posix":
+        return
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("trusted context", encoding="utf-8")
+    receipt_path = tmp_path / "execution.json"
+    marker = tmp_path / "duplicate-execution"
+    args = [
+        sys.executable, str(ENTRYPOINT), "--exec-capability",
+        "--skills-root", str(skills), "--select", "skill:agent",
+        "--sha256", hashlib.sha256(doc.read_bytes()).hexdigest(),
+        "--receipt-path", str(receipt_path), "--",
+        sys.executable, "-c", "import time;time.sleep(15)",
+    ]
+    parent = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=ROOT)
+    launched = None
+    try:
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            if receipt_path.exists():
+                data = json.loads(receipt_path.read_text(encoding="utf-8"))
+                if data["status"] == "launched_unverified":
+                    launched = data
+                    break
+            time.sleep(0.025)
+        assert launched is not None, "launch identity was not persisted"
+        assert launched["pid"] > 0
+        assert launched["process_group_id"] == launched["pid"]
+        assert len(launched["invocation_id"]) == 32
+        assert launched["outcome_verified"] is False
+        os.kill(parent.pid, signal.SIGKILL)
+        parent.wait(timeout=5)
+        preserved = receipt_path.read_bytes()
+        retry = invoke(
+            "--exec-capability", "--skills-root", skills,
+            "--select", "skill:agent",
+            "--sha256", hashlib.sha256(doc.read_bytes()).hexdigest(),
+            "--receipt-path", receipt_path, "--",
+            sys.executable, "-c",
+            "import pathlib,sys;pathlib.Path(sys.argv[1]).touch()", marker,
+        )
+        assert retry.returncode == 2
+        assert not marker.exists()
+        assert receipt_path.read_bytes() == preserved
+    finally:
+        if parent.poll() is None:
+            parent.kill()
+            parent.wait(timeout=5)
+        if launched is not None:
+            try:
+                os.killpg(launched["process_group_id"], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        parent.stdout.close()
+        parent.stderr.close()
