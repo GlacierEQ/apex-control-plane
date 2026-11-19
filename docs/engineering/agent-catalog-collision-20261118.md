@@ -160,3 +160,16 @@ Recovered PR #377 head `2935f168c364dc64b02d9640faa3de3aae5dc5de`, the real `src
 Added four real CLI regression tests in commit `1b4a3b4b0ab6ac31afe92f38c4b1d4078517567f`: live subprocess birth-time consistency, stale PID birth mismatch, pending without identity, and missing receipt failure. On connected Mac isolated worktree `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`, focused suite **19 passed**, full changed-head suite **1113 passed, 29 skipped, 8 subtests passed**, compilation passed. No merge or deployment.
 
 **Continuation cursor:** Process birth-time is second-resolution diagnostic evidence, not an identity token or a completion proof. There remains a launch-before-launched-receipt crash window; do not automatically retry pending or launched work. Next strengthen process identity capture with platform-native birth timestamps and address the launch-recording gap without creating duplicate external side effects; test actual crash windows and preserve non-replay semantics.
+
+
+## 2026-11-19 — close requested-command launch/receipt crash window
+
+Recovered PR #377 head `2678b3f4` and the existing POSIX receipt path. Prior implementation created the requested subprocess before fsyncing its launched receipt, leaving a crash window where external work could begin while only `pending_unverified` survived.
+
+**Actual consumer repair:** `src/control_plane.py` now uses a POSIX pipe-gated Python exec trampoline **only when --receipt-path is requested**. The child blocks before `execvp` of the operator command. The parent first commits the `launched_unverified` receipt (including PID and invocation ID) with existing atomic write/fsync, then sends a single release byte. If the parent dies before release, the gate closes with EOF and the requested program does not start. On receipt-write error, the child process group is killed and no release is sent. Without receipt-path, the original execution route is unchanged. This prevents the requested program from beginning before durable launch evidence; it does not prove mission completion or protect against detached descendants after release.
+
+**Provider-native commits:** `4638e145e51cab8642e130cd510144e656a2f250` (consumer fix), `2a1868371346078b3e8a87a9ce39dc11ce7945a3` (real execution regression). Test invokes the actual CLI and has the child inspect the on-disk launched receipt as its first operation, then checks final receipt. Connected Mac exact-head Python 3.13 full suite: **1114 passed, 29 skipped, 8 subtests passed**, exit 0; compileall passed.
+
+**Limit:** The launch gate has not been subjected to a deterministic SIGKILL specifically between child creation and gate release; existing SIGKILL restart tests and new live first-instruction ordering test passed. POSIX process gate applies only to receipt-enabled execution. Keep automatic retries disabled.
+
+**Next cursor:** Add deterministic fault injection at the pre-release boundary in a test-only harness and verify SIGKILL leaves pending/launched unverified evidence and zero requested-program side effects; address unbounded disk spool separately. Preserve existing PR and do not merge/deploy or change automations.
