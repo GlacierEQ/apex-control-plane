@@ -475,9 +475,17 @@ if __name__ == "__main__":
                                 pass
                         else:
                             child.kill()
-                        child.wait()
+                        # Receipt persistence failed: never let an inherited
+                        # descendant output handle hang cleanup indefinitely.
+                        # Stop parent-owned drain loops before waiting for them.
+                        stop_drains.set()
+                        try:
+                            child.wait(timeout=1)
+                        except subprocess.TimeoutExpired:
+                            child.kill()
+                            child.wait(timeout=1)
                         for thread in drains:
-                            thread.join()
+                            thread.join(timeout=0.3)
                         raise
                     finally:
                         if gate_write is not None:
