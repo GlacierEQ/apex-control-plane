@@ -153,6 +153,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--select", action="append", default=[], metavar="KIND:NAME")
     parser.add_argument("--load-content", action="store_true", help="Read selected capability documents into JSON")
     args = parser.parse_args(argv)
+    if args.load_content and not args.select:
+        print("--load-content requires at least one explicit --select", file=sys.stderr)
+        return 2
     catalog = build_catalog(args.skills, args.connectors)
     try:
         chosen = select(catalog, args.select) if args.select else catalog
