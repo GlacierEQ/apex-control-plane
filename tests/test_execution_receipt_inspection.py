@@ -1,0 +1,59 @@
+"""Real CLI inspection: no process identity result permits retry."""
+import datetime as dt
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+CLI = ROOT / "src" / "control_plane.py"
+
+
+def run(path):
+    return subprocess.run([sys.executable, str(CLI), "--inspect-receipt", str(path)],
+                          capture_output=True, text=True, cwd=ROOT)
+
+
+def test_live_child_birth_identity_is_observed(tmp_path):
+    child = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(15)"])
+    try:
+        path = tmp_path / "receipt.json"
+        path.write_text(json.dumps({
+            "status": "launched_unverified", "pid": child.pid,
+            "invocation_id": "live", "launched_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        }))
+        result = run(path)
+        assert result.returncode == 0, result.stderr
+        data = json.loads(result.stdout)
+        assert data["process_identity"] == "birth_time_consistent"
+        assert data["retry_authorized"] is False
+        assert data["outcome_verified"] is False
+    finally:
+        child.terminate()
+        child.wait(timeout=5)
+
+
+def test_stale_birth_rejected(tmp_path):
+    path = tmp_path / "receipt.json"
+    path.write_text(json.dumps({
+        "status": "launched_unverified", "pid": os.getpid(),
+        "invocation_id": "old", "launched_at_utc": "2020-01-01T00:00:00+00:00",
+    }))
+    data = json.loads(run(path).stdout)
+    assert data["process_identity"] == "birth_time_mismatch"
+    assert data["retry_authorized"] is False
+
+
+def test_pending_has_no_process_proof(tmp_path):
+    path = tmp_path / "receipt.json"
+    path.write_text(json.dumps({"status": "pending_unverified", "invocation_id": "pending"}))
+    data = json.loads(run(path).stdout)
+    assert data["process_identity"] == "insufficient_evidence"
+    assert data["retry_authorized"] is False
+
+
+def test_missing_receipt_is_failure(tmp_path):
+    result = run(tmp_path / "missing.json")
+    assert result.returncode == 2
+    assert json.loads(result.stdout)["status"] == "inspection_failed"
