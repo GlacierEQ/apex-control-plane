@@ -563,7 +563,11 @@ if __name__ == "__main__":
                 stdout = out_file.read(max_output_bytes).decode("utf-8", errors="replace")
                 stderr = err_file.read(max_output_bytes).decode("utf-8", errors="replace")
         except OSError as exc:
-            code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
+            # Cleanup failures must not erase a previously observed timeout.
+            # A failed kill/reap is NOT proof of process-tree containment.
+            cleanup_error = f"{type(exc).__name__}: {exc}"
+            code, stdout, stderr = (124 if timed_out else 127), "", cleanup_error
+            output_incomplete = True
         final_receipt = {
             "invocation_id": invocation_id,
             "status": "process_succeeded_unverified" if code == 0 else "failed",
@@ -585,6 +589,8 @@ if __name__ == "__main__":
             "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
             "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
             "output_incomplete": output_incomplete,
+            "cleanup_error": locals().get("cleanup_error"),
+            "containment_verified": not bool(locals().get("cleanup_error")) and not timed_out,
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }
