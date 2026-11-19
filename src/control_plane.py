@@ -276,6 +276,7 @@ if __name__ == "__main__":
         cli.add_argument("--select", required=True)
         cli.add_argument("--sha256", required=True)
         cli.add_argument("--timeout-seconds", type=float, default=60.0)
+        cli.add_argument("--receipt-path", type=Path)
         options = cli.parse_args(args[1:separator])
         if not 0 < options.timeout_seconds <= 3600 or not __import__("math").isfinite(options.timeout_seconds):
             reject("timeout-seconds must be finite and between 0 and 3600")
@@ -301,6 +302,45 @@ if __name__ == "__main__":
             document.decode("utf-8")
         except (OSError, UnicodeError, ValueError) as exc:
             reject(f"cannot load capability document: {exc}")
+        # Optional durable receipt: pending is committed before subprocess launch.
+        # A crash leaves explicit unverified evidence rather than false success.
+        def write_receipt(record: dict[str, Any]) -> None:
+            if options.receipt_path is None:
+                return
+            import tempfile as _tempfile
+            target = options.receipt_path
+            parent = target.parent.resolve(strict=True)
+            if target.is_symlink():
+                reject("receipt path must not be a symlink")
+            payload = (json.dumps(record, sort_keys=True) + "\\n").encode("utf-8")
+            fd, staging = _tempfile.mkstemp(prefix=".apex-receipt-", dir=parent)
+            try:
+                with os.fdopen(fd, "wb") as handle:
+                    handle.write(payload)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(staging, target)
+                if hasattr(os, "O_DIRECTORY"):
+                    directory_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+                    try:
+                        os.fsync(directory_fd)
+                    finally:
+                        os.close(directory_fd)
+            finally:
+                if os.path.exists(staging):
+                    os.unlink(staging)
+
+        if options.receipt_path is not None:
+            try:
+                write_receipt({
+                    "status": "pending_unverified", "executed": False,
+                    "outcome_verified": False, "mission_complete": False,
+                    "capability": {"qualified_name": f"{entry.kind}:{entry.name}", "sha256": actual},
+                    "command": command,
+                    "note": "A pending receipt after interruption does not prove whether the child ran.",
+                })
+            except OSError as exc:
+                reject(f"cannot initialize durable receipt: {exc}")
         executed = False
         timed_out = False
         # Capture to disk, not unbounded subprocess pipes. A noisy child
@@ -344,7 +384,7 @@ if __name__ == "__main__":
                 stderr = err_file.read(max_output_bytes).decode("utf-8", errors="replace")
         except OSError as exc:
             code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
-        print(json.dumps({
+        final_receipt = {
             "status": "process_succeeded_unverified" if code == 0 else "failed",
             "executed": executed,
             "timed_out": timed_out,
@@ -364,7 +404,13 @@ if __name__ == "__main__":
             "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
             "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
             "capture_limit_bytes": max_output_bytes,
-        }, sort_keys=True))
+        }
+        try:
+            write_receipt(final_receipt)
+        except OSError as exc:
+            print(f"cannot finalize durable receipt: {exc}", file=sys.stderr)
+            raise SystemExit(2) from exc
+        print(json.dumps(final_receipt, sort_keys=True))
         raise SystemExit(code)
     elif args[0] == "--exec" and len(args) > 1:
         try:
