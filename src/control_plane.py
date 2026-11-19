@@ -397,7 +397,11 @@ if __name__ == "__main__":
                         "os.execvp(sys.argv[2],sys.argv[2:])"
                     )
                     launch_command = [
-                        sys.executable, "-c", trampoline,
+                        # Suppress sitecustomize, usercustomize, PYTHONPATH and
+                        # ambient Python startup hooks until the durable gate
+                        # is released. Otherwise hook side effects can precede
+                        # the launched receipt despite the exec barrier.
+                        sys.executable, "-I", "-S", "-c", trampoline,
                         str(gate_read), *command,
                     ]
                 try:
