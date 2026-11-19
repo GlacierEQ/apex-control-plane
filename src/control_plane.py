@@ -355,6 +355,7 @@ if __name__ == "__main__":
                 reject(f"cannot initialize durable receipt: {exc}")
         executed = False
         timed_out = False
+        launch_receipt_error = None
         # Capture to disk, not unbounded subprocess pipes. A noisy child
         # must not exhaust the agent host's memory or inflate JSON receipts.
         import tempfile
@@ -467,7 +468,11 @@ if __name__ == "__main__":
                             # Only release the child after the launch receipt
                             # has reached durable storage.
                             os.write(gate_write, b"G")
-                    except OSError:
+                    except OSError as exc:
+                        # Never replace a pending receipt if the launched
+                        # receipt failed to become durable. Its uncertainty
+                        # must survive even if a later write would succeed.
+                        launch_receipt_error = exc
                         if os.name == "posix":
                             try:
                                 os.killpg(child.pid, signal.SIGKILL)
@@ -601,6 +606,10 @@ if __name__ == "__main__":
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }
+        if launch_receipt_error is not None:
+            print(f"cannot persist launched receipt; pending receipt preserved: {launch_receipt_error}",
+                  file=sys.stderr)
+            raise SystemExit(2)
         try:
             write_receipt(final_receipt)
         except OSError as exc:
