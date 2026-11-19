@@ -367,10 +367,34 @@ if __name__ == "__main__":
             # own POSIX process group, leaving the caller's group untouched.
             import signal
             with tempfile.TemporaryFile() as out_file, tempfile.TemporaryFile() as err_file:
-                child = subprocess.Popen(
-                    command, stdin=subprocess.PIPE, stdout=out_file,
-                    stderr=err_file, start_new_session=(os.name == "posix"),
-                )
+                # For durable POSIX executions, the first child is a gated
+                # exec trampoline. The requested command cannot begin until
+                # the launched receipt has been fsynced. If the parent dies
+                # first, pipe EOF makes the trampoline exit without exec.
+                gate_read = gate_write = None
+                launch_command = command
+                if options.receipt_path is not None and os.name == "posix":
+                    gate_read, gate_write = os.pipe()
+                    trampoline = (
+                        "import os,sys; "
+                        "fd=int(sys.argv[1]); "
+                        "token=os.read(fd,1); os.close(fd); "
+                        "os._exit(125) if token!=b'G' else None; "
+                        "os.execvp(sys.argv[2],sys.argv[2:])"
+                    )
+                    launch_command = [
+                        sys.executable, "-c", trampoline,
+                        str(gate_read), *command,
+                    ]
+                try:
+                    child = subprocess.Popen(
+                        launch_command, stdin=subprocess.PIPE, stdout=out_file,
+                        stderr=err_file, start_new_session=(os.name == "posix"),
+                        pass_fds=(gate_read,) if gate_read is not None else (),
+                    )
+                finally:
+                    if gate_read is not None:
+                        os.close(gate_read)
                 executed = True
                 # Durable diagnostic process identity; not authorization to retry.
                 if options.receipt_path is not None:
@@ -392,13 +416,23 @@ if __name__ == "__main__":
                     }
                     try:
                         write_receipt(launched)
+                        if gate_write is not None:
+                            # Only release the child after the launch receipt
+                            # has reached durable storage.
+                            os.write(gate_write, b"G")
                     except OSError:
                         if os.name == "posix":
-                            os.killpg(child.pid, signal.SIGKILL)
+                            try:
+                                os.killpg(child.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
                         else:
                             child.kill()
                         child.communicate()
                         raise
+                    finally:
+                        if gate_write is not None:
+                            os.close(gate_write)
                 try:
                     child.communicate(input=document, timeout=options.timeout_seconds)
                     code = child.returncode
