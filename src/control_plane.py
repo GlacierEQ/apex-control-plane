@@ -312,7 +312,7 @@ if __name__ == "__main__":
             parent = target.parent.resolve(strict=True)
             if target.is_symlink():
                 reject("receipt path must not be a symlink")
-            payload = (json.dumps(record, sort_keys=True) + "\\n").encode("utf-8")
+            payload = (json.dumps(record, sort_keys=True) + "\n").encode("utf-8")
             fd, staging = _tempfile.mkstemp(prefix=".apex-receipt-", dir=parent)
             try:
                 with os.fdopen(fd, "wb") as handle:
