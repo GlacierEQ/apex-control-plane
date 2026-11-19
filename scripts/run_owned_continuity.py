@@ -117,10 +117,30 @@ def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
         raise ValueError("existing checkpoint database required; no implicit creation")
     key = ":".join((profile["mission_id"], "model", session_id, invocation_id))
     saved = GatewayCheckpointStore(database, mission_id=profile["mission_id"]).readback(key)
+    # The checkpoint authenticates response_text as part of its digest. Expose
+    # the original completed action to the next process, without re-execution.
+    try:
+        action = json.loads(saved.response_text)
+    except (ValueError, TypeError):
+        action = None
+    if not isinstance(action, dict) or action.get("action") != "index_cloud":
+        action = None
+    else:
+        if (not isinstance(action.get("documents"), int)
+                or isinstance(action.get("documents"), bool)
+                or action["documents"] < 0
+                or not isinstance(action.get("namespace"), str)
+                or not isinstance(action.get("evidence_digest"), str)
+                or not isinstance(action.get("source_ids"), list)
+                or not all(isinstance(x, str) for x in action["source_ids"])):
+            raise ValueError("committed cloud action has invalid result structure")
+        action = {key: action[key] for key in
+                  ("action", "documents", "namespace", "evidence_digest", "source_ids")}
     return {
         "status": "CHECKPOINT_VERIFIED", "checkpoint_key": key,
         "checkpoint_digest": saved.digest, "journal_source_ref": saved.source_ref,
         "cursor": saved.cursor, "corrections_applied": list(saved.corrections),
+        "completed_action": action,
         "native_chatgpt_startup_verified": False,
     }
 

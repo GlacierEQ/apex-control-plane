@@ -108,6 +108,22 @@ class ReadbackTests(ProfileTests):
         result = module.read_checkpoint(self.path, session_id="session-2", invocation_id="turn-3")
         self.assertEqual(result["checkpoint_digest"], envelope.digest)
         self.assertEqual(result["corrections_applied"], ["CONTEXT FIRST"])
+        self.assertIsNone(result["completed_action"])
+        # A separate process can recover the authenticated completed action.
+        completed = {"action": "index_cloud", "documents": 2,
+                     "namespace": "architecture", "evidence_digest": "sha256:abc",
+                     "source_ids": ["drive:primary:id-A", "box:owner:id-B"]}
+        from dataclasses import replace
+        updated = replace(envelope, response_text=json.dumps(completed), digest="")
+        updated = replace(updated, digest=_envelope_digest(updated))
+        second_key = "mission-A:model:session-2:turn-4"
+        updated = replace(updated, operation_key=second_key, digest="")
+        updated = replace(updated, digest=_envelope_digest(updated))
+        self.assertTrue(store.reserve(second_key))
+        store.persist(updated)
+        recovered = module.read_checkpoint(self.path, session_id="session-2", invocation_id="turn-4")
+        self.assertEqual(recovered["completed_action"], completed)
+        self.assertIsNone(result["completed_action"])
         self.assertFalse(result["native_chatgpt_startup_verified"])
         with self.assertRaises(Exception):
             module.read_checkpoint(self.path, session_id="session-2", invocation_id="other")
