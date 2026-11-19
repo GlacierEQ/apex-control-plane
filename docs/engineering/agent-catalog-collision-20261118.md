@@ -230,3 +230,13 @@ Recovered PR #377 and the latest stronger bounded-cleanup branch, including its 
 **Evidence and limits:** GitHub accepted source and test changes. No connected native executor was available, so no changed-head Python suite or live adversarial result is claimed. This is provider-persisted source implementation, not runtime-verified.
 
 **Exact continuation:** Recover uncommitted /Users/kcbflux/Documents/GlacierEQ-Agent-Cleanup-20261119 without overwriting it. Fetch engineering/agent-preserve-pending-receipt-20261119 into an isolated worktree, run focused real-CLI regressions and full Python 3.13 suite, repair failures, then provider-readback. Investigate Windows output cancellation separately. No merge, deployment, credentials, permissions, task edits, or external messages.
+
+## 2026-11-19 — bounded timeout reap after process termination (source-persisted, runtime pending)
+
+Recovered latest owner-native `engineering/agent-preserve-pending-receipt-20261119`, current `src/control_plane.py` and receipt-failure notes. Both Desktop Commander device listings confirmed the Mac offline (last seen ~24 minutes earlier); no local worktree was touched. Created isolated stacked branch `engineering/agent-timeout-bounded-reap-20261119`.
+
+**Functional repair:** The timeout branch previously sent SIGKILL then called unbounded `child.wait()`. It now applies a one-second reap deadline. If the OS cannot reap the child, the consumer retains exit 124, records `cleanup_error = "TimeoutExpired: child did not reap after termination"`, stops output drains, and keeps `output_incomplete`, `outcome_verified=false`, and `mission_complete=false`. It does not claim process-tree containment or authorize replay.
+
+**Regression authored:** `tests/test_control_plane_bounded_timeout_reap.py` exercises the real `--exec-capability` CLI, uses test-only `sitecustomize` to make post-termination `Popen.wait(timeout=1)` fail, and checks bounded completion plus honest timeout and uncertainty fields. Source and test were persisted through GitHub. **No changed-head runtime test was executed** while the native Mac was offline; test correctness and full-suite compatibility remain unverified.
+
+**Next cursor:** Recover the existing Mac worktree without overwriting it; fetch `engineering/agent-timeout-bounded-reap-20261119` into an isolated checkout, run the new real CLI test and the prior receipt-failure regressions, then full Python 3.13 suite; repair any failures and independently read back changed GitHub revision. Non-POSIX descendant containment remains a separate open boundary. No merge, deployment, credential, permission, automation, or Linear mutation.
