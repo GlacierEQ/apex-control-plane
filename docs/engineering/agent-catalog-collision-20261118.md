@@ -218,3 +218,15 @@ Recovered the latest source on `engineering/agent-timeout-cleanup-evidence-20261
 **Verification boundary:** GitHub accepted the implementation and test commits and supports independent source readback. The regression is newly authored, **not yet executed** on the disconnected Mac. This does not establish successful full-suite or provider-runtime execution, nor does it solve non-POSIX blocking pipe reads. Do not claim those capabilities.
 
 **Next exact cursor:** When the Mac reconnects, recover its uncommitted `/Users/kcbflux/Documents/GlacierEQ-Agent-Cleanup-20261119` worktree before modifying it. Fetch this isolated branch, run the new focused real-CLI test and the complete Python 3.13 suite on the exact head, repair any failure, then independently read back GitHub. Specifically inspect whether an `OSError` from launch receipt persistence can be followed by another final receipt persistence failure; preserve the original exception and uncertain execution status. Do not merge, deploy, edit automations, or change credentials.
+
+## 2026-11-19 — preserve pending receipt after transient launch persistence failure
+
+Recovered PR #377 and the latest stronger bounded-cleanup branch, including its real executable and regression. The connected Mac is offline (last seen two hours ago). Created an isolated branch without merging or deploying.
+
+**Actual consumer repair:** A launched-stage os.replace failure was caught by outer error handling, but the final-receipt writer could retry os.replace. If the first failure was transient, the second could overwrite pending_unverified with a final failed record even though launch identity was never durably committed. The executor now retains the original launch persistence error, skips final receipt replacement on this path, reports exit 2, and preserves the pending receipt and duplicate-execution block.
+
+**Regression:** Extended tests/test_control_plane_receipt_failure_bounded_cleanup.py to check the corrected error and added a real-CLI scenario where os.replace fails once and would succeed afterward. It checks pending receipt preservation, no requested command execution, and refusal of same-receipt retry.
+
+**Evidence and limits:** GitHub accepted source and test changes. No connected native executor was available, so no changed-head Python suite or live adversarial result is claimed. This is provider-persisted source implementation, not runtime-verified.
+
+**Exact continuation:** Recover uncommitted /Users/kcbflux/Documents/GlacierEQ-Agent-Cleanup-20261119 without overwriting it. Fetch engineering/agent-preserve-pending-receipt-20261119 into an isolated worktree, run focused real-CLI regressions and full Python 3.13 suite, repair failures, then provider-readback. Investigate Windows output cancellation separately. No merge, deployment, credentials, permissions, task edits, or external messages.
