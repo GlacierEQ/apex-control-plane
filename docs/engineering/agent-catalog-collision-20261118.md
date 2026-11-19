@@ -66,3 +66,18 @@ Recovered PR #377 and the existing executable `src/control_plane.py` entrypoint;
 **Real execution through the new consumer:** On connected Mac, created a local read-only `cloud-catalog/SKILL.md` under `/Users/kcbflux/Documents/GlacierEQ-Cloud-Collection-20261118/capabilities`, fingerprint `81a013cab4fe6fbec41f137f1ea67a568943e3ba5e66f0173bec2bacc1f698ac`. Invoked new `control_plane.py --exec-capability` with exact pin, routed explicit Python command to existing private FILEBOSS SQLite cloud catalog. The actual returned JSON reported `executed=true`, exit code 0, selected capability digest match and catalog `total_objects=125` (Google Drive 100, Dropbox 5, OneDrive 20, provider-root reads previously captured), `staged_files=1`. The collection is partial (Drive root capped); no external host autopilot, live cloud download completeness, or mission completion is claimed. Private cloud names/metadata remain on Mac; not committed.
 
 **Next cursor:** Improve authorized orchestration only through a verified existing runtime owner. A real explicit command can now receive a pinned capability context and run against real local collected cross-cloud state. For future cloud collection, expand provider traversal with authenticated paginated reads, preserve partial/incomplete flags, and verify native provider download receipts; do not conflate this with automatic ChatGPT host dispatch. No merge, deployment, permissions, secrets, external messages, or automation edits.
+
+
+## 2026-11-18 capability-executor bounded-runtime repair
+
+**Source:** `src/control_plane.py` commit `517a4c36eeda98883601f58d3d9b0e899c424eee`, regression tests `tests/test_control_plane_capability_consumer.py` commit `47e0c378a432275de0434585fc3ec8ecd46149a1`.
+
+**Defect:** `--exec-capability` could block forever on a hung child; it also used `exit_code != 127` to infer whether execution occurred, incorrectly labeling a real child that exits 127 as never executed.
+
+**Repair:** Add a finite, validated `--timeout-seconds` (default 60, max 3600) to the existing pinned capability consumer. The child is terminated by Python's subprocess timeout mechanism; the CLI returns exit 124 with `timed_out=true`, `executed=true`, `outcome_verified=false`, and `mission_complete=false`. Track whether the child actually started rather than guessing from its exit code. Invalid/nonfinite timeouts fail before child launch. No scheduling, credential, permission, merge, deployment or external action.
+
+**Tests added:** actual subprocess timeout and truthful receipt; invalid NaN timeout rejected without child side effects; real child exit 127 recorded as executed. Existing capability pin, collision and old `--exec` tests retained.
+
+**Verification state:** GitHub accepted both source and test commits. Both connected Mac terminal tools failed internally before running any commands, so changed-head focused/full tests are **not yet verified**. This is a tool-access failure, not evidence of a code defect. Prior full-suite pass (1097) applies only to earlier commit `19502f4`, not this change.
+
+**Exact continuation cursor:** on connected Mac `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`, fetch branch `engineering/catalog-ambiguous-selection-20261118`, checkout head containing `47e0c378`, run `/opt/homebrew/bin/python3.13 -m pytest -q tests/test_control_plane_capability_consumer.py` then full `-m pytest -q` and `compileall`. Repair any failures, then independently read back GitHub and exercise a real pinned cloud-catalog command with a bounded timeout. Do not claim production-host integration.
