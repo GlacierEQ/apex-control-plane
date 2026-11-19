@@ -589,6 +589,19 @@ if __name__ == "__main__":
                             os.killpg(child.pid, signal.SIGKILL)
                         except ProcessLookupError:
                             pass
+                        except PermissionError as exc:
+                            # The direct child may already have exited while
+                            # descendants retain the output pipes. Preserve
+                            # partial output and the failed containment proof.
+                            cleanup_error = (
+                                (cleanup_error + "; " if cleanup_error else "")
+                                + f"{type(exc).__name__}: {exc}"
+                            )
+                            if child.poll() is None:
+                                try:
+                                    child.kill()
+                                except ProcessLookupError:
+                                    pass
                     stop_drains.set()
                     for thread in drains:
                         thread.join(timeout=0.3)
