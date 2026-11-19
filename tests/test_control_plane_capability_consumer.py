@@ -136,3 +136,35 @@ def test_child_exit_127_is_still_recorded_as_executed(tmp_path):
     assert response["executed"] is True
     assert response["routes_run"] == 1
     assert response["timed_out"] is False
+
+
+def test_timeout_terminates_descendant_process_group(tmp_path):
+    """A timed-out agent cannot leave its delegated worker writing afterward."""
+    import os
+    import time
+    if os.name != "posix":
+        return
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("context", encoding="utf-8")
+    marker = tmp_path / "descendant-survived"
+    worker = (
+        "import subprocess,sys,time;"
+        "subprocess.Popen([sys.executable,'-c',"
+        "'import pathlib,time,sys;time.sleep(1.2);pathlib.Path(sys.argv[1]).touch()',"
+        "sys.argv[1]]);time.sleep(10)"
+    )
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent",
+        "--sha256", hashlib.sha256(doc.read_bytes()).hexdigest(),
+        "--timeout-seconds", "0.3", "--",
+        sys.executable, "-c", worker, marker,
+    )
+    assert result.returncode == 124, result.stderr
+    receipt = json.loads(result.stdout)
+    assert receipt["timed_out"] is True
+    assert receipt["executed"] is True
+    time.sleep(1.4)
+    assert not marker.exists(), "delegated worker survived parent timeout"
