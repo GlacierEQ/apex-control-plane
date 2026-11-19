@@ -139,6 +139,7 @@ def start_context_gated_mission(
     handlers: Mapping[str, Callable[[Mapping[str, Any]], Any]],
     required_corrections: Mapping[str, tuple[str, ...]],
     required_fact_keys: Mapping[str, tuple[str, ...]],
+    required_fact_values: Mapping[str, Mapping[str, Any]] | None = None,
     bridge: Path | None = None,
     legacy_continue_cursor: str | None = None,
 ) -> Any:
@@ -174,6 +175,19 @@ def start_context_gated_mission(
                     or not isinstance(fact.get("source"), str)
                     or not fact["source"].strip()):
                 raise ValueError("required sourced fact absent")
+        if required_fact_values is not None:
+            expected = required_fact_values.get(action)
+            if not isinstance(expected, Mapping):
+                raise ValueError("missing expected fact-value policy")
+            for key, value in expected.items():
+                fact = facts.get(key)
+                if (not isinstance(fact, dict)
+                        or not isinstance(fact.get("source"), str)
+                        or not fact["source"].strip()
+                        or "value" not in fact
+                        or type(fact["value"]) is not type(value)
+                        or fact["value"] != value):
+                    raise ValueError("recovered fact conflicts with action policy")
         return handler(receipt)
     return start_mission(
         store=store, spiral_root=spiral_root, mission_id=mission_id,
@@ -190,6 +204,7 @@ def start_cloud_context_gated_mission(
     cloud_sources_by_action: Mapping[str, tuple[str, ...]],
     required_corrections: Mapping[str, tuple[str, ...]],
     required_fact_keys: Mapping[str, tuple[str, ...]],
+    required_fact_values: Mapping[str, Mapping[str, Any]] | None = None,
     bridge: Path | None = None,
     legacy_continue_cursor: str | None = None,
 ) -> Any:
@@ -226,7 +241,8 @@ def start_cloud_context_gated_mission(
         store=store, spiral_root=spiral_root,
         mission_id=mission_id, session_id=session_id,
         handlers=wrapped, required_corrections=required_corrections,
-        required_fact_keys=required_fact_keys, bridge=bridge,
+        required_fact_keys=required_fact_keys,
+        required_fact_values=required_fact_values, bridge=bridge,
         legacy_continue_cursor=legacy_continue_cursor,
     )
 

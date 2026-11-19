@@ -187,6 +187,32 @@ class StartupTests(unittest.TestCase):
                     execute(corrections, facts)
         self.assertEqual(calls, ["continue:next"])
 
+    def test_recovered_fact_value_controls_downstream_action(self):
+        calls = []
+        def invoke(value, expected):
+            receipt = {
+                "action_name": "continue", "cursor": "continue:next",
+                "result": {
+                    "instructions_to_apply": ["CONTEXT FIRST"],
+                    "verified_facts": {"owner": {"source": "github:commit", "value": value}},
+                },
+            }
+            with patch("scripts.continuity_mission_entrypoint.start_mission",
+                       side_effect=lambda **kw: kw["consumer"](receipt)):
+                return start_context_gated_mission(
+                    store=Path("/tmp/store"), spiral_root=Path("/tmp/spiral"),
+                    mission_id="mission", session_id="session",
+                    handlers={"continue": lambda r: calls.append(r["result"]["verified_facts"]["owner"]["value"])},
+                    required_corrections={"continue": ("CONTEXT FIRST",)},
+                    required_fact_keys={"continue": ("owner",)},
+                    required_fact_values={"continue": {"owner": expected}},
+                )
+        invoke("APEX", "APEX")
+        for value in ("OTHER", None, True):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "conflicts"):
+                invoke(value, "APEX")
+        self.assertEqual(calls, ["APEX"])
+
     def test_missing_policy_rejects_even_authenticated_receipt(self):
         with patch("scripts.continuity_mission_entrypoint.start_mission",
                    side_effect=lambda **kw: kw["consumer"]({
