@@ -47,5 +47,51 @@ def test_launch_receipt_failure_returns_without_running_requested_command(tmp_pa
                             capture_output=True, text=True, timeout=5, check=False)
     assert time.monotonic() - started < 3
     assert result.returncode == 2
-    assert "cannot finalize durable receipt" in result.stderr
+    assert "pending receipt preserved" in result.stderr
     assert json.loads(receipt.read_text())["status"] == "pending_unverified"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX launch receipt gate")
+def test_transient_launched_receipt_failure_must_not_overwrite_pending(tmp_path):
+    """A later successful replace must never erase uncertain pending evidence."""
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# Agent\n")
+    receipt = tmp_path / "execution.json"
+    marker = tmp_path / "executed"
+    shim = tmp_path / "sitecustomize.py"
+    shim.write_text(
+        "import os\n"
+        "_replace=os.replace\n"
+        "_failed=False\n"
+        "def fail_once(src,dst):\n"
+        " global _failed\n"
+        " if not _failed and os.path.basename(str(src)).startswith('.apex-receipt-'):\n"
+        "  _failed=True\n"
+        "  raise OSError('synthetic one-time launch receipt failure')\n"
+        " return _replace(src,dst)\n"
+        "os.replace=fail_once\n"
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(tmp_path)
+    command = [
+        sys.executable, str(ENTRY), "--exec-capability",
+        "--skills-root", str(skills), "--select", "skill:agent",
+        "--sha256", hashlib.sha256(doc.read_bytes()).hexdigest(),
+        "--receipt-path", str(receipt), "--",
+        sys.executable, "-c",
+        "import pathlib,sys;pathlib.Path(sys.argv[1]).touch()", str(marker),
+    ]
+    result = subprocess.run(command, cwd=ROOT, env=env,
+                            capture_output=True, text=True, timeout=5, check=False)
+    assert result.returncode == 2, (result.stdout, result.stderr)
+    assert "pending receipt preserved" in result.stderr
+    assert not marker.exists()
+    pending = receipt.read_bytes()
+    assert json.loads(pending)["status"] == "pending_unverified"
+    retry = subprocess.run(command, cwd=ROOT, env=env,
+                           capture_output=True, text=True, timeout=5, check=False)
+    assert retry.returncode == 2
+    assert receipt.read_bytes() == pending
+    assert not marker.exists()
