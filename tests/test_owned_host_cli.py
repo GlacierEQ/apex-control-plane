@@ -72,3 +72,42 @@ class ProfileTests(TestCase):
         self.assertEqual(args["expected_cursor"], "continue:exact")
         self.assertEqual(args["mission_id"], "mission-A")
         self.assertEqual(args["source_ids"], ["drive:primary:id-A"])
+
+
+class ReadbackTests(ProfileTests):
+    def test_missing_checkpoint_never_creates_database(self):
+        module = entrypoint()
+        with self.assertRaises(ValueError):
+            module.read_checkpoint(self.path, session_id="session-2", invocation_id="turn-3")
+
+    def test_ambiguous_invocation_rejected_before_database_access(self):
+        module = entrypoint()
+        with self.assertRaises(ValueError):
+            module.read_checkpoint(self.path, session_id="session:spoof", invocation_id="turn-3")
+
+    def test_committed_receipt_readback_scoped_to_profile(self):
+        module = entrypoint()
+        from src.apex_session_gateway import ContinuationEnvelope, _envelope_digest
+        from src.apex_session_gateway_store import GatewayCheckpointStore
+        db = self.path.parent / "receipts.db"
+        self.policy["checkpoint_db"] = str(db)
+        self.path.write_text(json.dumps(self.policy))
+        store = GatewayCheckpointStore(db, mission_id="mission-A")
+        key = "mission-A:model:session-2:turn-3"
+        self.assertTrue(store.reserve(key))
+        envelope = ContinuationEnvelope(
+            operation_key=key, chat_session_id="session-2", mission_id="mission-A",
+            source_ref="spiral-journal:" + "a" * 64, cursor="continue:exact",
+            corrections=("CONTEXT FIRST",), response_text="indexed",
+            attributions=(), memory_proposals=(), digest="",
+            response_author="assistant", memory_authority="SOURCE_CANDIDATE_ONLY",
+        )
+        from dataclasses import replace
+        envelope = replace(envelope, digest=_envelope_digest(envelope))
+        store.persist(envelope)
+        result = module.read_checkpoint(self.path, session_id="session-2", invocation_id="turn-3")
+        self.assertEqual(result["checkpoint_digest"], envelope.digest)
+        self.assertEqual(result["corrections_applied"], ["CONTEXT FIRST"])
+        self.assertFalse(result["native_chatgpt_startup_verified"])
+        with self.assertRaises(Exception):
+            module.read_checkpoint(self.path, session_id="session-2", invocation_id="other")

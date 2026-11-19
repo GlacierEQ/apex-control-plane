@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.owned_continuity_host import run_owned_cloud_mission, search_cloud_index
+from src.apex_session_gateway_store import GatewayCheckpointStore, GatewayStoreDenied
 
 PROFILE_SCHEMA = "glaciereq.owned-mission-profile/1"
 PATH_FIELDS = ("store", "spiral_root", "bridge", "cloud_store",
@@ -105,6 +106,25 @@ def run_profile(path: Path, *, session_id: str, invocation_id: str) -> dict:
     )
 
 
+def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
+    """Read back an existing committed receipt without running or replaying an action."""
+    profile = load_profile(path)
+    if any(not isinstance(value, str) or not value.strip() or ":" in value
+           for value in (session_id, invocation_id)):
+        raise ValueError("unambiguous session and invocation IDs required")
+    database = Path(profile["checkpoint_db"])
+    if not database.is_file() or database.is_symlink():
+        raise ValueError("existing checkpoint database required; no implicit creation")
+    key = ":".join((profile["mission_id"], "model", session_id, invocation_id))
+    saved = GatewayCheckpointStore(database, mission_id=profile["mission_id"]).readback(key)
+    return {
+        "status": "CHECKPOINT_VERIFIED", "checkpoint_key": key,
+        "checkpoint_digest": saved.digest, "journal_source_ref": saved.source_ref,
+        "cursor": saved.cursor, "corrections_applied": list(saved.corrections),
+        "native_chatgpt_startup_verified": False,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="GLACIEREQ owned continuity host")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -116,11 +136,18 @@ def main() -> None:
     search.add_argument("--profile", type=Path, required=True)
     search.add_argument("--query", required=True)
     search.add_argument("--limit", type=int, default=10)
+    readback = sub.add_parser("readback", help="Verify existing committed mission receipt")
+    readback.add_argument("--profile", type=Path, required=True)
+    readback.add_argument("--session-id", required=True)
+    readback.add_argument("--invocation-id", required=True)
     args = parser.parse_args()
     try:
         if args.command == "run":
             result = run_profile(args.profile, session_id=args.session_id,
                                  invocation_id=args.invocation_id)
+        elif args.command == "readback":
+            result = read_checkpoint(args.profile, session_id=args.session_id,
+                                     invocation_id=args.invocation_id)
         else:
             profile = load_profile(args.profile)
             result = search_cloud_index(
@@ -128,7 +155,7 @@ def main() -> None:
                 query=args.query, limit=args.limit,
             )
         print(json.dumps(result, sort_keys=True, ensure_ascii=False))
-    except (ValueError, OSError, RuntimeError, KeyError, json.JSONDecodeError) as exc:
+    except (ValueError, OSError, RuntimeError, KeyError, json.JSONDecodeError, GatewayStoreDenied) as exc:
         print("FAIL_CLOSED: " + str(exc), file=sys.stderr)
         raise SystemExit(1) from exc
 
