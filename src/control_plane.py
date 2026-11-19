@@ -251,6 +251,80 @@ if __name__ == "__main__":
         if result["status"] == "unconfirmed":
             raise SystemExit(5)
         raise SystemExit(2)
+    elif args[0] == "--exec-capability":
+        # Real, operator-invoked runtime consumer of the capability catalog.
+        # Capability text enters the child process ONLY as stdin data; it is
+        # never interpreted as a shell command or elevated into permission.
+        import argparse
+        import hashlib
+        from tool_catalog import build_catalog, select
+
+        def reject(reason: str) -> None:
+            print(reason, file=sys.stderr)
+            raise SystemExit(2)
+
+        try:
+            separator = args.index("--")
+        except ValueError:
+            reject("--exec-capability requires -- PROGRAM [ARG ...]")
+        command = args[separator + 1:]
+        if not command:
+            reject("--exec-capability requires an executable")
+        cli = argparse.ArgumentParser(prog="control_plane.py --exec-capability")
+        cli.add_argument("--skills-root", action="append", default=[])
+        cli.add_argument("--connectors-root", action="append", default=[])
+        cli.add_argument("--select", required=True)
+        cli.add_argument("--sha256", required=True)
+        options = cli.parse_args(args[1:separator])
+        expected = options.sha256
+        if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
+            reject("expected SHA-256 must be 64 lowercase hexadecimal characters")
+        try:
+            catalog = build_catalog(options.skills_root, options.connectors_root)
+            chosen = select(catalog, [options.select])
+            if len(chosen) != 1:
+                reject(f"unknown capability selection: {options.select!r}")
+            entry = chosen[0]
+            base_dirs = (options.skills_root if entry.kind == "skill"
+                         else options.connectors_root)
+            doc = Path(entry.path).resolve(strict=True)
+            if not any(doc.is_relative_to(Path(root).resolve(strict=True))
+                       for root in base_dirs):
+                reject("capability document escaped its authorized root")
+            document = doc.read_bytes()
+            actual = hashlib.sha256(document).hexdigest()
+            if actual != expected:
+                reject(f"capability document digest mismatch: {entry.kind}:{entry.name}")
+            document.decode("utf-8")
+        except (OSError, UnicodeError, ValueError) as exc:
+            reject(f"cannot load capability document: {exc}")
+        try:
+            completed = subprocess.run(
+                command, input=document, check=False, capture_output=True,
+            )
+            code = completed.returncode
+            stdout = completed.stdout.decode("utf-8", errors="replace")
+            stderr = completed.stderr.decode("utf-8", errors="replace")
+        except OSError as exc:
+            code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
+        print(json.dumps({
+            "status": "process_succeeded_unverified" if code == 0 else "failed",
+            "executed": code != 127,
+            "mission_complete": False,
+            "outcome_verified": False,
+            "outcome_scope": "subprocess_exit_only",
+            "routes_run": 1 if code != 127 else 0,
+            "exit_code": code,
+            "command": command,
+            "capability": {
+                "qualified_name": f"{entry.kind}:{entry.name}",
+                "sha256": actual,
+                "content_bytes": len(document),
+                "delivery": "subprocess_stdin",
+            },
+            "stdout": stdout, "stderr": stderr,
+        }, sort_keys=True))
+        raise SystemExit(code)
     elif args[0] == "--exec" and len(args) > 1:
         try:
             completed = subprocess.run(
