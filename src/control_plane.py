@@ -590,7 +590,6 @@ if __name__ == "__main__":
             "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
             "output_incomplete": output_incomplete,
             "cleanup_error": locals().get("cleanup_error"),
-            "containment_verified": not bool(locals().get("cleanup_error")) and not timed_out,
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }
