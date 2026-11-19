@@ -25,7 +25,7 @@ def test_sigkill_pending_receipt_blocks_duplicate_execution(tmp_path):
             str(skills), "--select", "skill:agent", "--sha256", digest,
             "--receipt-path", str(receipt), "--"]
     child = [sys.executable, "-c",
-             "import pathlib,sys,time; pathlib.Path(sys.argv[1]).write_text('started');time.sleep(15)",
+             "import pathlib,sys,time; pathlib.Path(sys.argv[1]).write_text(str(__import__('os').getpid()));time.sleep(15)",
              str(marker)]
     parent = subprocess.Popen(base + child, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE, cwd=ROOT)
@@ -54,6 +54,9 @@ def test_sigkill_pending_receipt_blocks_duplicate_execution(tmp_path):
         if parent.poll() is None:
             parent.kill()
             parent.wait(timeout=5)
-        # SIGKILL of the parent does not guarantee descendant termination.
-        # The child sleeps; terminate the test-owned process group when possible.
-        # No claim is made that the production executor contains detached children.
+        # Parent SIGKILL can orphan the child: clean up the test-owned group.
+        if marker.exists() and os.name == 'posix':
+            try:
+                os.killpg(int(marker.read_text()), signal.SIGKILL)
+            except (ProcessLookupError, ValueError):
+                pass
