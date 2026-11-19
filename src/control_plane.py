@@ -359,17 +359,20 @@ if __name__ == "__main__":
         # must not exhaust the agent host's memory or inflate JSON receipts.
         import tempfile
         max_output_bytes = 65536
-        # POSIX file-size resource limit applies to both disk-backed output
-        # streams in the child. This bounds disk consumption even if the child
-        # produces data indefinitely or catches SIGXFSZ.
+        # Parent-owned bounded pipe drains: cap only captured output, never
+        # the requested program's unrelated file writes.
         max_spool_bytes = 8 * 1024 * 1024
-        child_file_limit = None
-        if os.name == "posix":
-            import resource
-            def child_file_limit() -> None:
-                soft, hard = resource.getrlimit(resource.RLIMIT_FSIZE)
-                cap = min(max_spool_bytes, hard) if hard != resource.RLIM_INFINITY else max_spool_bytes
-                resource.setrlimit(resource.RLIMIT_FSIZE, (cap, hard))
+        import threading
+        def drain(stream, target, counts, index):
+            while True:
+                chunk = stream.read(65536)
+                if not chunk:
+                    break
+                counts[index] += len(chunk)
+                remaining = max_spool_bytes - target.tell()
+                if remaining > 0:
+                    target.write(chunk[:remaining])
+            stream.close()
         stdout_bytes = stderr_bytes = 0
         stdout_truncated = stderr_truncated = False
         try:
@@ -399,14 +402,18 @@ if __name__ == "__main__":
                     ]
                 try:
                     child = subprocess.Popen(
-                        launch_command, stdin=subprocess.PIPE, stdout=out_file,
-                        stderr=err_file, start_new_session=(os.name == "posix"),
+                        launch_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE, start_new_session=(os.name == "posix"),
                         pass_fds=(gate_read,) if gate_read is not None else (),
-                        preexec_fn=child_file_limit,
                     )
                 finally:
                     if gate_read is not None:
                         os.close(gate_read)
+                counts = [0, 0]
+                drains = [threading.Thread(target=drain, args=(child.stdout, out_file, counts, 0)),
+                          threading.Thread(target=drain, args=(child.stderr, err_file, counts, 1))]
+                for thread in drains:
+                    thread.start()
                 executed = True
                 # Durable diagnostic process identity; not authorization to retry.
                 if options.receipt_path is not None:
@@ -440,14 +447,21 @@ if __name__ == "__main__":
                                 pass
                         else:
                             child.kill()
-                        child.communicate()
+                        child.wait()
+                        for thread in drains:
+                            thread.join()
                         raise
                     finally:
                         if gate_write is not None:
                             os.close(gate_write)
                 try:
-                    child.communicate(input=document, timeout=options.timeout_seconds)
-                    code = child.returncode
+                    if child.stdin is not None:
+                        try:
+                            child.stdin.write(document)
+                            child.stdin.close()
+                        except BrokenPipeError:
+                            child.stdin.close()
+                    code = child.wait(timeout=options.timeout_seconds)
                 except subprocess.TimeoutExpired:
                     timed_out, code = True, 124
                     if os.name == "posix":
@@ -457,10 +471,12 @@ if __name__ == "__main__":
                             pass
                     else:
                         child.kill()
-                    child.communicate()
+                    child.wait()
+                for thread in drains:
+                    thread.join()
                 out_file.seek(0, os.SEEK_END)
                 err_file.seek(0, os.SEEK_END)
-                stdout_bytes, stderr_bytes = out_file.tell(), err_file.tell()
+                stdout_bytes, stderr_bytes = counts
                 stdout_truncated = stdout_bytes > max_output_bytes
                 stderr_truncated = stderr_bytes > max_output_bytes
                 out_file.seek(0)
@@ -490,7 +506,7 @@ if __name__ == "__main__":
             "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
             "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
             "capture_limit_bytes": max_output_bytes,
-            "spool_limit_bytes_per_stream": max_spool_bytes if os.name == "posix" else None,
+            "spool_limit_bytes_per_stream": max_spool_bytes,
         }
         try:
             write_receipt(final_receipt)

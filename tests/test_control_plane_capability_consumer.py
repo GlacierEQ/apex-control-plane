@@ -403,9 +403,30 @@ def test_disk_spool_is_strictly_bounded_for_noisy_child(tmp_path):
         sys.executable, "-c",
         "import sys; sys.stdout.buffer.write(b'x' * (12 * 1024 * 1024)); sys.stdout.flush()",
     )
-    assert result.returncode != 0
+    assert result.returncode == 0, result.stderr
     response = json.loads(result.stdout)
     assert response["executed"] is True
-    assert response["stdout_bytes"] <= 8 * 1024 * 1024
+    assert response["stdout_bytes"] == 12 * 1024 * 1024
+    assert response["stdout_truncated"] is True
+    assert len(response["stdout"].encode()) <= 65536
     assert response["spool_limit_bytes_per_stream"] == 8 * 1024 * 1024
     assert response["outcome_verified"] is False
+
+
+def test_output_quota_does_not_limit_child_work_files(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# Agent")
+    digest = hashlib.sha256(b"# Agent").hexdigest()
+    artifact = tmp_path / "child-artifact.bin"
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent", "--sha256", digest, "--",
+        sys.executable, "-c",
+        "import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b'x' * (10 * 1024 * 1024)); print('written')",
+        artifact,
+    )
+    assert result.returncode == 0, result.stderr
+    assert artifact.stat().st_size == 10 * 1024 * 1024
+    assert json.loads(result.stdout)["stdout"].strip() == "written"
