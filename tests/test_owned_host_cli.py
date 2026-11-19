@@ -156,3 +156,28 @@ class ResumeDecisionTests(ProfileTests):
         with mock.patch.object(module, "read_checkpoint", return_value={"completed_action": None}):
             with self.assertRaisesRegex(ValueError, "does not prove"):
                 module.decide_next_action(self.path, session_id="prior", invocation_id="done")
+
+class StartupRecoveryTests(ProfileTests):
+    def test_prior_completion_changes_real_run_path_without_index(self):
+        module = entrypoint()
+        decision = {"decision": "DO_NOT_REPEAT_COMPLETED_INDEX", "checkpoint_digest": "proof"}
+        with mock.patch.object(module, "decide_next_action", return_value=decision) as recover, mock.patch.object(module, "run_owned_cloud_mission") as index:
+            result = module.run_profile(self.path, session_id="new-session", invocation_id="new-turn", previous_session_id="old-session", previous_invocation_id="old-turn")
+        self.assertEqual(result["status"], "STARTUP_PRIOR_ACTION_APPLIED")
+        self.assertFalse(result["index_executed"])
+        recover.assert_called_once()
+        index.assert_not_called()
+
+    def test_conflicting_prior_completion_fails_before_index(self):
+        module = entrypoint()
+        with mock.patch.object(module, "decide_next_action", side_effect=ValueError("policy drift")), mock.patch.object(module, "run_owned_cloud_mission") as index:
+            with self.assertRaisesRegex(ValueError, "policy drift"):
+                module.run_profile(self.path, session_id="new", invocation_id="turn", previous_session_id="old", previous_invocation_id="old-turn")
+        index.assert_not_called()
+
+    def test_partial_prior_identity_refused_before_index(self):
+        module = entrypoint()
+        with mock.patch.object(module, "run_owned_cloud_mission") as index:
+            with self.assertRaises(ValueError):
+                module.run_profile(self.path, session_id="new", invocation_id="turn", previous_session_id="old")
+        index.assert_not_called()

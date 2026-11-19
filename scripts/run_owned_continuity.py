@@ -88,8 +88,20 @@ def load_profile(path: Path) -> dict:
     return profile
 
 
-def run_profile(path: Path, *, session_id: str, invocation_id: str) -> dict:
+def run_profile(path: Path, *, session_id: str, invocation_id: str,
+                previous_session_id: str | None = None,
+                previous_invocation_id: str | None = None) -> dict:
     profile = load_profile(path)
+    if (previous_session_id is None) != (previous_invocation_id is None):
+        raise ValueError("previous session and invocation must be supplied together")
+    if previous_session_id is not None:
+        decision = decide_next_action(path, session_id=previous_session_id,
+                                      invocation_id=previous_invocation_id)
+        # The actual mission-start execution path consumes the authenticated
+        # prior result before any indexing side effect or new reservation.
+        return {**decision, "status": "STARTUP_PRIOR_ACTION_APPLIED",
+                "new_session_id": session_id, "new_invocation_id": invocation_id,
+                "index_executed": False}
     return run_owned_cloud_mission(
         bridge=Path(profile["bridge"]), store=Path(profile["store"]),
         spiral_root=Path(profile["spiral_root"]),
@@ -182,6 +194,8 @@ def main() -> None:
     run.add_argument("--profile", type=Path, required=True)
     run.add_argument("--session-id", required=True)
     run.add_argument("--invocation-id", required=True)
+    run.add_argument("--previous-session-id")
+    run.add_argument("--previous-invocation-id")
     search = sub.add_parser("search", help="Read verified local cloud index")
     search.add_argument("--profile", type=Path, required=True)
     search.add_argument("--query", required=True)
@@ -198,7 +212,9 @@ def main() -> None:
     try:
         if args.command == "run":
             result = run_profile(args.profile, session_id=args.session_id,
-                                 invocation_id=args.invocation_id)
+                                 invocation_id=args.invocation_id,
+                                 previous_session_id=args.previous_session_id,
+                                 previous_invocation_id=args.previous_invocation_id)
         elif args.command == "resume":
             result = decide_next_action(args.profile, session_id=args.session_id,
                                         invocation_id=args.invocation_id)
