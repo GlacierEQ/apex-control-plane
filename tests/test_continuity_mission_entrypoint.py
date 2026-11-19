@@ -239,3 +239,38 @@ class StartupTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+def test_recovered_source_policy_changes_handler_execution():
+    base = {
+        "status": "RECOVERED_ACTION_DISPATCHED", "mission_id": "mission",
+        "session_id": "fresh-session", "cursor": "continue:next",
+        "action_name": "continue", "head": "a" * 64,
+        "downstream_action_executed": True, "apex_runtime_id": "apex",
+        "apex_phase": "ready", "apex_receipt_kinds": ["context_recovery"],
+    }
+    called = []
+    for source, admitted in (("court:docket:225", True), ("unverified:summary", False)):
+        receipt = dict(base, result={
+            "next_cursor": "continue:next",
+            "binding": "spiral-journal:" + "a" * 64,
+            "instructions_to_apply": ["use primary evidence"],
+            "verified_facts": {"filing": {"value": "filed", "source": source}},
+        })
+        with patch("scripts.continuity_mission_entrypoint.subprocess.run",
+                   return_value=subprocess.CompletedProcess([], 0, json.dumps(receipt), "")):
+            kwargs = dict(store=Path("/tmp/store"), spiral_root=Path("/tmp/spiral"),
+                          mission_id="mission", session_id="fresh-session",
+                          handlers={"continue": lambda r: called.append(source)},
+                          required_corrections={"continue": ("use primary evidence",)},
+                          required_fact_keys={"continue": ("filing",)},
+                          required_fact_sources={"continue": {"filing": "court:docket:225"}})
+            if admitted:
+                start_context_gated_mission(**kwargs)
+            else:
+                try:
+                    start_context_gated_mission(**kwargs)
+                except ValueError as exc:
+                    assert "provenance" in str(exc)
+                else:
+                    raise AssertionError("source substitution reached handler")
+    assert called == ["court:docket:225"]

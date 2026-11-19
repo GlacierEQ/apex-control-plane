@@ -140,6 +140,7 @@ def start_context_gated_mission(
     required_corrections: Mapping[str, tuple[str, ...]],
     required_fact_keys: Mapping[str, tuple[str, ...]],
     required_fact_values: Mapping[str, Mapping[str, Any]] | None = None,
+    required_fact_sources: Mapping[str, Mapping[str, str]] | None = None,
     bridge: Path | None = None,
     legacy_continue_cursor: str | None = None,
 ) -> Any:
@@ -188,6 +189,16 @@ def start_context_gated_mission(
                         or type(fact["value"]) is not type(value)
                         or fact["value"] != value):
                     raise ValueError("recovered fact conflicts with action policy")
+        if required_fact_sources is not None:
+            sources = required_fact_sources.get(action)
+            if not isinstance(sources, Mapping):
+                raise ValueError("missing expected fact-source policy")
+            for key, expected_source in sources.items():
+                fact = facts.get(key)
+                if (not isinstance(expected_source, str) or not expected_source
+                        or not isinstance(fact, dict)
+                        or fact.get("source") != expected_source):
+                    raise ValueError("recovered fact provenance conflicts with action policy")
         return handler(receipt)
     return start_mission(
         store=store, spiral_root=spiral_root, mission_id=mission_id,
@@ -205,6 +216,7 @@ def start_cloud_context_gated_mission(
     required_corrections: Mapping[str, tuple[str, ...]],
     required_fact_keys: Mapping[str, tuple[str, ...]],
     required_fact_values: Mapping[str, Mapping[str, Any]] | None = None,
+    required_fact_sources: Mapping[str, Mapping[str, str]] | None = None,
     bridge: Path | None = None,
     legacy_continue_cursor: str | None = None,
 ) -> Any:
@@ -242,7 +254,8 @@ def start_cloud_context_gated_mission(
         mission_id=mission_id, session_id=session_id,
         handlers=wrapped, required_corrections=required_corrections,
         required_fact_keys=required_fact_keys,
-        required_fact_values=required_fact_values, bridge=bridge,
+        required_fact_values=required_fact_values,
+        required_fact_sources=required_fact_sources, bridge=bridge,
         legacy_continue_cursor=legacy_continue_cursor,
     )
 
