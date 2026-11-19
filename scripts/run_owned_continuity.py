@@ -145,6 +145,36 @@ def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     }
 
 
+
+def decide_next_action(path: Path, *, session_id: str, invocation_id: str) -> dict:
+    """Use a verified prior action to select the next safe mission operation.
+
+    Never silently rerun a completed action or treat a historical cursor as
+    authority for a changed mission profile. The caller must explicitly start
+    a new invocation for any genuinely new work.
+    """
+    profile = load_profile(path)
+    receipt = read_checkpoint(path, session_id=session_id, invocation_id=invocation_id)
+    completed = receipt["completed_action"]
+    if completed is None:
+        raise ValueError("prior checkpoint does not prove a completed cloud action")
+    if (receipt["cursor"] != profile["expected_cursor"]
+            or completed["namespace"] != profile["namespace"]
+            or set(completed["source_ids"]) != set(profile["source_ids"])
+            or len(completed["source_ids"]) != len(profile["source_ids"])):
+        raise ValueError("prior completed action conflicts with current mission policy")
+    return {
+        "status": "COMPLETED_ACTION_RECOVERED",
+        "decision": "DO_NOT_REPEAT_COMPLETED_INDEX",
+        "checkpoint_digest": receipt["checkpoint_digest"],
+        "journal_source_ref": receipt["journal_source_ref"],
+        "recovered_cursor": receipt["cursor"],
+        "completed_action": completed,
+        "next_transition": "Select a new explicitly authorized operation and invocation; do not replay indexing",
+        "native_chatgpt_startup_verified": False,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="GLACIEREQ owned continuity host")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -160,11 +190,18 @@ def main() -> None:
     readback.add_argument("--profile", type=Path, required=True)
     readback.add_argument("--session-id", required=True)
     readback.add_argument("--invocation-id", required=True)
+    resume = sub.add_parser("resume", help="Recover prior action and select safe next transition")
+    resume.add_argument("--profile", type=Path, required=True)
+    resume.add_argument("--session-id", required=True)
+    resume.add_argument("--invocation-id", required=True)
     args = parser.parse_args()
     try:
         if args.command == "run":
             result = run_profile(args.profile, session_id=args.session_id,
                                  invocation_id=args.invocation_id)
+        elif args.command == "resume":
+            result = decide_next_action(args.profile, session_id=args.session_id,
+                                        invocation_id=args.invocation_id)
         elif args.command == "readback":
             result = read_checkpoint(args.profile, session_id=args.session_id,
                                      invocation_id=args.invocation_id)

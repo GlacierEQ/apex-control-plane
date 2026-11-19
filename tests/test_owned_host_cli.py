@@ -127,3 +127,32 @@ class ReadbackTests(ProfileTests):
         self.assertFalse(result["native_chatgpt_startup_verified"])
         with self.assertRaises(Exception):
             module.read_checkpoint(self.path, session_id="session-2", invocation_id="other")
+
+class ResumeDecisionTests(ProfileTests):
+    def test_completed_action_changes_next_decision_without_rerunning(self):
+        module = entrypoint()
+        receipt = {"checkpoint_digest": "sha256:receipt", "journal_source_ref": "spiral-journal:head",
+                   "cursor": "continue:exact", "completed_action": {
+                       "action": "index_cloud", "documents": 1, "namespace": "architecture",
+                       "source_ids": ["drive:primary:id-A"], "evidence_digest": "digest"}}
+        with mock.patch.object(module, "read_checkpoint", return_value=receipt), \
+             mock.patch.object(module, "run_owned_cloud_mission") as execute:
+            result = module.decide_next_action(self.path, session_id="prior", invocation_id="done")
+        self.assertEqual(result["decision"], "DO_NOT_REPEAT_COMPLETED_INDEX")
+        execute.assert_not_called()
+
+    def test_policy_drift_blocks_recovered_completion(self):
+        module = entrypoint()
+        receipt = {"checkpoint_digest": "sha256:receipt", "journal_source_ref": "spiral-journal:head",
+                   "cursor": "continue:stale", "completed_action": {
+                       "action": "index_cloud", "documents": 1, "namespace": "architecture",
+                       "source_ids": ["drive:primary:id-A"], "evidence_digest": "digest"}}
+        with mock.patch.object(module, "read_checkpoint", return_value=receipt):
+            with self.assertRaisesRegex(ValueError, "conflicts"):
+                module.decide_next_action(self.path, session_id="prior", invocation_id="done")
+
+    def test_missing_completed_action_never_claims_success(self):
+        module = entrypoint()
+        with mock.patch.object(module, "read_checkpoint", return_value={"completed_action": None}):
+            with self.assertRaisesRegex(ValueError, "does not prove"):
+                module.decide_next_action(self.path, session_id="prior", invocation_id="done")
