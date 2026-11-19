@@ -253,3 +253,47 @@ def test_receipt_init_failure_prevents_child_execution(tmp_path):
     assert result.returncode == 2
     assert not marker.exists()
     assert not receipt_path.exists()
+
+
+def test_existing_pending_receipt_is_never_overwritten_or_reexecuted(tmp_path):
+    """Restarting a crashed invocation must not erase uncertain execution evidence."""
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("trusted context", encoding="utf-8")
+    receipt_path = tmp_path / "execution.json"
+    original = '{"status":"pending_unverified","previous_attempt":"preserve"}\n'
+    receipt_path.write_text(original, encoding="utf-8")
+    marker = tmp_path / "must-not-execute"
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent",
+        "--sha256", hashlib.sha256(doc.read_bytes()).hexdigest(),
+        "--receipt-path", receipt_path, "--",
+        sys.executable, "-c",
+        "import pathlib,sys;pathlib.Path(sys.argv[1]).touch()", marker,
+    )
+    assert result.returncode == 2
+    assert not marker.exists()
+    assert receipt_path.read_text(encoding="utf-8") == original
+    assert not list(tmp_path.glob(".apex-receipt-*"))
+
+
+def test_existing_final_receipt_is_never_overwritten(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("trusted context", encoding="utf-8")
+    receipt_path = tmp_path / "execution.json"
+    original = '{"status":"process_succeeded_unverified","outcome_verified":false}\n'
+    receipt_path.write_text(original, encoding="utf-8")
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent",
+        "--sha256", hashlib.sha256(doc.read_bytes()).hexdigest(),
+        "--receipt-path", receipt_path, "--",
+        sys.executable, "-c", "print('should never run')",
+    )
+    assert result.returncode == 2
+    assert receipt_path.read_text(encoding="utf-8") == original
+    assert "should never run" not in result.stdout
