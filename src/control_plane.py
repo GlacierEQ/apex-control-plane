@@ -304,19 +304,32 @@ if __name__ == "__main__":
         executed = False
         timed_out = False
         try:
-            completed = subprocess.run(
-                command, input=document, check=False, capture_output=True,
-                timeout=options.timeout_seconds,
+            # A process timeout must also terminate descendant workers.
+            # start_new_session isolates the operator-selected child into its
+            # own POSIX process group, leaving the caller's group untouched.
+            import signal
+            child = subprocess.Popen(
+                command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, start_new_session=(os.name == "posix"),
             )
             executed = True
-            code = completed.returncode
-            stdout = completed.stdout.decode("utf-8", errors="replace")
-            stderr = completed.stderr.decode("utf-8", errors="replace")
-        except subprocess.TimeoutExpired as exc:
-            executed, timed_out = True, True
-            code = 124
-            stdout = (exc.stdout or b"").decode("utf-8", errors="replace")
-            stderr = (exc.stderr or b"").decode("utf-8", errors="replace")
+            try:
+                out, err = child.communicate(
+                    input=document, timeout=options.timeout_seconds,
+                )
+                code = child.returncode
+            except subprocess.TimeoutExpired:
+                timed_out, code = True, 124
+                if os.name == "posix":
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                else:
+                    child.kill()
+                out, err = child.communicate()
+            stdout = out.decode("utf-8", errors="replace")
+            stderr = err.decode("utf-8", errors="replace")
         except OSError as exc:
             code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
         print(json.dumps({
