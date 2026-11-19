@@ -1,0 +1,65 @@
+{
+  "schema": "APEX_JACK_LEGAL_CASE_ROUTE_V1",
+  "case_id": "1FDV-23-0001009",
+  "status": "ACTIVE_EXECUTION",
+  "registered_at": "2026-08-30 HST",
+  "prime_directive": "TURN EVERY MATERIAL EVENT INTO A PROPOSITION THAT CAN BE PROVEN, ATTACKED, STRENGTHENED, AND USED.",
+  "object_planes": {
+    "executable_casebuilder": "GlacierEQ/CASE-1FDV-23-0001009/10_CASEBUILDER/",
+    "casewide_identity_and_attacks": "GlacierEQ/apex-legal-case/case-master/allegations/YAMATANI_RYAN_LANE_LINKS.json",
+    "casebrain_interchange": "GlacierEQ/SUPERLUMINAL_CASE_MATRIX/CASEBRAIN_V3/cases/1FDV-23-0001009/JACK_YAM_LANE_BRIDGE.json",
+    "docket_acquisition": "GlacierEQ/DOCKETS/1FDV-23-0001009/CASEBUILDER/YAMATANI_DOCKET_ACQUISITION_QUEUE.md"
+  },
+  "source_planes": {
+    "dropbox_evidentiary_vault": "/Cherry Chan/01_LEGAL_EVIDENTIARY_VAULT/01_Case_1FDV-23-0001009_Master/",
+    "dropbox_jack_projection": "/Cherry Chan/01_LEGAL_EVIDENTIARY_VAULT/01_Case_1FDV-23-0001009_Master/10_CASEBUILD_CONTROL/11_JACK_CASEBUILDER/",
+    "dropbox_chat_index": "/Cherry Chan/05_AI_CONVERSATION_EXPORTS/00_CONTROL_CENTER/05_RECURSIVE_REFERENCE_GRAPH/01_ENTITIES/PEOPLE/Micky_Yamatani/01_CHAT_MENTION_INDEX.csv"
+  },
+  "human_execution": {
+    "notion_yam_page_id": "3c8b1e4f-3223-8135-91a8-cbe309a2b340",
+    "notion_casebrain_governance_page_id": "39eb1e4f-3223-81a3-8c0f-eca42e0cd0e3",
+    "asana_project_id": "1211960317839287"
+  },
+  "actor_aliases": {
+    "ACT-YAMATANI-001": "ACT-YAMATANI-009",
+    "ACT-BROWER-001": "ACT-BROWER-008"
+  },
+  "active_lane": {
+    "lane_id": "LANE-RYAN-YAMATANI-001",
+    "high_density_event": "EVT-RYAN-2024-07-24-HEARING",
+    "allegation_ids": [
+      "ALG-RYAN-001",
+      "ALG-RYAN-003",
+      "ALG-RYAN-004",
+      "ALG-RYAN-005",
+      "ALG-RYAN-007",
+      "ALG-RYAN-009",
+      "ALG-RYAN-011",
+      "ALG-RYAN-012",
+      "ALG-RYAN-013"
+    ],
+    "attack_ids": [
+      "ATK-024",
+      "ATK-025"
+    ]
+  },
+  "p0_targets": [
+    "JACK-TGT-JUL24-AUDIO",
+    "JACK-TGT-YAM-D57-D67",
+    "JACK-TGT-YAM-JUNE26",
+    "JACK-TGT-YAM-WD-CONSENT",
+    "request-withdrawal authority",
+    "exhibit disposition/admissibility",
+    "JACK-TGT-R58-91-98",
+    "discovery execution"
+  ],
+  "invariants": [
+    "native/authenticated record controls",
+    "chat-export AI prose is locator/hypothesis only",
+    "lane IDs remain stable",
+    "resolved acquisitions never regress to missing",
+    "unknown material fact becomes retrieval",
+    "unverified allegations are not promoted for public use"
+  ],
+  "runtime_contract": "jack/config/jack_relentless_contract.compiled.json"
+}
