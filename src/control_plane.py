@@ -454,14 +454,49 @@ if __name__ == "__main__":
                     finally:
                         if gate_write is not None:
                             os.close(gate_write)
-                try:
-                    if child.stdin is not None:
+                # Stdin delivery must not consume the execution deadline when
+                # a delegated program never reads its pipe. Use a cancellable
+                # writer; the parent's wait clock starts before delivery.
+                import time
+                import select
+                deadline = time.monotonic() + options.timeout_seconds
+                stop_input = threading.Event()
+                input_errors = []
+                def deliver_input():
+                    stream = child.stdin
+                    if stream is None:
+                        return
+                    try:
+                        fd = stream.fileno()
+                        if os.name == "posix":
+                            os.set_blocking(fd, False)
+                        view = memoryview(document)
+                        offset = 0
+                        while offset < len(view) and not stop_input.is_set():
+                            if os.name == "posix":
+                                _, writable, _ = select.select([], [fd], [], 0.05)
+                                if not writable:
+                                    continue
+                                try:
+                                    count = os.write(fd, view[offset:offset + 65536])
+                                except BlockingIOError:
+                                    continue
+                            else:
+                                count = os.write(fd, view[offset:offset + 65536])
+                            if count <= 0:
+                                break
+                            offset += count
+                    except (BrokenPipeError, OSError, ValueError) as exc:
+                        input_errors.append(type(exc).__name__)
+                    finally:
                         try:
-                            child.stdin.write(document)
-                            child.stdin.close()
-                        except BrokenPipeError:
-                            child.stdin.close()
-                    code = child.wait(timeout=options.timeout_seconds)
+                            stream.close()
+                        except OSError:
+                            pass
+                input_thread = threading.Thread(target=deliver_input, daemon=True)
+                input_thread.start()
+                try:
+                    code = child.wait(timeout=max(0, deadline - time.monotonic()))
                 except subprocess.TimeoutExpired:
                     timed_out, code = True, 124
                     if os.name == "posix":
@@ -472,6 +507,9 @@ if __name__ == "__main__":
                     else:
                         child.kill()
                     child.wait()
+                finally:
+                    stop_input.set()
+                    input_thread.join(timeout=1)
                 for thread in drains:
                     thread.join()
                 out_file.seek(0, os.SEEK_END)

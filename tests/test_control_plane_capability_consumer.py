@@ -430,3 +430,48 @@ def test_output_quota_does_not_limit_child_work_files(tmp_path):
     assert result.returncode == 0, result.stderr
     assert artifact.stat().st_size == 10 * 1024 * 1024
     assert json.loads(result.stdout)["stdout"].strip() == "written"
+
+
+def test_nonreading_child_large_stdin_obeys_timeout(tmp_path):
+    """A child ignoring a multi-megabyte capability cannot hang the executor."""
+    import time
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    content = "# Agent\n" + ("x" * (2 * 1024 * 1024))
+    doc.write_text(content)
+    digest = hashlib.sha256(content.encode()).hexdigest()
+    started = time.monotonic()
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent", "--sha256", digest,
+        "--timeout-seconds", "1", "--",
+        sys.executable, "-c", "import time; time.sleep(30)",
+    )
+    elapsed = time.monotonic() - started
+    assert elapsed < 8, (elapsed, result.stderr)
+    assert result.returncode != 2, result.stderr
+    receipt = json.loads(result.stdout)
+    assert receipt["timed_out"] is True
+    assert receipt["exit_code"] == 124
+    assert receipt["outcome_verified"] is False
+
+
+def test_large_stdin_reaches_reading_child(tmp_path):
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    content = "# Agent\n" + ("x" * (1024 * 1024))
+    doc.write_text(content)
+    digest = hashlib.sha256(content.encode()).hexdigest()
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent", "--sha256", digest,
+        "--timeout-seconds", "10", "--",
+        sys.executable, "-c",
+        "import sys,hashlib; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())",
+    )
+    assert result.returncode == 0, result.stderr
+    receipt = json.loads(result.stdout)
+    assert receipt["stdout"].strip() == digest
+    assert receipt["exit_code"] == 0
