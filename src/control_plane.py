@@ -304,7 +304,7 @@ if __name__ == "__main__":
             reject(f"cannot load capability document: {exc}")
         # Optional durable receipt: pending is committed before subprocess launch.
         # A crash leaves explicit unverified evidence rather than false success.
-        def write_receipt(record: dict[str, Any]) -> None:
+        def write_receipt(record: dict[str, Any], *, initial: bool = False) -> None:
             if options.receipt_path is None:
                 return
             import tempfile as _tempfile
@@ -319,7 +319,13 @@ if __name__ == "__main__":
                     handle.write(payload)
                     handle.flush()
                     os.fsync(handle.fileno())
-                os.replace(staging, target)
+                if initial:
+                    # Exclusive creation preserves a prior pending/final receipt.
+                    # A retry must not erase uncertainty about a previous run.
+                    os.link(staging, target)
+                    os.unlink(staging)
+                else:
+                    os.replace(staging, target)
                 if hasattr(os, "O_DIRECTORY"):
                     directory_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
                     try:
@@ -338,7 +344,7 @@ if __name__ == "__main__":
                     "capability": {"qualified_name": f"{entry.kind}:{entry.name}", "sha256": actual},
                     "command": command,
                     "note": "A pending receipt after interruption does not prove whether the child ran.",
-                })
+                }, initial=True)
             except OSError as exc:
                 reject(f"cannot initialize durable receipt: {exc}")
         executed = False
