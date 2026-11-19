@@ -275,7 +275,10 @@ if __name__ == "__main__":
         cli.add_argument("--connectors-root", action="append", default=[])
         cli.add_argument("--select", required=True)
         cli.add_argument("--sha256", required=True)
+        cli.add_argument("--timeout-seconds", type=float, default=60.0)
         options = cli.parse_args(args[1:separator])
+        if not 0 < options.timeout_seconds <= 3600 or not __import__("math").isfinite(options.timeout_seconds):
+            reject("timeout-seconds must be finite and between 0 and 3600")
         expected = options.sha256
         if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
             reject("expected SHA-256 must be 64 lowercase hexadecimal characters")
@@ -298,22 +301,32 @@ if __name__ == "__main__":
             document.decode("utf-8")
         except (OSError, UnicodeError, ValueError) as exc:
             reject(f"cannot load capability document: {exc}")
+        executed = False
+        timed_out = False
         try:
             completed = subprocess.run(
                 command, input=document, check=False, capture_output=True,
+                timeout=options.timeout_seconds,
             )
+            executed = True
             code = completed.returncode
             stdout = completed.stdout.decode("utf-8", errors="replace")
             stderr = completed.stderr.decode("utf-8", errors="replace")
+        except subprocess.TimeoutExpired as exc:
+            executed, timed_out = True, True
+            code = 124
+            stdout = (exc.stdout or b"").decode("utf-8", errors="replace")
+            stderr = (exc.stderr or b"").decode("utf-8", errors="replace")
         except OSError as exc:
             code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
         print(json.dumps({
             "status": "process_succeeded_unverified" if code == 0 else "failed",
-            "executed": code != 127,
+            "executed": executed,
+            "timed_out": timed_out,
             "mission_complete": False,
             "outcome_verified": False,
             "outcome_scope": "subprocess_exit_only",
-            "routes_run": 1 if code != 127 else 0,
+            "routes_run": 1 if executed else 0,
             "exit_code": code,
             "command": command,
             "capability": {
