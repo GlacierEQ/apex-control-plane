@@ -44,3 +44,17 @@ def test_literal_name_and_qualified_name_collision_fails_closed():
     with pytest.raises(ValueError, match="ambiguous"):
         select(catalog, ["skill:shared"])
     assert select(catalog, ["connector:skill:shared"]) == [catalog[0]]
+
+
+def test_content_loading_requires_explicit_selection(tmp_path, capsys):
+    from src.tool_catalog import main
+    root = tmp_path / "skills"
+    doc = root / "private" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("private capability content", encoding="utf-8")
+    assert main(["--skills", str(root), "--load-content"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "--select" in captured.err
+    assert main(["--skills", str(root), "--select", "skill:private", "--load-content"]) == 0
+    assert "private capability content" in capsys.readouterr().out
