@@ -387,3 +387,25 @@ def test_command_sees_durable_launched_receipt_before_its_first_instruction(tmp_
     output = json.loads(result.stdout)
     assert "LAUNCH_COMMITTED_BEFORE_EXEC" in output["stdout"]
     assert json.loads(receipt.read_text())["status"] == "process_succeeded_unverified"
+
+
+def test_disk_spool_is_strictly_bounded_for_noisy_child(tmp_path):
+    """A real child cannot fill disk beyond the configured per-stream quota."""
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# Agent")
+    digest = hashlib.sha256(b"# Agent").hexdigest()
+    result = invoke(
+        "--exec-capability", "--skills-root", skills,
+        "--select", "skill:agent", "--sha256", digest,
+        "--timeout-seconds", "10", "--",
+        sys.executable, "-c",
+        "import sys; sys.stdout.buffer.write(b'x' * (12 * 1024 * 1024)); sys.stdout.flush()",
+    )
+    assert result.returncode != 0
+    response = json.loads(result.stdout)
+    assert response["executed"] is True
+    assert response["stdout_bytes"] <= 8 * 1024 * 1024
+    assert response["spool_limit_bytes_per_stream"] == 8 * 1024 * 1024
+    assert response["outcome_verified"] is False

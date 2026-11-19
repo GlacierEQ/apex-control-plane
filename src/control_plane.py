@@ -359,6 +359,17 @@ if __name__ == "__main__":
         # must not exhaust the agent host's memory or inflate JSON receipts.
         import tempfile
         max_output_bytes = 65536
+        # POSIX file-size resource limit applies to both disk-backed output
+        # streams in the child. This bounds disk consumption even if the child
+        # produces data indefinitely or catches SIGXFSZ.
+        max_spool_bytes = 8 * 1024 * 1024
+        child_file_limit = None
+        if os.name == "posix":
+            import resource
+            def child_file_limit() -> None:
+                soft, hard = resource.getrlimit(resource.RLIMIT_FSIZE)
+                cap = min(max_spool_bytes, hard) if hard != resource.RLIM_INFINITY else max_spool_bytes
+                resource.setrlimit(resource.RLIMIT_FSIZE, (cap, hard))
         stdout_bytes = stderr_bytes = 0
         stdout_truncated = stderr_truncated = False
         try:
@@ -391,6 +402,7 @@ if __name__ == "__main__":
                         launch_command, stdin=subprocess.PIPE, stdout=out_file,
                         stderr=err_file, start_new_session=(os.name == "posix"),
                         pass_fds=(gate_read,) if gate_read is not None else (),
+                        preexec_fn=child_file_limit,
                     )
                 finally:
                     if gate_read is not None:
@@ -478,6 +490,7 @@ if __name__ == "__main__":
             "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
             "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
             "capture_limit_bytes": max_output_bytes,
+            "spool_limit_bytes_per_stream": max_spool_bytes if os.name == "posix" else None,
         }
         try:
             write_receipt(final_receipt)
