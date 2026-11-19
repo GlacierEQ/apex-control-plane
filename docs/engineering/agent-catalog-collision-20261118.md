@@ -81,3 +81,14 @@ Recovered PR #377 and the existing executable `src/control_plane.py` entrypoint;
 **Verification state:** GitHub accepted both source and test commits. Both connected Mac terminal tools failed internally before running any commands, so changed-head focused/full tests are **not yet verified**. This is a tool-access failure, not evidence of a code defect. Prior full-suite pass (1097) applies only to earlier commit `19502f4`, not this change.
 
 **Exact continuation cursor:** on connected Mac `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`, fetch branch `engineering/catalog-ambiguous-selection-20261118`, checkout head containing `47e0c378`, run `/opt/homebrew/bin/python3.13 -m pytest -q tests/test_control_plane_capability_consumer.py` then full `-m pytest -q` and `compileall`. Repair any failures, then independently read back GitHub and exercise a real pinned cloud-catalog command with a bounded timeout. Do not claim production-host integration.
+
+
+## 2026-11-18 agent execution process-tree timeout repair
+
+Recovered owner-native PR #377 head `c268a6d3`, the real `src/control_plane.py --exec-capability` consumer, existing timeout tests, and Mac worktree `/Users/kcbflux/Documents/GlacierEQ-Agent-Consumer-20261118`. Baseline exact-head focused tests **7 passed** and full repo **1100 passed, 29 skipped, 8 subtests passed**. Found a real operational gap: `subprocess.run(... timeout=...)` terminates the direct child but may leave spawned descendant workers alive, permitting post-timeout side effects and lingering work.
+
+Implementation `933e2df6c397a1f6238f3b1970956e3f761be1f0`: the actual pinned capability execution consumer now starts the child in a new POSIX process group, uses `Popen.communicate(timeout=...)`, and sends SIGKILL to that isolated group on timeout, reaping the child. Non-POSIX fallback kills direct child. Preserves 124 timeout receipt, `executed=true`, `outcome_verified=false`, exact capability pin, and existing operator-invoked execution behavior. No new automatic host or task authority.
+
+Regression `e59458536e4b3aa58cebf9d2cafdfbb8d10b6958`: actual subprocess spawns a grandchild scheduled to write a marker after the parent's timeout. Verified the parent returns 124 and, after waiting beyond the grandchild delay, marker remains absent. Exact changed-head Mac tests: **8 focused passed**, **1101 full-suite passed, 29 skipped, 8 subtests passed**, exit 0. No mocks for this process-tree test.
+
+Next cursor: independent GitHub readback of the notes/source/test commit; further capability orchestration should prove bounded output handling and durable receipts without confusing subprocess success with mission completion. POSIX descendants that deliberately detach into a new session are outside this process-group guarantee; avoid claiming universal containment. No merges, deployment, credentials, permissions, external messages or automation changes.
