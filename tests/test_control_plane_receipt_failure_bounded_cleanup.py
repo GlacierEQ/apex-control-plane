@@ -1,4 +1,4 @@
-"""Real CLI regression for durable launch-receipt failure with inherited output pipes."""
+"""Real CLI regression for durable launch-receipt failure cleanup."""
 import hashlib
 import json
 import os
@@ -14,7 +14,7 @@ ENTRY = ROOT / "src" / "control_plane.py"
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX process group cleanup")
-def test_launch_receipt_failure_cannot_hang_on_descendant_output(tmp_path):
+def test_launch_receipt_failure_returns_without_running_requested_command(tmp_path):
     skills = tmp_path / "skills"
     doc = skills / "agent" / "SKILL.md"
     doc.parent.mkdir(parents=True)
