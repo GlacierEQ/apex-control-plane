@@ -152,7 +152,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--connectors", action="append", default=[], metavar="DIR")
     parser.add_argument("--select", action="append", default=[], metavar="KIND:NAME")
     parser.add_argument("--load-content", action="store_true", help="Read selected capability documents into JSON")
+    parser.add_argument("--expect-sha256", action="append", default=[], metavar="DIGEST", help="Require each selected document to match its expected SHA-256 (in selection order)")
     args = parser.parse_args(argv)
+    if args.expect_sha256 and (not args.load_content or len(args.expect_sha256) != len(args.select)):
+        print("--expect-sha256 requires --load-content and one digest per --select", file=sys.stderr)
+        return 2
+    if any(len(d) != 64 or any(c not in "0123456789abcdef" for c in d) for d in args.expect_sha256):
+        print("expected SHA-256 must be 64 lowercase hexadecimal characters", file=sys.stderr)
+        return 2
     if args.load_content and not args.select:
         print("--load-content requires at least one explicit --select", file=sys.stderr)
         return 2
@@ -177,8 +184,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 content = Path(entry.path).read_bytes()
                 record["content"] = content.decode("utf-8")
                 record["sha256"] = hashlib.sha256(content).hexdigest()
+                if args.expect_sha256:
+                    requested = [name for name in args.select if name == entry.name or name == f"{entry.kind}:{entry.name}"]
+                    expected = {args.expect_sha256[i] for i, name in enumerate(args.select) if name in requested}
+                    if expected != {record["sha256"]}:
+                        raise ValueError(f"capability document digest mismatch: {entry.kind}:{entry.name}")
             output.append(record)
-    except (OSError, UnicodeError) as exc:
+    except (OSError, UnicodeError, ValueError) as exc:
         print(f"cannot load capability document: {exc}", file=sys.stderr)
         return 2
     print(json.dumps(output, sort_keys=True))
