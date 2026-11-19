@@ -547,7 +547,14 @@ if __name__ == "__main__":
                             pass
                     else:
                         child.kill()
-                    child.wait()
+                    try:
+                        child.wait(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        # A failed reap is not evidence that the process tree
+                        # stopped. Keep the timeout classification and mark
+                        # the uncertainty instead of hanging this executor.
+                        cleanup_error = "TimeoutExpired: child did not reap after termination"
+                        stop_drains.set()
                 finally:
                     stop_input.set()
                     input_thread.join(timeout=1)
