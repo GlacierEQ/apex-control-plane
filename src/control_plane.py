@@ -78,6 +78,9 @@ if __name__ == "__main__":
     import subprocess
 
     args = sys.argv[1:]
+    if args and args[0] == "--inspect-receipt":
+        from inspect_execution_receipt import main as inspect_receipt
+        raise SystemExit(inspect_receipt(args[1:]))
     if args and args[0] == "run-internal":
         from execute_now import main as run_internal
         raise SystemExit(run_internal(args[1:]))
