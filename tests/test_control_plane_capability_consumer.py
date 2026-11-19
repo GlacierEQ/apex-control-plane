@@ -92,7 +92,7 @@ def test_timeout_kills_hung_child_and_reports_unverified(tmp_path):
         "--timeout-seconds", "0.15", "--",
         sys.executable, "-c", "import time; time.sleep(5)",
     )
-    assert result.returncode == 124, result.stderr
+    assert result.returncode == 124, (result.stderr, result.stdout)
     response = json.loads(result.stdout)
     assert response["timed_out"] is True
     assert response["executed"] is True

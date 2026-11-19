@@ -362,19 +362,47 @@ if __name__ == "__main__":
         # Parent-owned bounded pipe drains: cap only captured output, never
         # the requested program's unrelated file writes.
         max_spool_bytes = 8 * 1024 * 1024
+        import select as _select
         import threading
+        stop_drains = threading.Event()
+        drain_complete = [False, False]
+
         def drain(stream, target, counts, index):
-            while True:
-                chunk = stream.read(65536)
-                if not chunk:
-                    break
-                counts[index] += len(chunk)
-                remaining = max_spool_bytes - target.tell()
-                if remaining > 0:
-                    target.write(chunk[:remaining])
-            stream.close()
+            # A child may exit while a descendant still holds stdout open.
+            # Use cancellable reads so output collection cannot outlive the
+            # same deadline that applies to subprocess execution.
+            fd = stream.fileno()
+            if os.name == "posix":
+                os.set_blocking(fd, False)
+            try:
+                while not stop_drains.is_set():
+                    if os.name == "posix":
+                        readable, _, _ = _select.select([fd], [], [], 0.05)
+                        if not readable:
+                            continue
+                        try:
+                            chunk = os.read(fd, 65536)
+                        except BlockingIOError:
+                            continue
+                    else:
+                        chunk = stream.read(65536)
+                    if not chunk:
+                        drain_complete[index] = True
+                        break
+                    counts[index] += len(chunk)
+                    remaining = max_spool_bytes - target.tell()
+                    if remaining > 0:
+                        target.write(chunk[:remaining])
+            except (OSError, ValueError):
+                # A stopped drain is explicitly marked incomplete in the
+                # receipt; never report a complete output byte count.
+                pass
+            finally:
+                stream.close()
+
         stdout_bytes = stderr_bytes = 0
         stdout_truncated = stderr_truncated = False
+        output_incomplete = False
         try:
             # A process timeout must also terminate descendant workers.
             # start_new_session isolates the operator-selected child into its
@@ -410,8 +438,8 @@ if __name__ == "__main__":
                     if gate_read is not None:
                         os.close(gate_read)
                 counts = [0, 0]
-                drains = [threading.Thread(target=drain, args=(child.stdout, out_file, counts, 0)),
-                          threading.Thread(target=drain, args=(child.stderr, err_file, counts, 1))]
+                drains = [threading.Thread(target=drain, args=(child.stdout, out_file, counts, 0), daemon=True),
+                          threading.Thread(target=drain, args=(child.stderr, err_file, counts, 1), daemon=True)]
                 for thread in drains:
                     thread.start()
                 executed = True
@@ -510,8 +538,21 @@ if __name__ == "__main__":
                 finally:
                     stop_input.set()
                     input_thread.join(timeout=1)
+                # A successful direct child exit is not the end of the work
+                # if descendants still hold inherited output pipes open.
                 for thread in drains:
-                    thread.join()
+                    thread.join(timeout=max(0, deadline - time.monotonic()))
+                if any(thread.is_alive() for thread in drains):
+                    timed_out, code = True, 124
+                    if os.name == "posix":
+                        try:
+                            os.killpg(child.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                    stop_drains.set()
+                    for thread in drains:
+                        thread.join(timeout=0.3)
+                output_incomplete = timed_out or not all(drain_complete)
                 out_file.seek(0, os.SEEK_END)
                 err_file.seek(0, os.SEEK_END)
                 stdout_bytes, stderr_bytes = counts
@@ -543,6 +584,7 @@ if __name__ == "__main__":
             "stdout": stdout, "stderr": stderr,
             "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
             "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
+            "output_incomplete": output_incomplete,
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }
