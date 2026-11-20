@@ -13,3 +13,7 @@ When `subprocess.Popen` raises before returning a child, the previous `finally` 
 ## Exact continuation
 
 Run broader changed-head Python 3.13 tests, inspect process lifecycle adversarial receipts, independently fetch pushed code and test from GitHub. Integrate only by an authorized non-destructive review path; do not merge or deploy without specific permission. Preserve parallel writer-liveness, drain, and continuity branches; reconcile before any eventual consolidation.
+
+## Expanded exact-head verification
+
+After code commit `857f718`, Python 3.13 native run across `test_control_plane_gate_fd_cleanup.py`, `test_control_plane_cli_execution.py`, `test_control_plane_output_drain_deadline.py`, `test_control_plane_prerelease_sigkill.py`, and `test_control_plane_capability_consumer.py` completed **38 passed in 25.00 seconds** (exit 0). GitHub independently read back the corrected launch path at blob `c03a3c7043e611623a2696f8e5dcbb0cbc3e6754`. Full repository suite not rerun on this head.
