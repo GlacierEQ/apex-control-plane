@@ -482,7 +482,17 @@ if __name__ == "__main__":
                                 pass
                         else:
                             child.kill()
-                        child.wait()
+                        # Even SIGKILL cannot guarantee immediate reaping
+                        # (e.g. a child stuck in uninterruptible kernel I/O).
+                        # Never allow receipt failure cleanup to hang forever.
+                        try:
+                            child.wait(timeout=1.0)
+                        except subprocess.TimeoutExpired:
+                            child.kill()
+                            try:
+                                child.wait(timeout=0.3)
+                            except subprocess.TimeoutExpired:
+                                pass  # daemon reaper/OS owns eventual cleanup
                         # Descendants outside the killed process group may
                         # retain inherited pipes. Never block indefinitely
                         # while handling a failed durable launch receipt.
