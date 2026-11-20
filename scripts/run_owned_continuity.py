@@ -140,9 +140,29 @@ def read_startup_decision(path: Path, *, session_id: str, invocation_id: str) ->
     digest = "sha256:" + hashlib.sha256(row["payload_json"].encode()).hexdigest()
     if digest != row["payload_digest"]:
         raise ValueError("startup receipt checksum mismatch")
-    payload = json.loads(row["payload_json"])
-    if payload.get("key") != key or payload.get("schema") != "glaciereq.startup-decision/1":
-        raise ValueError("startup receipt identity mismatch")
+    def unique_pairs(pairs):
+        record = {}
+        for member, value in pairs:
+            if member in record:
+                raise ValueError("duplicate startup receipt JSON member")
+            record[member] = value
+        return record
+
+    def reject_constant(_):
+        raise ValueError("nonfinite startup receipt constant")
+
+    payload = json.loads(row["payload_json"], object_pairs_hook=unique_pairs,
+                         parse_constant=reject_constant)
+    required = {"schema", "key", "prior_session_id", "prior_invocation_id",
+                "decision", "checkpoint_digest", "journal_source_ref",
+                "recovered_cursor", "index_executed"}
+    if (not isinstance(payload, dict) or set(payload) != required
+            or payload.get("key") != key
+            or payload.get("schema") != "glaciereq.startup-decision/1"
+            or payload.get("index_executed") is not False
+            or not all(isinstance(payload.get(field), str) and payload[field]
+                       for field in required - {"index_executed"})):
+        raise ValueError("startup receipt identity or execution claim mismatch")
     decision = decide_next_action(path, session_id=payload["prior_session_id"], invocation_id=payload["prior_invocation_id"])
     if any(payload[k] != decision[v] for k, v in (("decision", "decision"), ("checkpoint_digest", "checkpoint_digest"),
              ("journal_source_ref", "journal_source_ref"), ("recovered_cursor", "recovered_cursor"))):
