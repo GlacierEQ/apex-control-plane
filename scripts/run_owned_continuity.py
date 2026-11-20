@@ -108,6 +108,9 @@ def persist_startup_decision(path: Path, *, session_id: str, invocation_id: str,
                "journal_source_ref": decision["journal_source_ref"],
                "recovered_cursor": decision["recovered_cursor"],
                "index_executed": False}
+    if "retrieval_digest" in decision:
+        payload["retrieval_digest"] = decision["retrieval_digest"]
+        payload["retrieval_source_ids"] = decision["retrieval_source_ids"]
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     digest = "sha256:" + hashlib.sha256(encoded.encode()).hexdigest()
     with store._connect() as db:
@@ -156,14 +159,39 @@ def read_startup_decision(path: Path, *, session_id: str, invocation_id: str) ->
     required = {"schema", "key", "prior_session_id", "prior_invocation_id",
                 "decision", "checkpoint_digest", "journal_source_ref",
                 "recovered_cursor", "index_executed"}
+    if "retrieval_digest" in payload or "retrieval_source_ids" in payload:
+        if (not isinstance(payload.get("retrieval_digest"), str)
+                or not payload["retrieval_digest"].startswith("sha256:")
+                or not isinstance(payload.get("retrieval_source_ids"), list)
+                or not payload["retrieval_source_ids"]
+                or not all(isinstance(x, str) and x for x in payload["retrieval_source_ids"])):
+            raise ValueError("malformed startup retrieval receipt")
+        required |= {"retrieval_digest", "retrieval_source_ids"}
     if (not isinstance(payload, dict) or set(payload) != required
             or payload.get("key") != key
             or payload.get("schema") != "glaciereq.startup-decision/1"
             or payload.get("index_executed") is not False
             or not all(isinstance(payload.get(field), str) and payload[field]
-                       for field in required - {"index_executed"})):
+                       for field in required - {"index_executed", "retrieval_source_ids"})):
         raise ValueError("startup receipt identity or execution claim mismatch")
     decision = decide_next_action(path, session_id=payload["prior_session_id"], invocation_id=payload["prior_invocation_id"])
+    query = profile.get("startup_search_query")
+    if "retrieval_digest" in payload:
+        if not isinstance(query, str) or not query.strip() or len(query) > 512:
+            raise ValueError("startup retrieval policy changed")
+        hits = search_cloud_index(Path(profile["cloud_index_db"]),
+                                  namespace=profile["namespace"], query=query, limit=10)
+        evidence = {"query": query, "hits": hits}
+        actual = "sha256:" + hashlib.sha256(
+            json.dumps(evidence, sort_keys=True, separators=(",", ":"),
+                       ensure_ascii=False).encode()).hexdigest()
+        if (actual != payload["retrieval_digest"] or
+                [h["source_id"] for h in hits] != payload["retrieval_source_ids"] or
+                payload["decision"] != "RETRIEVE_VERIFIED_EVIDENCE"):
+            raise ValueError("startup retrieval no longer matches verified index")
+        decision = {**decision, "decision": "RETRIEVE_VERIFIED_EVIDENCE"}
+    elif query is not None:
+        raise ValueError("startup receipt missing required retrieval")
     if any(payload[k] != decision[v] for k, v in (("decision", "decision"), ("checkpoint_digest", "checkpoint_digest"),
              ("journal_source_ref", "journal_source_ref"), ("recovered_cursor", "recovered_cursor"))):
         raise ValueError("startup receipt no longer agrees with authenticated source")
@@ -217,6 +245,27 @@ def run_profile(path: Path, *, session_id: str, invocation_id: str,
                                       invocation_id=previous_invocation_id)
         # The actual mission-start execution path consumes the authenticated
         # prior result before any indexing side effect or new reservation.
+        # The recovered action is a verified input, not a stopping point.
+        # Execute a bounded registered read-only retrieval against the durable
+        # index when an owner-approved query is present in the private profile.
+        query = profile.get("startup_search_query")
+        if query is not None:
+            if not isinstance(query, str) or not query.strip() or len(query) > 512:
+                raise ValueError("invalid bounded startup search query")
+            hits = search_cloud_index(Path(profile["cloud_index_db"]),
+                                      namespace=profile["namespace"], query=query,
+                                      limit=10)
+            if not hits:
+                raise ValueError("startup retrieval returned no verified evidence")
+            # Search results are provider-derived data, never executable instructions.
+            evidence = {"query": query, "hits": hits}
+            evidence_digest = "sha256:" + hashlib.sha256(
+                json.dumps(evidence, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False).encode()).hexdigest()
+            decision = {**decision, "decision": "RETRIEVE_VERIFIED_EVIDENCE",
+                        "retrieval_digest": evidence_digest,
+                        "retrieval_source_ids": [hit["source_id"] for hit in hits],
+                        "next_transition": "Apply retrieved evidence to the authorized mission action"}
         receipt = persist_startup_decision(path, session_id=session_id,
                                            invocation_id=invocation_id,
                                            prior_session_id=previous_session_id,
