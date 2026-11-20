@@ -483,8 +483,12 @@ if __name__ == "__main__":
                         else:
                             child.kill()
                         child.wait()
+                        # Descendants outside the killed process group may
+                        # retain inherited pipes. Never block indefinitely
+                        # while handling a failed durable launch receipt.
+                        stop_drains.set()
                         for thread in drains:
-                            thread.join()
+                            thread.join(timeout=0.3)
                         raise
                     finally:
                         if gate_write is not None:
