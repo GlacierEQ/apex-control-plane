@@ -559,7 +559,18 @@ if __name__ == "__main__":
                             pass
                     else:
                         child.kill()
-                    child.wait()
+                    # A SIGKILL request is not proof of reaping: a child in
+                    # uninterruptible I/O can remain alive indefinitely.
+                    # Keep timeout handling bounded just like receipt-failure
+                    # cleanup; unresolved execution must never be success.
+                    try:
+                        child.wait(timeout=1.0)
+                    except subprocess.TimeoutExpired:
+                        child.kill()
+                        try:
+                            child.wait(timeout=0.3)
+                        except subprocess.TimeoutExpired:
+                            pass
                 finally:
                     stop_input.set()
                     input_thread.join(timeout=1)
