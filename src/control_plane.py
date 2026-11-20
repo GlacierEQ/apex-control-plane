@@ -482,6 +482,14 @@ if __name__ == "__main__":
                                 os.killpg(child.pid, signal.SIGKILL)
                             except ProcessLookupError:
                                 pass
+                            except PermissionError:
+                                # Group signaling can be denied by the OS even
+                                # when the direct child remains ours. Attempt
+                                # direct termination; never classify as success.
+                                try:
+                                    child.kill()
+                                except (ProcessLookupError, PermissionError):
+                                    pass
                         else:
                             child.kill()
                         # Even SIGKILL cannot guarantee immediate reaping
@@ -557,6 +565,13 @@ if __name__ == "__main__":
                             os.killpg(child.pid, signal.SIGKILL)
                         except ProcessLookupError:
                             pass
+                        except PermissionError:
+                            # A denied group signal must not escape cleanup
+                            # before a bounded direct-child termination attempt.
+                            try:
+                                child.kill()
+                            except (ProcessLookupError, PermissionError):
+                                pass
                     else:
                         child.kill()
                     # A SIGKILL request is not proof of reaping: a child in
@@ -592,6 +607,13 @@ if __name__ == "__main__":
                             os.killpg(child.pid, signal.SIGKILL)
                         except ProcessLookupError:
                             pass
+                        except PermissionError:
+                            # A denied group signal must not escape cleanup
+                            # before a bounded direct-child termination attempt.
+                            try:
+                                child.kill()
+                            except (ProcessLookupError, PermissionError):
+                                pass
                     stop_drains.set()
                     for thread in drains:
                         thread.join(timeout=0.3)
