@@ -370,6 +370,25 @@ def run_registered_resume(path: Path, *, session_id: str, invocation_id: str,
     return handlers["VERIFY_REQUIRED_RETRIEVED_SOURCES"](verified)
 
 
+
+def run_verified_handoff(path: Path, *, session_id: str, invocation_id: str,
+                         output_dir: Path, auto_resume: bool = True,
+                         previous_session_id: str | None = None,
+                         previous_invocation_id: str | None = None) -> dict:
+    """Actual registered downstream consumer; durable handoff is replay-safe.
+
+    Caller explicitly chooses an owner-private destination. This is not a
+    ChatGPT-native startup hook or an external provider mutation.
+    """
+    from scripts.continuity_verified_artifact import apply_verified_handoff
+    return run_registered_resume(
+        path, session_id=session_id, invocation_id=invocation_id,
+        auto_resume=auto_resume, previous_session_id=previous_session_id,
+        previous_invocation_id=previous_invocation_id,
+        handlers={"VERIFY_REQUIRED_RETRIEVED_SOURCES":
+                  lambda verified: apply_verified_handoff(
+                      verified, output_dir=output_dir)})
+
 def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     """Read back an existing committed receipt without running or replaying an action."""
     profile = load_profile(path)
