@@ -40,6 +40,32 @@ class StartupRetrievalTests(unittest.TestCase):
         self.assertEqual(persist.call_args.kwargs["decision"]["retrieval_digest"], result["retrieval_digest"])
         search.assert_called_once()
 
+    def test_registered_source_action_applies_and_persists(self):
+        self.profile["startup_registered_action"] = "VERIFY_REQUIRED_RETRIEVED_SOURCES"
+        self.profile["startup_required_source_ids"] = ["drive:doc-1"]
+        with (patch.object(host, "load_profile", return_value=self.profile),
+              patch.object(host, "decide_next_action", return_value=self.prior),
+              patch.object(host, "search_cloud_index", return_value=self.hits),
+              patch.object(host, "persist_startup_decision", return_value={"startup_receipt_key": "k"}) as persist):
+            result = host.run_profile(Path("/private/profile.json"), session_id="new",
+                                      invocation_id="turn", previous_session_id="old",
+                                      previous_invocation_id="prior")
+        self.assertEqual(result["action_result"], "REQUIRED_RETRIEVED_SOURCES_VERIFIED")
+        self.assertEqual(persist.call_args.kwargs["decision"]["action_source_ids"], ["drive:doc-1"])
+
+    def test_registered_action_missing_source_fails_closed(self):
+        self.profile["startup_registered_action"] = "VERIFY_REQUIRED_RETRIEVED_SOURCES"
+        self.profile["startup_required_source_ids"] = ["drive:missing"]
+        with (patch.object(host, "load_profile", return_value=self.profile),
+              patch.object(host, "decide_next_action", return_value=self.prior),
+              patch.object(host, "search_cloud_index", return_value=self.hits),
+              patch.object(host, "persist_startup_decision") as persist):
+            with self.assertRaisesRegex(ValueError, "missing required sources"):
+                host.run_profile(Path("/private/profile.json"), session_id="new",
+                                 invocation_id="turn", previous_session_id="old",
+                                 previous_invocation_id="prior")
+            persist.assert_not_called()
+
     def test_empty_retrieval_fails_before_persist(self):
         with (patch.object(host, "load_profile", return_value=self.profile),
               patch.object(host, "decide_next_action", return_value=self.prior),

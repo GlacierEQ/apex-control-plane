@@ -87,7 +87,34 @@ def load_profile(path: Path) -> dict:
             for value in policy.values()
         ):
             raise ValueError("invalid owner fact source policy")
+    action = profile.get("startup_registered_action")
+    if action is not None and action != "VERIFY_REQUIRED_RETRIEVED_SOURCES":
+        raise ValueError("unregistered startup action refused")
+    required = profile.get("startup_required_source_ids")
+    if action is not None:
+        if (not isinstance(profile.get("startup_search_query"), str)
+                or not isinstance(required, list) or not required
+                or len(required) > 10 or len(set(required)) != len(required)
+                or any(not isinstance(x, str) or not x.strip() for x in required)):
+            raise ValueError("registered startup action requires bounded source policy")
     return profile
+
+
+def execute_registered_startup_action(profile: dict, hits: list) -> dict:
+    """Apply only owner-registered source coverage policy, never text instructions."""
+    action = profile.get("startup_registered_action")
+    if action is None:
+        return {}
+    if action != "VERIFY_REQUIRED_RETRIEVED_SOURCES":
+        raise ValueError("unregistered startup action refused")
+    required = profile["startup_required_source_ids"]
+    actual = {hit["source_id"] for hit in hits}
+    missing = sorted(set(required) - actual)
+    if missing:
+        raise ValueError("registered startup action missing required sources")
+    return {"registered_action": action,
+            "action_result": "REQUIRED_RETRIEVED_SOURCES_VERIFIED",
+            "action_source_ids": sorted(required)}
 
 
 def persist_startup_decision(path: Path, *, session_id: str, invocation_id: str,
@@ -111,6 +138,9 @@ def persist_startup_decision(path: Path, *, session_id: str, invocation_id: str,
     if "retrieval_digest" in decision:
         payload["retrieval_digest"] = decision["retrieval_digest"]
         payload["retrieval_source_ids"] = decision["retrieval_source_ids"]
+    for field in ("registered_action", "action_result", "action_source_ids"):
+        if field in decision:
+            payload[field] = decision[field]
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     digest = "sha256:" + hashlib.sha256(encoded.encode()).hexdigest()
     with store._connect() as db:
@@ -167,12 +197,18 @@ def read_startup_decision(path: Path, *, session_id: str, invocation_id: str) ->
                 or not all(isinstance(x, str) and x for x in payload["retrieval_source_ids"])):
             raise ValueError("malformed startup retrieval receipt")
         required |= {"retrieval_digest", "retrieval_source_ids"}
+    if any(k in payload for k in ("registered_action", "action_result", "action_source_ids")):
+        if (payload.get("registered_action") != "VERIFY_REQUIRED_RETRIEVED_SOURCES"
+                or payload.get("action_result") != "REQUIRED_RETRIEVED_SOURCES_VERIFIED"
+                or not isinstance(payload.get("action_source_ids"), list)):
+            raise ValueError("malformed registered action receipt")
+        required |= {"registered_action", "action_result", "action_source_ids"}
     if (not isinstance(payload, dict) or set(payload) != required
             or payload.get("key") != key
             or payload.get("schema") != "glaciereq.startup-decision/1"
             or payload.get("index_executed") is not False
             or not all(isinstance(payload.get(field), str) and payload[field]
-                       for field in required - {"index_executed", "retrieval_source_ids"})):
+                       for field in required - {"index_executed", "retrieval_source_ids", "action_source_ids"})):
         raise ValueError("startup receipt identity or execution claim mismatch")
     decision = decide_next_action(path, session_id=payload["prior_session_id"], invocation_id=payload["prior_invocation_id"])
     query = profile.get("startup_search_query")
@@ -192,6 +228,14 @@ def read_startup_decision(path: Path, *, session_id: str, invocation_id: str) ->
         decision = {**decision, "decision": "RETRIEVE_VERIFIED_EVIDENCE"}
     elif query is not None:
         raise ValueError("startup receipt missing required retrieval")
+    if "registered_action" in payload:
+        if "retrieval_digest" not in payload:
+            raise ValueError("registered action requires verified retrieval")
+        action = execute_registered_startup_action(profile, hits)
+        if any(payload[k] != action[k] for k in action):
+            raise ValueError("registered startup action no longer verifies")
+    elif profile.get("startup_registered_action") is not None:
+        raise ValueError("registered startup action receipt missing")
     if any(payload[k] != decision[v] for k, v in (("decision", "decision"), ("checkpoint_digest", "checkpoint_digest"),
              ("journal_source_ref", "journal_source_ref"), ("recovered_cursor", "recovered_cursor"))):
         raise ValueError("startup receipt no longer agrees with authenticated source")
@@ -262,7 +306,8 @@ def run_profile(path: Path, *, session_id: str, invocation_id: str,
             evidence_digest = "sha256:" + hashlib.sha256(
                 json.dumps(evidence, sort_keys=True, separators=(",", ":"),
                            ensure_ascii=False).encode()).hexdigest()
-            decision = {**decision, "decision": "RETRIEVE_VERIFIED_EVIDENCE",
+            applied_action = execute_registered_startup_action(profile, hits)
+            decision = {**decision, **applied_action, "decision": "RETRIEVE_VERIFIED_EVIDENCE",
                         "retrieval_digest": evidence_digest,
                         "retrieval_source_ids": [hit["source_id"] for hit in hits],
                         "next_transition": "Apply retrieved evidence to the authorized mission action"}
