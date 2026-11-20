@@ -589,8 +589,16 @@ if __name__ == "__main__":
                     input_errors.append("InputWriterUnresolved")
                 # A successful direct child exit is not the end of the work
                 # if descendants still hold inherited output pipes open.
+                # Once the child has exited, allow a small, single shared EOF
+                # observation window: a zero remaining execution budget must
+                # not falsely turn an already-exited, drained child into a
+                # timeout solely because the reader threads were unscheduled.
+                # The grace is bounded across BOTH readers, not per reader.
+                drain_deadline = deadline
+                if not timed_out and child.poll() is not None:
+                    drain_deadline = max(drain_deadline, time.monotonic() + 0.25)
                 for thread in drains:
-                    thread.join(timeout=max(0, deadline - time.monotonic()))
+                    thread.join(timeout=max(0, drain_deadline - time.monotonic()))
                 if any(thread.is_alive() for thread in drains):
                     timed_out, code = True, 124
                     if os.name == "posix":
