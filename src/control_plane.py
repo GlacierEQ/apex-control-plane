@@ -548,7 +548,7 @@ if __name__ == "__main__":
                             stream.close()
                         except OSError:
                             pass
-                input_thread = threading.Thread(target=deliver_input, daemon=True)
+                input_thread = threading.Thread(target=deliver_input, name="capability-stdin-writer", daemon=True)
                 input_thread.start()
                 try:
                     code = child.wait(timeout=max(0, deadline - time.monotonic()))
@@ -636,7 +636,10 @@ if __name__ == "__main__":
         input_written = locals().get("input_bytes_written", [0])[0]
         input_writer_unresolved = locals().get("input_writer_unresolved", False)
         input_delivery_complete = (
-            executed and input_written == len(document) and not input_writer_unresolved
+            executed
+            and input_written == len(document)
+            and not input_writer_unresolved
+            and not locals().get("input_errors", [])
         )
         if code == 0 and not input_delivery_complete:
             code = 74
