@@ -335,6 +335,41 @@ def run_profile(path: Path, *, session_id: str, invocation_id: str,
     )
 
 
+
+def run_registered_resume(path: Path, *, session_id: str, invocation_id: str,
+                          handlers: dict, previous_session_id: str | None = None,
+                          previous_invocation_id: str | None = None,
+                          auto_resume: bool = False):
+    """Dispatch an explicitly supplied consumer only after durable source readback.
+
+    This is an owner-process integration, not a ChatGPT host startup hook.
+    The registry is trusted caller code; indexed excerpts never select handlers.
+    """
+    if (not isinstance(handlers, dict) or
+            set(handlers) != {"VERIFY_REQUIRED_RETRIEVED_SOURCES"} or
+            not callable(handlers["VERIFY_REQUIRED_RETRIEVED_SOURCES"])):
+        raise ValueError("explicit registered source-gated handler required")
+    profile = load_profile(path)
+    if profile.get("startup_registered_action") != "VERIFY_REQUIRED_RETRIEVED_SOURCES":
+        raise ValueError("owner policy does not authorize source-gated dispatch")
+    outcome = run_profile(path, session_id=session_id, invocation_id=invocation_id,
+                          previous_session_id=previous_session_id,
+                          previous_invocation_id=previous_invocation_id,
+                          auto_resume=auto_resume)
+    if outcome.get("status") != "STARTUP_PRIOR_ACTION_APPLIED":
+        raise ValueError("no authenticated prior recovery for dispatch")
+    verified = read_startup_decision(path, session_id=session_id,
+                                     invocation_id=invocation_id)
+    if (verified.get("status") != "STARTUP_DECISION_VERIFIED" or
+            verified.get("registered_action") != "VERIFY_REQUIRED_RETRIEVED_SOURCES" or
+            verified.get("action_result") != "REQUIRED_RETRIEVED_SOURCES_VERIFIED" or
+            verified.get("startup_receipt_digest") != outcome.get("startup_receipt_digest") or
+            verified.get("retrieval_digest") != outcome.get("retrieval_digest") or
+            verified.get("action_source_ids") != outcome.get("action_source_ids")):
+        raise ValueError("authenticated source-gated startup readback mismatch")
+    return handlers["VERIFY_REQUIRED_RETRIEVED_SOURCES"](verified)
+
+
 def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     """Read back an existing committed receipt without running or replaying an action."""
     profile = load_profile(path)
