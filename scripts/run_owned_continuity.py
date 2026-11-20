@@ -150,10 +150,46 @@ def read_startup_decision(path: Path, *, session_id: str, invocation_id: str) ->
     return {**payload, "startup_receipt_digest": digest, "status": "STARTUP_DECISION_VERIFIED"}
 
 
+def discover_prior_completion(path: Path, *, session_id: str, invocation_id: str) -> tuple[str, str]:
+    """Find the latest committed prior operation from the owner-private gateway.
+
+    Never infer a prior from RESERVED/incomplete operations. The latest
+    checkpoint is authoritative for this local mission; reject policy drift
+    rather than silently falling back to an older compatible checkpoint.
+    """
+    profile = load_profile(path)
+    dbpath = Path(profile["checkpoint_db"])
+    if not dbpath.is_file() or dbpath.is_symlink():
+        raise ValueError("automatic recovery requires existing private checkpoint database")
+    store = GatewayCheckpointStore(dbpath, mission_id=profile["mission_id"])
+    with store._connect() as db:
+        row = db.execute(
+            """SELECT operation_key FROM apex_session_gateway_continuations
+               WHERE mission_id=? AND state='CHECKPOINTED'
+               ORDER BY rowid DESC LIMIT 1""", (profile["mission_id"],)
+        ).fetchone()
+    if row is None:
+        raise ValueError("automatic recovery has no committed prior operation")
+    parts = row["operation_key"].split(":")
+    if len(parts) != 4 or parts[1] != "model" or any(not part for part in parts):
+        raise ValueError("malformed prior checkpoint identity")
+    if parts[2:] == [session_id, invocation_id]:
+        raise ValueError("automatic recovery cannot select current invocation")
+    # Source, cursor, action, and policy must authenticate before any effect.
+    decide_next_action(path, session_id=parts[2], invocation_id=parts[3])
+    return parts[2], parts[3]
+
+
 def run_profile(path: Path, *, session_id: str, invocation_id: str,
                 previous_session_id: str | None = None,
-                previous_invocation_id: str | None = None) -> dict:
+                previous_invocation_id: str | None = None,
+                auto_resume: bool = False) -> dict:
     profile = load_profile(path)
+    if auto_resume:
+        if previous_session_id is not None or previous_invocation_id is not None:
+            raise ValueError("automatic and explicit prior recovery are mutually exclusive")
+        previous_session_id, previous_invocation_id = discover_prior_completion(
+            path, session_id=session_id, invocation_id=invocation_id)
     if (previous_session_id is None) != (previous_invocation_id is None):
         raise ValueError("previous session and invocation must be supplied together")
     if previous_session_id is not None:
@@ -263,6 +299,7 @@ def main() -> None:
     run.add_argument("--invocation-id", required=True)
     run.add_argument("--previous-session-id")
     run.add_argument("--previous-invocation-id")
+    run.add_argument("--auto-resume", action="store_true", help="Discover and authenticate latest durable prior completion before any work")
     search = sub.add_parser("search", help="Read verified local cloud index")
     search.add_argument("--profile", type=Path, required=True)
     search.add_argument("--query", required=True)
@@ -285,7 +322,8 @@ def main() -> None:
             result = run_profile(args.profile, session_id=args.session_id,
                                  invocation_id=args.invocation_id,
                                  previous_session_id=args.previous_session_id,
-                                 previous_invocation_id=args.previous_invocation_id)
+                                 previous_invocation_id=args.previous_invocation_id,
+                                 auto_resume=args.auto_resume)
         elif args.command == "startup-readback":
             result = read_startup_decision(args.profile, session_id=args.session_id,
                                            invocation_id=args.invocation_id)

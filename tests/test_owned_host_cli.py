@@ -207,3 +207,67 @@ class DurableStartupReceiptTests(ProfileTests):
         with mock.patch.object(module, "decide_next_action", return_value={**decision, "checkpoint_digest": "changed"}):
             with self.assertRaisesRegex(ValueError, "no longer agrees"):
                 module.read_startup_decision(self.path, session_id="new", invocation_id="turn")
+
+
+class AutomaticPriorDiscoveryTests(ProfileTests):
+    def _checkpoint(self, *, session="prior", invocation="done", cursor="continue:exact"):
+        from dataclasses import replace
+        from src.apex_session_gateway import ContinuationEnvelope, _envelope_digest
+        from src.apex_session_gateway_store import GatewayCheckpointStore
+        db = self.path.parent / "receipts.db"
+        self.policy["checkpoint_db"] = str(db)
+        self.path.write_text(json.dumps(self.policy))
+        store = GatewayCheckpointStore(db, mission_id="mission-A")
+        key = f"mission-A:model:{session}:{invocation}"
+        self.assertTrue(store.reserve(key))
+        completed = {"action": "index_cloud", "documents": 1,
+                     "namespace": "architecture", "evidence_digest": "sha256:proof",
+                     "source_ids": ["drive:primary:id-A"]}
+        env = ContinuationEnvelope(
+            operation_key=key, chat_session_id=session, mission_id="mission-A",
+            source_ref="spiral-journal:" + "a" * 64, cursor=cursor,
+            corrections=("CONTEXT FIRST",), response_text=json.dumps(completed),
+            attributions=(), memory_proposals=(), digest="",
+            response_author="assistant", memory_authority="SOURCE_CANDIDATE_ONLY")
+        store.persist(replace(env, digest=_envelope_digest(env)))
+
+    def test_real_store_auto_resume_persists_and_reads_back(self):
+        module = entrypoint()
+        self._checkpoint()
+        with mock.patch.object(module, "run_owned_cloud_mission") as index:
+            result = module.run_profile(self.path, session_id="fresh", invocation_id="next",
+                                        auto_resume=True)
+            index.assert_not_called()
+        self.assertEqual(result["status"], "STARTUP_PRIOR_ACTION_APPLIED")
+        self.assertEqual(result["decision"], "DO_NOT_REPEAT_COMPLETED_INDEX")
+        self.assertEqual(module.read_startup_decision(self.path, session_id="fresh",
+                                                     invocation_id="next")["status"],
+                         "STARTUP_DECISION_VERIFIED")
+
+    def test_latest_policy_drift_rejected_not_fallback(self):
+        module = entrypoint()
+        self._checkpoint()
+        self._checkpoint(session="newer", invocation="done", cursor="continue:stale")
+        with mock.patch.object(module, "run_owned_cloud_mission") as index:
+            with self.assertRaisesRegex(ValueError, "conflicts"):
+                module.run_profile(self.path, session_id="fresh", invocation_id="next",
+                                   auto_resume=True)
+            index.assert_not_called()
+
+    def test_incomplete_reservation_not_treated_as_completed(self):
+        module = entrypoint()
+        from src.apex_session_gateway_store import GatewayCheckpointStore
+        db = self.path.parent / "receipts.db"
+        self.policy["checkpoint_db"] = str(db)
+        self.path.write_text(json.dumps(self.policy))
+        GatewayCheckpointStore(db, mission_id="mission-A").reserve("mission-A:model:old:unfinished")
+        with self.assertRaisesRegex(ValueError, "no committed"):
+            module.run_profile(self.path, session_id="fresh", invocation_id="next",
+                               auto_resume=True)
+
+    def test_auto_resume_rejects_explicit_prior_identity(self):
+        module = entrypoint()
+        with self.assertRaisesRegex(ValueError, "mutually exclusive"):
+            module.run_profile(self.path, session_id="fresh", invocation_id="next",
+                               auto_resume=True, previous_session_id="prior",
+                               previous_invocation_id="done")
