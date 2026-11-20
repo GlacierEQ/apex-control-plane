@@ -12,7 +12,7 @@ The existing bounded termination/reaping path exposed process-group denial but d
 - Final receipt reports observed direct-child reaping, not inferred reaping from kill requests.
 - POSIX real-CLI denied-group-signal regression asserts direct child was reaped while descendant containment remains unverified.
 - Focused test command: `python3.13 -m pytest -q tests/test_control_plane_group_signal_denial.py tests/test_control_plane_output_drain_deadline.py tests/test_control_plane_capability_consumer.py` — 22 passed.
-- Full suite: see exact run log `/tmp/glaciereq-agent-run11-full.log` and follow-up verified result.
+- Full repository suite on changed head `7067a36`: `python3.13 -m pytest -q -o cache_dir=/tmp/glaciereq-agent-run11-pytest/.pytest_cache --basetemp=/tmp/glaciereq-agent-run11-pytest/all` — **1,127 passed, 29 skipped, 8 subtests passed in 20.89s**; local log `/tmp/glaciereq-agent-run11-all.log`. Explicit `tests/` suite — **1,100 passed, 29 skipped, 8 subtests passed in 20.22s**.
 
 ## Continuation cursor
 
