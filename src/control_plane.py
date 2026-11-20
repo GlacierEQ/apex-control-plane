@@ -515,6 +515,7 @@ if __name__ == "__main__":
                 deadline = time.monotonic() + options.timeout_seconds
                 stop_input = threading.Event()
                 input_errors = []
+                input_bytes_written = [0]
                 def deliver_input():
                     stream = child.stdin
                     if stream is None:
@@ -539,6 +540,7 @@ if __name__ == "__main__":
                             if count <= 0:
                                 break
                             offset += count
+                            input_bytes_written[0] = offset
                     except (BrokenPipeError, OSError, ValueError) as exc:
                         input_errors.append(type(exc).__name__)
                     finally:
@@ -621,6 +623,13 @@ if __name__ == "__main__":
             cleanup_error = f"{type(exc).__name__}: {exc}"
             code, stdout, stderr = (124 if timed_out else 127), "", cleanup_error
             output_incomplete = True
+        # A child exiting zero does not establish that its pinned capability
+        # was delivered. Incomplete pipe writes are a failed execution route,
+        # not successful context application or mission completion.
+        input_written = locals().get("input_bytes_written", [0])[0]
+        input_delivery_complete = executed and input_written == len(document)
+        if code == 0 and not input_delivery_complete:
+            code = 74
         final_receipt = {
             "invocation_id": invocation_id,
             "status": "process_succeeded_unverified" if code == 0 else "failed",
@@ -637,6 +646,9 @@ if __name__ == "__main__":
                 "sha256": actual,
                 "content_bytes": len(document),
                 "delivery": "subprocess_stdin",
+                "stdin_bytes_written": input_written,
+                "stdin_delivery_complete": input_delivery_complete,
+                "stdin_delivery_errors": locals().get("input_errors", []),
             },
             "stdout": stdout, "stderr": stderr,
             "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
