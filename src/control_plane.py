@@ -498,7 +498,10 @@ if __name__ == "__main__":
                         try:
                             child.wait(timeout=1.0)
                         except subprocess.TimeoutExpired:
-                            child.kill()
+                            try:
+                                child.kill()
+                            except (ProcessLookupError, PermissionError):
+                                pass
                             try:
                                 child.wait(timeout=0.3)
                             except subprocess.TimeoutExpired:
@@ -581,7 +584,10 @@ if __name__ == "__main__":
                     try:
                         child.wait(timeout=1.0)
                     except subprocess.TimeoutExpired:
-                        child.kill()
+                        try:
+                            child.kill()
+                        except (ProcessLookupError, PermissionError):
+                            pass
                         try:
                             child.wait(timeout=0.3)
                         except subprocess.TimeoutExpired:
