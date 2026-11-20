@@ -580,6 +580,13 @@ if __name__ == "__main__":
                 finally:
                     stop_input.set()
                     input_thread.join(timeout=1)
+                # A bounded join is not proof that the writer stopped. On
+                # non-POSIX hosts a blocked pipe write may survive cancellation;
+                # never report complete delivery or a successful route while
+                # the input writer still owns an unresolved I/O operation.
+                input_writer_unresolved = input_thread.is_alive()
+                if input_writer_unresolved:
+                    input_errors.append("InputWriterUnresolved")
                 # A successful direct child exit is not the end of the work
                 # if descendants still hold inherited output pipes open.
                 for thread in drains:
@@ -627,7 +634,10 @@ if __name__ == "__main__":
         # was delivered. Incomplete pipe writes are a failed execution route,
         # not successful context application or mission completion.
         input_written = locals().get("input_bytes_written", [0])[0]
-        input_delivery_complete = executed and input_written == len(document)
+        input_writer_unresolved = locals().get("input_writer_unresolved", False)
+        input_delivery_complete = (
+            executed and input_written == len(document) and not input_writer_unresolved
+        )
         if code == 0 and not input_delivery_complete:
             code = 74
         final_receipt = {
@@ -648,6 +658,7 @@ if __name__ == "__main__":
                 "delivery": "subprocess_stdin",
                 "stdin_bytes_written": input_written,
                 "stdin_delivery_complete": input_delivery_complete,
+                "stdin_writer_unresolved": input_writer_unresolved,
                 "stdin_delivery_errors": locals().get("input_errors", []),
             },
             "stdout": stdout, "stderr": stderr,
