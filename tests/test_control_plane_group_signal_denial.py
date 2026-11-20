@@ -44,3 +44,4 @@ def test_timeout_group_signal_denial_still_fails_closed(tmp_path):
     assert receipt["status"] == "failed"
     assert receipt["group_signal_denied"] is True
     assert receipt["descendant_containment_verified"] is False
+    assert receipt["direct_child_reaped"] is True

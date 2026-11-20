@@ -649,6 +649,12 @@ if __name__ == "__main__":
         # A denied group signal leaves descendant containment unverified.
         # Surface this explicitly instead of implying cleanup succeeded.
         group_signal_denied = locals().get("group_signal_denied", False)
+        # A signal request is not proof that the direct child was reaped.
+        # Expose unresolved ownership so a scheduler cannot infer cleanup
+        # merely from a timeout/failure-classified exit receipt.
+        direct_child_reaped = (
+            child.poll() is not None if executed and "child" in locals() else None
+        )
         input_written = locals().get("input_bytes_written", [0])[0]
         input_writer_unresolved = locals().get("input_writer_unresolved", False)
         input_delivery_complete = (
@@ -683,6 +689,7 @@ if __name__ == "__main__":
             "output_incomplete": output_incomplete,
             "descendant_containment_verified": False if group_signal_denied else None,
             "group_signal_denied": group_signal_denied,
+            "direct_child_reaped": direct_child_reaped,
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }
