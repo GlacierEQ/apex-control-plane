@@ -491,7 +491,10 @@ if __name__ == "__main__":
                                 except (ProcessLookupError, PermissionError):
                                     pass
                         else:
-                            child.kill()
+                            try:
+                                child.kill()
+                            except (ProcessLookupError, PermissionError):
+                                pass  # fail closed; bounded reap still follows
                         # Even SIGKILL cannot guarantee immediate reaping
                         # (e.g. a child stuck in uninterruptible kernel I/O).
                         # Never allow receipt failure cleanup to hang forever.
@@ -576,7 +579,10 @@ if __name__ == "__main__":
                             except (ProcessLookupError, PermissionError):
                                 pass
                     else:
-                        child.kill()
+                        try:
+                            child.kill()
+                        except (ProcessLookupError, PermissionError):
+                            pass  # timeout remains failure-classified
                     # A SIGKILL request is not proof of reaping: a child in
                     # uninterruptible I/O can remain alive indefinitely.
                     # Keep timeout handling bounded just like receipt-failure
