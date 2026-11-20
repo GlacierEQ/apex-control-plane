@@ -434,6 +434,13 @@ if __name__ == "__main__":
                         stderr=subprocess.PIPE, start_new_session=(os.name == "posix"),
                         pass_fds=(gate_read,) if gate_read is not None else (),
                     )
+                except BaseException:
+                    # Popen can fail before a child owns the gate. Close the
+                    # parent writer as well; otherwise retries leak FDs.
+                    if gate_write is not None:
+                        os.close(gate_write)
+                        gate_write = None
+                    raise
                 finally:
                     if gate_read is not None:
                         os.close(gate_read)
