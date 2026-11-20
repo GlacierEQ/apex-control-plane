@@ -42,3 +42,5 @@ def test_timeout_group_signal_denial_still_fails_closed(tmp_path):
     receipt = json.loads(result.stdout)
     assert receipt["timed_out"] is True
     assert receipt["status"] == "failed"
+    assert receipt["group_signal_denied"] is True
+    assert receipt["descendant_containment_verified"] is False

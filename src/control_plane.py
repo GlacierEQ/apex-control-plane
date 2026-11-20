@@ -483,6 +483,7 @@ if __name__ == "__main__":
                             except ProcessLookupError:
                                 pass
                             except PermissionError:
+                                group_signal_denied = True
                                 # Group signaling can be denied by the OS even
                                 # when the direct child remains ours. Attempt
                                 # direct termination; never classify as success.
@@ -572,6 +573,7 @@ if __name__ == "__main__":
                         except ProcessLookupError:
                             pass
                         except PermissionError:
+                            group_signal_denied = True
                             # A denied group signal must not escape cleanup
                             # before a bounded direct-child termination attempt.
                             try:
@@ -620,6 +622,7 @@ if __name__ == "__main__":
                         except ProcessLookupError:
                             pass
                         except PermissionError:
+                            group_signal_denied = True
                             # A denied group signal must not escape cleanup
                             # before a bounded direct-child termination attempt.
                             try:
@@ -643,6 +646,9 @@ if __name__ == "__main__":
             cleanup_error = f"{type(exc).__name__}: {exc}"
             code, stdout, stderr = (124 if timed_out else 127), "", cleanup_error
             output_incomplete = True
+        # A denied group signal leaves descendant containment unverified.
+        # Surface this explicitly instead of implying cleanup succeeded.
+        group_signal_denied = locals().get("group_signal_denied", False)
         input_written = locals().get("input_bytes_written", [0])[0]
         input_writer_unresolved = locals().get("input_writer_unresolved", False)
         input_delivery_complete = (
@@ -675,6 +681,8 @@ if __name__ == "__main__":
             "stdout_bytes": stdout_bytes, "stderr_bytes": stderr_bytes,
             "stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
             "output_incomplete": output_incomplete,
+            "descendant_containment_verified": False if group_signal_denied else None,
+            "group_signal_denied": group_signal_denied,
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }
