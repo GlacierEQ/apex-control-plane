@@ -254,8 +254,20 @@ def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     saved = GatewayCheckpointStore(database, mission_id=profile["mission_id"]).readback(key)
     # The checkpoint authenticates response_text as part of its digest. Expose
     # the original completed action to the next process, without re-execution.
+    def unique_action_pairs(pairs):
+        record = {}
+        for member, value in pairs:
+            if member in record:
+                raise ValueError("duplicate completed-action JSON member")
+            record[member] = value
+        return record
+
+    def reject_action_constant(_):
+        raise ValueError("nonfinite completed-action constant")
+
     try:
-        action = json.loads(saved.response_text)
+        action = json.loads(saved.response_text, object_pairs_hook=unique_action_pairs,
+                            parse_constant=reject_action_constant)
     except (ValueError, TypeError):
         action = None
     if not isinstance(action, dict) or action.get("action") != "index_cloud":
