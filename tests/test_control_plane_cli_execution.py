@@ -139,6 +139,36 @@ def test_cli_verified_artifact_closes_work_in_one_execution(tmp_path: Path) -> N
     assert len(verified.details["sha256"]) == 64
 
 
+def test_cli_artifact_streams_readback_with_exact_digest(tmp_path: Path) -> None:
+    import hashlib
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        WorkState, load_continuous_control_config,
+    )
+    store = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    plane = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    work = plane.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="large-streaming-proof", correlation_id="large-stream", payload={},
+    ))[0]
+    target = tmp_path / "large.bin"
+    size = 512 * 1024
+    command = [sys.executable, "-c",
+               "from pathlib import Path; import sys; Path(sys.argv[1]).write_bytes(b'Z' * int(sys.argv[2]))",
+               str(target), str(size)]
+    run = subprocess.run([sys.executable, str(CLI), "--run-next-local", str(store),
+                          work.capability, "--verify-file", str(target), "--", *command],
+                         cwd=ROOT, capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    recovered = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    assert recovered.work[work.work_id].state is WorkState.COMPLETE
+    receipt = next(r for r in recovered.receipts.values() if r.receipt_kind == "verification")
+    assert receipt.details["bytes"] == size
+    assert receipt.details["sha256"] == hashlib.sha256(b"Z" * size).hexdigest()
+
+
 def test_cli_missing_artifact_does_not_claim_complete(tmp_path: Path) -> None:
     sys.path.insert(0, str(ROOT / "src"))
     from continuous_control_plane import (

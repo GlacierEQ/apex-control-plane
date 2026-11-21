@@ -241,7 +241,11 @@ if __name__ == "__main__":
                     return execution
                 with os.fdopen(fd, "rb") as handle:
                     fd = -1
-                    actual = handle.read()
+                    digest = sha256()
+                    verified_bytes = 0
+                    while chunk := handle.read(1024 * 1024):
+                        digest.update(chunk)
+                        verified_bytes += len(chunk)
                     final = os.fstat(handle.fileno())
                     final_snapshot = (
                         final.st_dev, final.st_ino, final.st_size,
@@ -265,8 +269,8 @@ if __name__ == "__main__":
                     source_system="apex-local-artifact-readback",
                     details={
                         "path": str(verify_file),
-                        "sha256": sha256(actual).hexdigest(),
-                        "bytes": len(actual),
+                        "sha256": digest.hexdigest(),
+                        "bytes": verified_bytes,
                         "freshness": "created_or_changed_during_this_command",
                         "scope": "current-run regular-file readback, not external provider completion",
                     },
