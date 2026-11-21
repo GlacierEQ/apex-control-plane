@@ -1,6 +1,6 @@
 """Scheduler must not turn negative executor evidence into success or a blind retry."""
 from test_continuous_control_plane import NOW, event, plane
-from src.continuous_control_plane import ExecutionReceipt, WorkState
+from continuous_control_plane import ExecutionReceipt, WorkState
 import pytest
 
 @pytest.mark.parametrize("details", [
