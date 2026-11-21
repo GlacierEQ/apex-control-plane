@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from scripts.continuity_verified_artifact import apply_verified_handoff, consume_verified_handoff
+from scripts.continuity_verified_artifact import apply_verified_handoff, consume_verified_handoff, consume_once_verified_handoff
 
 class HandoffTests(unittest.TestCase):
     def setUp(self):
@@ -72,6 +72,45 @@ class HandoffTests(unittest.TestCase):
     def test_consumer_requires_explicit_handler(self):
         with self.assertRaisesRegex(ValueError, "explicit owner consumer"):
             consume_verified_handoff(self.receipt, output_dir=self.path, handler=None)
+
+    def test_operation_claim_prevents_repeat_after_restart(self):
+        calls = []
+        def effect(payload, identity):
+            calls.append((payload["recovered_cursor"], identity))
+            return "effect"
+        first = consume_once_verified_handoff(self.receipt, output_dir=self.path,
+                                               handler=effect, operation_name="mission")
+        self.assertEqual(first["status"], "OPERATION_INVOKED_RECONCILIATION_REQUIRED")
+        second = consume_once_verified_handoff(self.receipt, output_dir=self.path,
+                                                handler=effect, operation_name="mission")
+        self.assertEqual(second["status"], "OPERATION_RECONCILIATION_REQUIRED")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(first["identity"], second["identity"])
+
+    def test_crashed_handler_is_not_repeated(self):
+        calls = []
+        def crash(payload, identity):
+            calls.append(identity)
+            raise RuntimeError("simulated process death after claim")
+        with self.assertRaises(RuntimeError):
+            consume_once_verified_handoff(self.receipt, output_dir=self.path,
+                                          handler=crash, operation_name="mission")
+        result = consume_once_verified_handoff(self.receipt, output_dir=self.path,
+                                                handler=crash, operation_name="mission")
+        self.assertEqual(result["status"], "OPERATION_RECONCILIATION_REQUIRED")
+        self.assertEqual(len(calls), 1)
+
+    def test_operation_conflict_and_bad_name_fail_closed(self):
+        with self.assertRaises(ValueError):
+            consume_once_verified_handoff(self.receipt, output_dir=self.path,
+                                          handler=lambda *_: None, operation_name="../bad")
+        consume_once_verified_handoff(self.receipt, output_dir=self.path,
+                                      handler=lambda *_: None, operation_name="mission")
+        claim = next(self.path.glob("operation-*.json"))
+        claim.write_text("attacker")
+        with self.assertRaisesRegex(ValueError, "conflicting"):
+            consume_once_verified_handoff(self.receipt, output_dir=self.path,
+                                          handler=lambda *_: None, operation_name="mission")
 
     def test_private_directory_required(self):
         os.chmod(self.path, 0o755)

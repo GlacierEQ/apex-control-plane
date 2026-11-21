@@ -83,3 +83,50 @@ def consume_verified_handoff(receipt, *, output_dir, handler):
     if payload != expected:
         raise ValueError("handoff provenance mismatch")
     return handler(payload)
+
+
+def consume_once_verified_handoff(receipt, *, output_dir, handler, operation_name):
+    """Durable at-most-once dispatch; ambiguous crash requires reconciliation.
+
+    An interrupted handler is NEVER silently repeated. Caller must reconcile
+    the provider effect before an explicit new operation is authorized.
+    """
+    if not isinstance(operation_name, str) or not operation_name or not all(
+        c.isascii() and (c.isalnum() or c in "-_") for c in operation_name
+    ) or len(operation_name) > 80:
+        raise ValueError("explicit safe operation name required")
+    if not callable(handler):
+        raise ValueError("explicit handler required")
+
+    def guarded(payload):
+        directory = Path(output_dir)
+        identity = hashlib.sha256((payload["startup_receipt_digest"] + ":" + operation_name).encode()).hexdigest()
+        claim = directory / ("operation-" + identity + ".json")
+        marker = {"schema": "glaciereq.operation-claim/1", "identity": identity,
+                  "operation": operation_name, "handoff_digest": payload["startup_receipt_digest"],
+                  "status": "CLAIMED"}
+        encoded = (json.dumps(marker, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        try:
+            fd = os.open(claim, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        except FileExistsError:
+            info = claim.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+                raise ValueError("untrusted operation claim")
+            if claim.read_bytes() != encoded:
+                raise ValueError("conflicting or incomplete operation claim")
+            return {"status": "OPERATION_RECONCILIATION_REQUIRED", "identity": identity}
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(encoded)
+            stream.flush()
+            os.fsync(stream.fileno())
+        directory_fd = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+        # The claim is durable before invoking any effectful handler.
+        result = handler(payload, identity)
+        return {"status": "OPERATION_INVOKED_RECONCILIATION_REQUIRED",
+                "identity": identity, "handler_result": result}
+
+    return consume_verified_handoff(receipt, output_dir=output_dir, handler=guarded)
