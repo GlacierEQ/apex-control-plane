@@ -41,7 +41,14 @@ def inspect(path: Path) -> dict:
     except (OSError, ValueError, UnicodeError, RecursionError) as exc:
         return {"status": "inspection_failed", "reason": str(exc), "retry_authorized": False}
 
-    # Receipt fields are untrusted: reject non-string status before membership\n    # tests, which otherwise raise TypeError for arrays and objects.\n    if not isinstance(record.get("status"), str):\n        return {"status": "inspection_failed", "reason": "receipt status must be a string",\n                "retry_authorized": False, "outcome_verified": False}\n\n    result = {\n        "status": "inspected_unverified",
+    # Receipt fields are untrusted: reject non-string status before membership
+    # tests, which otherwise raise TypeError for arrays and objects.
+    if not isinstance(record.get("status"), str):
+        return {"status": "inspection_failed", "reason": "receipt status must be a string",
+                "retry_authorized": False, "outcome_verified": False}
+
+    result = {
+        "status": "inspected_unverified",
         "receipt_status": record.get("status"),
         "invocation_id": record.get("invocation_id"),
         "retry_authorized": False,
