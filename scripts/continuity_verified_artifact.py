@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import tempfile
 
 def apply_verified_handoff(receipt, *, output_dir):
     if (receipt.get("status") != "STARTUP_DECISION_VERIFIED"
@@ -23,21 +24,30 @@ def apply_verified_handoff(receipt, *, output_dir):
     payload = {key: receipt[key] for key in ("key", "startup_receipt_digest", "retrieval_digest", "action_source_ids", "recovered_cursor", "checkpoint_digest", "journal_source_ref")}
     payload["schema"] = "glaciereq.verified-continuity-handoff/1"
     encoded = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    # Publish only fully fsynced bytes. A crash during staging cannot leave a
+    # partial final artifact; hard-link publication never overwrites a winner.
+    fd, staging = tempfile.mkstemp(prefix=".handoff-", suffix=".tmp", dir=directory)
     try:
-        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
-    except FileExistsError:
-        if target.is_symlink() or target.stat().st_uid != os.getuid() or target.stat().st_mode & 0o077 or target.read_bytes() != encoded:
-            raise ValueError("handoff replay conflict or incomplete write")
-        status = "HANDOFF_REPLAY_VERIFIED"
-    else:
         with os.fdopen(fd, "wb") as stream:
+            os.fchmod(stream.fileno(), 0o600)
             stream.write(encoded)
             stream.flush()
             os.fsync(stream.fileno())
+        try:
+            os.link(staging, target, follow_symlinks=False)
+        except FileExistsError:
+            if (target.is_symlink() or target.stat().st_uid != os.getuid()
+                    or target.stat().st_mode & 0o077
+                    or target.read_bytes() != encoded):
+                raise ValueError("handoff replay conflict or incomplete write")
+            status = "HANDOFF_REPLAY_VERIFIED"
+        else:
+            status = "HANDOFF_CREATED"
         directory_fd = os.open(directory, os.O_RDONLY)
         try:
             os.fsync(directory_fd)
         finally:
             os.close(directory_fd)
-        status = "HANDOFF_CREATED"
+    finally:
+        os.unlink(staging)
     return {"status": status, "path": str(target), "digest": "sha256:" + hashlib.sha256(encoded).hexdigest()}

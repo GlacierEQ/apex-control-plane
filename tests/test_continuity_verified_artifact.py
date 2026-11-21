@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 from scripts.continuity_verified_artifact import apply_verified_handoff
 
 class HandoffTests(unittest.TestCase):
@@ -37,6 +38,20 @@ class HandoffTests(unittest.TestCase):
         (self.path / ("a"*64 + ".json")).write_text("partial")
         with self.assertRaisesRegex(ValueError, "incomplete"):
             apply_verified_handoff(self.receipt, output_dir=self.path)
+    def test_failed_publish_cleans_staging_without_partial_final(self):
+        with patch("scripts.continuity_verified_artifact.os.link",
+                   side_effect=OSError("simulated interruption")):
+            with self.assertRaisesRegex(OSError, "simulated interruption"):
+                apply_verified_handoff(self.receipt, output_dir=self.path)
+        self.assertEqual(list(self.path.iterdir()), [])
+        self.assertEqual(apply_verified_handoff(self.receipt, output_dir=self.path)["status"], "HANDOFF_CREATED")
+
+    def test_staging_files_are_not_consumer_artifacts(self):
+        (self.path / ".handoff-orphan.tmp").write_text("crashed process")
+        result = apply_verified_handoff(self.receipt, output_dir=self.path)
+        self.assertEqual(result["status"], "HANDOFF_CREATED")
+        self.assertEqual(apply_verified_handoff(self.receipt, output_dir=self.path)["status"], "HANDOFF_REPLAY_VERIFIED")
+
     def test_private_directory_required(self):
         os.chmod(self.path, 0o755)
         with self.assertRaisesRegex(ValueError, "owner-private"):
