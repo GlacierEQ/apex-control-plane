@@ -78,3 +78,24 @@ def test_provider_receipt_replay_cannot_certify_another_execution(tmp_path):
     assert restarted.claim_next(
         worker_id="replay", capabilities=[second.capability], now=NOW,
     ) is None
+
+@pytest.mark.parametrize("malformed_details", [None, [], "inspection_failed", 17])
+def test_malformed_receipt_details_fail_closed_without_scheduler_crash(tmp_path, malformed_details):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+
+    def run(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-executor",
+            details=malformed_details,
+        )
+
+    result = cp.execute_next_local(
+        worker_id="worker", capabilities=[work.capability],
+        executor=run, now=NOW,
+    )
+    assert result["status"] == "unconfirmed"
+    assert cp.work[work.work_id].state is WorkState.RECONCILING
+    assert plane(tmp_path).work[work.work_id].state is WorkState.RECONCILING
