@@ -1,0 +1,9 @@
+[
+  {"provider":"neon","source":"provider_api","checked_at":"2026-11-08T14:30:37Z","plan":"free","project_count":2,"suspend_timeout_seconds":[0,0]},
+  {"provider":"render","source":"provider_api","checked_at":"2026-11-08T14:30:37Z","plan":"free","resource_count":4,"free_service_count":4,"shared_instance_hours":750},
+  {"provider":"supabase","source":"provider_api","checked_at":"2026-11-08T14:30:37Z","plan":"unknown","project_count":2},
+  {"provider":"railway","source":"provider_api","checked_at":"2026-11-08T14:30:37Z","plan":"unknown","resource_count":2,"failed_deployments":2},
+  {"provider":"netlify","source":"provider_api","checked_at":"2026-11-08T14:30:37Z","plan":"unknown","resource_count":5},
+  {"provider":"vercel","source":"provider_api","checked_at":"2026-11-08T14:30:37Z","plan":"unknown","resource_count":56,"billing_readback":"costs_not_found"},
+  {"provider":"sprites","source":"provider_api","checked_at":"2026-11-08T14:30:37Z","plan":"unknown","resource_count":11,"cold_count":11}
+]
