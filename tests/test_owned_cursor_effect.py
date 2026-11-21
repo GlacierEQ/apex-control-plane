@@ -43,3 +43,19 @@ class OwnerCursorEffectTest(unittest.TestCase):
         self.execute()
         with self.assertRaises(ValueError):
             self.execute({**self.receipt, 'recovered_cursor':'continue:forged'})
+
+class CursorEffectCLITest(unittest.TestCase):
+    def test_cli_invokes_real_registered_effect_entrypoint(self):
+        import io
+        import json
+        from contextlib import redirect_stdout
+        with patch('sys.argv', ['continuity', 'cursor-effect', '--profile', '/tmp/profile',
+                                '--session-id', 's', '--invocation-id', 'i',
+                                '--output-dir', '/tmp/handoff', '--database', '/tmp/provider',
+                                '--auto-resume']):
+            with patch.object(owner, 'run_verified_cursor_effect', return_value={'status': 'OPERATION_EFFECT_PROVIDER_VERIFIED'}) as call:
+                with redirect_stdout(io.StringIO()) as out:
+                    owner.main()
+        self.assertEqual(json.loads(out.getvalue())['status'], 'OPERATION_EFFECT_PROVIDER_VERIFIED')
+        self.assertEqual(call.call_args.kwargs['database'], Path('/tmp/provider'))
+        self.assertTrue(call.call_args.kwargs['auto_resume'])
