@@ -9,6 +9,9 @@ import pytest
     {"output_drains_unresolved": True},
     {"direct_child_reaped": False},
     {"status": "inspection_failed", "retry_authorized": False},
+    {"status": "INSPECTION_FAILED", "retry_authorized": True},
+    {"status": ["inspection_failed"]},
+    {"status": None},
 ])
 def test_negative_execution_evidence_requires_reconciliation(tmp_path, details):
     cp = plane(tmp_path)
