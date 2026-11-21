@@ -642,8 +642,11 @@ class ContinuousControlPlane:
             or evidence.details.get("cleanup_unresolved") is True
             or evidence.details.get("output_drains_unresolved") is True
             or evidence.details.get("direct_child_reaped") is False
-            or evidence.details.get("retry_authorized") is False
-               and evidence.details.get("status") == "inspection_failed"
+            # Inspection failure is terminal for this attempt even when the
+            # worker omits retry_authorized or supplies contradictory labels.
+            or evidence.details.get("status") == "inspection_failed"
+            or evidence.details.get("outcome_evidence") == "unattested_receipt"
+            or evidence.status.casefold() == "inspection_failed"
             for evidence in receipts
         )
         if unsafe:

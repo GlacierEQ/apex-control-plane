@@ -770,3 +770,48 @@ def test_unspecified_receipts_cannot_turn_execution_only_into_completion(tmp_pat
     assert cp.work[item.work_id].state is WorkState.VERIFYING
     with pytest.raises(RuntimeError, match="verification"):
         cp.transition(item.work_id, WorkState.COMPLETE, reason="no final result")
+
+
+def test_scheduler_reconciles_inspection_failure_despite_forged_verified_label(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+
+    def contradictory(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-inspector",
+            details={"status": "inspection_failed", "retry_authorized": True},
+        )
+
+    result = cp.execute_next_local(
+        worker_id="local", capabilities=[work.capability],
+        executor=contradictory, now=NOW,
+    )
+    assert result["status"] == "unconfirmed"
+    assert cp.work[work.work_id].state is WorkState.RECONCILING
+    assert cp.receipts
+    assert cp.execute_next_local(
+        worker_id="local", capabilities=[work.capability],
+        executor=contradictory, now=NOW,
+    )["status"] == "idle"
+
+
+def test_scheduler_reconciles_unattested_receipt_despite_success_label(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+
+    def unattested(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-inspector",
+            details={"outcome_evidence": "unattested_receipt"},
+        )
+
+    result = cp.execute_next_local(
+        worker_id="local", capabilities=[work.capability],
+        executor=unattested, now=NOW,
+    )
+    assert result["status"] == "unconfirmed"
+    assert cp.work[work.work_id].state is WorkState.RECONCILING

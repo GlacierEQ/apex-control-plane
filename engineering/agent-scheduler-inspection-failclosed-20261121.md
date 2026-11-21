@@ -1,0 +1,7 @@
+# Scheduler inspection-failure fail-closed gate — 2026-11-21
+
+Owning source: `src/continuous_control_plane.py`, `execute_next_local`. Based on `engineering/agent-scheduler-receipt-gate-20261120` (`888f022`).
+
+The previous gate only rejected `details.status=inspection_failed` when `retry_authorized` was explicitly false. A contradictory or omitted retry field allowed an otherwise `verified` receipt to reach completion. The scheduler now treats `inspection_failed` (either receipt status or nested inspector status) and `outcome_evidence=unattested_receipt` as independent reconciliation triggers. This prevents a worker-controlled success label from overriding failed inspection and prevents automatic replay of uncertain effects. Existing receipt persistence and reconciliation transitions are reused.
+
+Tests: `tests/test_continuous_control_plane.py` includes forged-success/inspection-failed and unattested-success cases; rerun with `python3.13 -m pytest -q tests/test_continuous_control_plane.py`. No deployment or merge performed. Next: integrate actual subprocess inspector result into worker adapter and run genuine subprocess → inspector → scheduler tests; do not infer attestation from CLI exit 0.
