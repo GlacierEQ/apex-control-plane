@@ -77,6 +77,7 @@ def test_provider_receipt_replay_cannot_certify_another_execution(tmp_path):
     assert restarted.work[second.work_id].state is WorkState.RECONCILING
     assert restarted.claim_next(
         worker_id="replay", capabilities=[second.capability], now=NOW,
+        exclude_work_ids=[first.work_id],
     ) is None
 
 @pytest.mark.parametrize("malformed_details", [None, [], "inspection_failed", 17])

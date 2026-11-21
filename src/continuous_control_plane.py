@@ -634,6 +634,17 @@ class ContinuousControlPlane:
         # record_receipt may return an older receipt instead of the submitted one.
         # Evaluate the *persisted* evidence, and never certify this attempt with
         # a receipt that belongs to a different work item or execution.
+        # Normalize malformed worker evidence *before* persistence.  A later
+        # decision gate cannot protect against record() raising on non-mappings.
+        # Preserve a durable failure marker without accepting the worker label.
+        receipts = tuple(
+            replace(evidence, status="inspection_failed", details={
+                "status": "inspection_failed",
+                "outcome_verified": False,
+                "malformed_details_type": type(evidence.details).__name__,
+            }) if not isinstance(evidence.details, Mapping) else evidence
+            for evidence in receipts
+        )
         recorded = tuple(self.record_receipt(evidence) for evidence in receipts)
         if any(saved.receipt_id != supplied.receipt_id for saved, supplied in zip(recorded, receipts)):
             self.transition(item.work_id, WorkState.RECONCILING,
