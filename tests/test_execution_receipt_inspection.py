@@ -97,3 +97,28 @@ def test_inspection_fails_closed_on_unresolved_or_legacy_cleanup(tmp_path):
     result = inspect(path)
     assert result["cleanup_status"] == "unknown"
     assert result["outcome_verified"] is False
+
+
+def test_duplicate_members_cannot_promote_execution_receipt(tmp_path):
+    path = tmp_path / "receipt.json"
+    clean = ('{"status":"failed","status":"process_succeeded_unverified",'
+             '"outcome_verified":true,"cleanup_unresolved":false,'
+             '"output_drains_unresolved":false,"direct_child_reaped":true,'
+             '"group_signal_denied":false,"descendant_containment_verified":true}')
+    for payload in (clean, '{"status":"failed","nested":{"x":1,"x":2}}',
+                    '{"status":"failed","outcome_verified":NaN}',
+                    '{"status":"failed","outcome_verified":Infinity}'):
+        path.write_text(payload)
+        result = run(path)
+        assert result.returncode == 2, result.stderr
+        data = json.loads(result.stdout)
+        assert data["status"] == "inspection_failed"
+        assert data["retry_authorized"] is False
+
+
+def test_unique_standard_json_receipt_still_inspects(tmp_path):
+    path = tmp_path / "receipt.json"
+    path.write_text('{"status":"failed","outcome_verified":false}')
+    result = run(path)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["status"] == "inspected_unverified"
