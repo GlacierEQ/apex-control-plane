@@ -13,6 +13,20 @@ import subprocess
 import sys
 
 
+def _unique_receipt_pairs(pairs: list[tuple[str, object]]) -> dict:
+    """Reject ambiguous JSON members rather than trusting last-key-wins parsing."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate receipt member: {key}")
+        result[key] = value
+    return result
+
+
+def _reject_nonfinite_constant(value: str) -> None:
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
 def inspect(path: Path) -> dict:
     try:
         fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
@@ -20,7 +34,8 @@ def inspect(path: Path) -> dict:
             info = os.fstat(handle.fileno())
             if not stat.S_ISREG(info.st_mode) or info.st_size > 1024 * 1024:
                 raise ValueError("receipt must be a regular file <= 1 MiB")
-            record = json.load(handle)
+            record = json.load(handle, object_pairs_hook=_unique_receipt_pairs,
+                               parse_constant=_reject_nonfinite_constant)
         if not isinstance(record, dict):
             raise ValueError("receipt must be an object")
     except (OSError, ValueError, UnicodeError) as exc:
