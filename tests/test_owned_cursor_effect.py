@@ -39,6 +39,18 @@ class OwnerCursorEffectTest(unittest.TestCase):
         with sqlite3.connect(self.root/'provider.sqlite') as db:
             self.assertEqual(db.execute('SELECT count(*) FROM applied_cursor').fetchone()[0], 0)
 
+    def test_real_provider_effect_changes_handler_selection(self):
+        with patch.object(owner, 'run_registered_resume',
+                          side_effect=lambda *args, **kw: kw['handlers']['VERIFY_REQUIRED_RETRIEVED_SOURCES'](self.receipt)):
+            result = owner.select_verified_next_handler(Path('profile'), session_id='s', invocation_id='i',
+                        output_dir=self.root, database=self.root/'provider.sqlite')
+            self.assertEqual(result['selection'], 'VERIFY_REQUIRED_RETRIEVED_SOURCES')
+            again = owner.select_verified_next_handler(Path('profile'), session_id='s', invocation_id='i',
+                        output_dir=self.root, database=self.root/'provider.sqlite')
+            self.assertEqual(again['selection'], result['selection'])
+        with sqlite3.connect(self.root/'provider.sqlite') as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM applied_cursor').fetchone()[0], 1)
+
     def test_conflicting_recovered_cursor_rejected(self):
         self.execute()
         with self.assertRaises(ValueError):
@@ -59,3 +71,15 @@ class CursorEffectCLITest(unittest.TestCase):
         self.assertEqual(json.loads(out.getvalue())['status'], 'OPERATION_EFFECT_PROVIDER_VERIFIED')
         self.assertEqual(call.call_args.kwargs['database'], Path('/tmp/provider'))
         self.assertTrue(call.call_args.kwargs['auto_resume'])
+
+class VerifiedNextHandlerTest(unittest.TestCase):
+    def test_verified_provider_selects_registered_handler(self):
+        with patch.object(owner, 'run_verified_cursor_effect', return_value={'status': 'OPERATION_EFFECT_PROVIDER_VERIFIED'}):
+            result = owner.select_verified_next_handler(Path('profile'), session_id='s', invocation_id='i', output_dir=Path('/tmp/a'), database=Path('/tmp/b'))
+        self.assertEqual(result['selection'], 'VERIFY_REQUIRED_RETRIEVED_SOURCES')
+
+    def test_ambiguous_or_missing_provider_never_selects_handler(self):
+        for status in ('OPERATION_RECONCILIATION_REQUIRED', 'OPERATION_NOT_CLAIMED', None):
+            with self.subTest(status=status), patch.object(owner, 'run_verified_cursor_effect', return_value={'status': status}):
+                result = owner.select_verified_next_handler(Path('profile'), session_id='s', invocation_id='i', output_dir=Path('/tmp/a'), database=Path('/tmp/b'))
+                self.assertEqual(result['selection'], 'HALT_UNVERIFIED_CONTEXT')

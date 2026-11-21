@@ -419,6 +419,32 @@ def run_verified_cursor_effect(path: Path, *, session_id: str, invocation_id: st
         handlers={"VERIFY_REQUIRED_RETRIEVED_SOURCES": consume})
 
 
+
+def select_verified_next_handler(path: Path, *, session_id: str, invocation_id: str,
+                                 output_dir: Path, database: Path,
+                                 auto_resume: bool = True,
+                                 previous_session_id: str | None = None,
+                                 previous_invocation_id: str | None = None) -> dict:
+    """Causal, fail-closed selection from a real reconciled provider effect.
+
+    Never dispatch recovered text as code. Only the existing registered source
+    verification handler can be selected, and only after independent readback.
+    """
+    result = run_verified_cursor_effect(
+        path, session_id=session_id, invocation_id=invocation_id,
+        output_dir=output_dir, database=database, auto_resume=auto_resume,
+        previous_session_id=previous_session_id,
+        previous_invocation_id=previous_invocation_id)
+    if not isinstance(result, dict):
+        raise ValueError("unrecognized provider effect result")
+    status = result.get("status")
+    if status != "OPERATION_EFFECT_PROVIDER_VERIFIED":
+        return {"selection": "HALT_UNVERIFIED_CONTEXT", "provider_status": status}
+    return {"selection": "VERIFY_REQUIRED_RETRIEVED_SOURCES",
+            "provider_status": status,
+            "effect": result}
+
+
 def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     """Read back an existing committed receipt without running or replaying an action."""
     profile = load_profile(path)
@@ -539,6 +565,12 @@ def main() -> None:
     effect.add_argument("--previous-session-id")
     effect.add_argument("--previous-invocation-id")
     effect.add_argument("--auto-resume", action="store_true")
+    selector = sub.add_parser("select-next", help="Select registered handler only after durable authenticated cursor readback")
+    for flag in ("profile", "session-id", "invocation-id", "output-dir", "database"):
+        selector.add_argument("--" + flag, required=True, type=Path if flag in ("profile", "output-dir", "database") else str)
+    selector.add_argument("--previous-session-id")
+    selector.add_argument("--previous-invocation-id")
+    selector.add_argument("--auto-resume", action="store_true")
     startup = sub.add_parser("startup-readback", help="Verify durable startup decision and original authenticated checkpoint")
     startup.add_argument("--profile", type=Path, required=True)
     startup.add_argument("--session-id", required=True)
@@ -559,6 +591,13 @@ def main() -> None:
                 previous_invocation_id=args.previous_invocation_id)
         elif args.command == "cursor-effect":
             result = run_verified_cursor_effect(
+                args.profile, session_id=args.session_id, invocation_id=args.invocation_id,
+                output_dir=args.output_dir, database=args.database,
+                auto_resume=args.auto_resume,
+                previous_session_id=args.previous_session_id,
+                previous_invocation_id=args.previous_invocation_id)
+        elif args.command == "select-next":
+            result = select_verified_next_handler(
                 args.profile, session_id=args.session_id, invocation_id=args.invocation_id,
                 output_dir=args.output_dir, database=args.database,
                 auto_resume=args.auto_resume,
