@@ -655,6 +655,19 @@ if __name__ == "__main__":
         direct_child_reaped = (
             child.poll() is not None if executed and "child" in locals() else None
         )
+        # An attempted kill or bounded thread join is not proof that all
+        # executor-owned resources have stopped. Publish one fail-closed
+        # cleanup signal for schedulers deciding whether retry is safe.
+        output_drains_unresolved = (
+            any(thread.is_alive() for thread in drains)
+            if executed and "drains" in locals() else False
+        )
+        cleanup_unresolved = (
+            direct_child_reaped is False
+            or output_drains_unresolved
+            or locals().get("input_writer_unresolved", False)
+            or group_signal_denied
+        )
         input_written = locals().get("input_bytes_written", [0])[0]
         input_writer_unresolved = locals().get("input_writer_unresolved", False)
         input_delivery_complete = (
@@ -690,6 +703,8 @@ if __name__ == "__main__":
             "descendant_containment_verified": False if group_signal_denied else None,
             "group_signal_denied": group_signal_denied,
             "direct_child_reaped": direct_child_reaped,
+            "output_drains_unresolved": output_drains_unresolved,
+            "cleanup_unresolved": cleanup_unresolved,
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }
