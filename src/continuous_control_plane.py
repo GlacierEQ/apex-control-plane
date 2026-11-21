@@ -650,7 +650,8 @@ class ContinuousControlPlane:
         # Reconciliation is mandatory: retry could repeat an effect whose
         # subprocess or descendants are still running.
         unsafe = any(
-            evidence.details.get("outcome_verified") is False
+            not isinstance(evidence.details, Mapping)
+            or evidence.details.get("outcome_verified") is False
             or evidence.details.get("cleanup_unresolved") is True
             or evidence.details.get("output_drains_unresolved") is True
             or evidence.details.get("direct_child_reaped") is False
