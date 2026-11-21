@@ -19,3 +19,5 @@ Changed-head Python 3.13 focused CLI: 17 passed. Full repository suite: 1,098 pa
 ## 2026-11-21 — local subprocess disk quota gate
 
 Recovered branch at 75faee8. Real local execution previously used unbounded disk-backed temporary output despite 64 KiB persisted receipt caps. Added POSIX RLIMIT_FSIZE 1 MiB per stream to actual subprocess launch, and fail-closed exit status 125 when either output file reaches quota even if the child reports zero. Receipt includes disk_limit_bytes_per_stream and output_quota_exhausted. This avoids silently accepting a partial write as success (observed during adversarial test: Python os.write of 2 MB returned after writing only 1 MB, and process exited 0). Windows remains without a disk quota; receipt records null limit. Focused CLI suite: 18 passed. Full suite outcome recorded separately after execution. Next: independently prove descendant cleanup and integrate standalone receipt inspector into worker adapter; preserve fail-closed reconciliation.
+
+Full changed-head suite (Python 3.13): 1099 passed, 29 skipped, 8 subtests passed, exit 0 (4.58s), before evidence-only note commit.
