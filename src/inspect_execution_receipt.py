@@ -39,6 +39,16 @@ def inspect(path: Path) -> dict:
             payload = handle.read(1024 * 1024 + 1)
             if len(payload) > 1024 * 1024:
                 raise ValueError("receipt exceeds 1 MiB during read")
+            # Detect in-place rewrites and append/truncation during inspection.
+            # Both reads are bounded; no parsed content is trusted if the file
+            # changes across the snapshot window.
+            handle.seek(0)
+            confirmation = handle.read(1024 * 1024 + 1)
+            after = os.fstat(handle.fileno())
+            if (len(confirmation) > 1024 * 1024 or confirmation != payload
+                    or (info.st_size, info.st_mtime_ns, info.st_ctime_ns) !=
+                       (after.st_size, after.st_mtime_ns, after.st_ctime_ns)):
+                raise ValueError("receipt changed during inspection")
             record = json.loads(payload, object_pairs_hook=_unique_receipt_pairs,
                                 parse_constant=_reject_nonfinite_constant)
         if not isinstance(record, dict):
