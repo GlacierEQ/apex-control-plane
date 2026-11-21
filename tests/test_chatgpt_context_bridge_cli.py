@@ -103,6 +103,99 @@ class ChatGPTContextBridgeTests(unittest.TestCase):
         self.store.symlink_to(original, target_is_directory=True)
         self.cmd("recover", "--session-id", "next-chat", ok=False)
 
+    def test_reconcile_recovers_authenticated_append_without_anchor(self):
+        # A journal fsync can succeed just before a process loses the anchor update.
+        # Reproduce that persisted state: authenticated descendant in journal,
+        # but the independent anchor still names its verified ancestor.
+        init = self.initialize()
+        self.cmd("correct", "--instruction", "Preserve the source-qualified execution cursor")
+        anchor = self.require_one(self.store / "anchors", "*.json")
+        anchor.write_text(json.dumps({"mission_id": self.base[-1], "head": init["head"]}) + "\n")
+        self.cmd("recover", "--session-id", "new-chat", ok=False)
+        resumed = self.cmd("reconcile")
+        self.assertEqual(resumed["status"], "VERIFIED_RECONCILED")
+        self.assertEqual(resumed["previous_head"], init["head"])
+        self.assertNotEqual(resumed["head"], init["head"])
+        a = self.cmd("recover", "--session-id", "independent-chat-A")
+        b = self.cmd("recover", "--session-id", "independent-chat-B")
+        self.assertEqual(a["head"], b["head"])
+        self.assertEqual(a["head"], resumed["head"])
+        self.assertIn("Preserve the source-qualified execution cursor", a["corrections"])
+
+    def test_reconcile_rejects_anchor_that_is_not_authenticated_ancestor(self):
+        self.initialize()
+        anchor = self.require_one(self.store / "anchors", "*.json")
+        forged = {"mission_id": self.base[-1], "head": "0" * 64}
+        anchor.write_text(json.dumps(forged) + "\n")
+        self.cmd("reconcile", ok=False)
+        self.assertEqual(json.loads(anchor.read_text()), forged)
+        self.cmd("recover", "--session-id", "new-chat", ok=False)
+
+    def test_reconcile_rejects_unverified_event_chain(self):
+        init = self.initialize()
+        journal = self.require_one(self.store / "journals", "*.jsonl")
+        fabricated = {
+            "seq": 2, "kind": "correction",
+            "data": {"instruction": "malicious fabricated instruction"},
+            "timestamp": "2026-11-17T00:00:00+00:00",
+            "previous_sha256": init["head"], "sha256": "f" * 64,
+            "auth_tag": "f" * 64,
+        }
+        with journal.open("ab") as handle:
+            handle.write((json.dumps(fabricated) + "\n").encode())
+        anchor = self.require_one(self.store / "anchors", "*.json")
+        prior = anchor.read_bytes()
+        self.cmd("reconcile", ok=False)
+        self.assertEqual(anchor.read_bytes(), prior)
+        self.cmd("recover", "--session-id", "next-chat", ok=False)
+
+    def test_reconcile_is_read_only_when_head_is_current(self):
+        init = self.initialize()
+        journal = self.require_one(self.store / "journals", "*.jsonl")
+        original = journal.read_bytes()
+        proof = self.cmd("reconcile")
+        self.assertEqual(proof["status"], "VERIFIED_UNCHANGED")
+        self.assertEqual(proof["head"], init["head"])
+        self.assertEqual(journal.read_bytes(), original)
+
+    def test_admit_applies_authenticated_context_to_real_apex_kernel(self):
+        self.initialize()
+        self.cmd("correct", "--instruction", "Preserve past corrections and source identity")
+        self.cmd("checkpoint", "--cursor", "APEX/known-next-operation")
+        self.cmd("fact", "--key", "verified_capability", "--value", "pass",
+                 "--source", "github:GlacierEQ/apex-control-plane@head")
+        journal = self.require_one(self.store / "journals", "*.jsonl")
+        anchor = self.require_one(self.store / "anchors", "*.json")
+        before = (journal.read_bytes(), anchor.read_bytes())
+        first = self.cmd("admit", "--session-id", "native-connected-host-A")
+        second = self.cmd("admit", "--session-id", "native-connected-host-B")
+        self.assertEqual(first["status"], "APEX_CONTEXT_ADMITTED")
+        self.assertEqual(second["status"], "APEX_CONTEXT_ADMITTED")
+        self.assertNotEqual(first["session_id"], second["session_id"])
+        self.assertEqual(first["head"], second["head"])
+        self.assertEqual(first["source_ref"], second["source_ref"])
+        self.assertEqual(first["apex_phase"], "ready")
+        self.assertTrue(first["recovered_context_applied_to_apex_instruction"])
+        self.assertEqual(first["corrections"], ["Preserve past corrections and source identity"])
+        self.assertEqual(first["facts"]["verified_capability"]["value"], "pass")
+        self.assertEqual(first["cursor"], "APEX/known-next-operation")
+        self.assertIn("context_recovery", first["apex_receipt_kinds"])
+        self.assertFalse(first["downstream_action_executed"])
+        self.assertFalse(first["automatic_chatgpt_host_hook_verified"])
+        self.assertEqual((journal.read_bytes(), anchor.read_bytes()), before)
+
+    def test_admit_denies_missing_or_stale_authenticated_journal(self):
+        self.cmd("admit", "--session-id", "not-yet-created", ok=False)
+        init = self.initialize()
+        self.cmd("correct", "--instruction", "Do not lose corrections")
+        anchor = self.require_one(self.store / "anchors", "*.json")
+        anchor.write_text(json.dumps({"mission_id": self.base[-1], "head": init["head"]}) + "\n")
+        self.cmd("admit", "--session-id", "stale-head", ok=False)
+        self.cmd("reconcile")
+        accepted = self.cmd("admit", "--session-id", "fresh-head")
+        self.assertEqual(accepted["status"], "APEX_CONTEXT_ADMITTED")
+        self.assertIn("Do not lose corrections", accepted["corrections"])
+
     def test_no_secret_material_in_stdout_or_artifact_permissions(self):
         init = self.initialize()
         key = self.require_one(self.store / "keys", "*.key")

@@ -18,7 +18,13 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.spiral_live_journal import load_spiral_engine, open_authenticated_chat
+sys.path.insert(0, str(ROOT / "src"))
+from src.apex_runtime_kernel import create_verified_runtime_kernel
+from src.spiral_live_journal import (
+    load_spiral_engine,
+    open_authenticated_chat,
+    resume_authenticated_chat_in_apex,
+)
 from src.spiral_chat_handoff import recover_existing_chat_session
 
 def fail(reason):
@@ -115,8 +121,11 @@ def main():
     create = sub.add_parser("init")
     create.add_argument("--objective", required=True)
     create.add_argument("--outcome", required=True)
+    sub.add_parser("reconcile", help="Repair interrupted anchor update only for an HMAC-validated journal descendant")
     read = sub.add_parser("recover")
     read.add_argument("--session-id", required=True)
+    admit = sub.add_parser("admit", help="Recover authenticated journal and admit context into a real APEX runtime kernel")
+    admit.add_argument("--session-id", required=True)
     for action in ("correct", "checkpoint", "fact"):
         s = sub.add_parser(action)
         if action == "correct":
@@ -161,34 +170,120 @@ def main():
     for folder in folders.values():
         secure_dir(folder)
     # Stable owner-only file lock covers authenticated read, append, and head update.
-    with mission_lock(paths["lock"], read_only=(args.command == "recover")):
+    with mission_lock(paths["lock"], read_only=(args.command in ("recover", "admit"))):
         manifest = json.loads(read_bytes(paths["manifest"]))
         anchor = json.loads(read_bytes(paths["anchor"]))
         secret = read_bytes(paths["key"])
         if manifest.get("mission_id") != args.mission_id or anchor.get("mission_id") != args.mission_id:
             fail("mission identity mismatch")
+        if args.command == "reconcile":
+            # A process can fsync an authenticated append, then exit before the
+            # separate anchor rename. Recover that exact interrupted forward
+            # transition, never a rollback, fork, fabricated mission or unauthenticated
+            # journal. The prior anchored head remains the trust root.
+            previous_head = anchor.get("head")
+            if (not isinstance(previous_head, str) or len(previous_head) != 64
+                    or any(ch not in "0123456789abcdef" for ch in previous_head)):
+                fail("independently anchored revision is invalid")
+            # Candidate head is untrusted until validated by the ORIGINAL
+            # upstream Spiral HMAC chain and its protected journal reader.
+            raw = read_bytes(paths["journal"])
+            lines = raw.splitlines()
+            if not lines:
+                fail("cannot reconcile an empty journal")
+            candidate_head = json.loads(lines[-1]).get("sha256")
+            if not isinstance(candidate_head, str):
+                fail("journal candidate head is invalid")
+            journal, proof = open_authenticated_chat(
+                paths["journal"], spiral_source_root=args.spiral_root,
+                chat_session_id="bridge-forward-reconcile",
+                mission_id=args.mission_id, objective=manifest["objective"],
+                terminal_outcome=manifest["terminal_outcome"],
+                integrity_key=secret, expected_head=candidate_head,
+            )
+            observed_heads = tuple(event["sha256"] for event in journal.events)
+            if previous_head not in observed_heads:
+                fail("anchored revision is not an ancestor of authenticated journal")
+            appended = len(observed_heads) - 1 - observed_heads.index(previous_head)
+            if appended:
+                replace_anchor(paths["anchor"], {
+                    "mission_id": args.mission_id, "head": candidate_head,
+                })
+            # A separate authenticated readback confirms the actual durable head,
+            # not simply a successful rename or a previously held object.
+            _, verified = open_authenticated_chat(
+                paths["journal"], spiral_source_root=args.spiral_root,
+                chat_session_id="bridge-forward-readback",
+                mission_id=args.mission_id, objective=manifest["objective"],
+                terminal_outcome=manifest["terminal_outcome"],
+                integrity_key=secret, expected_head=candidate_head,
+            )
+            if verified.source_ref != "spiral-journal:" + candidate_head:
+                fail("reconciliation readback is not source-matched")
+            print(json.dumps({
+                "status": "VERIFIED_RECONCILED" if appended else "VERIFIED_UNCHANGED",
+                "mission_id": verified.mission_id, "previous_head": previous_head,
+                "head": candidate_head, "authenticated_events_recovered": appended,
+                "session_id": verified.chat_session_id,
+                "automatic_chatgpt_host_hook_verified": False,
+            }))
+            return
         journal, recovery = open_authenticated_chat(
             paths["journal"], spiral_source_root=args.spiral_root, 
-            chat_session_id=(args.session_id if args.command == "recover" else "bridge-update"),
+            chat_session_id=(args.session_id if args.command in ("recover", "admit") else "bridge-update"),
             mission_id=args.mission_id, objective=manifest["objective"],
             terminal_outcome=manifest["terminal_outcome"],
             integrity_key=secret, expected_head=anchor["head"]
         )
-        if args.command == "recover":
+        if args.command in ("recover", "admit"):
             verified_fact_keys = tuple(dict.fromkeys(
                 event["data"]["key"] for event in journal.events
                 if event["kind"] in ("verified_fact", "superseded_fact")
             ))
             recovery = recover_existing_chat_session(journal, args.session_id,
                                                       fact_keys=verified_fact_keys)
+            if args.command == "recover":
+                print(json.dumps({
+                    "status": "VERIFIED_EXISTING", "mission_id":recovery.mission_id,
+                    "objective":recovery.objective, "terminal_outcome":recovery.terminal_outcome,
+                    "session_id":recovery.chat_session_id, "head":anchor["head"],
+                    "source_ref":recovery.source_ref, "cursor":recovery.cursor,
+                    "corrections":recovery.corrections, "facts":recovery.facts,
+                    "requires_actual_action_application":True,
+                    "automatic_chatgpt_host_hook_verified":False
+                }, indent=2))
+                return
+            kernel = create_verified_runtime_kernel()
+            applied = bool(recovery.material_context_found)
+            snapshot = resume_authenticated_chat_in_apex(
+                kernel,
+                recovery,
+                task_instruction=(
+                    f"Continue mission {recovery.mission_id} from {recovery.source_ref} "
+                    f"at cursor {recovery.cursor or 'initial'}"
+                ),
+                target_state=recovery.terminal_outcome,
+                operation_class="chat_context_admission",
+                applied_to_action=applied,
+                expected_mission_id=args.mission_id,
+            )
             print(json.dumps({
-                "status": "VERIFIED_EXISTING", "mission_id":recovery.mission_id,
-                "objective":recovery.objective, "terminal_outcome":recovery.terminal_outcome,
-                "session_id":recovery.chat_session_id, "head":anchor["head"],
-                "source_ref":recovery.source_ref, "cursor":recovery.cursor,
-                "corrections":recovery.corrections, "facts":recovery.facts,
-                "requires_actual_action_application":True,
-                "automatic_chatgpt_host_hook_verified":False
+                "status": "APEX_CONTEXT_ADMITTED",
+                "mission_id": recovery.mission_id,
+                "objective": recovery.objective,
+                "terminal_outcome": recovery.terminal_outcome,
+                "session_id": recovery.chat_session_id,
+                "head": anchor["head"],
+                "source_ref": recovery.source_ref,
+                "cursor": recovery.cursor,
+                "corrections": list(recovery.corrections),
+                "facts": recovery.facts,
+                "apex_runtime_id": snapshot.runtime_id,
+                "apex_phase": snapshot.phase,
+                "apex_receipt_kinds": list(snapshot.receipt_kinds),
+                "recovered_context_applied_to_apex_instruction": applied,
+                "downstream_action_executed": False,
+                "automatic_chatgpt_host_hook_verified": False,
             }, indent=2))
             return
         if args.command == "correct":

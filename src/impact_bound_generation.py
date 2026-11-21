@@ -25,6 +25,7 @@ from continuous_impact_selection import (
     ImpactCandidate,
     ImpactDecision,
     ImpactSelectionViolation,
+    ImpactAttempt,
 )
 from prosecution_pressure import ProsecutionPressure, ROUTE_KINDS
 
@@ -62,6 +63,10 @@ class ImpactBoundTurn:
     output: Mapping[str, Any]
     candidate_count: int
     state_version: str
+    # Model text is never an execution receipt. This is populated only after
+    # the host executes the chosen operation and independently reads the owner.
+    native_effect: ImpactAttempt | None = None
+    native_verified: bool = False
 
 
 class ImpactBoundGenerationHost:
@@ -83,6 +88,9 @@ class ImpactBoundGenerationHost:
         execute: ModelCall,
         minimum_candidates: int = 2,
         pressure: ProsecutionPressure | None = None,
+        perform_selected: Callable[[ImpactDecision], ImpactAttempt] | None = None,
+        verify_native_readback: Callable[[ImpactAttempt], bool] | None = None,
+        require_native_effect: bool = False,
     ) -> ImpactBoundTurn:
         """Run one complete impact-bound model turn.
 
@@ -90,7 +98,22 @@ class ImpactBoundGenerationHost:
         models, or deterministic host functions. ``execute`` never sees an
         unselected proposal as authority; it receives only the selected operation
         plus the original base context.
+
+        ``execute`` is a response-generation callback, NOT evidence that any
+        real-world operation occurred. An effectful host must pass an actual
+        provider operation in ``perform_selected`` plus an independent native
+        readback. Without those callbacks, ``native_verified`` is always false.
+        If execution/readback raises after a side effect, reconcile the owning
+        provider and idempotency reservation before retrying.
         """
+        if type(require_native_effect) is not bool:
+            raise ImpactBoundGenerationViolation("require_native_effect must be boolean")
+        if (perform_selected is None) != (verify_native_readback is None):
+            raise ImpactBoundGenerationViolation("native effect requires both execution and readback callbacks")
+        if require_native_effect and not (callable(perform_selected) and callable(verify_native_readback)):
+            raise ImpactBoundGenerationViolation("effectful mission requires native execution and independent readback")
+        if perform_selected is not None and not (callable(perform_selected) and callable(verify_native_readback)):
+            raise ImpactBoundGenerationViolation("native effect callbacks must be callable")
         if minimum_candidates < 1:
             raise ImpactBoundGenerationViolation("minimum_candidates must be >= 1")
 
@@ -138,6 +161,41 @@ class ImpactBoundGenerationHost:
             *base_messages,
             self.selector.execution_frame(decision),
         ]
+        native_effect = None
+        if perform_selected is not None:
+            # The model cannot certify its own effect. This is a separate host-
+            # supplied real operation, already governed by provider permissions,
+            # idempotency and source-bound admission in its owning connector.
+            attempt = perform_selected(decision)
+            if not isinstance(attempt, ImpactAttempt):
+                raise ImpactBoundGenerationViolation("native operation must return an ImpactAttempt")
+            try:
+                attempt.verify_claim()
+            except ImpactSelectionViolation as exc:
+                raise ImpactBoundGenerationViolation(str(exc)) from exc
+            if (attempt.candidate_id != decision.selected_candidate_id
+                    or attempt.mission_sha256 != decision.mission_sha256):
+                raise ImpactBoundGenerationViolation("native receipt does not match selected operation and mission")
+            if attempt.stage not in {"VERIFIED_MATERIAL_DELTA", "HUMAN_OUTCOME"}:
+                raise ImpactBoundGenerationViolation("native operation has no independently verified effect")
+            try:
+                verified = verify_native_readback(attempt) is True
+            except Exception as exc:
+                raise ImpactBoundGenerationViolation("provider readback failed; reconcile before retry") from exc
+            if not verified:
+                raise ImpactBoundGenerationViolation("provider effect not independently verified; reconcile before retry")
+            native_effect = attempt
+            execution_messages.append({
+                "role": "tool", "type": "verified_native_effect",
+                "content": json.dumps({
+                    "candidate_id": attempt.candidate_id,
+                    "stage": attempt.stage,
+                    "provider_ref": attempt.provider_ref,
+                    "after_state_ref": attempt.after_state_ref,
+                    "readback_ref": attempt.readback_ref,
+                    "mission_complete": attempt.stage == "HUMAN_OUTCOME",
+                }, sort_keys=True),
+            })
         output = execute(execution_messages)
         if not isinstance(output, Mapping):
             raise ImpactBoundGenerationViolation("execution model output must be a mapping")
@@ -147,6 +205,8 @@ class ImpactBoundGenerationHost:
             output=dict(output),
             candidate_count=len(candidates),
             state_version=state_version,
+            native_effect=native_effect,
+            native_verified=native_effect is not None,
         )
 
     @staticmethod
