@@ -138,12 +138,24 @@ if __name__ == "__main__":
 
         def execute_queued(item: WorkItem) -> ExecutionReceipt | list[ExecutionReceipt]:
             before_artifact = _artifact_snapshot(verify_file)
+            # Timeouts cannot establish whether descendant effects completed.
+            try:
+                timeout_seconds = float(os.getenv("GLACIEREQ_LOCAL_COMMAND_TIMEOUT", "120"))
+                if not 0 < timeout_seconds <= 3600 or not __import__("math").isfinite(timeout_seconds):
+                    raise ValueError("invalid timeout")
+            except ValueError:
+                timeout_seconds = 120.0
+            timed_out = False
             try:
                 process = subprocess.run(
                     command, check=False, text=True, capture_output=True,
+                    timeout=timeout_seconds,
                 )
                 code = process.returncode
                 stdout, stderr = process.stdout, process.stderr
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                code, stdout, stderr = 124, "", "local subprocess deadline exceeded"
             except OSError as exc:
                 code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
             execution = ExecutionReceipt(
@@ -157,6 +169,9 @@ if __name__ == "__main__":
                     "exit_code": code,
                     "stdout": stdout,
                     "stderr": stderr,
+                    **({"status": "inspection_failed", "outcome_verified": False,
+                        "cleanup_unresolved": True, "reason": "subprocess_timeout"}
+                       if timed_out else {}),
                     "scope": "local process execution only; independent mission validation may remain",
                 },
             )

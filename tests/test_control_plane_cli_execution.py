@@ -401,3 +401,35 @@ def test_single_item_cli_does_not_exit_green_with_another_local_item_queued(tmp_
     assert sorted(restored.work[i].state.value for i in ids) == sorted([
         WorkState.COMPLETE.value, WorkState.RECEIVED.value,
     ])
+
+
+def test_local_subprocess_timeout_is_durable_reconciliation_not_retry(tmp_path: Path) -> None:
+    import os
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        WorkState, load_continuous_control_config,
+    )
+    store = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    plane = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    work = plane.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="timeout-mission", correlation_id="timeout-corr", payload={},
+    ))[0]
+    env = dict(os.environ, GLACIEREQ_LOCAL_COMMAND_TIMEOUT="0.1")
+    invocation = [sys.executable, str(CLI), "--run-next-local", str(store),
+                  work.capability, "--", sys.executable, "-c",
+                  "import time; time.sleep(3)"]
+    result = subprocess.run(invocation, cwd=ROOT, text=True,
+                            capture_output=True, timeout=12, env=env)
+    assert result.returncode != 0, result.stderr
+    assert json.loads(result.stdout)["status"] == "unconfirmed"
+    recovered = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    assert recovered.work[work.work_id].state is WorkState.RECONCILING
+    assert any(r.details.get("reason") == "subprocess_timeout"
+               and r.details.get("cleanup_unresolved") is True
+               for r in recovered.receipts.values())
+    second = subprocess.run(invocation, cwd=ROOT, text=True,
+                            capture_output=True, timeout=12, env=env)
+    assert json.loads(second.stdout)["status"] == "idle"
