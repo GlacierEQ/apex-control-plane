@@ -46,3 +46,19 @@ def test_append_during_inspection_fails_closed(tmp_path, monkeypatch):
     result = inspector.inspect(receipt)
     assert result["status"] == "inspection_failed"
     assert result["retry_authorized"] is False
+
+
+def test_numeric_overflow_fails_closed(tmp_path):
+    receipt = tmp_path / "overflow.json"
+    receipt.write_text('{"status":"pending_unverified","diagnostic":1e9999}')
+    result = inspector.inspect(receipt)
+    assert result["status"] == "inspection_failed"
+    assert result["retry_authorized"] is False
+
+
+def test_finite_fraction_remains_accepted(tmp_path):
+    receipt = tmp_path / "finite.json"
+    receipt.write_text('{"status":"pending_unverified","diagnostic":0.125}')
+    result = inspector.inspect(receipt)
+    assert result["status"] == "inspected_unverified"
+    assert result["retry_authorized"] is False

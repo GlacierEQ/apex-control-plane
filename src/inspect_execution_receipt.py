@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import math
 import os
 from pathlib import Path
 import stat
@@ -25,6 +26,14 @@ def _unique_receipt_pairs(pairs: list[tuple[str, object]]) -> dict:
 
 def _reject_nonfinite_constant(value: str) -> None:
     raise ValueError(f"invalid JSON constant: {value}")
+
+
+def _finite_receipt_float(value: str) -> float:
+    """Reject JSON exponents that overflow to nonfinite Python floats."""
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError("nonfinite receipt number")
+    return parsed
 
 
 def inspect(path: Path) -> dict:
@@ -50,7 +59,8 @@ def inspect(path: Path) -> dict:
                        (after.st_size, after.st_mtime_ns, after.st_ctime_ns)):
                 raise ValueError("receipt changed during inspection")
             record = json.loads(payload, object_pairs_hook=_unique_receipt_pairs,
-                                parse_constant=_reject_nonfinite_constant)
+                                parse_constant=_reject_nonfinite_constant,
+                                parse_float=_finite_receipt_float)
         if not isinstance(record, dict):
             raise ValueError("receipt must be an object")
     except (OSError, ValueError, UnicodeError, RecursionError) as exc:
