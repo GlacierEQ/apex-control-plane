@@ -389,6 +389,36 @@ def run_verified_handoff(path: Path, *, session_id: str, invocation_id: str,
                   lambda verified: apply_verified_handoff(
                       verified, output_dir=output_dir)})
 
+def run_verified_cursor_effect(path: Path, *, session_id: str, invocation_id: str,
+                               output_dir: Path, database: Path,
+                               auto_resume: bool = True,
+                               previous_session_id: str | None = None,
+                               previous_invocation_id: str | None = None) -> dict:
+    """Recover a source-gated startup cursor and apply its durable provider effect.
+
+    An existing operation claim never replays. Independent readback is required
+    to establish whether an interrupted invocation reached SQLite.
+    """
+    from scripts.continuity_sqlite_effect import apply_cursor_once, readback_cursor_once
+
+    def consume(verified):
+        prior = readback_cursor_once(verified, handoff_dir=output_dir, database=database)
+        if prior["status"] == "OPERATION_EFFECT_PROVIDER_VERIFIED":
+            return prior
+        if prior["status"] != "OPERATION_NOT_CLAIMED":
+            return prior  # Ambiguous claim: never replay an effect.
+        applied = apply_cursor_once(verified, handoff_dir=output_dir, database=database)
+        if applied["status"] != "OPERATION_INVOKED_RECONCILIATION_REQUIRED":
+            return applied
+        return readback_cursor_once(verified, handoff_dir=output_dir, database=database)
+
+    return run_registered_resume(
+        path, session_id=session_id, invocation_id=invocation_id,
+        auto_resume=auto_resume, previous_session_id=previous_session_id,
+        previous_invocation_id=previous_invocation_id,
+        handlers={"VERIFY_REQUIRED_RETRIEVED_SOURCES": consume})
+
+
 def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     """Read back an existing committed receipt without running or replaying an action."""
     profile = load_profile(path)
