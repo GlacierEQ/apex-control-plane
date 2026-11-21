@@ -630,8 +630,20 @@ class ContinuousControlPlane:
                 "work_id": item.work_id,
                 "error": "worker receipt identity does not match claimed work",
             }
-        for evidence in receipts:
-            self.record_receipt(evidence)
+        # Provider IDs are idempotency identities, not reusable success tokens.
+        # record_receipt may return an older receipt instead of the submitted one.
+        # Evaluate the *persisted* evidence, and never certify this attempt with
+        # a receipt that belongs to a different work item or execution.
+        recorded = tuple(self.record_receipt(evidence) for evidence in receipts)
+        if any(saved.receipt_id != supplied.receipt_id for saved, supplied in zip(recorded, receipts)):
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="provider_receipt_reused_requires_reconciliation")
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id,
+                "error": "provider receipt already recorded for a different execution",
+            }
+        receipts = recorded
         receipt = receipts[-1]
         # An execution/inspection receipt is diagnostic, not a success attestation.
         # Never let a generic "success" label override explicit negative proof.
