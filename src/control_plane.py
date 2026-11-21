@@ -673,7 +673,8 @@ if __name__ == "__main__":
         input_delivery_complete = (
             executed and input_written == len(document) and not input_writer_unresolved
         )
-        if code == 0 and not input_delivery_complete:
+        if code == 0 and (not input_delivery_complete or cleanup_unresolved or output_incomplete):
+            # A zero exit is not success when owned I/O or cleanup remains unresolved.
             code = 74
         final_receipt = {
             "invocation_id": invocation_id,
