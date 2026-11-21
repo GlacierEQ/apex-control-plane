@@ -149,7 +149,12 @@ if __name__ == "__main__":
                 timeout_seconds = 120.0
             timed_out = False
             cleanup_unresolved = False
+            quota_exhausted = False
             output_limit = 65536
+            disk_limit = 1048576  # Per-stream subprocess file-size ceiling on POSIX.
+            def _limit_child_output() -> None:
+                import resource
+                resource.setrlimit(resource.RLIMIT_FSIZE, (disk_limit, disk_limit))
             try:
                 # Disk-backed pipes prevent unbounded capture_output memory and
                 # inherited-pipe hangs when a child leaves descendants behind.
@@ -157,6 +162,7 @@ if __name__ == "__main__":
                     child = subprocess.Popen(
                         command, stdout=out, stderr=err,
                         start_new_session=(os.name == "posix"),
+                        preexec_fn=_limit_child_output if os.name == "posix" else None,
                     )
                     try:
                         code = child.wait(timeout=timeout_seconds)
@@ -176,6 +182,11 @@ if __name__ == "__main__":
                         except subprocess.TimeoutExpired:
                             cleanup_unresolved = True
                         code = 124
+                    out.seek(0, os.SEEK_END)
+                    err.seek(0, os.SEEK_END)
+                    quota_exhausted = os.name == "posix" and (out.tell() >= disk_limit or err.tell() >= disk_limit)
+                    if quota_exhausted and code == 0:
+                        code = 125  # A successful exit cannot attest quota-clipped output.
                     out.seek(0)
                     err.seek(0)
                     stdout = out.read(output_limit).decode("utf-8", errors="replace")
@@ -199,6 +210,8 @@ if __name__ == "__main__":
                     "stdout_truncated": stdout_truncated,
                     "stderr_truncated": stderr_truncated,
                     "output_limit_bytes": output_limit,
+                    "disk_limit_bytes_per_stream": disk_limit if os.name == "posix" else None,
+                    "output_quota_exhausted": quota_exhausted,
                     **({"status": "inspection_failed", "outcome_verified": False,
                         "cleanup_unresolved": True, "process_group_cleanup_error": cleanup_unresolved,
                         "direct_child_reaped": child.poll() is not None if "child" in locals() else False,

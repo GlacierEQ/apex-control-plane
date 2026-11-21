@@ -462,3 +462,27 @@ def test_local_subprocess_output_is_bounded_and_persisted(tmp_path: Path) -> Non
     assert details["stdout_truncated"] is True
     assert details["stderr_truncated"] is True
     assert details["output_limit_bytes"] == 65536
+
+
+def test_local_subprocess_disk_quota_fails_closed(tmp_path: Path) -> None:
+    import os
+    import signal
+    if os.name != 'posix' or not hasattr(signal, 'SIGXFSZ'):
+        pytest.skip('POSIX file size quota required')
+    sys.path.insert(0, str(ROOT / 'src'))
+    from continuous_control_plane import ContinuousControlPlane, ControlEvent, JsonlControlStore, load_continuous_control_config
+    store = tmp_path / 'queue'
+    config = load_continuous_control_config(ROOT / 'config' / 'continuous_control_plane.json')
+    plane = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    work = plane.ingest_event(ControlEvent(event_type='gmail.reply.received', source_system='test', subject_id='disk-quota', correlation_id='disk-quota-corr', payload={}))[0]
+    command = [sys.executable, str(CLI), '--run-next-local', str(store), work.capability, '--', sys.executable, '-c', "import os; os.write(1, b'x'*2000000)"]
+    result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, timeout=15)
+    assert result.returncode != 0
+    recovered = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    receipts = [r for r in recovered.receipts.values() if r.source_system == 'apex-local-process']
+    assert len(receipts) == 1
+    details = receipts[0].details
+    assert details['disk_limit_bytes_per_stream'] == 1048576
+    assert details['stdout_truncated'] is True
+    assert details['exit_code'] != 0
+    assert len(details['stdout'].encode()) <= 65536
