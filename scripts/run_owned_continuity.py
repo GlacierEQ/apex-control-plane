@@ -492,6 +492,14 @@ def main() -> None:
     resume.add_argument("--profile", type=Path, required=True)
     resume.add_argument("--session-id", required=True)
     resume.add_argument("--invocation-id", required=True)
+    handoff = sub.add_parser("handoff", help="Recover authenticated startup and persist source-gated durable consumer handoff")
+    handoff.add_argument("--profile", type=Path, required=True)
+    handoff.add_argument("--session-id", required=True)
+    handoff.add_argument("--invocation-id", required=True)
+    handoff.add_argument("--output-dir", type=Path, required=True)
+    handoff.add_argument("--previous-session-id")
+    handoff.add_argument("--previous-invocation-id")
+    handoff.add_argument("--auto-resume", action="store_true")
     startup = sub.add_parser("startup-readback", help="Verify durable startup decision and original authenticated checkpoint")
     startup.add_argument("--profile", type=Path, required=True)
     startup.add_argument("--session-id", required=True)
@@ -504,6 +512,12 @@ def main() -> None:
                                  previous_session_id=args.previous_session_id,
                                  previous_invocation_id=args.previous_invocation_id,
                                  auto_resume=args.auto_resume)
+        elif args.command == "handoff":
+            result = run_verified_handoff(
+                args.profile, session_id=args.session_id, invocation_id=args.invocation_id,
+                output_dir=args.output_dir, auto_resume=args.auto_resume,
+                previous_session_id=args.previous_session_id,
+                previous_invocation_id=args.previous_invocation_id)
         elif args.command == "startup-readback":
             result = read_startup_decision(args.profile, session_id=args.session_id,
                                            invocation_id=args.invocation_id)
