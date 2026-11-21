@@ -36,7 +36,22 @@ def inspect(path: Path) -> dict:
     }
     if record.get("status") not in {"launched_unverified", "pending_unverified"}:
         result["process_identity"] = "not_applicable"
-        result["outcome_verified"] = bool(record.get("outcome_verified") is True)
+        # Inspection is the read-only consumer of durable execution receipts.
+        # Unknown or incomplete cleanup must never be promoted to verified.
+        required = ("cleanup_unresolved", "output_drains_unresolved", "direct_child_reaped")
+        if not all(type(record.get(key)) is bool for key in required):
+            result["cleanup_status"] = "unknown"
+        elif (record["cleanup_unresolved"] or record["output_drains_unresolved"]
+              or not record["direct_child_reaped"]):
+            result["cleanup_status"] = "unresolved"
+        else:
+            result["cleanup_status"] = "resolved_direct_child_only"
+        result["outcome_verified"] = (
+            record.get("outcome_verified") is True
+            and result["cleanup_status"] == "resolved_direct_child_only"
+            and record.get("group_signal_denied") is False
+            and record.get("descendant_containment_verified") is True
+        )
         return result
     pid = record.get("pid")
     launched = record.get("launched_at_utc")

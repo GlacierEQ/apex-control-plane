@@ -57,3 +57,43 @@ def test_missing_receipt_is_failure(tmp_path):
     result = run(tmp_path / "missing.json")
     assert result.returncode == 2
     assert json.loads(result.stdout)["status"] == "inspection_failed"
+
+
+
+def test_inspection_fails_closed_on_unresolved_or_legacy_cleanup(tmp_path):
+    import json
+    from inspect_execution_receipt import inspect
+
+    path = tmp_path / "receipt.json"
+    base = {
+        "status": "process_succeeded_unverified",
+        "outcome_verified": True,
+        "cleanup_unresolved": False,
+        "output_drains_unresolved": False,
+        "direct_child_reaped": True,
+        "group_signal_denied": False,
+        "descendant_containment_verified": True,
+    }
+    for changes, expected in [
+        ({}, "resolved_direct_child_only"),
+        ({"cleanup_unresolved": True}, "unresolved"),
+        ({"output_drains_unresolved": True}, "unresolved"),
+        ({"direct_child_reaped": False}, "unresolved"),
+        ({"cleanup_unresolved": None}, "unknown"),
+    ]:
+        record = dict(base, **changes)
+        path.write_text(json.dumps(record))
+        result = inspect(path)
+        assert result["cleanup_status"] == expected
+        assert result["outcome_verified"] is (expected == "resolved_direct_child_only")
+        assert result["retry_authorized"] is False
+
+    for key in ("group_signal_denied", "descendant_containment_verified"):
+        record = dict(base)
+        record.pop(key)
+        path.write_text(json.dumps(record))
+        assert inspect(path)["outcome_verified"] is False
+    path.write_text(json.dumps({"status": "failed", "outcome_verified": True}))
+    result = inspect(path)
+    assert result["cleanup_status"] == "unknown"
+    assert result["outcome_verified"] is False
