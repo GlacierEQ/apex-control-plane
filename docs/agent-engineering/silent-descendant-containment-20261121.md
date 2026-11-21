@@ -13,3 +13,7 @@ After bounded output drains, the POSIX adapter probes the owned session's proces
 ## Validation and continuation
 
 A real subprocess regression spawns a 30-second descendant with stdout/stderr redirected to DEVNULL, exits its parent successfully, and verifies exit 74, failed receipt, and unresolved descendant-group evidence. Test cleanup sends SIGKILL as a fallback. Focused consumer suite: 21 passed. Full changed-head suite initiated; final result must be recorded only after observed completion. Continue by testing escaped-session descendants and integrating the independent receipt inspector with the scheduler receipt adapter; never treat subprocess exit alone as outcome attestation.
+
+## Completed verification
+
+Python 3.13 focused capability consumer suite: **21 passed**. Entire repository suite: **1,137 passed, 29 skipped, 8 subtests passed**, exit 0. `git diff --check` and Python compile succeeded. Implementation commit `30baa20d09dd6672b00d166e8df5c425fccef365` was pushed to `engineering/agent-descendant-cleanup-test-20261121` and independently fetched through GitHub with source, regression, and note paths confirmed. This is tested branch code, not a merge, deployment, or host-level automatic invocation. Next: investigate escaped-session descendants and wire durable independent inspection into scheduler receipt production, with real-process tests and fail-closed reconciliation.
