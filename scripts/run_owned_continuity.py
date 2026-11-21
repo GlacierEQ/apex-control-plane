@@ -445,6 +445,38 @@ def select_verified_next_handler(path: Path, *, session_id: str, invocation_id: 
             "effect": result}
 
 
+
+def dispatch_verified_next_handler(path: Path, *, session_id: str, invocation_id: str,
+                                   output_dir: Path, database: Path,
+                                   auto_resume: bool = True,
+                                   previous_session_id: str | None = None,
+                                   previous_invocation_id: str | None = None) -> dict:
+    """Execute the selected registered consumer, never a cursor-supplied command.
+
+    The durable provider must independently verify the cursor first. A second
+    authenticated startup readback gates the actual owner-local handoff effect.
+    """
+    selection = select_verified_next_handler(
+        path, session_id=session_id, invocation_id=invocation_id,
+        output_dir=output_dir, database=database, auto_resume=auto_resume,
+        previous_session_id=previous_session_id,
+        previous_invocation_id=previous_invocation_id)
+    if selection["selection"] != "VERIFY_REQUIRED_RETRIEVED_SOURCES":
+        return {"status": "DISPATCH_HALTED_UNVERIFIED_CONTEXT", "selection": selection}
+    verified = read_startup_decision(path, session_id=session_id,
+                                     invocation_id=invocation_id)
+    if (verified.get("status") != "STARTUP_DECISION_VERIFIED" or
+            verified.get("registered_action") != selection["selection"] or
+            verified.get("startup_receipt_digest") !=
+            selection["effect"].get("startup_receipt_digest", verified.get("startup_receipt_digest"))):
+        raise ValueError("selected handler startup provenance mismatch")
+    from scripts.continuity_verified_artifact import apply_verified_handoff
+    effect = apply_verified_handoff(verified, output_dir=output_dir)
+    return {"status": "REGISTERED_HANDLER_EFFECT_VERIFIED",
+            "selection": selection["selection"], "handoff": effect,
+            "provider_status": selection["provider_status"]}
+
+
 def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     """Read back an existing committed receipt without running or replaying an action."""
     profile = load_profile(path)
@@ -571,6 +603,12 @@ def main() -> None:
     selector.add_argument("--previous-session-id")
     selector.add_argument("--previous-invocation-id")
     selector.add_argument("--auto-resume", action="store_true")
+    dispatch = sub.add_parser("dispatch-next", help="Dispatch registered source-gated handler after independent durable cursor verification")
+    for flag in ("profile", "session-id", "invocation-id", "output-dir", "database"):
+        dispatch.add_argument("--" + flag, required=True, type=Path if flag in ("profile", "output-dir", "database") else str)
+    dispatch.add_argument("--previous-session-id")
+    dispatch.add_argument("--previous-invocation-id")
+    dispatch.add_argument("--auto-resume", action="store_true")
     startup = sub.add_parser("startup-readback", help="Verify durable startup decision and original authenticated checkpoint")
     startup.add_argument("--profile", type=Path, required=True)
     startup.add_argument("--session-id", required=True)
@@ -598,6 +636,13 @@ def main() -> None:
                 previous_invocation_id=args.previous_invocation_id)
         elif args.command == "select-next":
             result = select_verified_next_handler(
+                args.profile, session_id=args.session_id, invocation_id=args.invocation_id,
+                output_dir=args.output_dir, database=args.database,
+                auto_resume=args.auto_resume,
+                previous_session_id=args.previous_session_id,
+                previous_invocation_id=args.previous_invocation_id)
+        elif args.command == "dispatch-next":
+            result = dispatch_verified_next_handler(
                 args.profile, session_id=args.session_id, invocation_id=args.invocation_id,
                 output_dir=args.output_dir, database=args.database,
                 auto_resume=args.auto_resume,

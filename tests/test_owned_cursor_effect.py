@@ -83,3 +83,30 @@ class VerifiedNextHandlerTest(unittest.TestCase):
             with self.subTest(status=status), patch.object(owner, 'run_verified_cursor_effect', return_value={'status': status}):
                 result = owner.select_verified_next_handler(Path('profile'), session_id='s', invocation_id='i', output_dir=Path('/tmp/a'), database=Path('/tmp/b'))
                 self.assertEqual(result['selection'], 'HALT_UNVERIFIED_CONTEXT')
+
+class DispatchNextTest(unittest.TestCase):
+    def test_selected_handler_produces_durable_handoff(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            os.chmod(root, 0o700)
+            receipt = dict(
+                status='STARTUP_DECISION_VERIFIED', registered_action='VERIFY_REQUIRED_RETRIEVED_SOURCES',
+                action_result='REQUIRED_RETRIEVED_SOURCES_VERIFIED', action_source_ids=['source-a'],
+                key='mission:startup:s:i', startup_receipt_digest='sha256:'+'a'*64,
+                retrieval_digest='sha256:'+'b'*64, recovered_cursor='continue:verified',
+                checkpoint_digest='sha256:checkpoint', journal_source_ref='journal')
+            with patch.object(owner, 'run_registered_resume', side_effect=lambda *a, **k: k['handlers']['VERIFY_REQUIRED_RETRIEVED_SOURCES'](receipt)), patch.object(owner, 'read_startup_decision', return_value=receipt):
+                args = dict(session_id='s', invocation_id='i', output_dir=root, database=root/'provider.sqlite')
+                first = owner.dispatch_verified_next_handler(Path('profile'), **args)
+                second = owner.dispatch_verified_next_handler(Path('profile'), **args)
+            self.assertEqual(first['status'], 'REGISTERED_HANDLER_EFFECT_VERIFIED')
+            self.assertEqual(first['handoff']['status'], 'HANDOFF_REPLAY_VERIFIED')
+            self.assertEqual(second['handoff']['status'], 'HANDOFF_REPLAY_VERIFIED')
+            with sqlite3.connect(root/'provider.sqlite') as db:
+                self.assertEqual(db.execute('SELECT count(*) FROM applied_cursor').fetchone()[0], 1)
+
+    def test_unverified_context_never_dispatches(self):
+        with patch.object(owner, 'select_verified_next_handler', return_value={'selection':'HALT_UNVERIFIED_CONTEXT'}), patch.object(owner, 'read_startup_decision') as read:
+            result = owner.dispatch_verified_next_handler(Path('profile'), session_id='s', invocation_id='i', output_dir=Path('/tmp/a'), database=Path('/tmp/b'))
+        self.assertEqual(result['status'], 'DISPATCH_HALTED_UNVERIFIED_CONTEXT')
+        read.assert_not_called()
