@@ -632,6 +632,27 @@ if __name__ == "__main__":
                     stop_drains.set()
                     for thread in drains:
                         thread.join(timeout=0.3)
+                # A direct child can exit cleanly after spawning a worker that
+                # closes inherited output pipes. EOF alone cannot attest that
+                # the isolated execution group has finished. Do not certify a
+                # successful command while such a descendant is still running.
+                descendant_group_unresolved = False
+                if os.name == "posix" and child.poll() is not None:
+                    try:
+                        os.killpg(child.pid, 0)
+                    except ProcessLookupError:
+                        pass  # no remaining members of the isolated group
+                    except PermissionError:
+                        descendant_group_unresolved = True
+                        group_signal_denied = True
+                    else:
+                        descendant_group_unresolved = True
+                        try:
+                            os.killpg(child.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                        except PermissionError:
+                            group_signal_denied = True
                 output_incomplete = timed_out or not all(drain_complete)
                 out_file.seek(0, os.SEEK_END)
                 err_file.seek(0, os.SEEK_END)
@@ -667,6 +688,7 @@ if __name__ == "__main__":
             or output_drains_unresolved
             or locals().get("input_writer_unresolved", False)
             or group_signal_denied
+            or locals().get("descendant_group_unresolved", False)
         )
         input_written = locals().get("input_bytes_written", [0])[0]
         input_writer_unresolved = locals().get("input_writer_unresolved", False)
@@ -706,6 +728,7 @@ if __name__ == "__main__":
             "direct_child_reaped": direct_child_reaped,
             "output_drains_unresolved": output_drains_unresolved,
             "cleanup_unresolved": cleanup_unresolved,
+            "descendant_group_unresolved": locals().get("descendant_group_unresolved", False),
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }

@@ -475,3 +475,43 @@ def test_large_stdin_reaches_reading_child(tmp_path):
     receipt = json.loads(result.stdout)
     assert receipt["stdout"].strip() == digest
     assert receipt["exit_code"] == 0
+
+
+def test_zero_exit_with_silent_live_descendant_fails_closed(tmp_path):
+    """A worker cannot claim clean exit while its same-group descendant survives."""
+    import os
+    import time
+    import pytest
+    if os.name != "posix":
+        pytest.skip("POSIX process groups required")
+    skills = tmp_path / "skills"
+    doc = skills / "agent" / "SKILL.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# Agent")
+    digest = hashlib.sha256(doc.read_bytes()).hexdigest()
+    pid_file = tmp_path / "descendant.pid"
+    script = (
+        "import subprocess,sys,pathlib;"
+        "p=subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)'],"
+        "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL);"
+        "pathlib.Path(sys.argv[1]).write_text(str(p.pid))"
+    )
+    try:
+        result = invoke(
+            "--exec-capability", "--skills-root", skills,
+            "--select", "skill:agent", "--sha256", digest,
+            "--timeout-seconds", "3", "--", sys.executable, "-c", script, pid_file,
+        )
+        assert result.returncode == 74, result.stderr
+        payload = json.loads(result.stdout)
+        assert payload["exit_code"] == 74
+        assert payload["status"] == "failed"
+        assert payload["cleanup_unresolved"] is True
+        assert payload["descendant_group_unresolved"] is True
+        assert payload["outcome_verified"] is False
+    finally:
+        if pid_file.exists():
+            try:
+                os.kill(int(pid_file.read_text()), 9)
+            except ProcessLookupError:
+                pass
