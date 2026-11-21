@@ -106,24 +106,29 @@ def consume_once_verified_handoff(receipt, *, output_dir, handler, operation_nam
                   "operation": operation_name, "handoff_digest": payload["startup_receipt_digest"],
                   "status": "CLAIMED"}
         encoded = (json.dumps(marker, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        # Publish complete, fsynced claims atomically before dispatch.
+        fd, staging = tempfile.mkstemp(prefix=".operation-", suffix=".tmp", dir=directory)
         try:
-            fd = os.open(claim, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
-        except FileExistsError:
-            info = claim.lstat()
-            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
-                raise ValueError("untrusted operation claim")
-            if claim.read_bytes() != encoded:
-                raise ValueError("conflicting or incomplete operation claim")
-            return {"status": "OPERATION_RECONCILIATION_REQUIRED", "identity": identity}
-        with os.fdopen(fd, "wb") as stream:
-            stream.write(encoded)
-            stream.flush()
-            os.fsync(stream.fileno())
-        directory_fd = os.open(directory, os.O_RDONLY)
-        try:
-            os.fsync(directory_fd)
+            with os.fdopen(fd, "wb") as stream:
+                os.fchmod(stream.fileno(), 0o600)
+                stream.write(encoded)
+                stream.flush()
+                os.fsync(stream.fileno())
+            try:
+                os.link(staging, claim, follow_symlinks=False)
+            except FileExistsError:
+                info = claim.lstat()
+                if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                        or info.st_mode & 0o077 or claim.read_bytes() != encoded):
+                    raise ValueError("conflicting or incomplete operation claim")
+                return {"status": "OPERATION_RECONCILIATION_REQUIRED", "identity": identity}
+            directory_fd = os.open(directory, os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
         finally:
-            os.close(directory_fd)
+            os.unlink(staging)
         # The claim is durable before invoking any effectful handler.
         result = handler(payload, identity)
         return {"status": "OPERATION_INVOKED_RECONCILIATION_REQUIRED",

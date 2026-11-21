@@ -87,6 +87,25 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(first["identity"], second["identity"])
 
+    def test_interrupted_claim_publication_never_dispatches_or_poison_retries(self):
+        real_link = os.link
+        calls = []
+        def fail_operation_link(src, dst, **kwargs):
+            if Path(dst).name.startswith("operation-"):
+                raise OSError("interrupted claim publication")
+            return real_link(src, dst, **kwargs)
+        with patch("scripts.continuity_verified_artifact.os.link", side_effect=fail_operation_link):
+            with self.assertRaisesRegex(OSError, "interrupted claim publication"):
+                consume_once_verified_handoff(self.receipt, output_dir=self.path,
+                    handler=lambda *_: calls.append("effect"), operation_name="mission")
+        self.assertFalse(calls)
+        self.assertEqual(list(self.path.glob("operation-*.json")), [])
+        self.assertEqual(list(self.path.glob(".operation-*.tmp")), [])
+        result = consume_once_verified_handoff(self.receipt, output_dir=self.path,
+            handler=lambda *_: calls.append("effect"), operation_name="mission")
+        self.assertEqual(result["status"], "OPERATION_INVOKED_RECONCILIATION_REQUIRED")
+        self.assertEqual(calls, ["effect"])
+
     def test_crashed_handler_is_not_repeated(self):
         calls = []
         def crash(payload, identity):
