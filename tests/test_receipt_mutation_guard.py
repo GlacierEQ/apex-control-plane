@@ -18,7 +18,7 @@ def test_same_length_rewrite_during_inspection_fails_closed(tmp_path, monkeypatc
         result = original(fd)
         calls += 1
         if calls == 1:
-            receipt.write_text('{"status":"launched_unverified"}')
+            receipt.write_text('{"status":"pending_unverifieD"}')
         return result
 
     monkeypatch.setattr(inspector.os, "fstat", rewriting_fstat)
