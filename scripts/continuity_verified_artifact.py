@@ -135,3 +135,43 @@ def consume_once_verified_handoff(receipt, *, output_dir, handler, operation_nam
                 "identity": identity, "handler_result": result}
 
     return consume_verified_handoff(receipt, output_dir=output_dir, handler=guarded)
+
+
+def reconcile_once_verified_handoff(receipt, *, output_dir, operation_name, provider_readback):
+    """Reconcile an already claimed operation through owner-registered provider readback.
+
+    Never invokes the original effect. A provider must return a verifiable
+    operation identity and evidence reference; ambiguous reads remain pending.
+    """
+    if not callable(provider_readback):
+        raise ValueError("explicit provider readback required")
+    def inspect(payload):
+        if not isinstance(operation_name, str) or not 0 < len(operation_name) <= 80 or not all(
+            c.isascii() and (c.isalnum() or c in '-_') for c in operation_name
+        ):
+            raise ValueError("explicit safe operation name required")
+        identity = hashlib.sha256((payload['startup_receipt_digest'] + ':' + operation_name).encode()).hexdigest()
+        claim = Path(output_dir) / ('operation-' + identity + '.json')
+        try:
+            info = claim.lstat()
+        except FileNotFoundError:
+            return {'status': 'OPERATION_NOT_CLAIMED', 'identity': identity}
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError('untrusted operation claim')
+        expected = {'schema': 'glaciereq.operation-claim/1', 'identity': identity,
+                    'operation': operation_name, 'handoff_digest': payload['startup_receipt_digest'],
+                    'status': 'CLAIMED'}
+        raw = (json.dumps(expected, sort_keys=True, separators=(',', ':')) + '\n').encode()
+        if claim.read_bytes() != raw:
+            raise ValueError('conflicting or incomplete operation claim')
+        evidence = provider_readback(identity, payload)
+        if evidence is None:
+            return {'status': 'OPERATION_RECONCILIATION_REQUIRED', 'identity': identity}
+        if (not isinstance(evidence, dict) or evidence.get('operation_identity') != identity
+            or evidence.get('effect_verified') is not True
+            or not isinstance(evidence.get('provider_reference'), str)
+            or not evidence['provider_reference'].strip()):
+            raise ValueError('provider readback did not verify claimed effect')
+        return {'status': 'OPERATION_EFFECT_PROVIDER_VERIFIED', 'identity': identity,
+                'provider_reference': evidence['provider_reference']}
+    return consume_verified_handoff(receipt, output_dir=output_dir, handler=inspect)

@@ -137,3 +137,40 @@ class HandoffTests(unittest.TestCase):
             apply_verified_handoff(self.receipt, output_dir=self.path)
 if __name__ == "__main__":
     unittest.main()
+
+class ReconciliationTests(HandoffTests):
+    def test_claimed_provider_effect_readback_without_repeat(self):
+        from scripts.continuity_verified_artifact import reconcile_once_verified_handoff
+        seen=[]
+        claim=consume_once_verified_handoff(self.receipt, output_dir=self.path,
+            operation_name='mission', handler=lambda p,i: seen.append(i))
+        result=reconcile_once_verified_handoff(self.receipt, output_dir=self.path,
+            operation_name='mission', provider_readback=lambda i,p: {
+                'operation_identity':i,'effect_verified':True,'provider_reference':'provider:record:123'})
+        self.assertEqual(result['status'],'OPERATION_EFFECT_PROVIDER_VERIFIED')
+        self.assertEqual(result['identity'],claim['identity'])
+        self.assertEqual(len(seen),1)
+
+    def test_missing_and_ambiguous_provider_effect(self):
+        from scripts.continuity_verified_artifact import reconcile_once_verified_handoff
+        read=lambda i,p: None
+        self.assertEqual(reconcile_once_verified_handoff(self.receipt, output_dir=self.path,
+            operation_name='mission', provider_readback=read)['status'],'OPERATION_NOT_CLAIMED')
+        consume_once_verified_handoff(self.receipt, output_dir=self.path,
+            operation_name='mission', handler=lambda *_: None)
+        self.assertEqual(reconcile_once_verified_handoff(self.receipt, output_dir=self.path,
+            operation_name='mission', provider_readback=read)['status'],'OPERATION_RECONCILIATION_REQUIRED')
+        with self.assertRaisesRegex(ValueError,'provider readback'):
+            reconcile_once_verified_handoff(self.receipt, output_dir=self.path,
+                operation_name='mission', provider_readback=lambda i,p: {'operation_identity':'wrong','effect_verified':True,'provider_reference':'x'})
+
+    def test_tampered_claim_blocks_readback(self):
+        from scripts.continuity_verified_artifact import reconcile_once_verified_handoff
+        consume_once_verified_handoff(self.receipt, output_dir=self.path,
+            operation_name='mission', handler=lambda *_: None)
+        next(self.path.glob('operation-*.json')).write_text('corrupted')
+        called=[]
+        with self.assertRaisesRegex(ValueError,'conflicting'):
+            reconcile_once_verified_handoff(self.receipt, output_dir=self.path,
+                operation_name='mission', provider_readback=lambda *_: called.append(1))
+        self.assertFalse(called)
