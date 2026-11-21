@@ -18,6 +18,8 @@ from continuous_control_plane import (
     load_continuous_control_config,
 )
 import json
+import signal
+import tempfile
 from hashlib import sha256
 import os
 from pathlib import Path
@@ -146,18 +148,43 @@ if __name__ == "__main__":
             except ValueError:
                 timeout_seconds = 120.0
             timed_out = False
+            cleanup_unresolved = False
+            output_limit = 65536
             try:
-                process = subprocess.run(
-                    command, check=False, text=True, capture_output=True,
-                    timeout=timeout_seconds,
-                )
-                code = process.returncode
-                stdout, stderr = process.stdout, process.stderr
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                code, stdout, stderr = 124, "", "local subprocess deadline exceeded"
+                # Disk-backed pipes prevent unbounded capture_output memory and
+                # inherited-pipe hangs when a child leaves descendants behind.
+                with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+                    child = subprocess.Popen(
+                        command, stdout=out, stderr=err,
+                        start_new_session=(os.name == "posix"),
+                    )
+                    try:
+                        code = child.wait(timeout=timeout_seconds)
+                    except subprocess.TimeoutExpired:
+                        timed_out = True
+                        if os.name == "posix":
+                            try:
+                                os.killpg(child.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+                            except OSError:
+                                cleanup_unresolved = True
+                        else:
+                            child.kill()
+                        try:
+                            child.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            cleanup_unresolved = True
+                        code = 124
+                    out.seek(0)
+                    err.seek(0)
+                    stdout = out.read(output_limit).decode("utf-8", errors="replace")
+                    stderr = err.read(output_limit).decode("utf-8", errors="replace")
+                    stdout_truncated = out.read(1) != b""
+                    stderr_truncated = err.read(1) != b""
             except OSError as exc:
                 code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
+                stdout_truncated = stderr_truncated = False
             execution = ExecutionReceipt(
                 work_id=item.work_id,
                 mission_id=item.mission_id,
@@ -169,8 +196,13 @@ if __name__ == "__main__":
                     "exit_code": code,
                     "stdout": stdout,
                     "stderr": stderr,
+                    "stdout_truncated": stdout_truncated,
+                    "stderr_truncated": stderr_truncated,
+                    "output_limit_bytes": output_limit,
                     **({"status": "inspection_failed", "outcome_verified": False,
-                        "cleanup_unresolved": True, "reason": "subprocess_timeout"}
+                        "cleanup_unresolved": True, "process_group_cleanup_error": cleanup_unresolved,
+                        "direct_child_reaped": child.poll() is not None if "child" in locals() else False,
+                        "reason": "subprocess_timeout"}
                        if timed_out else {}),
                     "scope": "local process execution only; independent mission validation may remain",
                 },

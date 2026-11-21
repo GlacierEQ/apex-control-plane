@@ -433,3 +433,32 @@ def test_local_subprocess_timeout_is_durable_reconciliation_not_retry(tmp_path: 
     second = subprocess.run(invocation, cwd=ROOT, text=True,
                             capture_output=True, timeout=12, env=env)
     assert json.loads(second.stdout)["status"] == "idle"
+
+
+def test_local_subprocess_output_is_bounded_and_persisted(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import (
+        ContinuousControlPlane, ControlEvent, JsonlControlStore,
+        load_continuous_control_config,
+    )
+    store = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    plane = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    work = plane.ingest_event(ControlEvent(
+        event_type="gmail.reply.received", source_system="test",
+        subject_id="bounded-output", correlation_id="bounded-corr", payload={},
+    ))[0]
+    command = [sys.executable, str(CLI), "--run-next-local", str(store),
+               work.capability, "--", sys.executable, "-c",
+               "import sys;sys.stdout.write('x'*200000);sys.stderr.write('y'*200000)"]
+    result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, timeout=15)
+    assert result.returncode == 4, result.stderr
+    recovered = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    receipts = [r for r in recovered.receipts.values() if r.source_system == "apex-local-process"]
+    assert len(receipts) == 1
+    details = receipts[0].details
+    assert len(details["stdout"].encode()) == 65536
+    assert len(details["stderr"].encode()) == 65536
+    assert details["stdout_truncated"] is True
+    assert details["stderr_truncated"] is True
+    assert details["output_limit_bytes"] == 65536

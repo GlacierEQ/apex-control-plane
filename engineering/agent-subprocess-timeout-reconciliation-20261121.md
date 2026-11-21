@@ -10,3 +10,8 @@ Python 3.13 focused original CLI tests: 15 passed. New adversarial timeout/resta
 
 ## Remaining / continuation
 Inspect actual subprocess durable receipt integration and ensure process-group cleanup and output bounding for noisy children; a timeout does not establish descendant termination. Next: recover this branch head, inspect CLI adapter and inspector, add genuine process-to-inspector-to-scheduler integration tests, then read back remote commit. No merge or deployment.
+
+## 2026-11-21 bounded subprocess capture and process-group reap
+On the actual `--run-next-local` / `--drain-local` worker adapter, replaced unbounded `subprocess.run(capture_output=True)` with disk-backed stdout/stderr, per-stream 65,536-byte persisted capture with explicit truncation flags, and a new-session subprocess group on POSIX. Timeout now attempts SIGKILL against the process group and bounded direct-child wait; uncertain descendant effects remain explicitly `cleanup_unresolved=true` and enter durable RECONCILING, even when the direct child was reaped. No automatic retry of ambiguous effects. The change does not attest external effects, and temporary output files may still grow on disk during a running command; future hardening should enforce a disk quota and independently inspect descendant termination.
+
+Changed-head Python 3.13 focused CLI: 17 passed. Full repository suite: 1,098 passed, 29 skipped, 8 subtests passed, exit 0. Adversarial test executes a real process writing 200 KB to both streams and verifies the persisted receipt is bounded and marked truncated. Continuation: integrate standalone inspector's actual subprocess receipt into the scheduler and verify descendant cleanup plus output drain semantics; do not infer host deployment from these tests.
