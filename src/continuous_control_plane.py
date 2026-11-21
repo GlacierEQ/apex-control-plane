@@ -644,7 +644,10 @@ class ContinuousControlPlane:
             or evidence.details.get("direct_child_reaped") is False
             # Inspection failure is terminal for this attempt even when the
             # worker omits retry_authorized or supplies contradictory labels.
-            or evidence.details.get("status") == "inspection_failed"
+            or ("status" in evidence.details and (
+                not isinstance(evidence.details["status"], str)
+                or evidence.details["status"].casefold() == "inspection_failed"
+            ))
             or evidence.details.get("outcome_evidence") == "unattested_receipt"
             or not isinstance(evidence.status, str)
             or evidence.status.casefold() == "inspection_failed"
