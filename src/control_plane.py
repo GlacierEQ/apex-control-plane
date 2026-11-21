@@ -151,49 +151,80 @@ if __name__ == "__main__":
             cleanup_unresolved = False
             quota_exhausted = False
             output_limit = 65536
-            disk_limit = 1048576  # Per-stream subprocess file-size ceiling on POSIX.
-            def _limit_child_output() -> None:
-                import resource
-                resource.setrlimit(resource.RLIMIT_FSIZE, (disk_limit, disk_limit))
+            disk_limit = 1048576  # Strict per-stream parent-owned capture ceiling.
             try:
-                # Disk-backed pipes prevent unbounded capture_output memory and
-                # inherited-pipe hangs when a child leaves descendants behind.
-                with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
-                    child = subprocess.Popen(
-                        command, stdout=out, stderr=err,
-                        start_new_session=(os.name == "posix"),
-                        preexec_fn=_limit_child_output if os.name == "posix" else None,
-                    )
-                    try:
-                        code = child.wait(timeout=timeout_seconds)
-                    except subprocess.TimeoutExpired:
-                        timed_out = True
-                        if os.name == "posix":
-                            try:
-                                os.killpg(child.pid, signal.SIGKILL)
-                            except ProcessLookupError:
-                                pass
-                            except OSError:
+                if os.name == "posix":
+                    import selectors
+                    import time
+                    child = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                             stderr=subprocess.PIPE, start_new_session=True)
+                    captured = {"stdout": bytearray(), "stderr": bytearray()}
+                    counts = {"stdout": 0, "stderr": 0}
+                    deadline = time.monotonic() + timeout_seconds
+                    killed = False
+                    with selectors.DefaultSelector() as selector:
+                        selector.register(child.stdout, selectors.EVENT_READ, "stdout")
+                        selector.register(child.stderr, selectors.EVENT_READ, "stderr")
+                        while selector.get_map():
+                            now = time.monotonic()
+                            if not killed and now >= deadline:
+                                timed_out = True
+                            if (timed_out or quota_exhausted) and not killed:
+                                killed = True
+                                try:
+                                    os.killpg(child.pid, signal.SIGKILL)
+                                except ProcessLookupError:
+                                    pass
+                                except OSError:
+                                    cleanup_unresolved = True
+                            if killed and now >= deadline + 5:
                                 cleanup_unresolved = True
-                        else:
-                            child.kill()
+                                break
+                            for key, _ in selector.select(timeout=0.05):
+                                name = key.data
+                                data = os.read(key.fileobj.fileno(), 65536)
+                                if not data:
+                                    selector.unregister(key.fileobj)
+                                    continue
+                                remaining = max(0, disk_limit - counts[name])
+                                counts[name] += min(len(data), remaining)
+                                if len(data) > remaining or counts[name] >= disk_limit:
+                                    quota_exhausted = True
+                                if len(captured[name]) < output_limit:
+                                    captured[name].extend(data[:output_limit - len(captured[name])])
+                    if killed:
                         try:
                             child.wait(timeout=5)
                         except subprocess.TimeoutExpired:
                             cleanup_unresolved = True
-                        code = 124
-                    out.seek(0, os.SEEK_END)
-                    err.seek(0, os.SEEK_END)
-                    quota_exhausted = os.name == "posix" and (out.tell() >= disk_limit or err.tell() >= disk_limit)
-                    if quota_exhausted and code == 0:
-                        code = 125  # A successful exit cannot attest quota-clipped output.
-                    out.seek(0)
-                    err.seek(0)
-                    stdout = out.read(output_limit).decode("utf-8", errors="replace")
-                    stderr = err.read(output_limit).decode("utf-8", errors="replace")
-                    stdout_truncated = out.read(1) != b""
-                    stderr_truncated = err.read(1) != b""
-            except OSError as exc:
+                        code = 124 if timed_out else 125
+                    else:
+                        code = child.wait(timeout=5)
+                    stdout = captured["stdout"].decode("utf-8", errors="replace")
+                    stderr = captured["stderr"].decode("utf-8", errors="replace")
+                    stdout_truncated = counts["stdout"] > output_limit
+                    stderr_truncated = counts["stderr"] > output_limit
+                else:
+                    # Portable fallback: no strict quota claim on Windows.
+                    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+                        child = subprocess.Popen(command, stdout=out, stderr=err)
+                        try:
+                            code = child.wait(timeout=timeout_seconds)
+                        except subprocess.TimeoutExpired:
+                            timed_out = True
+                            child.kill()
+                            try:
+                                child.wait(timeout=5)
+                            except subprocess.TimeoutExpired:
+                                cleanup_unresolved = True
+                            code = 124
+                        out.seek(0)
+                        err.seek(0)
+                        stdout = out.read(output_limit).decode("utf-8", errors="replace")
+                        stderr = err.read(output_limit).decode("utf-8", errors="replace")
+                        stdout_truncated = out.read(1) != b""
+                        stderr_truncated = err.read(1) != b""
+            except (OSError, subprocess.TimeoutExpired) as exc:
                 code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
                 stdout_truncated = stderr_truncated = False
             execution = ExecutionReceipt(

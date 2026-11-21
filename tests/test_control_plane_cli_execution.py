@@ -516,3 +516,28 @@ def test_local_subprocess_disk_quota_fails_closed(tmp_path: Path) -> None:
     assert details['stdout_truncated'] is True
     assert details['exit_code'] != 0
     assert len(details['stdout'].encode()) <= 65536
+
+
+def test_local_output_quota_does_not_limit_verified_artifact(tmp_path: Path) -> None:
+    import os
+    if os.name != "posix":
+        pytest.skip("POSIX strict parent capture")
+    sys.path.insert(0, str(ROOT / "src"))
+    from continuous_control_plane import ContinuousControlPlane, ControlEvent, JsonlControlStore, load_continuous_control_config
+    store = tmp_path / "queue"
+    config = load_continuous_control_config(ROOT / "config" / "continuous_control_plane.json")
+    plane = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    work = plane.ingest_event(ControlEvent(event_type="gmail.reply.received", source_system="test", subject_id="large-artifact", correlation_id="large-artifact-corr", payload={}))[0]
+    artifact = tmp_path / "large.bin"
+    command = [sys.executable, str(CLI), "--run-next-local", str(store), work.capability,
+               "--verify-file", str(artifact), "--", sys.executable, "-c",
+               "import pathlib,sys;pathlib.Path(sys.argv[1]).write_bytes(b'z'*20000000);print('created')", str(artifact)]
+    result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, timeout=20)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    assert artifact.stat().st_size == 20000000
+    recovered = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    receipts = [r for r in recovered.receipts.values() if r.source_system == "apex-local-process"]
+    assert len(receipts) == 1
+    assert receipts[0].status == "verified"
+    assert receipts[0].details["output_quota_exhausted"] is False
+    assert receipts[0].details["exit_code"] == 0
