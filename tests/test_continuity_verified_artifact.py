@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from scripts.continuity_verified_artifact import apply_verified_handoff
+from scripts.continuity_verified_artifact import apply_verified_handoff, consume_verified_handoff
 
 class HandoffTests(unittest.TestCase):
     def setUp(self):
@@ -51,6 +51,27 @@ class HandoffTests(unittest.TestCase):
         result = apply_verified_handoff(self.receipt, output_dir=self.path)
         self.assertEqual(result["status"], "HANDOFF_CREATED")
         self.assertEqual(apply_verified_handoff(self.receipt, output_dir=self.path)["status"], "HANDOFF_REPLAY_VERIFIED")
+
+    def test_verified_consumer_receives_recovered_cursor(self):
+        seen = []
+        result = consume_verified_handoff(self.receipt, output_dir=self.path,
+                                          handler=lambda payload: seen.append(payload["recovered_cursor"]) or "applied")
+        self.assertEqual(result, "applied")
+        self.assertEqual(seen, ["cursor"])
+        self.assertEqual(len(list(self.path.glob("*.json"))), 1)
+
+    def test_consumer_rejects_tamper_before_dispatch(self):
+        first = apply_verified_handoff(self.receipt, output_dir=self.path)
+        Path(first["path"]).write_text("tampered")
+        seen = []
+        with self.assertRaises(ValueError):
+            consume_verified_handoff(self.receipt, output_dir=self.path,
+                                     handler=lambda payload: seen.append(payload))
+        self.assertFalse(seen)
+
+    def test_consumer_requires_explicit_handler(self):
+        with self.assertRaisesRegex(ValueError, "explicit owner consumer"):
+            consume_verified_handoff(self.receipt, output_dir=self.path, handler=None)
 
     def test_private_directory_required(self):
         os.chmod(self.path, 0o755)
