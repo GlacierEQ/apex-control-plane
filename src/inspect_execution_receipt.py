@@ -72,6 +72,13 @@ def inspect(path: Path) -> dict:
         return {"status": "inspection_failed", "reason": "receipt status must be a string",
                 "retry_authorized": False, "outcome_verified": False}
 
+    # Unknown receipt states are not valid execution evidence.
+    allowed_statuses = {"launched_unverified", "pending_unverified",
+                        "process_succeeded_unverified", "failed"}
+    if record["status"] not in allowed_statuses:
+        return {"status": "inspection_failed", "reason": "unknown receipt status",
+                "retry_authorized": False, "outcome_verified": False}
+
     result = {
         "status": "inspected_unverified",
         "receipt_status": record.get("status"),
