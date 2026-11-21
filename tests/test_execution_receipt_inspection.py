@@ -85,7 +85,8 @@ def test_inspection_fails_closed_on_unresolved_or_legacy_cleanup(tmp_path):
         path.write_text(json.dumps(record))
         result = inspect(path)
         assert result["cleanup_status"] == expected
-        assert result["outcome_verified"] is (expected == "resolved_direct_child_only")
+        assert result["outcome_verified"] is False
+        assert result["outcome_evidence"] == "unattested_receipt"
         assert result["retry_authorized"] is False
 
     for key in ("group_signal_denied", "descendant_containment_verified"):
@@ -122,3 +123,20 @@ def test_unique_standard_json_receipt_still_inspects(tmp_path):
     result = run(path)
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["status"] == "inspected_unverified"
+
+
+def test_forged_success_and_failure_receipts_never_attest_outcome(tmp_path):
+    path = tmp_path / "receipt.json"
+    for status in ("process_succeeded_unverified", "failed", "invented_success"):
+        path.write_text(json.dumps({
+            "status": status, "outcome_verified": True,
+            "cleanup_unresolved": False, "output_drains_unresolved": False,
+            "direct_child_reaped": True, "group_signal_denied": False,
+            "descendant_containment_verified": True,
+        }))
+        completed = run(path)
+        assert completed.returncode == 0, completed.stderr
+        result = json.loads(completed.stdout)
+        assert result["outcome_verified"] is False
+        assert result["retry_authorized"] is False
+        assert result["outcome_evidence"] == "unattested_receipt"

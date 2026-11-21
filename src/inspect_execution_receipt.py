@@ -67,12 +67,11 @@ def inspect(path: Path) -> dict:
             result["cleanup_status"] = "unresolved"
         else:
             result["cleanup_status"] = "resolved_direct_child_only"
-        result["outcome_verified"] = (
-            record.get("outcome_verified") is True
-            and result["cleanup_status"] == "resolved_direct_child_only"
-            and record.get("group_signal_denied") is False
-            and record.get("descendant_containment_verified") is True
-        )
+        # Durable receipts are diagnostic, not attested outcome proofs. The
+        # executor emits outcome_verified=False even on zero subprocess exit;
+        # a modified receipt must not manufacture an authorization to succeed.
+        result["outcome_verified"] = False
+        result["outcome_evidence"] = "unattested_receipt"
         return result
     pid = record.get("pid")
     launched = record.get("launched_at_utc")
