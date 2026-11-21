@@ -633,6 +633,27 @@ class ContinuousControlPlane:
         for evidence in receipts:
             self.record_receipt(evidence)
         receipt = receipts[-1]
+        # An execution/inspection receipt is diagnostic, not a success attestation.
+        # Never let a generic "success" label override explicit negative proof.
+        # Reconciliation is mandatory: retry could repeat an effect whose
+        # subprocess or descendants are still running.
+        unsafe = any(
+            evidence.details.get("outcome_verified") is False
+            or evidence.details.get("cleanup_unresolved") is True
+            or evidence.details.get("output_drains_unresolved") is True
+            or evidence.details.get("direct_child_reaped") is False
+            or evidence.details.get("retry_authorized") is False
+               and evidence.details.get("status") == "inspection_failed"
+            for evidence in receipts
+        )
+        if unsafe:
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="execution_receipt_negative_proof_requires_reconciliation")
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id, "receipt_id": receipt.receipt_id,
+                "error": "execution receipt contains unresolved or unverified evidence",
+            }
         good = all(evidence.status.casefold() in {
             "verified", "pass", "passed", "success", "succeeded",
         } for evidence in receipts)
