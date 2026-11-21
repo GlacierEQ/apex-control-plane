@@ -1,0 +1,165 @@
+# Apex Control Plane — Portable Project Manifest
+schema: glaciereq.project-manifest.v1
+generated_at: "2026-11-20T06:45:00-10:00"
+source_authority: "estate_owner_graph.json (t_a4098ff2 strategy) + live git readback + DECISIONS.md (2026-11-09 legal root integration)"
+
+project:
+  key: apex-control-plane
+  canonical_name: "apex-control-plane"
+  canonical_owner: "GlacierEQ/apex-control-plane"
+  role: "control_plane"
+  tier: "SubsystemI"
+  purpose: "Apex Control Plane — capability routing for apex-boot-core (mission_adapter.py:345-346); execution/readback/verification separation for computer-user; legal casebuilder injector"
+  operator_intent: "Control plane for APEX mesh — routes capabilities, separates execution/readback/verification, injects casebuilders"
+  runtime_entrypoint: "scripts/universal_casebuilder_injector.py, scripts/seeder.py, mass_casebuilder_push.sh (portable paths)"
+  target_output: "Verified capability routing, casebuilder injection, execution/readback/verification separation"
+  operational_users:
+    - "Casey (Operator)"
+    - "apex-boot-core (capability routing: runtime/mission_adapter.py:345-346)"
+    - "computer-user (execution/readback/verification separation)"
+    - "Legal kanban (casebuilder injection)"
+    - "monolith (labs worktree: projects/labs/gatebridge-admin-20261113)"
+
+identity:
+  local_path: "/Users/kcbflux/workspace/projects/apex-control-plane"
+  git_origin: "https://github.com/GlacierEQ/apex-control-plane.git"
+  head_branch: "fix/native-readback-receipt-type-20261114"
+  head_sha: "aa7e2ca"  # from estate_owner_graph.md
+  last_commit: "2026-11-14 (measured)"
+  version: "unknown"
+  commit_count: "unknown"
+  dirty_files: 0
+  branch_count: 1
+  worktrees: []
+  github:
+    visibility: "PRIVATE"
+    is_fork: false
+    is_archived: false
+    default_branch: "main"
+    updated_at: "2026-11-14T08:03:41Z"  # approximate
+    language: "Python"
+    description: ""
+  registry:
+    url: "https://github.com/GlacierEQ/apex-control-plane"
+    is_private: true
+    is_archived: false
+    primary_role: "control_plane"
+    memberships: []
+
+boundaries:
+  files:
+    - "scripts/universal_casebuilder_injector.py (portable MONOLITH_ROOT/CASEBRAIN_ENGINE/CASEBRAIN_HOME/FORGE_DIR)"
+    - "scripts/seeder.py"
+    - "mass_casebuilder_push.sh"
+    - "adapters/chatgpt/PROJECT_INSTRUCTIONS.md"
+    - "docs/operator-administration/ARCHITECTURE.md"
+    - "tests/"
+    - "pyproject.toml"
+    - "AGENTS.md"
+    - ".github/"
+  languages:
+    - "Python"
+    - "Markdown"
+    - "Shell"
+  packages: []
+  dependency_interfaces:
+    - "apex-boot-core capability routing: runtime/mission_adapter.py:345-346"
+    - "computer-user execution/readback/verification separation"
+    - "monolith labs worktree: projects/labs/gatebridge-admin-20261113 (origin)"
+    - "Legal kanban casebuilder injection"
+  services: []
+  secrets_references: []
+  deploy_targets:
+    - "local Mac workstation"
+  upstream_projects: []
+  downstream_projects:
+    - "apex-boot-core (capability routing consumer)"
+    - "computer-user (execution/readback/verification consumer)"
+    - "monolith (labs worktree)"
+
+lineage:
+  root_source_branch: "main"
+  forks: []
+  history_preserving_renames: []
+  archived_generations: []
+  predecessor_projects: []
+  generated_mirrors: []
+  unique_unmerged_work: []
+  all_branches:
+    - "fix/native-readback-receipt-type-20261114 (HEAD)"
+    - "main"
+  remotes:
+    - "origin"
+  ahead_behind: "unknown"
+  unpushed_commits: 0
+  unpulled_commits: 0
+
+state:
+  observed_working_features:
+    - "Capability routing for apex-boot-core (mission_adapter.py)"
+    - "Execution/readback/verification separation for computer-user"
+    - "Universal casebuilder injector with portable paths (fixed 2026-11-09)"
+    - "Legal root integration re-verified 2026-11-10 (185 tests OK, foundation 5/5)"
+    - "ChatGPT adapter with PROJECT_INSTRUCTIONS.md"
+    - "Operator administration docs/architecture"
+  broken_features: []
+  missing_dependencies: []
+  current_build_status: "operational (measured, legal kanban integrated)"
+  outstanding_human_decisions: []
+
+separation:
+  case_evidence_excluded: true
+  forensic_records_preserved: true
+  legal_kanban_integrated: true
+
+architecture_contracts:
+  - "scripts/universal_casebuilder_injector.py (portable paths)"
+  - "scripts/seeder.py"
+  - "mass_casebuilder_push.sh"
+  - "adapters/chatgpt/PROJECT_INSTRUCTIONS.md"
+  - "docs/operator-administration/ARCHITECTURE.md"
+  - "pyproject.toml"
+  - "AGENTS.md"
+  - "tests/ (run-before-reliance)"
+
+handoff:
+  startup_instructions: |
+    1. Verify casebuilder injector: `python3 scripts/universal_casebuilder_injector.py --limit 3` (writes INJECTION_REPORT.json)
+    2. Run seeder: `python3 scripts/seeder.py`
+    3. Check apex-boot-core routing: verify mission_adapter.py integration
+    4. Check computer-user separation: verify execution/readback/verification
+    5. Run tests: `python -m pytest tests/`
+  operator_instructions: |
+    - Role: Control plane — capability routing, execution/readback/verification separation, casebuilder injection
+    - Portable paths: MONOLITH_ROOT, CASEBRAIN_ENGINE, CASEBRAIN_HOME, FORGE_DIR (repo-relative defaults, Linux layout preserved via env)
+    - Fixed 2026-11-09: was hardcoded /root/monolith + /root/computer-user (dead on Mac)
+    - Legal kanban: 22 dossier children P-02..P-23 gated on root; 3 hold-closure tasks unlinked but rate-limited
+    - Apex-boot-core consumes capability routing (mission_adapter.py:345-346)
+    - Computer-user consumes execution/readback/verification separation
+    - Monolith has labs worktree (gatebridge-admin-20261113)
+    - Clean state on fix/native-readback-receipt-type-20261114 branch
+  dependency_map:
+    imports: []
+    contracts:
+      - "scripts/universal_casebuilder_injector.py"
+      - "docs/operator-administration/ARCHITECTURE.md"
+    entrypoints:
+      - "scripts/universal_casebuilder_injector.py"
+      - "scripts/seeder.py"
+      - "mass_casebuilder_push.sh"
+      - "tests/ (run-before-reliance)"
+  handoff_notes: |
+    - Critical fix 2026-11-09: portable paths for casebuilder injector (was hardcoded Linux paths)
+    - Legal kanban integration verified 2026-11-10
+    - On feature branch fix/native-readback-receipt-type-20261114 (not main)
+    - ChatGPT adapter available
+
+verification_receipts:
+  - "estate_owner_graph.json (t_a4098ff2 strategy) — canonical owner with measured head"
+  - "Legal root integration 2026-11-10: 185 tests OK, foundation 5/5, pilot SHA-256 OK, apex-legal-sdk 89/1"
+
+status: "deployed_verified"
+remaining_work:
+  - "Merge fix/native-readback-receipt-type-20261114 to main"
+  - "Verify capability routing end-to-end with apex-boot-core"
+  - "Verify execution/readback/verification separation with computer-user"
