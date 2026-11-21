@@ -10,6 +10,10 @@ Main at 201be71; scheduler `ContinuousControlPlane.execute_next_local` accepted 
 
 The real scheduler now persists the returned receipt and transitions to durable RECONCILING rather than COMPLETE, VERIFYING, RECEIVED, or WAITING when explicit negative execution evidence is present. No blind retry is authorized; independent eligible work remains runnable. Legacy successful verification receipts without negative evidence retain existing behavior. This is an opt-in evidence-field guard, not an attestation of positive success or a claim that an arbitrary executor callback is trusted.
 
+## Verification
+
+Mac Python 3.13 exact code/test head 888f022: 42 focused and existing continuous-control-plane tests passed in 26.45 seconds (exit 0). GitHub independent readback confirmed scheduler executable, regression tests and engineering record. Full repository suite separately launched; final exit not yet established at this checkpoint.
+
 ## Continuation
 
 Run `python3 -m pytest -q tests/test_scheduler_negative_execution_evidence.py tests/test_continuous_control_plane.py` and full suite on exact branch head; inspect exit codes. Independently fetch the branch's scheduler source and regression tests from GitHub. Then extend the actual worker adapter to attach inspected subprocess receipt evidence to scheduler `ExecutionReceipt.details`; test real subprocess -> inspector -> scheduler, including denied cleanup and corrupted receipt. Do not merge/deploy or alter scheduled automations without approval.
