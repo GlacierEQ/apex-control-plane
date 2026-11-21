@@ -10,6 +10,6 @@ The real `--inspect-receipt` consumer must never turn untrusted durable JSON fie
 
 ## Verification and continuation
 
-Focused CLI/inspector suite: 13 passed on Mac Python 3.13 with pytest `-o pythonpath=src`. Full repository suite executed separately using an isolated basetemp; final count should be read from the test run output, not inferred from this note. `git diff --check` clean. This branch is an isolated implementation, not a merge or deployment.
+Focused CLI/inspector suite: 13 passed on Mac Python 3.13 with pytest `-o pythonpath=src`. Full repository suite passed on Mac Python 3.13 with isolated `--basetemp=/tmp/glaciereq-agent-run11-pytest`: **1,136 passed, 29 skipped, 8 subtests passed in 21.23 seconds**. `git diff --check` clean. This branch is an isolated implementation, not a merge or deployment.
 
 Next: recover the actual scheduler's receipt consumer and enforce `outcome_verified` and cleanup state at its transition boundary; validate with genuine execution receipts. Native Windows and descendant containment still require separate proof. No scheduled task configurations, credentials, permissions, merges or deployments changed.
