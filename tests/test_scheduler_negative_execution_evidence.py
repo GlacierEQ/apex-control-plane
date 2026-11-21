@@ -42,3 +42,39 @@ def test_malformed_receipt_status_reconciles_without_crashing(tmp_path, malforme
                                    executor=run, now=NOW)
     assert result["status"] == "unconfirmed"
     assert cp.work[work.work_id].state is WorkState.RECONCILING
+
+
+def test_provider_receipt_replay_cannot_certify_another_execution(tmp_path):
+    cp = plane(tmp_path)
+    first = cp.ingest_event(event())[0]
+    # Two distinct local jobs sharing a provider receipt identifier.
+    second = cp.submit_work(
+        mission_id=first.mission_id, correlation_id=first.correlation_id,
+        domain=first.domain, capability=first.capability,
+        objective="independent execution", idempotency_key="independent-execution",
+    )
+    cp.record_receipt(ExecutionReceipt(
+        work_id=first.work_id, mission_id=first.mission_id,
+        correlation_id=first.correlation_id, receipt_kind="verification",
+        status="verified", source_system="provider", details={"ok": True},
+        provider_receipt_id="provider-replayed-id",
+    ))
+    def run(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="provider", details={"ok": True},
+            provider_receipt_id="provider-replayed-id",
+        )
+    result = cp.execute_next_local(
+        worker_id="worker", capabilities=[first.capability],
+        executor=run, now=NOW, exclude_work_ids=[first.work_id],
+    )
+    assert result["status"] == "unconfirmed"
+    assert cp.work[second.work_id].state is WorkState.RECONCILING
+    assert len(cp.receipts) == 1
+    restarted = plane(tmp_path)
+    assert restarted.work[second.work_id].state is WorkState.RECONCILING
+    assert restarted.claim_next(
+        worker_id="replay", capabilities=[second.capability], now=NOW,
+    ) is None
