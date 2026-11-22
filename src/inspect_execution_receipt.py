@@ -34,8 +34,13 @@ def inspect(path: Path) -> dict:
             info = os.fstat(handle.fileno())
             if not stat.S_ISREG(info.st_mode) or info.st_size > 1024 * 1024:
                 raise ValueError("receipt must be a regular file <= 1 MiB")
-            record = json.load(handle, object_pairs_hook=_unique_receipt_pairs,
-                               parse_constant=_reject_nonfinite_constant)
+            # fstat is only a snapshot: a concurrent writer may extend the file.
+            # Bound the actual read as well, before invoking the JSON parser.
+            payload = handle.read(1024 * 1024 + 1)
+            if len(payload) > 1024 * 1024:
+                raise ValueError("receipt exceeds 1 MiB during inspection")
+            record = json.loads(payload, object_pairs_hook=_unique_receipt_pairs,
+                                parse_constant=_reject_nonfinite_constant)
         if not isinstance(record, dict):
             raise ValueError("receipt must be an object")
     except (OSError, ValueError, UnicodeError, RecursionError) as exc:
