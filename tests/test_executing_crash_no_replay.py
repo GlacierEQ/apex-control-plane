@@ -139,3 +139,48 @@ def test_expired_uninvoked_local_dispatch_remains_retriable(tmp_path):
         now=NOW + timedelta(seconds=3),
     )
     assert resumed is not None and resumed.attempt == 2
+
+
+def test_real_process_crash_after_side_effect_before_receipt_never_replays(tmp_path):
+    """The worker process actually exits without a receipt after local effects."""
+    import os
+    import subprocess
+
+    cp, item = job(tmp_path)
+    marker = tmp_path / "side-effect.txt"
+    child_script = (
+        "import os,sys;"
+        "from datetime import datetime;"
+        "from pathlib import Path;"
+        "from continuous_control_plane import "
+        "ContinuousControlPlane,JsonlControlStore,WorkState,load_continuous_control_config;"
+        "root,config,cap,marker,instant=sys.argv[1:];"
+        "cp=ContinuousControlPlane.from_config("
+        "JsonlControlStore(root),load_continuous_control_config(Path(config)));"
+        "work=cp.claim_next(worker_id='crashed',capabilities=[cap],"
+        "now=datetime.fromisoformat(instant),lease_seconds=1);"
+        "assert work is not None;"
+        "cp.transition(work.work_id,WorkState.EXECUTING,reason='worker_invoked');"
+        "Path(marker).write_text('effect already happened');"
+        "os._exit(77)"
+    )
+    env = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
+    crashed = subprocess.run(
+        [sys.executable, "-c", child_script,
+         str(tmp_path), str(ROOT / "config" / "continuous_control_plane.json"),
+         item.capability, str(marker), NOW.isoformat()],
+        cwd=ROOT, env=env, capture_output=True, text=True, timeout=10,
+    )
+    assert crashed.returncode == 77, (crashed.stdout, crashed.stderr)
+    assert marker.read_text() == "effect already happened"
+    restarted = plane(tmp_path)
+    attempts = []
+    result = restarted.execute_next_local(
+        worker_id="replacement", capabilities=[item.capability],
+        now=NOW + timedelta(seconds=2),
+        executor=lambda claimed: attempts.append(claimed.work_id),
+    )
+    assert result["status"] == "idle"
+    assert attempts == []
+    assert marker.read_text() == "effect already happened"
+    assert plane(tmp_path).work[item.work_id].state is WorkState.RECONCILING
