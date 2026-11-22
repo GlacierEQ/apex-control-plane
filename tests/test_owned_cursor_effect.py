@@ -110,3 +110,22 @@ class DispatchNextTest(unittest.TestCase):
             result = owner.dispatch_verified_next_handler(Path('profile'), session_id='s', invocation_id='i', output_dir=Path('/tmp/a'), database=Path('/tmp/b'))
         self.assertEqual(result['status'], 'DISPATCH_HALTED_UNVERIFIED_CONTEXT')
         read.assert_not_called()
+
+class MissionStartCLITest(unittest.TestCase):
+    def test_one_command_dispatches_recovered_context_into_registered_handler(self):
+        import io
+        import json
+        from contextlib import redirect_stdout
+        argv = ['continuity', 'mission-start', '--profile', '/tmp/owner.json',
+                '--session-id', 'new-session', '--invocation-id', 'new-invocation',
+                '--output-dir', '/tmp/private-handoff', '--database', '/tmp/private-cursor.sqlite',
+                '--auto-resume']
+        with patch('sys.argv', argv), patch.object(owner, 'dispatch_verified_next_handler',
+                return_value={'status':'REGISTERED_HANDLER_EFFECT_VERIFIED',
+                              'selection':'VERIFY_REQUIRED_RETRIEVED_SOURCES'}) as handler:
+            with redirect_stdout(io.StringIO()) as output:
+                owner.main()
+        self.assertEqual(json.loads(output.getvalue())['status'], 'REGISTERED_HANDLER_EFFECT_VERIFIED')
+        self.assertTrue(handler.call_args.kwargs['auto_resume'])
+        self.assertEqual(handler.call_args.kwargs['session_id'], 'new-session')
+        self.assertEqual(handler.call_args.kwargs['database'], Path('/tmp/private-cursor.sqlite'))

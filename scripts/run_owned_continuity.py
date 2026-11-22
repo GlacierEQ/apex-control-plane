@@ -609,6 +609,12 @@ def main() -> None:
     dispatch.add_argument("--previous-session-id")
     dispatch.add_argument("--previous-invocation-id")
     dispatch.add_argument("--auto-resume", action="store_true")
+    mission_start = sub.add_parser("mission-start", help="One-step authenticated recovery, durable cursor readback, and registered handler dispatch")
+    for flag in ("profile", "session-id", "invocation-id", "output-dir", "database"):
+        mission_start.add_argument("--" + flag, required=True, type=Path if flag in ("profile", "output-dir", "database") else str)
+    mission_start.add_argument("--previous-session-id")
+    mission_start.add_argument("--previous-invocation-id")
+    mission_start.add_argument("--auto-resume", action="store_true")
     startup = sub.add_parser("startup-readback", help="Verify durable startup decision and original authenticated checkpoint")
     startup.add_argument("--profile", type=Path, required=True)
     startup.add_argument("--session-id", required=True)
@@ -642,6 +648,13 @@ def main() -> None:
                 previous_session_id=args.previous_session_id,
                 previous_invocation_id=args.previous_invocation_id)
         elif args.command == "dispatch-next":
+            result = dispatch_verified_next_handler(
+                args.profile, session_id=args.session_id, invocation_id=args.invocation_id,
+                output_dir=args.output_dir, database=args.database,
+                auto_resume=args.auto_resume,
+                previous_session_id=args.previous_session_id,
+                previous_invocation_id=args.previous_invocation_id)
+        elif args.command == "mission-start":
             result = dispatch_verified_next_handler(
                 args.profile, session_id=args.session_id, invocation_id=args.invocation_id,
                 output_dir=args.output_dir, database=args.database,
