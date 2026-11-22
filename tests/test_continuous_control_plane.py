@@ -850,3 +850,22 @@ def test_receipt_uuid_collision_is_rejected_under_ledger_lock(tmp_path):
     cp.record_receipt(proof)
     with pytest.raises(ValueError, match="receipt UUID already recorded"):
         plane(tmp_path).record_receipt(proof)
+
+
+def test_worker_receipt_batch_rejects_cross_work_without_persisting(tmp_path):
+    cp = plane(tmp_path)
+    first = cp.ingest_event(event())[0]
+    second = cp.ingest_event(event("dockets.referral.ready"))[0]
+    receipts = tuple(
+        ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-process", details={},
+        )
+        for item in (first, second)
+    )
+    with pytest.raises(ValueError, match="spans multiple work"):
+        cp.record_receipt_batch(receipts)
+    restarted = plane(tmp_path)
+    assert all(row.receipt_id not in restarted.receipts for row in receipts)
+
