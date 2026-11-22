@@ -317,3 +317,39 @@ def test_killed_worker_with_surviving_process_group_is_unresolved(tmp_path):
     killed_path = source.split("if killed:", 1)[1].split("else:", 1)[0]
     assert "os.killpg(child.pid, 0)" in killed_path
     assert "cleanup_unresolved = True" in killed_path
+
+
+def test_linux_detached_grandchild_cannot_falsely_complete_durable_queue(tmp_path):
+    """A setsid grandchild that closes stdio cannot survive worker completion."""
+    import time
+    import pytest
+    if sys.platform != "linux":
+        pytest.skip("Linux subreaper adoption regression")
+    store, config, item = queued(tmp_path)
+    artifact = tmp_path / "claimed-output.txt"
+    marker = tmp_path / "escaped-wrote.txt"
+    parent = tmp_path / "detached_parent.py"
+    parent.write_text(
+        "import subprocess,sys\n"
+        "from pathlib import Path\n"
+        "subprocess.Popen([sys.executable, '-c', "
+        "\"import pathlib,sys,time;time.sleep(1.2);pathlib.Path(sys.argv[1]).write_text('escaped')\","
+        "sys.argv[2]], start_new_session=True, stdin=subprocess.DEVNULL, "
+        "stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+        "Path(sys.argv[1]).write_text('parent-output')\n"
+    )
+    result = subprocess.run([
+        sys.executable, str(CLI), "--run-next-local", str(store),
+        item.capability, "--verify-file", str(artifact), "--",
+        sys.executable, str(parent), str(artifact), str(marker),
+    ], cwd=ROOT, capture_output=True, text=True, timeout=15)
+    assert result.returncode == 5, (result.stdout[:600], result.stderr)
+    assert json.loads(result.stdout)["status"] == "unconfirmed"
+    plane = recovered(store, config, item)
+    details = next(iter(plane.receipts.values())).details
+    assert details["linux_subreaper_guard_active"] is True
+    assert details["detached_descendant_detected"] is True
+    assert details["descendant_detected_after_exit"] is True
+    assert details["exit_code"] == 125
+    time.sleep(1.6)
+    assert not marker.exists()

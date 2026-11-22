@@ -26,6 +26,7 @@ from pathlib import Path
 import runpy
 import stat
 import sys
+from posix_descendant_guard import LinuxAdoptedDescendants
 from typing import Any
 
 
@@ -169,6 +170,9 @@ if __name__ == "__main__":
             cleanup_unresolved = False
             quota_exhausted = False
             descendant_detected_after_exit = False
+            detached_guard = LinuxAdoptedDescendants()
+            detached_descendant_detected = False
+            detached_cleanup_unresolved = False
             output_drains_unresolved = False
             output_limit = 65536
             disk_limit = 1048576  # Strict per-stream parent-owned capture ceiling.
@@ -177,6 +181,7 @@ if __name__ == "__main__":
                 if os.name == "posix":
                     import selectors
                     import time
+                    detached_guard.arm()
                     child = subprocess.Popen(command, stdout=subprocess.PIPE,
                                              stderr=subprocess.PIPE, start_new_session=True)
                     captured = {"stdout": bytearray(), "stderr": bytearray()}
@@ -312,6 +317,19 @@ if __name__ == "__main__":
                             child.wait(timeout=3)
                         except (OSError, subprocess.TimeoutExpired):
                             pass
+            # Reap Linux setsid grandchildren even if they closed inherited pipes.
+            detached_guard_active = detached_guard.enabled
+            detached_descendant_detected, detached_cleanup_unresolved = detached_guard.finish(
+                child.pid if "child" in locals() else None
+            )
+            if detached_descendant_detected:
+                descendant_detected_after_exit = True
+                if code == 0:
+                    code = 125
+            if detached_cleanup_unresolved:
+                cleanup_unresolved = True
+                if code == 0:
+                    code = 125
             execution = ExecutionReceipt(
                 work_id=item.work_id,
                 mission_id=item.mission_id,
@@ -332,6 +350,9 @@ if __name__ == "__main__":
                     "stdout_bytes": counts["stdout"] if os.name == "posix" else len(stdout.encode("utf-8")),
                     "stderr_bytes": counts["stderr"] if os.name == "posix" else len(stderr.encode("utf-8")),
                     "descendant_detected_after_exit": descendant_detected_after_exit,
+                    "linux_subreaper_guard_active": detached_guard_active,
+                    "detached_descendant_detected": detached_descendant_detected,
+                    "detached_cleanup_unresolved": detached_cleanup_unresolved,
                     "output_drains_unresolved": output_drains_unresolved,
                     "output_quota_exhausted": quota_exhausted,
                     "timed_out": timed_out,
