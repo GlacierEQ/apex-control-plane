@@ -223,3 +223,60 @@ def test_worker_receipt_unhashable_or_nonjson_fields_reconcile(tmp_path):
         )
         assert result["status"] == "unconfirmed"
         assert not recovered(store, config, item).receipts
+
+
+def test_local_worker_detects_descendant_after_parent_exit_and_refuses_success(tmp_path):
+    """An orphan delegated child must not outlive the 'complete' queue receipt."""
+    import os
+    import time
+    import pytest
+
+    if os.name != "posix":
+        pytest.skip("POSIX group tracking only")
+    store, config, item = queued(tmp_path)
+    artifact = tmp_path / "claimed-output.txt"
+    descendant_marker = tmp_path / "orphan-wrote.txt"
+    parent_script = (
+        "import subprocess,sys,pathlib;"
+        "subprocess.Popen([sys.executable,'-c',"
+        "'import time,pathlib,sys;time.sleep(1.0);pathlib.Path(sys.argv[1]).write_text(\\\"survived\\\")',"
+        "sys.argv[2]]);"
+        "pathlib.Path(sys.argv[1]).write_text('parent-output')"
+    )
+    command = [
+        sys.executable, str(CLI), "--run-next-local", str(store),
+        item.capability, "--verify-file", str(artifact), "--",
+        sys.executable, "-c", parent_script, str(artifact), str(descendant_marker),
+    ]
+    response = subprocess.run(command, cwd=ROOT, text=True,
+                              capture_output=True, timeout=12)
+    assert response.returncode == 5, (response.stdout[:400], response.stderr)
+    assert json.loads(response.stdout)["status"] == "unconfirmed"
+    plane = recovered(store, config, item)
+    proof = next(iter(plane.receipts.values()))
+    assert proof.details["descendant_detected_after_exit"] is True
+    time.sleep(1.2)
+    assert not descendant_marker.exists()
+
+
+def test_local_worker_enforces_live_posix_stream_quota(tmp_path):
+    import os
+    import pytest
+    if os.name != "posix":
+        pytest.skip("POSIX streaming quota only")
+    store, config, item = queued(tmp_path)
+    command = [
+        sys.executable, str(CLI), "--run-next-local", str(store),
+        item.capability, "--", sys.executable, "-c",
+        "import sys;sys.stdout.write('A'*4000000)",
+    ]
+    result = subprocess.run(command, cwd=ROOT, capture_output=True,
+                            text=True, timeout=12)
+    assert result.returncode == 5, (result.stdout[:450], result.stderr)
+    assert json.loads(result.stdout)["status"] == "unconfirmed"
+    plane = recovered(store, config, item)
+    details = next(iter(plane.receipts.values())).details
+    assert details["strict_stream_quota_enforced"] is True
+    assert details["output_quota_exhausted"] is True
+    assert details["stdout_bytes"] <= 1048576 + 65536
+    assert len(details["stdout"]) <= 65536

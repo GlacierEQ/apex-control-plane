@@ -20,6 +20,7 @@ from continuous_control_plane import (
 import json
 from hashlib import sha256
 import os
+import signal
 import tempfile
 from pathlib import Path
 import runpy
@@ -157,50 +158,149 @@ if __name__ == "__main__":
         def execute_queued(item: WorkItem) -> ExecutionReceipt | list[ExecutionReceipt]:
             before_artifact = _artifact_snapshot(verify_file)
             before_durable_receipt = _artifact_snapshot(inspection_receipt_file)
-            # Parent-owned temporary streams keep subprocess output out of
-            # unbounded in-memory capture. The post-run quota is a failure
-            # classifier, not a claim of strict disk-space enforcement.
-            timed_out = False
-            quota_exhausted = False
-            cleanup_unresolved = False
-            output_limit = 65536
-            post_run_quota = 1048576
+            # Timeouts cannot establish whether descendant effects completed.
             try:
-                raw_timeout = float(os.getenv("GLACIEREQ_LOCAL_COMMAND_TIMEOUT", "120"))
-                timeout_seconds = (raw_timeout if 0 < raw_timeout <= 3600
-                                   and __import__("math").isfinite(raw_timeout) else 120.0)
+                timeout_seconds = float(os.getenv("GLACIEREQ_LOCAL_COMMAND_TIMEOUT", "120"))
+                if not 0 < timeout_seconds <= 3600 or not __import__("math").isfinite(timeout_seconds):
+                    raise ValueError("invalid timeout")
             except ValueError:
                 timeout_seconds = 120.0
+            timed_out = False
+            cleanup_unresolved = False
+            quota_exhausted = False
+            descendant_detected_after_exit = False
+            output_drains_unresolved = False
+            output_limit = 65536
+            disk_limit = 1048576  # Strict per-stream parent-owned capture ceiling.
+            counts = {"stdout": 0, "stderr": 0}
             try:
-                with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
-                    try:
-                        completed = subprocess.run(
-                            command, check=False, stdout=out, stderr=err,
-                            timeout=timeout_seconds,
-                        )
-                        code = completed.returncode
-                    except subprocess.TimeoutExpired:
-                        timed_out = True
-                        cleanup_unresolved = True  # descendants are not proven reaped
-                        code = 124
-                    out.flush()
-                    err.flush()
-                    out_size = os.fstat(out.fileno()).st_size
-                    err_size = os.fstat(err.fileno()).st_size
-                    quota_exhausted = (out_size > post_run_quota
-                                       or err_size > post_run_quota)
-                    if quota_exhausted and not timed_out:
-                        code = 125
-                    out.seek(0)
-                    err.seek(0)
-                    stdout = out.read(output_limit).decode("utf-8", errors="replace")
-                    stderr = err.read(output_limit).decode("utf-8", errors="replace")
-                    stdout_truncated = out_size > output_limit
-                    stderr_truncated = err_size > output_limit
-            except OSError as exc:
+                if os.name == "posix":
+                    import selectors
+                    import time
+                    child = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                             stderr=subprocess.PIPE, start_new_session=True)
+                    captured = {"stdout": bytearray(), "stderr": bytearray()}
+                    counts = {"stdout": 0, "stderr": 0}
+                    deadline = time.monotonic() + timeout_seconds
+                    killed = False
+                    cleanup_deadline = None
+                    with selectors.DefaultSelector() as selector:
+                        selector.register(child.stdout, selectors.EVENT_READ, "stdout")
+                        selector.register(child.stderr, selectors.EVENT_READ, "stderr")
+                        while selector.get_map():
+                            now = time.monotonic()
+                            # A reaped direct child can leave delegated processes
+                            # in its original session with inherited stream handles.
+                            if not killed and child.poll() is not None:
+                                try:
+                                    os.killpg(child.pid, 0)
+                                except ProcessLookupError:
+                                    pass
+                                except OSError:
+                                    cleanup_unresolved = True
+                                else:
+                                    descendant_detected_after_exit = True
+                                    killed = True
+                                    cleanup_deadline = now + 3.0
+                                    try:
+                                        os.killpg(child.pid, signal.SIGKILL)
+                                    except ProcessLookupError:
+                                        pass
+                                    except OSError:
+                                        cleanup_unresolved = True
+                            if not killed and now >= deadline:
+                                timed_out = True
+                            if (timed_out or quota_exhausted) and not killed:
+                                killed = True
+                                cleanup_deadline = now + 3.0
+                                try:
+                                    os.killpg(child.pid, signal.SIGKILL)
+                                except ProcessLookupError:
+                                    pass
+                                except OSError:
+                                    cleanup_unresolved = True
+                            if killed and cleanup_deadline is not None and now >= cleanup_deadline:
+                                cleanup_unresolved = True
+                                output_drains_unresolved = bool(selector.get_map())
+                                break
+                            for key, _ in selector.select(timeout=0.05):
+                                name = key.data
+                                data = os.read(key.fileobj.fileno(), 65536)
+                                if not data:
+                                    selector.unregister(key.fileobj)
+                                    continue
+                                remaining = max(0, disk_limit - counts[name])
+                                counts[name] += min(len(data), remaining)
+                                if len(data) > remaining or counts[name] >= disk_limit:
+                                    quota_exhausted = True
+                                if len(captured[name]) < output_limit:
+                                    captured[name].extend(data[:output_limit - len(captured[name])])
+                    if killed:
+                        try:
+                            child.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            cleanup_unresolved = True
+                        code = 124 if timed_out else 125
+                    else:
+                        code = child.wait(timeout=5)
+                        # Also detect descendants that closed inherited pipes
+                        # before our final stream read reached EOF.
+                        try:
+                            os.killpg(child.pid, 0)
+                        except ProcessLookupError:
+                            pass
+                        except OSError:
+                            cleanup_unresolved = True
+                        else:
+                            descendant_detected_after_exit = True
+                            code = 125
+                            try:
+                                os.killpg(child.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+                            except OSError:
+                                cleanup_unresolved = True
+                    stdout = captured["stdout"].decode("utf-8", errors="replace")
+                    stderr = captured["stderr"].decode("utf-8", errors="replace")
+                    stdout_truncated = counts["stdout"] > output_limit
+                    stderr_truncated = counts["stderr"] > output_limit
+                else:
+                    # Portable fallback: no strict quota claim on Windows.
+                    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+                        child = subprocess.Popen(command, stdout=out, stderr=err)
+                        try:
+                            code = child.wait(timeout=timeout_seconds)
+                        except subprocess.TimeoutExpired:
+                            timed_out = True
+                            child.kill()
+                            try:
+                                child.wait(timeout=5)
+                            except subprocess.TimeoutExpired:
+                                cleanup_unresolved = True
+                            code = 124
+                        out.seek(0)
+                        err.seek(0)
+                        stdout = out.read(output_limit).decode("utf-8", errors="replace")
+                        stderr = err.read(output_limit).decode("utf-8", errors="replace")
+                        stdout_truncated = out.read(1) != b""
+                        stderr_truncated = err.read(1) != b""
+            except (OSError, subprocess.TimeoutExpired) as exc:
                 code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
                 stdout_truncated = stderr_truncated = False
-                cleanup_unresolved = True
+                # Once a child launched, failure of capture/reaping is an
+                # uncertain execution outcome, not a safe automatic retry.
+                if isinstance(exc, subprocess.TimeoutExpired) or "child" in locals():
+                    cleanup_unresolved = True
+                    output_drains_unresolved = True
+                    if "child" in locals() and child.poll() is None:
+                        try:
+                            if os.name == "posix":
+                                os.killpg(child.pid, signal.SIGKILL)
+                            else:
+                                child.kill()
+                            child.wait(timeout=3)
+                        except (OSError, subprocess.TimeoutExpired):
+                            pass
             execution = ExecutionReceipt(
                 work_id=item.work_id,
                 mission_id=item.mission_id,
@@ -215,8 +315,13 @@ if __name__ == "__main__":
                     "stdout_truncated": stdout_truncated,
                     "stderr_truncated": stderr_truncated,
                     "output_limit_bytes": output_limit,
-                    "post_run_output_quota_bytes": post_run_quota,
+                    "post_run_output_quota_bytes": disk_limit,
                     "strict_disk_quota_enforced": False,
+                    "strict_stream_quota_enforced": os.name == "posix",
+                    "stdout_bytes": counts["stdout"] if os.name == "posix" else len(stdout.encode("utf-8")),
+                    "stderr_bytes": counts["stderr"] if os.name == "posix" else len(stderr.encode("utf-8")),
+                    "descendant_detected_after_exit": descendant_detected_after_exit,
+                    "output_drains_unresolved": output_drains_unresolved,
                     "output_quota_exhausted": quota_exhausted,
                     "timed_out": timed_out,
                     "cleanup_unresolved": cleanup_unresolved,
