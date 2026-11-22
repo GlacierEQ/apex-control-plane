@@ -8,6 +8,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "src" / "control_plane.py"
+# The inspector is an executable source module, not an installed package.
+sys.path.insert(0, str(ROOT / "src"))
 
 
 def run(path):
@@ -140,3 +142,19 @@ def test_forged_success_and_failure_receipts_never_attest_outcome(tmp_path):
         assert result["outcome_verified"] is False
         assert result["retry_authorized"] is False
         assert result["outcome_evidence"] == "unattested_receipt"
+
+
+def test_detected_descendant_remains_visible_after_successful_cleanup(tmp_path):
+    from inspect_execution_receipt import inspect
+    path = tmp_path / "receipt.json"
+    path.write_text(json.dumps({
+        "status": "failed", "exit_code": 74,
+        "descendant_detected_after_exit": True,
+        "cleanup_unresolved": False, "output_drains_unresolved": False,
+        "direct_child_reaped": True,
+    }))
+    result = inspect(path)
+    assert result["cleanup_status"] == "descendant_detected_cleanup_completed"
+    assert result["descendant_detected_after_exit"] is True
+    assert result["outcome_verified"] is False
+    assert result["retry_authorized"] is False

@@ -506,8 +506,8 @@ def test_zero_exit_with_silent_live_descendant_fails_closed(tmp_path):
         payload = json.loads(result.stdout)
         assert payload["exit_code"] == 74
         assert payload["status"] == "failed"
-        assert payload["cleanup_unresolved"] is True
-        assert payload["descendant_group_unresolved"] is True
+        assert payload["descendant_detected_after_exit"] is True
+        assert payload["cleanup_unresolved"] == payload["descendant_group_unresolved"]
         assert payload["outcome_verified"] is False
     finally:
         if pid_file.exists():

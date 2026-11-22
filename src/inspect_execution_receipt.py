@@ -67,6 +67,12 @@ def inspect(path: Path) -> dict:
             result["cleanup_status"] = "unresolved"
         else:
             result["cleanup_status"] = "resolved_direct_child_only"
+        # A descendant found after direct-child exit is a failed execution
+        # even when subsequent cleanup succeeds. Preserve that distinction.
+        if record.get("descendant_detected_after_exit") is True:
+            result["descendant_detected_after_exit"] = True
+            if result["cleanup_status"] == "resolved_direct_child_only":
+                result["cleanup_status"] = "descendant_detected_cleanup_completed"
         # Durable receipts are diagnostic, not attested outcome proofs. The
         # executor emits outcome_verified=False even on zero subprocess exit;
         # a modified receipt must not manufacture an authorization to succeed.
