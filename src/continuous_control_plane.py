@@ -386,6 +386,21 @@ class ContinuousControlPlane:
         self._event_dedupe = {event.stable_dedupe_key for event in self.events.values()}
         self._work_idempotency = {item.idempotency_key: item.work_id for item in self.work.values()}
 
+    def _expired_lease_disposition(self, expired: WorkItem) -> tuple[WorkState, str]:
+        """Classify an expired lease from current durable evidence, under lock.
+
+        DISPATCHED without receipts means no worker invocation was recorded.
+        EXECUTING, even without a receipt, may already have produced effects;
+        automatic replay would be unsafe after a crash.
+        """
+        if any(r.work_id == expired.work_id for r in self.receipts.values()):
+            return WorkState.RECONCILING, "expired_lease_has_durable_receipts"
+        if expired.external_action:
+            return WorkState.RECONCILING, "expired_external_lease_requires_provider_reconciliation"
+        if expired.state is WorkState.EXECUTING:
+            return WorkState.RECONCILING, "expired_invoked_local_worker_outcome_unknown"
+        return WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
+
     @classmethod
     def from_config(
         cls,
@@ -574,19 +589,10 @@ class ContinuousControlPlane:
                     continue
                 if expired.lease_expires_at is None or expired.lease_expires_at > instant:
                     continue
-                # A crash after receipt fsync but before the work-state
-                # transition leaves durable execution evidence on a leased
-                # item. Never replay that item, including local-only work:
-                # reconcile the committed evidence first.
-                has_receipts = any(r.work_id == expired.work_id for r in self.receipts.values())
-                if has_receipts:
-                    state, reason = WorkState.RECONCILING, "expired_lease_has_durable_receipts"
-                elif expired.external_action:
-                    state, reason = WorkState.RECONCILING, "expired_external_lease_requires_provider_reconciliation"
-                else:
-                    # Legacy max_attempts is telemetry, never an automatic
-                    # abandonment of reversible, local work without receipts.
-                    state, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
+                # Never replay a previously invoked worker just because it
+                # crashed before persisting a receipt. Only uninvoked local
+                # dispatch may be safely reclaimed automatically.
+                state, reason = self._expired_lease_disposition(expired)
                 recovered = replace(expired, state=state, lease_owner=None,
                                     lease_expires_at=None, updated_at=instant)
                 self.work[expired.work_id] = recovered
@@ -905,20 +911,30 @@ class ContinuousControlPlane:
         ]
 
     def reconcile_expired_leases(self, now: datetime | None = None) -> list[WorkItem]:
+        """Reconcile expired leases atomically against the current journal head.
+
+        A stale scheduler instance must not invalidate a replacement worker's
+        newer live lease. All classification and work persistence share the
+        ledger transaction, matching the claim-next recovery path.
+        """
         instant = _require_aware(now or utc_now(), "now")
-        changed = []
-        for item in list(self.work.values()):
-            if item.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
-                continue
-            if item.lease_expires_at is None or item.lease_expires_at > instant:
-                continue
-            if item.external_action:
-                target, reason = WorkState.RECONCILING, "external_action_lease_expired_reconcile_before_retry"
-            else:
-                # Keep retrying local work after worker crashes. Real provider
-                # failures remain visible; external calls still reconcile.
-                target, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
-            changed.append(self.transition(item.work_id, target, reason=reason))
+        changed: list[WorkItem] = []
+        with self.store.transaction():
+            self._refresh()
+            for item in list(self.work.values()):
+                if item.state not in {WorkState.DISPATCHED, WorkState.EXECUTING}:
+                    continue
+                if item.lease_expires_at is None or item.lease_expires_at > instant:
+                    continue
+                target, reason = self._expired_lease_disposition(item)
+                updated = replace(
+                    item, state=target, lease_owner=None,
+                    lease_expires_at=None, updated_at=instant,
+                )
+                self.work[item.work_id] = updated
+                self.store.append_work(updated, reason=reason)
+                self.checkpoint(item.mission_id)
+                changed.append(updated)
         return changed
 
     def checkpoint(self, mission_id: str) -> dict[str, Any]:
