@@ -869,3 +869,49 @@ def test_worker_receipt_batch_rejects_cross_work_without_persisting(tmp_path):
     restarted = plane(tmp_path)
     assert all(row.receipt_id not in restarted.receipts for row in receipts)
 
+
+
+def test_receipt_batch_is_one_durable_record_and_recovers_all(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    receipts = tuple(
+        ExecutionReceipt(
+            work_id=work.work_id, mission_id=work.mission_id,
+            correlation_id=work.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-process", details={"sequence": n},
+        )
+        for n in range(2)
+    )
+    cp.record_receipt_batch(receipts)
+    rows = cp.store._read(cp.store.receipts_path)
+    assert len(rows) == 1
+    assert rows[0]["record_type"] == "receipt_batch_v1"
+    assert len(rows[0]["receipts"]) == 2
+    assert all(row.receipt_id in plane(tmp_path).receipts for row in receipts)
+
+
+def test_torn_final_batch_envelope_does_not_certify_partial_receipts(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    receipt = ExecutionReceipt(
+        work_id=work.work_id, mission_id=work.mission_id,
+        correlation_id=work.correlation_id, receipt_kind="verification",
+        status="verified", source_system="local-process", details={},
+    )
+    with cp.store.receipts_path.open("ab") as handle:
+        handle.write(b'{"record_type":"receipt_batch_v1","receipts":[{"receipt_id":"')
+    assert receipt.receipt_id not in plane(tmp_path).receipts
+
+
+def test_receipt_batch_recovery_rejects_duplicate_uuid_across_envelopes(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    receipt = ExecutionReceipt(
+        work_id=work.work_id, mission_id=work.mission_id,
+        correlation_id=work.correlation_id, receipt_kind="verification",
+        status="verified", source_system="local-process", details={},
+    )
+    cp.record_receipt_batch((receipt,))
+    cp.store.append_receipt_batch((receipt,))
+    with pytest.raises(RuntimeError, match="duplicate durable receipt UUID"):
+        plane(tmp_path)
