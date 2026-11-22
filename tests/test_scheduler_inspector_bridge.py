@@ -161,3 +161,65 @@ def test_local_queue_can_verify_multi_megabyte_artifact_without_output_quota_lim
     proof = next(r for r in plane.receipts.values() if r.receipt_kind == "verification")
     assert proof.details["bytes"] == 4000000
     assert proof.details["sha256"] == hashlib.sha256(b'Z' * 4000000).hexdigest()
+
+
+def test_worker_receipt_malformed_shape_reconciles_without_crashing(tmp_path):
+    """A bad worker adapter cannot bypass persistent state by crashing parsing."""
+    from continuous_control_plane import ExecutionReceipt
+
+    invalid_evidence = [
+        ("verified", None),
+        ("verified", []),
+        ("verified", 7),
+        ("verified", "nonmapping"),
+        ([], {}),
+        ({"claim": "verified"}, {}),
+    ]
+    for index, (status, details) in enumerate(invalid_evidence):
+        scoped = tmp_path / str(index)
+        scoped.mkdir()
+        store, config, item = queued(scoped)
+        def worker(work):
+            return ExecutionReceipt(
+                work_id=work.work_id, mission_id=work.mission_id,
+                correlation_id=work.correlation_id,
+                receipt_kind="verification", status=status,
+                source_system="malformed-test", details=details,
+            )
+        plane = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+        result = plane.execute_next_local(
+            worker_id="isolated", capabilities=[item.capability], executor=worker,
+        )
+        assert result["status"] == "unconfirmed"
+        after = recovered(store, config, item)
+        assert not after.receipts
+
+
+def test_worker_receipt_unhashable_or_nonjson_fields_reconcile(tmp_path):
+    """Invalid IDs and non-JSON detail structures must fail before ledger writes."""
+    from continuous_control_plane import ExecutionReceipt
+
+    variants = (
+        {"receipt_kind": ["verification"]},
+        {"source_system": ["worker"]},
+        {"provider_receipt_id": ["duplicate"]},
+        {"details": {"unsafe": {1, 2}}},
+    )
+    for index, override in enumerate(variants):
+        scoped = tmp_path / str(index)
+        scoped.mkdir()
+        store, config, item = queued(scoped)
+        def worker(work):
+            fields = dict(
+                work_id=work.work_id, mission_id=work.mission_id,
+                correlation_id=work.correlation_id, receipt_kind="verification",
+                status="verified", source_system="agent", details={},
+            )
+            fields.update(override)
+            return ExecutionReceipt(**fields)
+        plane = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+        result = plane.execute_next_local(
+            worker_id="malformed", capabilities=[item.capability], executor=worker,
+        )
+        assert result["status"] == "unconfirmed"
+        assert not recovered(store, config, item).receipts

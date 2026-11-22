@@ -697,6 +697,48 @@ class ContinuousControlPlane:
                 "work_id": item.work_id,
                 "error": "worker receipt identity does not match claimed work",
             }
+        # Worker callbacks are an untrusted integration boundary. A dataclass
+        # instance can still contain invalid runtime field types; never let
+        # malformed evidence crash the scheduler before durable reconciliation.
+        if any(
+            not isinstance(evidence.status, str)
+            or not evidence.status.strip()
+            or not isinstance(evidence.details, Mapping)
+            or not isinstance(evidence.receipt_id, str)
+            or not evidence.receipt_id.strip()
+            or not isinstance(evidence.receipt_kind, str)
+            or not evidence.receipt_kind.strip()
+            or not isinstance(evidence.source_system, str)
+            or not evidence.source_system.strip()
+            or (evidence.provider_receipt_id is not None
+                and not isinstance(evidence.provider_receipt_id, str))
+            for evidence in receipts
+        ):
+            self.transition(
+                item.work_id, WorkState.RECONCILING,
+                reason="worker_receipt_malformed_evidence_requires_reconciliation",
+            )
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id,
+                "error": "worker receipt has malformed evidence fields",
+            }
+        # Reject nested data that the durable JSON journal cannot encode.
+        # Record reconciliation rather than allowing a serialization failure
+        # to strand the item in EXECUTING.
+        try:
+            for evidence in receipts:
+                json.dumps(evidence.details, sort_keys=True, allow_nan=False)
+        except (TypeError, ValueError, OverflowError):
+            self.transition(
+                item.work_id, WorkState.RECONCILING,
+                reason="worker_receipt_unserializable_evidence_requires_reconciliation",
+            )
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id,
+                "error": "worker receipt detail payload is not strict JSON",
+            }
         # Diagnostic inspection cannot attest success. Preserve evidence but
         # reconcile rather than replay when cleanup or outcome is uncertain.
         negative = any(

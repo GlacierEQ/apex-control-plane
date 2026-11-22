@@ -31,3 +31,13 @@ The operator-supplied local subprocess CLI now accepts `--inspect-execution-rece
 The inspector cannot independently attest the human objective; complete descendant containment and Windows execution are not proven. Temporary output files can grow until execution terminates; 1 MiB enforcement here is post-run failure detection, not a strict disk cap. The separate stronger POSIX stream enforcement remains on its existing branch and was not overwritten. No PR merge or production deployment.
 
 Next: reconcile nonregressing strict POSIX output quota and verified descendant cleanup from the separate tested branch without losing this inspector bridge; test cross-process lease/crash recovery, full Python 3.13 suite, and provider readback on exact final commit. In production, approval-controlled installation and native host activation require separate proof.
+
+## Follow-on worker-receipt shape hardening (same isolated branch)
+
+After the inspector bridge passed its first full suite, a new adversarial worker-callback test reproduced a real `AttributeError` when `ExecutionReceipt.details` was `None` or another non-mapping. A second failing test reproduced an unhashable receipt-kind crash during completion after receipt persistence.
+
+`src/continuous_control_plane.py::execute_next_local` now checks runtime types of status, details, receipt UUID, receipt kind, source system and provider receipt identity before any receipt append. Nested detail values must also be strict JSON-serializable. Malformed or unserializable worker receipts enter durable `RECONCILING`; no receipt from that invalid callback is appended and no automatic replay is authorized.
+
+RED: 2 focused adversarial tests failed on the pre-fix implementation. GREEN: 60 focused scheduler/bridge tests passed. Full exact changed-tree Python 3.13 verification: `PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.13 -m pytest -q -p no:cacheprovider` → **1163 passed, 29 skipped, 8 subtests passed, 40.05 seconds, exit 0**. Previous clean 1161-pass result remains tied to the earlier revision only.
+
+Remaining boundaries: real host adoption, strict live disk quota, Windows process-tree containment, escaped-session descendants, and independent human-outcome attestation are not proven. Keep all other scheduled worker configurations and unrelated repositories untouched. Next executable cursor: independently read back the final pushed head, then reconcile strict POSIX stream limits and verified descendant cleanup from the older tested branch in another isolated change without weakening the durable inspection/reconciliation path.
