@@ -302,6 +302,15 @@ class JsonlControlStore:
     def append_receipt(self, receipt: ExecutionReceipt) -> None:
         self._append(self.receipts_path, receipt.record())
 
+    def append_receipt_batch(self, receipts: tuple[ExecutionReceipt, ...]) -> None:
+        """Persist one batch as one journal record, never as partial receipt rows."""
+        if not receipts:
+            raise ValueError("empty receipt batch")
+        self._append(self.receipts_path, {
+            "record_type": "receipt_batch_v1",
+            "receipts": [receipt.record() for receipt in receipts],
+        })
+
     def append_checkpoint(self, row: Mapping[str, Any]) -> None:
         self._append(self.checkpoints_path, row)
 
@@ -310,7 +319,20 @@ class JsonlControlStore:
         work: dict[str, WorkItem] = {}
         for row in self._read(self.work_path):
             work[str(row["work_id"])] = WorkItem.from_record(row)
-        receipts = {row["receipt_id"]: ExecutionReceipt.from_record(row) for row in self._read(self.receipts_path)}
+        receipts: dict[str, ExecutionReceipt] = {}
+        for row in self._read(self.receipts_path):
+            if row.get("record_type") == "receipt_batch_v1":
+                batch = row.get("receipts")
+                if not isinstance(batch, list) or not batch:
+                    raise RuntimeError("invalid durable receipt batch")
+                records = batch
+            else:
+                records = [row]
+            for record in records:
+                receipt = ExecutionReceipt.from_record(record)
+                if receipt.receipt_id in receipts:
+                    raise RuntimeError("duplicate durable receipt UUID")
+                receipts[receipt.receipt_id] = receipt
         return events, work, receipts
 
 
@@ -526,8 +548,10 @@ class ContinuousControlPlane:
                     if key in seen:
                         raise ValueError("historical provider receipt reused")
                     seen.add(key)
+            # One fsynced JSONL envelope is the commit boundary. A torn final
+            # line is ignored by recovery; no prefix of a batch is certified.
+            self.store.append_receipt_batch(receipts)
             for row in receipts:
-                self.store.append_receipt(row)
                 self.receipts[row.receipt_id] = row
             self.checkpoint(receipts[0].mission_id)
             return receipts
