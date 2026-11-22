@@ -330,6 +330,13 @@ if __name__ == "__main__":
                 cleanup_unresolved = True
                 if code == 0:
                     code = 125
+            # Linux cannot attest detached descendant containment when the
+            # subreaper guard was unavailable; never promote exit zero to a
+            # verified local execution in that case.
+            if sys.platform == "linux" and not detached_guard_active:
+                cleanup_unresolved = True
+                if code == 0:
+                    code = 125
             execution = ExecutionReceipt(
                 work_id=item.work_id,
                 mission_id=item.mission_id,
