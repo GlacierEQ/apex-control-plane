@@ -158,3 +158,23 @@ def test_detected_descendant_remains_visible_after_successful_cleanup(tmp_path):
     assert result["descendant_detected_after_exit"] is True
     assert result["outcome_verified"] is False
     assert result["retry_authorized"] is False
+
+
+def test_receipt_growth_after_fstat_is_bounded(tmp_path, monkeypatch):
+    """A stale size check cannot permit unbounded parser input."""
+    import inspect_execution_receipt as inspector
+    from types import SimpleNamespace
+
+    path = tmp_path / "growing-receipt.json"
+    path.write_bytes(b'{"status":"failed","padding":"' + b"x" * (1024 * 1024 + 10) + b'"}')
+    original_fstat = inspector.os.fstat
+
+    def stale_fstat(fd):
+        info = original_fstat(fd)
+        return SimpleNamespace(st_mode=info.st_mode, st_size=32)
+
+    monkeypatch.setattr(inspector.os, "fstat", stale_fstat)
+    result = inspector.inspect(path)
+    assert result["status"] == "inspection_failed"
+    assert result["retry_authorized"] is False
+    assert "1 MiB" in result["reason"]
