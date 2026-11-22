@@ -795,3 +795,35 @@ def test_local_consumer_reconciles_negative_execution_proof_without_replay(tmp_p
     restarted = plane(tmp_path)
     assert restarted.work[work.work_id].state is WorkState.RECONCILING
     assert restarted.execute_next_local(worker_id="local", capabilities=[work.capability], executor=run, now=NOW)["status"] == "idle"
+
+
+def test_receipt_uuid_replay_is_reconciled_after_durable_restart(tmp_path):
+    cp = plane(tmp_path)
+    first = cp.ingest_event(event())[0]
+    proof = ExecutionReceipt(
+        work_id=first.work_id, mission_id=first.mission_id,
+        correlation_id=first.correlation_id, receipt_kind="verification",
+        status="verified", source_system="local-process", details={"outcome_verified": True},
+    )
+    cp.record_receipt(proof)
+    restarted = plane(tmp_path)
+    result = restarted.execute_next_local(
+        worker_id="local", capabilities=[first.capability],
+        executor=lambda _: proof, now=NOW,
+    )
+    assert result["status"] == "unconfirmed"
+    assert restarted.work[first.work_id].state is WorkState.RECONCILING
+    assert plane(tmp_path).work[first.work_id].state is WorkState.RECONCILING
+
+
+def test_receipt_uuid_collision_is_rejected_under_ledger_lock(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    proof = ExecutionReceipt(
+        work_id=work.work_id, mission_id=work.mission_id,
+        correlation_id=work.correlation_id, receipt_kind="verification",
+        status="verified", source_system="local-process", details={},
+    )
+    cp.record_receipt(proof)
+    with pytest.raises(ValueError, match="receipt UUID already recorded"):
+        plane(tmp_path).record_receipt(proof)
