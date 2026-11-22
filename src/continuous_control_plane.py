@@ -645,6 +645,25 @@ class ContinuousControlPlane:
             }) if not isinstance(evidence.details, Mapping) else evidence
             for evidence in receipts
         )
+        # A receipt UUID is a durable execution identity. Never reuse one
+        # from an earlier attempt, even for the same work item: otherwise an
+        # old success can be submitted again as proof of a fresh invocation.
+        # Check under the store lock and refresh to include concurrent writers.
+        with self.store.transaction():
+            self._refresh()
+            prior_ids = set(self.receipts)
+            ids = [evidence.receipt_id for evidence in receipts]
+            reused_receipt_id = len(ids) != len(set(ids)) or any(
+                identity in prior_ids for identity in ids
+            )
+        if reused_receipt_id:
+                self.transition(item.work_id, WorkState.RECONCILING,
+                                reason="worker_receipt_uuid_replay_requires_reconciliation")
+                return {
+                    "status": "unconfirmed", "executed": True, "routes_run": 1,
+                    "work_id": item.work_id,
+                    "error": "worker receipt UUID was reused",
+                }
         recorded = tuple(self.record_receipt(evidence) for evidence in receipts)
         if any(saved.receipt_id != supplied.receipt_id for saved, supplied in zip(recorded, receipts)):
             self.transition(item.work_id, WorkState.RECONCILING,

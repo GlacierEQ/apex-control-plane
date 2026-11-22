@@ -100,3 +100,28 @@ def test_malformed_receipt_details_fail_closed_without_scheduler_crash(tmp_path,
     assert result["status"] == "unconfirmed"
     assert cp.work[work.work_id].state is WorkState.RECONCILING
     assert plane(tmp_path).work[work.work_id].state is WorkState.RECONCILING
+
+
+@pytest.mark.parametrize("duplicate_within_batch", [False, True])
+def test_receipt_uuid_replay_never_certifies_new_execution(tmp_path, duplicate_within_batch):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    original = ExecutionReceipt(
+        work_id=work.work_id, mission_id=work.mission_id,
+        correlation_id=work.correlation_id, receipt_kind="verification",
+        status="verified", source_system="local-executor", details={"ok": True},
+    )
+    if not duplicate_within_batch:
+        cp.record_receipt(original)
+    def run(item):
+        return [original, original] if duplicate_within_batch else original
+    result = cp.execute_next_local(
+        worker_id="worker", capabilities=[work.capability],
+        executor=run, now=NOW,
+    )
+    assert result["status"] == "unconfirmed"
+    assert cp.work[work.work_id].state is WorkState.RECONCILING
+    assert len(cp.receipts) == (0 if duplicate_within_batch else 1)
+    restarted = plane(tmp_path)
+    assert restarted.work[work.work_id].state is WorkState.RECONCILING
+    assert restarted.claim_next(worker_id="replay", capabilities=[work.capability], now=NOW) is None
