@@ -353,3 +353,13 @@ def test_linux_detached_grandchild_cannot_falsely_complete_durable_queue(tmp_pat
     assert details["exit_code"] == 125
     time.sleep(1.6)
     assert not marker.exists()
+
+
+def test_linux_guard_unavailable_fails_closed_in_worker_source():
+    """Linux worker must not certify a command if detached tracking is disabled."""
+    if sys.platform != "linux":
+        import pytest
+        pytest.skip("Linux-only guard")
+    source = CLI.read_text()
+    assert 'if sys.platform == "linux" and not detached_guard_active:' in source
+    assert 'cleanup_unresolved = True' in source.split('if sys.platform == "linux" and not detached_guard_active:', 1)[1].split('execution = ExecutionReceipt(', 1)[0]
