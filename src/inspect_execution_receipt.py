@@ -39,6 +39,12 @@ def inspect(path: Path) -> dict:
             payload = handle.read(1024 * 1024 + 1)
             if len(payload) > 1024 * 1024:
                 raise ValueError("receipt exceeds 1 MiB during inspection")
+            # A concurrent in-place writer can change the bytes after fstat.
+            # Never interpret a torn or modified receipt as stable evidence.
+            after = os.fstat(handle.fileno())
+            identity = lambda st: (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns)
+            if identity(after) != identity(info) or len(payload) != after.st_size:
+                raise ValueError("receipt changed during inspection")
             record = json.loads(payload, object_pairs_hook=_unique_receipt_pairs,
                                 parse_constant=_reject_nonfinite_constant)
         if not isinstance(record, dict):

@@ -178,3 +178,29 @@ def test_receipt_growth_after_fstat_is_bounded(tmp_path, monkeypatch):
     assert result["status"] == "inspection_failed"
     assert result["retry_authorized"] is False
     assert "1 MiB" in result["reason"]
+
+
+def test_inspector_rejects_in_place_mutation_during_bounded_read(tmp_path, monkeypatch):
+    from inspect_execution_receipt import inspect
+    import inspect_execution_receipt as module
+
+    path = tmp_path / "receipt.json"
+    path.write_text('{"status":"failed"}')
+    original = module.os.fstat
+    calls = [0]
+
+    def mutated_fstat(fd):
+        calls[0] += 1
+        stat_result = original(fd)
+        if calls[0] == 2:
+            # Simulate a concurrent in-place modification after bounded read.
+            with path.open("ab") as writer:
+                writer.write(b" ")
+            return original(fd)
+        return stat_result
+
+    monkeypatch.setattr(module.os, "fstat", mutated_fstat)
+    result = inspect(path)
+    assert result["status"] == "inspection_failed"
+    assert result["retry_authorized"] is False
+    assert "changed during inspection" in result["reason"]
