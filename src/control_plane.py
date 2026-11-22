@@ -104,16 +104,30 @@ if __name__ == "__main__":
         # the work identity. Never execute instructions extracted from events.
         queue_root, capability = args[1], args[2]
         verify_file = None
-        if args[3] == "--":
-            command = args[4:]
-        elif len(args) >= 7 and args[3] == "--verify-file" and args[5] == "--":
-            verify_file = Path(args[4])
-            command = args[6:]
+        inspection_receipt_file = None
+        usage = ("usage: (--run-next-local | --drain-local) STORE CAPABILITY "
+                 "[--verify-file PATH] [--inspect-execution-receipt PATH] -- PROGRAM [ARG ...]")
+        try:
+            boundary = args.index("--", 3)
+        except ValueError:
+            boundary = -1
+        options = args[3:boundary] if boundary >= 0 else []
+        command = args[boundary + 1:] if boundary >= 0 else []
+        parsed_options = {}
+        for offset in range(0, len(options), 2):
+            if (offset + 1 >= len(options)
+                    or options[offset] not in {"--verify-file", "--inspect-execution-receipt"}
+                    or options[offset] in parsed_options):
+                break
+            parsed_options[options[offset]] = Path(options[offset + 1])
         else:
+            if command:
+                verify_file = parsed_options.get("--verify-file")
+                inspection_receipt_file = parsed_options.get("--inspect-execution-receipt")
+        if not command or len(parsed_options) * 2 != len(options):
             print(json.dumps({
                 "status": "failed", "executed": False, "routes_run": 0,
-                "mission_complete": False,
-                "reason": "usage: (--run-next-local | --drain-local) STORE CAPABILITY [--verify-file PATH] -- PROGRAM [ARG ...]",
+                "mission_complete": False, "reason": usage,
             }, sort_keys=True))
             raise SystemExit(2)
         plane = ContinuousControlPlane.from_config(
@@ -141,6 +155,7 @@ if __name__ == "__main__":
 
         def execute_queued(item: WorkItem) -> ExecutionReceipt | list[ExecutionReceipt]:
             before_artifact = _artifact_snapshot(verify_file)
+            before_durable_receipt = _artifact_snapshot(inspection_receipt_file)
             try:
                 process = subprocess.run(
                     command, check=False, text=True, capture_output=True,
@@ -163,6 +178,38 @@ if __name__ == "__main__":
                     "scope": "local process execution only; independent mission validation may remain",
                 },
             )
+            if inspection_receipt_file is not None:
+                # A real subprocess receipt is diagnostic, never a substitute
+                # for independent outcome attestation. Even exit zero plus a
+                # fresh artifact must not override an unverified inspector.
+                from inspect_execution_receipt import inspect
+                after_durable_receipt = _artifact_snapshot(inspection_receipt_file)
+                if (after_durable_receipt is None
+                        or after_durable_receipt == before_durable_receipt):
+                    diagnosis = {
+                        "status": "inspection_failed",
+                        "reason": "execution receipt not fresh for this invocation",
+                        "retry_authorized": False, "outcome_verified": False,
+                    }
+                else:
+                    diagnosis = inspect(inspection_receipt_file)
+                return ExecutionReceipt(
+                    work_id=item.work_id, mission_id=item.mission_id,
+                    correlation_id=item.correlation_id, receipt_kind="execution",
+                    status=("inspection_failed" if diagnosis["status"] == "inspection_failed"
+                            else "inspected_unverified"),
+                    source_system="apex-local-process-with-independent-inspection",
+                    details={
+                        **execution.details,
+                        "receipt_inspection": diagnosis,
+                        "outcome_evidence": "unattested_receipt",
+                        "outcome_verified": False,
+                        "inspection_receipt_fresh": (
+                            after_durable_receipt is not None
+                            and after_durable_receipt != before_durable_receipt
+                        ),
+                    },
+                )
             if code != 0 or verify_file is None:
                 return execution
             after_artifact = _artifact_snapshot(verify_file)
