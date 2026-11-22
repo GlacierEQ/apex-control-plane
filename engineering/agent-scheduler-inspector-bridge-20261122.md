@@ -11,3 +11,6 @@ The actual `src/control_plane.py --run-next-local` and `--drain-local` CLI accep
 
 ## Next cursor
 Validate full changed-head suite and subprocess timeout/output containment before claiming broad operational hardening. Specifically, this new bridge currently uses the existing `subprocess.run(capture_output=True)` local worker; do not treat it as bounded-output or process-tree-contained. Reconcile stronger divergent bounded-subprocess branch before attempting that integration. Then independently read back the pushed GitHub branch and verify live process exit/state and crash-injection behavior. Keep the other four workstreams untouched.
+
+## Changed-head verification
+After implementation, the real subprocess bridge regression passed 3/3; the focused scheduler/CLI/inspector regression command completed with exit 0. Full Python 3.13 repository suite executed against the exact changed source tree and returned **1158 passed, 29 skipped, 8 subtests passed in 36.95 s**, exit 0. Local implementation commit `8948cc91ee16715ef76a5488b64fe89ed84bb297`. These are local Mac tests, not proof of production deployment or host-level automatic invocation. The isolated branch is deliberately unmerged.
