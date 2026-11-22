@@ -465,10 +465,19 @@ def dispatch_verified_next_handler(path: Path, *, session_id: str, invocation_id
         return {"status": "DISPATCH_HALTED_UNVERIFIED_CONTEXT", "selection": selection}
     verified = read_startup_decision(path, session_id=session_id,
                                      invocation_id=invocation_id)
+    # Bind the independently verified provider operation to THIS authenticated
+    # startup receipt. The provider reference must not be substitutable from
+    # another invocation even when both selected the same registered action.
+    digest = verified.get("startup_receipt_digest")
+    expected_identity = hashlib.sha256(
+        (str(digest) + ":apply_recovered_cursor").encode()).hexdigest()
+    provider_effect = selection["effect"]
     if (verified.get("status") != "STARTUP_DECISION_VERIFIED" or
             verified.get("registered_action") != selection["selection"] or
-            verified.get("startup_receipt_digest") !=
-            selection["effect"].get("startup_receipt_digest", verified.get("startup_receipt_digest"))):
+            not isinstance(digest, str) or not digest.startswith("sha256:") or
+            provider_effect.get("identity") != expected_identity or
+            provider_effect.get("provider_reference") !=
+            "sqlite:applied_cursor:" + expected_identity):
         raise ValueError("selected handler startup provenance mismatch")
     from scripts.continuity_verified_artifact import apply_verified_handoff
     effect = apply_verified_handoff(verified, output_dir=output_dir)

@@ -105,6 +105,24 @@ class DispatchNextTest(unittest.TestCase):
             with sqlite3.connect(root/'provider.sqlite') as db:
                 self.assertEqual(db.execute('SELECT count(*) FROM applied_cursor').fetchone()[0], 1)
 
+    def test_substituted_verified_provider_identity_never_dispatches(self):
+        receipt = {'status': 'STARTUP_DECISION_VERIFIED',
+                   'registered_action': 'VERIFY_REQUIRED_RETRIEVED_SOURCES',
+                   'startup_receipt_digest': 'sha256:' + 'a' * 64}
+        for identity, reference in [('f' * 64, 'sqlite:applied_cursor:' + 'f' * 64),
+                                    ('f' * 64, 'sqlite:applied_cursor:' + 'e' * 64)]:
+            selection = {'selection': 'VERIFY_REQUIRED_RETRIEVED_SOURCES',
+                         'provider_status': 'OPERATION_EFFECT_PROVIDER_VERIFIED',
+                         'effect': {'identity': identity, 'provider_reference': reference}}
+            with self.subTest(identity=identity, reference=reference), \
+                 patch.object(owner, 'select_verified_next_handler', return_value=selection), \
+                 patch.object(owner, 'read_startup_decision', return_value=receipt), \
+                 patch('scripts.continuity_verified_artifact.apply_verified_handoff') as effect:
+                with self.assertRaisesRegex(ValueError, 'provenance mismatch'):
+                    owner.dispatch_verified_next_handler(Path('profile'), session_id='s',
+                        invocation_id='i', output_dir=Path('/tmp/a'), database=Path('/tmp/b'))
+                effect.assert_not_called()
+
     def test_unverified_context_never_dispatches(self):
         with patch.object(owner, 'select_verified_next_handler', return_value={'selection':'HALT_UNVERIFIED_CONTEXT'}), patch.object(owner, 'read_startup_decision') as read:
             result = owner.dispatch_verified_next_handler(Path('profile'), session_id='s', invocation_id='i', output_dir=Path('/tmp/a'), database=Path('/tmp/b'))
