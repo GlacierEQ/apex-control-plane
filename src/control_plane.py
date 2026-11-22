@@ -231,7 +231,7 @@ if __name__ == "__main__":
                                     continue
                                 remaining = max(0, disk_limit - counts[name])
                                 counts[name] += min(len(data), remaining)
-                                if len(data) > remaining or counts[name] >= disk_limit:
+                                if len(data) > remaining:
                                     quota_exhausted = True
                                 if len(captured[name]) < output_limit:
                                     captured[name].extend(data[:output_limit - len(captured[name])])

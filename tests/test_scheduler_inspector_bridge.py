@@ -280,3 +280,25 @@ def test_local_worker_enforces_live_posix_stream_quota(tmp_path):
     assert details["output_quota_exhausted"] is True
     assert details["stdout_bytes"] <= 1048576 + 65536
     assert len(details["stdout"]) <= 65536
+
+
+def test_exact_stream_quota_is_not_falsely_classified_as_overflow(tmp_path):
+    """A stream of exactly 1 MiB is permitted, not an overflow."""
+    import os
+    import pytest
+    if os.name != "posix":
+        pytest.skip("POSIX stream limit")
+    store, config, item = queued(tmp_path)
+    command = [
+        sys.executable, str(CLI), "--run-next-local", str(store),
+        item.capability, "--", sys.executable, "-c",
+        "import sys;sys.stdout.buffer.write(b'A'*1048576)",
+    ]
+    result = subprocess.run(command, cwd=ROOT, capture_output=True,
+                            text=True, timeout=12)
+    assert result.returncode == 4, (result.stdout[:500], result.stderr)
+    assert json.loads(result.stdout)["status"] == "awaiting_receipts"
+    plane = ContinuousControlPlane.from_config(JsonlControlStore(store), config)
+    details = next(iter(plane.receipts.values())).details
+    assert details["output_quota_exhausted"] is False
+    assert details["stdout_bytes"] == 1048576
