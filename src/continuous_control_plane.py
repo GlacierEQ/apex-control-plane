@@ -507,6 +507,11 @@ class ContinuousControlPlane:
             raise ValueError("empty worker receipt batch")
         with self.store.transaction():
             self._refresh()
+            # A worker batch belongs to exactly one claimed work item. A
+            # cross-work batch must never partially certify unrelated work or
+            # checkpoint only the first mission.
+            if len({row.work_id for row in receipts}) != 1:
+                raise ValueError("worker receipt batch spans multiple work items")
             ids = [row.receipt_id for row in receipts]
             if len(set(ids)) != len(ids) or any(key in self.receipts for key in ids):
                 raise ValueError("receipt UUID already recorded")
