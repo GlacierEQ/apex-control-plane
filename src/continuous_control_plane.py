@@ -484,6 +484,11 @@ class ContinuousControlPlane:
             current = self.work[receipt.work_id]
             if receipt.mission_id != current.mission_id or receipt.correlation_id != current.correlation_id:
                 raise ValueError("receipt mission/correlation does not match work item")
+            # A UUID is a single durable execution identity, even when the
+            # claimed work and payload happen to match. Refuse replay before
+            # provider-level deduplication can return historical success.
+            if receipt.receipt_id in self.receipts:
+                raise ValueError("receipt UUID already recorded")
             for existing in self.receipts.values():
                 if (
                     receipt.provider_receipt_id
