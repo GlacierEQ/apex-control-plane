@@ -40,6 +40,7 @@ class SQLiteEffectTest(unittest.TestCase):
                   operation_name="apply_recovered_cursor", handler=lambda payload, identity: None)
         self.assertEqual(readback_cursor_once(self.receipt, handoff_dir=self.root,
                          database=self.db)["status"], "OPERATION_RECONCILIATION_REQUIRED")
+        self.assertFalse(self.db.exists(), "readback must not create a provider database")
 
     def test_conflicting_provider_row_denied(self):
         first = apply_cursor_once(self.receipt, handoff_dir=self.root, database=self.db)

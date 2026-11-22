@@ -4,6 +4,7 @@ The authenticated handoff remains the authority. This provider persists only
 the selected cursor and its provenance, never executes recovered text.
 """
 import hashlib
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -15,7 +16,7 @@ from scripts.continuity_verified_artifact import (
 )
 
 
-def _connect(path):
+def _connect(path, *, read_only=False):
     path = Path(path)
     parent = path.parent
     info = parent.lstat()
@@ -23,15 +24,20 @@ def _connect(path):
         raise ValueError("private owner database directory required")
     if path.is_symlink():
         raise ValueError("database symlink forbidden")
+    if read_only and not path.exists():
+        return None
     if path.exists():
         info = path.lstat()
         if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
             raise ValueError("untrusted database")
-    db = sqlite3.connect(str(path), timeout=10)
-    os.chmod(path, 0o600)
-    db.execute("PRAGMA synchronous=FULL")
-    db.execute("CREATE TABLE IF NOT EXISTS applied_cursor (identity TEXT PRIMARY KEY, cursor TEXT NOT NULL, provenance TEXT NOT NULL)")
-    db.commit()
+    if read_only:
+        db = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=10)
+    else:
+        db = sqlite3.connect(str(path), timeout=10)
+        os.chmod(path, 0o600)
+        db.execute("PRAGMA synchronous=FULL")
+        db.execute("CREATE TABLE IF NOT EXISTS applied_cursor (identity TEXT PRIMARY KEY, cursor TEXT NOT NULL, provenance TEXT NOT NULL)")
+        db.commit()
     return db
 
 
@@ -54,7 +60,10 @@ def readback_cursor_once(receipt, *, handoff_dir, database):
     """Independently read durable provider effect; never replay the write."""
     def readback(identity, payload):
         provenance = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
-        with _connect(database) as db:
+        db = _connect(database, read_only=True)
+        if db is None:
+            return None
+        with closing(db):
             row = db.execute("SELECT cursor, provenance FROM applied_cursor WHERE identity=?", (identity,)).fetchone()
         if row is None:
             return None
