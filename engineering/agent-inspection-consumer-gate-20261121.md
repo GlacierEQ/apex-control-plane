@@ -9,3 +9,7 @@ The real local execution consumer now preserves worker receipts but transitions 
 ## Verification and continuation
 
 Focused `tests/test_continuous_control_plane.py`: 43 passed (Python 3.13). Full suite result recorded separately after completion. No merge or deployment. Reconcile the divergent `engineering/agent-scheduler-inspection-failclosed-20261121` branch selectively; do not replace this branch wholesale because the branch diff removes stronger inspector/subprocess implementation. Next: add strict receipt identity replay detection and test receipt inspector's direct diagnostic output flowing through the worker callback, including malformed evidence and restart.
+
+## Exact changed-head full-suite verification
+
+Python 3.13 `python3.13 -m pytest -q`: **1146 passed, 29 skipped, 8 subtests passed in 53.05 seconds**, exit 0. Focused 43 passed. This proves local tests, not deployed provider execution.
