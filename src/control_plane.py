@@ -637,6 +637,7 @@ if __name__ == "__main__":
                 # the isolated execution group has finished. Do not certify a
                 # successful command while such a descendant is still running.
                 descendant_group_unresolved = False
+                descendant_detected_after_exit = False
                 if os.name == "posix" and child.poll() is not None:
                     try:
                         os.killpg(child.pid, 0)
@@ -646,6 +647,7 @@ if __name__ == "__main__":
                         descendant_group_unresolved = True
                         group_signal_denied = True
                     else:
+                        descendant_detected_after_exit = True
                         descendant_group_unresolved = True
                         try:
                             os.killpg(child.pid, signal.SIGKILL)
@@ -710,7 +712,7 @@ if __name__ == "__main__":
         input_delivery_complete = (
             executed and input_written == len(document) and not input_writer_unresolved
         )
-        if code == 0 and (not input_delivery_complete or cleanup_unresolved or output_incomplete):
+        if code == 0 and (not input_delivery_complete or cleanup_unresolved or output_incomplete or locals().get("descendant_detected_after_exit", False)):
             # A zero exit is not success when owned I/O or cleanup remains unresolved.
             code = 74
         final_receipt = {
@@ -744,6 +746,7 @@ if __name__ == "__main__":
             "output_drains_unresolved": output_drains_unresolved,
             "cleanup_unresolved": cleanup_unresolved,
             "descendant_group_unresolved": locals().get("descendant_group_unresolved", False),
+            "descendant_detected_after_exit": locals().get("descendant_detected_after_exit", False),
             "capture_limit_bytes": max_output_bytes,
             "spool_limit_bytes_per_stream": max_spool_bytes,
         }
