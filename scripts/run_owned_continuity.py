@@ -518,6 +518,49 @@ def run_mission_start_with_context(path: Path, *, session_id: str, invocation_id
             "resume_decision": packet["next_transition"]}
 
 
+def consume_mission_context(path: Path, *, session_id: str, invocation_id: str,
+                            packet_path: Path, packet_digest: str) -> dict:
+    """Independent process validates original providers before accepting context."""
+    from scripts.continuity_context_packet import read_context_packet
+    packet = read_context_packet(packet_path, expected_digest=packet_digest)
+    verified = read_startup_decision(path, session_id=session_id,
+                                     invocation_id=invocation_id)
+    profile = load_profile(path)
+    prior = read_checkpoint(path, session_id=verified["prior_session_id"],
+                            invocation_id=verified["prior_invocation_id"])
+    hits = search_cloud_index(Path(profile["cloud_index_db"]),
+                              namespace=profile["namespace"],
+                              query=profile["startup_search_query"], limit=10)
+    from scripts.continuity_context_packet import _encode
+    evidence_digest = "sha256:" + hashlib.sha256(_encode({
+        "query": profile["startup_search_query"], "hits": hits}).rstrip(b"\n")).hexdigest()
+    if evidence_digest != verified.get("retrieval_digest"):
+        raise ValueError("retrieval changed since authenticated startup")
+    expected = {
+        "mission_id": profile["mission_id"], "startup_key": verified["key"],
+        "startup_receipt_digest": verified["startup_receipt_digest"],
+        "checkpoint_digest": prior["checkpoint_digest"],
+        "journal_source_ref": prior["journal_source_ref"],
+        "retrieval_digest": evidence_digest, "recovered_cursor": prior["cursor"],
+        "verified_corrections": prior["corrections_applied"],
+        "previously_completed_action": prior["completed_action"],
+        "source_evidence": [{k: hit.get(k) for k in
+             ("source_id", "revision", "title", "url", "text_sha256", "excerpt")}
+             for hit in hits],
+    }
+    if any(packet.get(k) != value for k, value in expected.items()):
+        raise ValueError("context packet differs from authenticated provider state")
+    if packet.get("next_transition") != "RESUME_FROM_VERIFIED_CURSOR" or packet.get("conflicting_source_ids"):
+        raise ValueError("context conflict requires reconciliation")
+    return {"status": "CONTEXT_CONSUMED_PROVIDER_VERIFIED",
+            "recovered_cursor": packet["recovered_cursor"],
+            "verified_corrections": packet["verified_corrections"],
+            "previously_completed_action": packet["previously_completed_action"],
+            "source_evidence": packet["source_evidence"],
+            "next_transition": packet["next_transition"],
+            "native_chatgpt_startup_verified": False}
+
+
 def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     """Read back an existing committed receipt without running or replaying an action."""
     profile = load_profile(path)
@@ -656,6 +699,12 @@ def main() -> None:
     mission_start.add_argument("--previous-session-id")
     mission_start.add_argument("--previous-invocation-id")
     mission_start.add_argument("--auto-resume", action="store_true")
+    consumer = sub.add_parser("context-consume", help="Independently authenticate source-backed startup context before agent use")
+    consumer.add_argument("--profile", type=Path, required=True)
+    consumer.add_argument("--session-id", required=True)
+    consumer.add_argument("--invocation-id", required=True)
+    consumer.add_argument("--packet-path", type=Path, required=True)
+    consumer.add_argument("--packet-digest", required=True)
     startup = sub.add_parser("startup-readback", help="Verify durable startup decision and original authenticated checkpoint")
     startup.add_argument("--profile", type=Path, required=True)
     startup.add_argument("--session-id", required=True)
@@ -702,6 +751,11 @@ def main() -> None:
                 auto_resume=args.auto_resume,
                 previous_session_id=args.previous_session_id,
                 previous_invocation_id=args.previous_invocation_id)
+        elif args.command == "context-consume":
+            result = consume_mission_context(
+                args.profile, session_id=args.session_id,
+                invocation_id=args.invocation_id, packet_path=args.packet_path,
+                packet_digest=args.packet_digest)
         elif args.command == "startup-readback":
             result = read_startup_decision(args.profile, session_id=args.session_id,
                                            invocation_id=args.invocation_id)

@@ -103,6 +103,22 @@ class OwnedMissionStartupPacketTest(StartupContextPacketTest):
                                        expected_digest=result["context_packet"]["digest"])
         self.assertEqual(contents["recovered_cursor"], "continue:real-work")
 
+    def test_independent_consumer_rechecks_provider_and_rejects_drift(self):
+        receipt = dict(self.receipt, prior_session_id="old", prior_invocation_id="first")
+        created = self.publish()
+        def consume():
+            return owner.consume_mission_context(
+                Path("/private/profile.json"), session_id="new", invocation_id="second",
+                packet_path=Path(created["path"]), packet_digest=created["digest"])
+        with (patch.object(owner, "read_startup_decision", return_value=receipt),
+              patch.object(owner, "load_profile", return_value=self.profile),
+              patch.object(owner, "read_checkpoint", return_value=self.prior),
+              patch.object(owner, "search_cloud_index", return_value=self.hits)):
+            self.assertEqual(consume()["status"], "CONTEXT_CONSUMED_PROVIDER_VERIFIED")
+            self.hits[0]["excerpt"] = "changed after packet publication"
+            with self.assertRaisesRegex(ValueError, "retrieval changed"):
+                consume()
+
     def test_no_packet_on_unverified_dispatch(self):
         with (patch.object(owner, "dispatch_verified_next_handler",
                            return_value={"status": "DISPATCH_HALTED_UNVERIFIED_CONTEXT"}),
