@@ -647,8 +647,26 @@ class ContinuousControlPlane:
             or evidence.details.get("descendant_detected_after_exit") is True
             for evidence in receipts
         )
-        for evidence in receipts:
-            self.record_receipt(evidence)
+        # Persisted UUIDs and provider identities must not certify a fresh
+        # invocation. record_receipt checks UUIDs under the ledger lock, so
+        # concurrent writers cannot both admit the same execution identity.
+        if len({e.receipt_id for e in receipts}) != len(receipts):
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="duplicate_worker_receipt_uuid")
+            return {"status": "unconfirmed", "executed": True, "routes_run": 1,
+                    "work_id": item.work_id, "error": "duplicate receipt UUID"}
+        try:
+            saved = tuple(self.record_receipt(evidence) for evidence in receipts)
+        except ValueError as exc:
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="worker_receipt_replay_requires_reconciliation")
+            return {"status": "unconfirmed", "executed": True, "routes_run": 1,
+                    "work_id": item.work_id, "error": str(exc)}
+        if any(a.receipt_id != b.receipt_id for a, b in zip(saved, receipts)):
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="provider_receipt_replay_requires_reconciliation")
+            return {"status": "unconfirmed", "executed": True, "routes_run": 1,
+                    "work_id": item.work_id, "error": "historical provider receipt reused"}
         receipt = receipts[-1]
         if negative:
             self.transition(item.work_id, WorkState.RECONCILING,
