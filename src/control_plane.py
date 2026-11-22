@@ -20,6 +20,7 @@ from continuous_control_plane import (
 import json
 from hashlib import sha256
 import os
+import tempfile
 from pathlib import Path
 import runpy
 import stat
@@ -156,14 +157,50 @@ if __name__ == "__main__":
         def execute_queued(item: WorkItem) -> ExecutionReceipt | list[ExecutionReceipt]:
             before_artifact = _artifact_snapshot(verify_file)
             before_durable_receipt = _artifact_snapshot(inspection_receipt_file)
+            # Parent-owned temporary streams keep subprocess output out of
+            # unbounded in-memory capture. The post-run quota is a failure
+            # classifier, not a claim of strict disk-space enforcement.
+            timed_out = False
+            quota_exhausted = False
+            cleanup_unresolved = False
+            output_limit = 65536
+            post_run_quota = 1048576
             try:
-                process = subprocess.run(
-                    command, check=False, text=True, capture_output=True,
-                )
-                code = process.returncode
-                stdout, stderr = process.stdout, process.stderr
+                raw_timeout = float(os.getenv("GLACIEREQ_LOCAL_COMMAND_TIMEOUT", "120"))
+                timeout_seconds = (raw_timeout if 0 < raw_timeout <= 3600
+                                   and __import__("math").isfinite(raw_timeout) else 120.0)
+            except ValueError:
+                timeout_seconds = 120.0
+            try:
+                with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+                    try:
+                        completed = subprocess.run(
+                            command, check=False, stdout=out, stderr=err,
+                            timeout=timeout_seconds,
+                        )
+                        code = completed.returncode
+                    except subprocess.TimeoutExpired:
+                        timed_out = True
+                        cleanup_unresolved = True  # descendants are not proven reaped
+                        code = 124
+                    out.flush()
+                    err.flush()
+                    out_size = os.fstat(out.fileno()).st_size
+                    err_size = os.fstat(err.fileno()).st_size
+                    quota_exhausted = (out_size > post_run_quota
+                                       or err_size > post_run_quota)
+                    if quota_exhausted and not timed_out:
+                        code = 125
+                    out.seek(0)
+                    err.seek(0)
+                    stdout = out.read(output_limit).decode("utf-8", errors="replace")
+                    stderr = err.read(output_limit).decode("utf-8", errors="replace")
+                    stdout_truncated = out_size > output_limit
+                    stderr_truncated = err_size > output_limit
             except OSError as exc:
                 code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
+                stdout_truncated = stderr_truncated = False
+                cleanup_unresolved = True
             execution = ExecutionReceipt(
                 work_id=item.work_id,
                 mission_id=item.mission_id,
@@ -175,6 +212,21 @@ if __name__ == "__main__":
                     "exit_code": code,
                     "stdout": stdout,
                     "stderr": stderr,
+                    "stdout_truncated": stdout_truncated,
+                    "stderr_truncated": stderr_truncated,
+                    "output_limit_bytes": output_limit,
+                    "post_run_output_quota_bytes": post_run_quota,
+                    "strict_disk_quota_enforced": False,
+                    "output_quota_exhausted": quota_exhausted,
+                    "timed_out": timed_out,
+                    "cleanup_unresolved": cleanup_unresolved,
+                    **({
+                        "status": "inspection_failed",
+                        "outcome_verified": False,
+                        "reason": ("subprocess_timeout" if timed_out
+                                   else "output_quota_exceeded" if quota_exhausted
+                                   else "subprocess_cleanup_unresolved"),
+                    } if timed_out or quota_exhausted or cleanup_unresolved else {}),
                     "scope": "local process execution only; independent mission validation may remain",
                 },
             )
@@ -231,7 +283,11 @@ if __name__ == "__main__":
                     return execution
                 with os.fdopen(fd, "rb") as handle:
                     fd = -1
-                    actual = handle.read()
+                    digest = sha256()
+                    verified_bytes = 0
+                    while chunk := handle.read(1024 * 1024):
+                        digest.update(chunk)
+                        verified_bytes += len(chunk)
                     final = os.fstat(handle.fileno())
                     final_snapshot = (
                         final.st_dev, final.st_ino, final.st_size,
@@ -255,8 +311,8 @@ if __name__ == "__main__":
                     source_system="apex-local-artifact-readback",
                     details={
                         "path": str(verify_file),
-                        "sha256": sha256(actual).hexdigest(),
-                        "bytes": len(actual),
+                        "sha256": digest.hexdigest(),
+                        "bytes": verified_bytes,
                         "freshness": "created_or_changed_during_this_command",
                         "scope": "current-run regular-file readback, not external provider completion",
                     },
