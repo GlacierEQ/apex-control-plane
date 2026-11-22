@@ -915,3 +915,46 @@ def test_receipt_batch_recovery_rejects_duplicate_uuid_across_envelopes(tmp_path
     cp.store.append_receipt_batch((receipt,))
     with pytest.raises(RuntimeError, match="duplicate durable receipt UUID"):
         plane(tmp_path)
+
+
+def test_crash_after_receipt_fsync_before_state_transition_never_replays_local_work(tmp_path):
+    """A committed worker receipt must prevent an expired local lease from rerunning."""
+    cp = plane(tmp_path)
+    item = cp.ingest_event(event())[0]
+    claimed = cp.claim_next(
+        worker_id="crashed-local", capabilities=[item.capability],
+        now=NOW, lease_seconds=1,
+    )
+    assert claimed is not None and claimed.work_id == item.work_id
+    proof = ExecutionReceipt(
+        work_id=item.work_id, mission_id=item.mission_id,
+        correlation_id=item.correlation_id, receipt_kind="execution",
+        status="verified", source_system="local-process",
+        details={"outcome_verified": True},
+    )
+    cp.record_receipt_batch((proof,))
+    restarted = plane(tmp_path)
+    calls = []
+    result = restarted.execute_next_local(
+        worker_id="replacement", capabilities=[item.capability],
+        executor=lambda work: calls.append(work.work_id), now=NOW + timedelta(seconds=2),
+    )
+    assert result["status"] == "idle"
+    assert calls == []
+    assert restarted.work[item.work_id].state is WorkState.RECONCILING
+    assert plane(tmp_path).work[item.work_id].state is WorkState.RECONCILING
+
+
+def test_expired_local_lease_without_receipt_remains_retriable(tmp_path):
+    cp = plane(tmp_path)
+    item = cp.ingest_event(event())[0]
+    assert cp.claim_next(
+        worker_id="crashed-local", capabilities=[item.capability],
+        now=NOW, lease_seconds=1,
+    ) is not None
+    restarted = plane(tmp_path)
+    claimed = restarted.claim_next(
+        worker_id="replacement", capabilities=[item.capability],
+        now=NOW + timedelta(seconds=2),
+    )
+    assert claimed is not None and claimed.work_id == item.work_id
