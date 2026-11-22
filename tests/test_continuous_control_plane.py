@@ -770,3 +770,28 @@ def test_unspecified_receipts_cannot_turn_execution_only_into_completion(tmp_pat
     assert cp.work[item.work_id].state is WorkState.VERIFYING
     with pytest.raises(RuntimeError, match="verification"):
         cp.transition(item.work_id, WorkState.COMPLETE, reason="no final result")
+
+
+@pytest.mark.parametrize("details", [
+    {"outcome_verified": False},
+    {"outcome_evidence": "unattested_receipt"},
+    {"cleanup_unresolved": True},
+    {"output_drains_unresolved": True},
+    {"descendant_detected_after_exit": True},
+    {"status": "inspection_failed"},
+])
+def test_local_consumer_reconciles_negative_execution_proof_without_replay(tmp_path, details):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    def run(item):
+        return ExecutionReceipt(
+            work_id=item.work_id, mission_id=item.mission_id,
+            correlation_id=item.correlation_id, receipt_kind="verification",
+            status="verified", source_system="local-process", details=details,
+        )
+    result = cp.execute_next_local(worker_id="local", capabilities=[work.capability], executor=run, now=NOW)
+    assert result["status"] == "unconfirmed"
+    assert cp.work[work.work_id].state is WorkState.RECONCILING
+    restarted = plane(tmp_path)
+    assert restarted.work[work.work_id].state is WorkState.RECONCILING
+    assert restarted.execute_next_local(worker_id="local", capabilities=[work.capability], executor=run, now=NOW)["status"] == "idle"

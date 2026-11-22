@@ -630,9 +630,29 @@ class ContinuousControlPlane:
                 "work_id": item.work_id,
                 "error": "worker receipt identity does not match claimed work",
             }
+        # Diagnostic inspection cannot attest success. Preserve evidence but
+        # reconcile rather than replay when cleanup or outcome is uncertain.
+        negative = any(
+            evidence.status.casefold() == "inspection_failed"
+            or evidence.details.get("status") == "inspection_failed"
+            or evidence.details.get("outcome_evidence") == "unattested_receipt"
+            or evidence.details.get("outcome_verified") is False
+            or evidence.details.get("cleanup_unresolved") is True
+            or evidence.details.get("output_drains_unresolved") is True
+            or evidence.details.get("descendant_detected_after_exit") is True
+            for evidence in receipts
+        )
         for evidence in receipts:
             self.record_receipt(evidence)
         receipt = receipts[-1]
+        if negative:
+            self.transition(item.work_id, WorkState.RECONCILING,
+                            reason="negative_execution_evidence_requires_reconciliation")
+            return {
+                "status": "unconfirmed", "executed": True, "routes_run": 1,
+                "work_id": item.work_id, "receipt_id": receipt.receipt_id,
+                "error": "execution evidence requires reconciliation",
+            }
         good = all(evidence.status.casefold() in {
             "verified", "pass", "passed", "success", "succeeded",
         } for evidence in receipts)
