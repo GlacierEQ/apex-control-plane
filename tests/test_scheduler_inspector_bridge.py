@@ -302,3 +302,18 @@ def test_exact_stream_quota_is_not_falsely_classified_as_overflow(tmp_path):
     details = next(iter(plane.receipts.values())).details
     assert details["output_quota_exhausted"] is False
     assert details["stdout_bytes"] == 1048576
+
+
+
+def test_killed_worker_with_surviving_process_group_is_unresolved(tmp_path):
+    """A signaled parent cannot certify descendant cleanup from wait() alone."""
+    import os
+    import pytest
+    if os.name != "posix":
+        pytest.skip("POSIX process groups")
+    source = (ROOT / "src" / "control_plane.py").read_text()
+    # Static guard for the killed-path post-reap process-group check. Runtime
+    # adversarial containment still requires the native authorized host.
+    killed_path = source.split("if killed:", 1)[1].split("else:", 1)[0]
+    assert "os.killpg(child.pid, 0)" in killed_path
+    assert "cleanup_unresolved = True" in killed_path

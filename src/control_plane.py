@@ -240,6 +240,17 @@ if __name__ == "__main__":
                             child.wait(timeout=5)
                         except subprocess.TimeoutExpired:
                             cleanup_unresolved = True
+                        # Reaping the direct child is not proof that the
+                        # execution group stopped. A denied or ineffective
+                        # SIGKILL must remain an uncertain execution outcome.
+                        try:
+                            os.killpg(child.pid, 0)
+                        except ProcessLookupError:
+                            pass
+                        except OSError:
+                            cleanup_unresolved = True
+                        else:
+                            cleanup_unresolved = True
                         code = 124 if timed_out else 125
                     else:
                         code = child.wait(timeout=5)
