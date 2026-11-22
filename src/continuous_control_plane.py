@@ -574,11 +574,18 @@ class ContinuousControlPlane:
                     continue
                 if expired.lease_expires_at is None or expired.lease_expires_at > instant:
                     continue
-                if expired.external_action:
+                # A crash after receipt fsync but before the work-state
+                # transition leaves durable execution evidence on a leased
+                # item. Never replay that item, including local-only work:
+                # reconcile the committed evidence first.
+                has_receipts = any(r.work_id == expired.work_id for r in self.receipts.values())
+                if has_receipts:
+                    state, reason = WorkState.RECONCILING, "expired_lease_has_durable_receipts"
+                elif expired.external_action:
                     state, reason = WorkState.RECONCILING, "expired_external_lease_requires_provider_reconciliation"
                 else:
                     # Legacy max_attempts is telemetry, never an automatic
-                    # abandonment of reversible, local work.
+                    # abandonment of reversible, local work without receipts.
                     state, reason = WorkState.RECEIVED, "expired_local_lease_requeued_for_execution"
                 recovered = replace(expired, state=state, lease_owner=None,
                                     lease_expires_at=None, updated_at=instant)
