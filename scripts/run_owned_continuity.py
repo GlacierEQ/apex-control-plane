@@ -486,6 +486,38 @@ def dispatch_verified_next_handler(path: Path, *, session_id: str, invocation_id
             "provider_status": selection["provider_status"]}
 
 
+def run_mission_start_with_context(path: Path, *, session_id: str, invocation_id: str,
+                                   output_dir: Path, database: Path,
+                                   auto_resume: bool = True,
+                                   previous_session_id: str | None = None,
+                                   previous_invocation_id: str | None = None) -> dict:
+    """Owner process recovery plus source-backed, agent-readable continuity packet.
+
+    Every successful mission-start must materialize and verify the actual
+    context the next agent consumes. An unverified dispatch never publishes it.
+    """
+    result = dispatch_verified_next_handler(
+        path, session_id=session_id, invocation_id=invocation_id,
+        output_dir=output_dir, database=database, auto_resume=auto_resume,
+        previous_session_id=previous_session_id,
+        previous_invocation_id=previous_invocation_id)
+    if result.get("status") != "REGISTERED_HANDLER_EFFECT_VERIFIED":
+        return result
+    verified = read_startup_decision(path, session_id=session_id,
+                                     invocation_id=invocation_id)
+    profile = load_profile(path)
+    prior = read_checkpoint(path, session_id=verified["prior_session_id"],
+                            invocation_id=verified["prior_invocation_id"])
+    hits = search_cloud_index(Path(profile["cloud_index_db"]),
+                              namespace=profile["namespace"],
+                              query=profile["startup_search_query"], limit=10)
+    from scripts.continuity_context_packet import publish_context_packet
+    packet = publish_context_packet(verified, profile=profile, checkpoint=prior,
+                                    hits=hits, output_dir=output_dir)
+    return {**result, "context_packet": packet,
+            "resume_decision": packet["next_transition"]}
+
+
 def read_checkpoint(path: Path, *, session_id: str, invocation_id: str) -> dict:
     """Read back an existing committed receipt without running or replaying an action."""
     profile = load_profile(path)
@@ -664,7 +696,7 @@ def main() -> None:
                 previous_session_id=args.previous_session_id,
                 previous_invocation_id=args.previous_invocation_id)
         elif args.command == "mission-start":
-            result = dispatch_verified_next_handler(
+            result = run_mission_start_with_context(
                 args.profile, session_id=args.session_id, invocation_id=args.invocation_id,
                 output_dir=args.output_dir, database=args.database,
                 auto_resume=args.auto_resume,

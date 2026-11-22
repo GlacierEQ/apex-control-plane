@@ -36,8 +36,8 @@ class OwnerCursorEffectTest(unittest.TestCase):
         consume_once_verified_handoff(self.receipt, output_dir=self.root,
             operation_name='apply_recovered_cursor', handler=lambda payload, identity: None)
         self.assertEqual(self.execute()['status'], 'OPERATION_RECONCILIATION_REQUIRED')
-        with sqlite3.connect(self.root/'provider.sqlite') as db:
-            self.assertEqual(db.execute('SELECT count(*) FROM applied_cursor').fetchone()[0], 0)
+        self.assertFalse((self.root/'provider.sqlite').exists(),
+                         'readback must never create a missing provider')
 
     def test_real_provider_effect_changes_handler_selection(self):
         with patch.object(owner, 'run_registered_resume',
@@ -138,7 +138,7 @@ class MissionStartCLITest(unittest.TestCase):
                 '--session-id', 'new-session', '--invocation-id', 'new-invocation',
                 '--output-dir', '/tmp/private-handoff', '--database', '/tmp/private-cursor.sqlite',
                 '--auto-resume']
-        with patch('sys.argv', argv), patch.object(owner, 'dispatch_verified_next_handler',
+        with patch('sys.argv', argv), patch.object(owner, 'run_mission_start_with_context',
                 return_value={'status':'REGISTERED_HANDLER_EFFECT_VERIFIED',
                               'selection':'VERIFY_REQUIRED_RETRIEVED_SOURCES'}) as handler:
             with redirect_stdout(io.StringIO()) as output:
