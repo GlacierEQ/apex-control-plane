@@ -650,9 +650,24 @@ if __name__ == "__main__":
                         try:
                             os.killpg(child.pid, signal.SIGKILL)
                         except ProcessLookupError:
-                            pass
+                            descendant_group_unresolved = False
                         except PermissionError:
                             group_signal_denied = True
+                        else:
+                            # A successful signal call is not proof of process
+                            # group termination. Recheck briefly without
+                            # allowing cleanup to exceed a bounded deadline.
+                            cleanup_deadline = time.monotonic() + 0.5
+                            while time.monotonic() < cleanup_deadline:
+                                try:
+                                    os.killpg(child.pid, 0)
+                                except ProcessLookupError:
+                                    descendant_group_unresolved = False
+                                    break
+                                except PermissionError:
+                                    group_signal_denied = True
+                                    break
+                                time.sleep(0.02)
                 output_incomplete = timed_out or not all(drain_complete)
                 out_file.seek(0, os.SEEK_END)
                 err_file.seek(0, os.SEEK_END)
