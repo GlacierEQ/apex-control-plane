@@ -501,6 +501,32 @@ class ContinuousControlPlane:
             self.checkpoint(receipt.mission_id)
             return receipt
 
+    def record_receipt_batch(self, receipts: tuple[ExecutionReceipt, ...]) -> tuple[ExecutionReceipt, ...]:
+        """Preflight the complete worker batch under one durable ledger lock."""
+        if not receipts:
+            raise ValueError("empty worker receipt batch")
+        with self.store.transaction():
+            self._refresh()
+            ids = [row.receipt_id for row in receipts]
+            if len(set(ids)) != len(ids) or any(key in self.receipts for key in ids):
+                raise ValueError("receipt UUID already recorded")
+            seen = {(r.source_system, r.provider_receipt_id) for r in self.receipts.values()
+                    if r.provider_receipt_id}
+            for row in receipts:
+                current = self.work[row.work_id]
+                if row.mission_id != current.mission_id or row.correlation_id != current.correlation_id:
+                    raise ValueError("receipt mission/correlation does not match work item")
+                if row.provider_receipt_id:
+                    key = (row.source_system, row.provider_receipt_id)
+                    if key in seen:
+                        raise ValueError("historical provider receipt reused")
+                    seen.add(key)
+            for row in receipts:
+                self.store.append_receipt(row)
+                self.receipts[row.receipt_id] = row
+            self.checkpoint(receipts[0].mission_id)
+            return receipts
+
     def claim_next(self, *, worker_id: str, capabilities: Iterable[str],
                    now: datetime | None = None, lease_seconds: int = 90,
                    external_action: bool | None = None,
@@ -656,7 +682,7 @@ class ContinuousControlPlane:
             return {"status": "unconfirmed", "executed": True, "routes_run": 1,
                     "work_id": item.work_id, "error": "duplicate receipt UUID"}
         try:
-            saved = tuple(self.record_receipt(evidence) for evidence in receipts)
+            saved = self.record_receipt_batch(receipts)
         except ValueError as exc:
             self.transition(item.work_id, WorkState.RECONCILING,
                             reason="worker_receipt_replay_requires_reconciliation")

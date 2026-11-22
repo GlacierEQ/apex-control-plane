@@ -816,6 +816,29 @@ def test_receipt_uuid_replay_is_reconciled_after_durable_restart(tmp_path):
     assert plane(tmp_path).work[first.work_id].state is WorkState.RECONCILING
 
 
+
+def test_worker_batch_replay_rejects_entire_batch_without_partial_receipts(tmp_path):
+    cp = plane(tmp_path)
+    work = cp.ingest_event(event())[0]
+    old = ExecutionReceipt(
+        work_id=work.work_id, mission_id=work.mission_id,
+        correlation_id=work.correlation_id, receipt_kind="verification",
+        status="verified", source_system="local-process", details={},
+    )
+    cp.record_receipt(old)
+    fresh = ExecutionReceipt(
+        work_id=work.work_id, mission_id=work.mission_id,
+        correlation_id=work.correlation_id, receipt_kind="verification",
+        status="verified", source_system="local-process", details={},
+    )
+    result = cp.execute_next_local(
+        worker_id="local", capabilities=[work.capability],
+        executor=lambda _: [fresh, old], now=NOW,
+    )
+    assert result["status"] == "unconfirmed"
+    assert fresh.receipt_id not in plane(tmp_path).receipts
+    assert plane(tmp_path).work[work.work_id].state is WorkState.RECONCILING
+
 def test_receipt_uuid_collision_is_rejected_under_ledger_lock(tmp_path):
     cp = plane(tmp_path)
     work = cp.ingest_event(event())[0]
