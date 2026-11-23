@@ -45,6 +45,12 @@ class EmptyStackAcceptanceTests(unittest.TestCase):
     def test_ready_requires_all_positive_receipts(self):
         self.verify_with(healthy_responses())
 
+    def test_host_can_use_an_existing_free_model(self):
+        data = healthy_responses()
+        data["/api/tags"] = {"models": [{"name": "deepseek-r1:1.5b"}]}
+        with patch.dict(os.environ, {"PAPER_MODEL_NAME": "deepseek-r1:1.5b"}):
+            self.verify_with(data)
+
     def test_rejects_stored_exchange_credentials(self):
         data = healthy_responses()
         data["/accounts/master_account/credentials"] = ["coinbase_advanced_trade"]
