@@ -16,7 +16,8 @@ commits, then requires all of the following at the same time:
 - The local LLM generates an actual response rather than only reporting that
   a model name is configured.
 - Every Hummingbot account has **zero exchange credentials** and there are
-  **zero running trading bots**. No deposit, payment, or Coinbase connection.
+  **zero cached asset balances and zero running trading bots**. No deposit,
+  payment, or Coinbase connection.
 
 The verification script `verify-empty-stack.py` fails closed on any missing
 stage. A GitHub-hosted successful run proves an **ephemeral unfunded stack**,
