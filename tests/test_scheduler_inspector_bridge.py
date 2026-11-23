@@ -449,3 +449,25 @@ def test_linux_guard_unreapable_reported_child_fails_closed(monkeypatch):
     assert detected is True
     assert unresolved is True
     assert guard.enabled is False
+
+
+def test_linux_guard_restore_exception_is_unresolved_and_disarmed(monkeypatch):
+    """Failed subreaper restoration must not mask the fail-closed receipt."""
+    import pytest
+    if sys.platform != "linux":
+        pytest.skip("Linux adopted-child guard")
+    from posix_descendant_guard import LinuxAdoptedDescendants
+
+    class FailingLibc:
+        def prctl(self, *args):
+            raise OSError("restore failed")
+
+    guard = LinuxAdoptedDescendants()
+    guard.enabled = True
+    guard._libc = FailingLibc()
+    guard._previous = 0
+    monkeypatch.setattr(guard, "_children", lambda: set())
+    detected, unresolved = guard.finish(None, timeout=0.1)
+    assert detected is False
+    assert unresolved is True
+    assert guard.enabled is False
