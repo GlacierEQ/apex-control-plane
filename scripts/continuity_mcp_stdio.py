@@ -98,7 +98,11 @@ def serve(input_stream=sys.stdin, output_stream=sys.stdout):
         # Request identity is frame-local: malformed frames cannot inherit an earlier ID.
         request_id = None
         try:
-            request = json.loads(line, object_pairs_hook=_unique_object,\n                                 parse_constant=_reject_constant)
+            try:
+                request = json.loads(line, object_pairs_hook=_unique_object,
+                                     parse_constant=_reject_constant)
+            except (json.JSONDecodeError, ValueError) as exc:
+                raise _InvalidFrame("invalid JSON frame") from exc
             request_id = request.get("id") if isinstance(request, dict) else None
             result = handle(request)
             if request_id is None:
