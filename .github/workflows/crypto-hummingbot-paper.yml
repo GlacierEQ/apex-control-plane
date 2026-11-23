@@ -45,16 +45,44 @@ jobs:
           HBOT_PASSWORD="$(openssl rand -hex 32)"
           hbot --version
           bash ops/crypto-paper/start-hummingbot-paper.sh
-          sleep 35
-          hbot status --json > "$RUNNER_TEMP/hummingbot-paper-status.json"
-          python3 - "$RUNNER_TEMP/hummingbot-paper-status.json" <<'PY'
+          market_ready=0
+          for attempt in $(seq 1 12); do
+            hbot status --json > "$RUNNER_TEMP/hummingbot-paper-status.json"
+            if python3 - "$RUNNER_TEMP/hummingbot-paper-status.json" <<'PY'
           import json
           import sys
           with open(sys.argv[1], encoding='utf-8') as f:
               data = json.load(f)
-          assert data.get('running') is True, f'Hummingbot paper strategy is not running: {data}'
-          print('NATIVE PAPER STRATEGY RUNNING; Coinbase account untouched')
+          errors = data.get('errors') or {}
+          paper_balances = (data.get('balances') or {}).get('kraken_paper_trade') or {}
+          message = data.get('format_status') or ''
+          ready = (
+              data.get('running') is True
+              and data.get('strategy') == 'simple_pmm'
+              and data.get('config') == 'glaciereq_59_paper.yml'
+              and (data.get('snapshot_age_s') or 999) < 10
+              and errors.get('count') == 0
+              and 'Market connectors are not ready' not in message
+              and bool(message)
+              and bool(paper_balances)
+              and isinstance(paper_balances.get('USD'), (float, int))
+              and 0 <= paper_balances['USD'] <= 59.01
+          )
+          print(f"paper ready={ready} balance={paper_balances} status={message[:110]!r}")
+          sys.exit(0 if ready else 1)
           PY
+            then
+              market_ready=1
+              break
+            fi
+            sleep 15
+          done
+          if [ "$market_ready" -ne 1 ]; then
+            echo 'PAPER MARKET NEVER BECAME READY; no completion credit' >&2
+            hbot logs || true
+            exit 1
+          fi
+          echo 'NATIVE PAPER MARKET READY; Kraken simulation only, no Coinbase connection'
           hbot stop
 
       - name: Stop isolated Hummingbot container
