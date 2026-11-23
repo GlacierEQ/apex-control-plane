@@ -23,6 +23,15 @@ stage. A GitHub-hosted successful run proves an **ephemeral unfunded stack**,
 not a persistent deployment on the Hermes Mac. Operational deployment must
 repeat the same proof on its actual host before it can be called ready.
 
+The November 23, 2026 ephemeral readback first reached `EMPTY_STACK_READY`
+in GitHub Actions run `45170418663`: the API doctor showed 22 passes and zero
+failures, and Condor doctor showed 12 passes and zero failures. The source
+remains gated on the current PR head and on re-running after any modification.
+The Mac's existing DeepSeek-R1 model is now serving locally through Ollama,
+but its Docker daemon is still stopped; the external NTFS volume cannot
+host Colima's required Unix sockets. No persistent API/Condor installation
+has been claimed.
+
 This is a **native Hummingbot paper run**, not a home-built trading simulator.
 The $59 is the simulated USD balance, **not a connection to the user's Coinbase funds**.
 No Coinbase credentials, API keys, deposits, withdrawals, orders, or real assets are accessed.
