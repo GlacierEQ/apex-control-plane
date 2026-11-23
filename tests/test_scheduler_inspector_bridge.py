@@ -471,3 +471,30 @@ def test_linux_guard_restore_exception_is_unresolved_and_disarmed(monkeypatch):
     assert detected is False
     assert unresolved is True
     assert guard.enabled is False
+
+
+def test_windows_live_stream_quota_fails_closed(tmp_path):
+    """Windows workers must stop excessive output before child completion."""
+    import os
+    import pytest
+    if os.name != "nt":
+        pytest.skip("Windows live quota integration")
+    store, config, item = queued(tmp_path)
+    marker = tmp_path / "should-not-write.txt"
+    worker = (
+        "import sys,time,pathlib;"
+        "sys.stdout.buffer.write(b'X'*2097152);sys.stdout.flush();"
+        "time.sleep(2);pathlib.Path(sys.argv[1]).write_text('escaped')"
+    )
+    result = subprocess.run([
+        sys.executable, str(CLI), "--run-next-local", str(store),
+        item.capability, "--", sys.executable, "-c", worker, str(marker),
+    ], cwd=ROOT, capture_output=True, text=True, timeout=15)
+    assert result.returncode == 5, (result.stdout[:500], result.stderr)
+    assert json.loads(result.stdout)["status"] == "unconfirmed"
+    details = next(iter(recovered(store, config, item).receipts.values())).details
+    assert details["strict_stream_quota_enforced"] is True
+    assert details["output_quota_exhausted"] is True
+    assert details["stdout_bytes"] <= 1048576
+    assert len(details["stdout"]) <= 65536
+    assert not marker.exists()
