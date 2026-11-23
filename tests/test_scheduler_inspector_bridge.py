@@ -529,6 +529,7 @@ def test_windows_incremental_stream_quota_preempts_delayed_side_effect(tmp_path)
 
 def test_windows_quota_kills_live_grandchild_before_delayed_side_effect(tmp_path):
     """Quota teardown must terminate a live worker's child process tree."""
+    import time
     import os
     import pytest
     if os.name != "nt":
