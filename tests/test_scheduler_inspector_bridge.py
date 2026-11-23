@@ -355,20 +355,37 @@ def test_linux_detached_grandchild_cannot_falsely_complete_durable_queue(tmp_pat
     assert not marker.exists()
 
 
-def test_linux_guard_unavailable_prevents_worker_launch():
-    """Uncontained Linux workers must never start and create side effects."""
-    import os
+def test_linux_guard_unavailable_prevents_worker_launch(tmp_path):
+    """Nested subreaper must reject a worker before it can write anything."""
+    import ctypes
     import pytest
     if sys.platform != "linux":
         pytest.skip("Linux-only guard rejection")
-    store, config, item = queued(tmp_path := __import__("tempfile").TemporaryDirectory())
-    # The real CLI is launched under an existing subreaper, so arm() refuses
-    # ownership. The attempted worker would write a marker if ever started.
-    # Keep this test as a source assertion until the Linux integration harness
-    # supplies a subreaper supervisor and a valid Path-backed tmp_path.
-    source = CLI.read_text()
-    assert 'if sys.platform == "linux" and not detached_guard.arm():' in source
-    assert 'raise OSError("Linux descendant containment unavailable; worker not launched")' in source
+    store, config, item = queued(tmp_path)
+    marker = tmp_path / "should-not-exist.txt"
+
+    def activate_existing_subreaper():
+        libc = ctypes.CDLL(None, use_errno=True)
+        if libc.prctl(36, 1, 0, 0, 0) != 0:
+            raise OSError("test could not activate Linux subreaper")
+
+    result = subprocess.run([
+        sys.executable, str(CLI), "--run-next-local", str(store),
+        item.capability, "--verify-file", str(marker), "--",
+        sys.executable, "-c",
+        "from pathlib import Path;import sys;Path(sys.argv[1]).write_text('escaped')",
+        str(marker),
+    ], cwd=ROOT, capture_output=True, text=True, timeout=15,
+       preexec_fn=activate_existing_subreaper)
+    assert result.returncode == 5, (result.stdout[:600], result.stderr)
+    assert json.loads(result.stdout)["status"] == "unconfirmed"
+    assert not marker.exists(), "uncontained worker was launched"
+    plane = recovered(store, config, item)
+    details = next(iter(plane.receipts.values())).details
+    assert details["linux_subreaper_guard_active"] is False
+    assert details["cleanup_unresolved"] is True
+    assert details["exit_code"] == 127
+    assert "worker not launched" in details["stderr"]
 
 
 def test_linux_guard_unavailable_fails_closed_in_worker_source():

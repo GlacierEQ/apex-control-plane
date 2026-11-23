@@ -105,3 +105,8 @@ Recovered owning branch 05b4e7e38b694f8d82d3fa369e209ea1b50e3f2e. Found a concre
 ## Pre-launch containment gate — 2026-11-22
 
 Recovered branch 469c76bc635a73aadd7a4d46b45ec2e45736b38c. Corrected a concrete safety defect: the Linux local worker previously launched subprocesses even when its subreaper guard refused ownership, then merely marked the receipt unconfirmed afterward. A detached worker could still produce side effects. The real POSIX scheduler path now raises before Popen on Linux when arm() fails, retaining the existing failure receipt and no-retry reconciliation behavior. macOS retains its previous path. Added a source regression assertion. Exact-head Linux end-to-end test, durable receipt validation, and full suite remain pending; do not claim runtime validation. Next: run a Linux CLI under an already-active subreaper, assert no worker marker is created and the persisted work is unconfirmed; run detached-grandchild regression and full suite. No merge/deployment/automation/credential changes.
+
+
+## Linux nested-supervisor integration regression added — 2026-11-22
+
+Extended the previous pre-launch containment fix with a real Linux CLI integration regression: run the queue worker under an inherited PR_SET_CHILD_SUBREAPER supervisor, supply a command that would write a marker, assert the command never launches, the marker remains absent, the queue survives restart in RECONCILING, and the receipt records guard inactive / cleanup unresolved / exit 127. This is committed test code, **not yet an executed test**; Linux exact-head run remains the next gate. Preserve parent 6e3ea10e52d81eff47094f424075330d274403d6 for rollback.
