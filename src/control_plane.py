@@ -310,11 +310,17 @@ if __name__ == "__main__":
                                 room = max(0, output_limit - len(captured[name]))
                                 if room:
                                     captured[name].extend(data[:room])
-                        except OSError as exc:
-                            drain_errors.append((name, str(exc)))
+                        except Exception as exc:
+                            # Reader failures (including non-OSError stream faults)
+                            # must fail closed instead of silently losing output.
+                            drain_errors.append((name, f"{type(exc).__name__}: {exc}"))
                             overflow.set()
                         finally:
-                            stream.close()
+                            try:
+                                stream.close()
+                            except Exception as exc:
+                                drain_errors.append((name, f"close: {type(exc).__name__}: {exc}"))
+                                overflow.set()
                     readers = [
                         threading.Thread(target=drain, args=(name, stream),
                                          daemon=True)
