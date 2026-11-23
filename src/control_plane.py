@@ -385,7 +385,23 @@ if __name__ == "__main__":
                             if os.name == "posix":
                                 os.killpg(child.pid, signal.SIGKILL)
                             else:
-                                child.kill()
+                                # An exceptional capture/reap failure must not
+                                # leave a Windows worker's descendants alive.
+                                # Match the normal timeout/quota tree teardown.
+                                try:
+                                    tree_kill = subprocess.run(
+                                        ["taskkill", "/PID", str(child.pid), "/T", "/F"],
+                                        stdout=subprocess.DEVNULL,
+                                        stderr=subprocess.DEVNULL,
+                                        timeout=5,
+                                        check=False,
+                                    )
+                                    if tree_kill.returncode != 0:
+                                        cleanup_unresolved = True
+                                except (OSError, subprocess.TimeoutExpired):
+                                    cleanup_unresolved = True
+                                if child.poll() is None:
+                                    child.kill()
                             child.wait(timeout=3)
                         except (OSError, subprocess.TimeoutExpired):
                             pass
