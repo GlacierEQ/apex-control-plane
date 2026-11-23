@@ -59,3 +59,35 @@ class MissionEnterTests(unittest.TestCase):
     def test_missing_evidence_denied(self, run):
         with self.assertRaises(ValueError):
             enter(**KW)
+
+
+class StrictOwnerResponseTests(unittest.TestCase):
+    @patch('scripts.mission_enter.subprocess.run')
+    def test_duplicate_top_level_status_rejected(self, run):
+        from scripts.mission_enter import _run
+        run.return_value.returncode = 0
+        run.return_value.stdout = '{"status":"DENIED","status":"REGISTERED_HANDLER_EFFECT_VERIFIED"}'
+        with self.assertRaises(ValueError):
+            _run(['owner'])
+
+    @patch('scripts.mission_enter.subprocess.run')
+    def test_duplicate_nested_packet_member_rejected(self, run):
+        from scripts.mission_enter import _run
+        run.return_value.returncode = 0
+        run.return_value.stdout = '{"context_packet":{"digest":"bad","digest":"sha256:good"}}'
+        with self.assertRaises(ValueError):
+            _run(['owner'])
+
+    @patch('scripts.mission_enter.subprocess.run')
+    def test_nonfinite_owner_json_rejected(self, run):
+        from scripts.mission_enter import _run
+        run.return_value.returncode = 0
+        run.return_value.stdout = '{"status":NaN}'
+        with self.assertRaises(ValueError):
+            _run(['owner'])
+
+    @patch('scripts.mission_enter._run', side_effect=[START, {**CONSUMED, 'recovered_cursor': '  '}])
+    def test_empty_recovered_cursor_denied_at_entry(self, run):
+        with self.assertRaises(ValueError):
+            enter(**KW)
+        self.assertEqual(run.call_count, 2)
