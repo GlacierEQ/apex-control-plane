@@ -90,6 +90,9 @@ def handle(request, *, recover=None):
     return {"content": [{"type": "text", "text": json.dumps(result, sort_keys=True)}],
             "structuredContent": result, "isError": False}
 
+class _InvalidFrame(ValueError):
+    pass
+
 def serve(input_stream=sys.stdin, output_stream=sys.stdout):
     for line in input_stream:
         # Request identity is frame-local: malformed frames cannot inherit an earlier ID.
@@ -101,7 +104,7 @@ def serve(input_stream=sys.stdin, output_stream=sys.stdout):
             if request_id is None:
                 continue
             response = {"jsonrpc": "2.0", "id": request_id, "result": result}
-        except (json.JSONDecodeError, ValueError) as exc:
+        except _InvalidFrame as exc:
             response = {"jsonrpc": "2.0", "id": None,
                         "error": {"code": -32700, "message": "invalid JSON frame"}}
             print(type(exc).__name__ + ": " + str(exc)[:300], file=sys.stderr)
