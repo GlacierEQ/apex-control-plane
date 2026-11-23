@@ -180,3 +180,7 @@ Source `src/posix_descendant_guard.py` now catches OSError/ValueError/AttributeE
 - Regression commit `55f8c4d3c7a0c90e2d78b328852ad5bc19676b83`: Windows-only end-to-end queue regression emits 8 KiB flushed increments, crosses the quota, and asserts no delayed side-effect marker and an unconfirmed durable outcome.
 - Verification boundary: provider source commits persisted; native Windows execution remains required. No merge, production deployment, or automation edits.
 - Continuation: execute the incremental Windows regression on a Windows runner and the full Ubuntu suite on the exact branch head; inspect quota receipt, process termination, and side-effect marker before claiming runtime verification.
+
+
+## 2026-11-23 native Windows CI enforcement
+Committed `.github/workflows/ci.yml` at `259555261434ab356cdb3df661f9bd9c4b72c966`: added an independent `windows-latest` job running both real Windows scheduler stream quota regressions by exact pytest node ID. This closes the validation gap where Windows-only quota and incremental-drain tests skipped on Ubuntu. Source readback confirmed the workflow blob `cc52e2fb97b5767ea4363a4f40121f2cc25f33a3`. CI execution on the new head is not yet verified; this is enforced native-runner coverage, not proof of Windows runtime correctness. Next: inspect push-triggered Windows job and its actual test output; if failures arise repair `src/control_plane.py` without weakening fail-closed receipts; independently verify Ubuntu Linux tests on same head. No merge, deployment or automation changes.
