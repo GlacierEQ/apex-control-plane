@@ -23,6 +23,8 @@ The verification script `verify-empty-stack.py` fails closed on any missing
 stage. A GitHub-hosted successful run proves an **ephemeral unfunded stack**,
 not a persistent deployment on the Hermes Mac. Operational deployment must
 repeat the same proof on its actual host before it can be called ready.
+The verified CI model defaults to `qwen3:0.6b`; a host with a different
+keyless Ollama model can set `PAPER_MODEL_NAME` to the exact installed tag.
 
 The November 23, 2026 ephemeral readback first reached `EMPTY_STACK_READY`
 in GitHub Actions run `45170418663`: the API doctor showed 22 passes and zero
