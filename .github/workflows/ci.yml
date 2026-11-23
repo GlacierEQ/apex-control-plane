@@ -12,6 +12,24 @@ permissions:
   statuses: write
 
 jobs:
+  windows-worker-containment:
+    name: Windows worker containment
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Enforce live and incremental stream quotas on native Windows
+        env:
+          PYTHONPATH: src;.
+        run: |
+          python -m pytest -q -ra tests/test_scheduler_inspector_bridge.py::test_windows_live_stream_quota_fails_closed tests/test_scheduler_inspector_bridge.py::test_windows_incremental_stream_quota_preempts_delayed_side_effect
+
   proactive-suite:
     name: Proactive suite
     runs-on: ubuntu-latest
