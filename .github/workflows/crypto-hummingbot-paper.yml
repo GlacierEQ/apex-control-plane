@@ -27,11 +27,13 @@ jobs:
           git checkout -q --detach FETCH_HEAD
           test "$(git rev-parse HEAD)" = 97d9261afcbad6977e92c4eb520a09c8da84ad32
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: '0.13.9'
 
       - name: Install Condor from locked upstream dependencies
         working-directory: ${{ runner.temp }}/condor
