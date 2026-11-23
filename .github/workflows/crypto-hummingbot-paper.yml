@@ -11,6 +11,42 @@ permissions:
   contents: read
 
 jobs:
+  condor-risk:
+    name: Condor upstream risk / readiness tests (no trade access)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Fetch exact reviewed Condor commit
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/condor"
+          cd "$RUNNER_TEMP/condor"
+          git init -q
+          git remote add origin https://github.com/hummingbot/condor.git
+          git fetch -q --depth=1 origin 97d9261afcbad6977e92c4eb520a09c8da84ad32
+          git checkout -q --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = 97d9261afcbad6977e92c4eb520a09c8da84ad32
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install Condor from locked upstream dependencies
+        working-directory: ${{ runner.temp }}/condor
+        run: uv sync --dev --locked
+
+      - name: Verify upstream safety and readiness behavior
+        working-directory: ${{ runner.temp }}/condor
+        run: |
+          uv run --locked pytest -q \
+            tests/test_risk_leverage_gate.py \
+            tests/test_unenforced_risk_limits.py \
+            tests/test_pinned_server_refusal.py \
+            tests/test_mcp_library_write_scope.py \
+            tests/test_session_options_readiness.py
+
   native-paper:
     runs-on: ubuntu-latest
     timeout-minutes: 20
