@@ -63,7 +63,28 @@ def handle(request, *, recover=None):
         raise ValueError("existing owner-private mission state required")
     result = recover(owner_script=Path(__file__).with_name("run_owned_continuity.py"),
                      profile=profile, output_dir=output_dir, database=database, **args)
-    if result.get("status") != "MISSION_CONTEXT_READY":
+    context = result.get("context") if isinstance(result, dict) else None
+    evidence = context.get("source_evidence") if isinstance(context, dict) else None
+    if (not isinstance(result, dict)
+            or result.get("status") != "MISSION_CONTEXT_READY"
+            or result.get("session_id") != args["session_id"]
+            or result.get("invocation_id") != args["invocation_id"]
+            or result.get("native_chatgpt_startup_verified") is not False
+            or not isinstance(result.get("packet_digest"), str)
+            or not result["packet_digest"].startswith("sha256:")
+            or len(result["packet_digest"]) != 71
+            or any(ch not in "0123456789abcdef" for ch in result["packet_digest"][7:])
+            or not isinstance(context, dict)
+            or context.get("next_transition") != "RESUME_FROM_VERIFIED_CURSOR"
+            or context.get("native_chatgpt_startup_verified") is not False
+            or not isinstance(context.get("recovered_cursor"), str)
+            or not context["recovered_cursor"].strip()
+            or not isinstance(evidence, list) or not evidence
+            or any(not isinstance(item, dict)
+                   or not isinstance(item.get("source_id"), str)
+                   or not item["source_id"].strip()
+                   or not isinstance(item.get("text_sha256"), str)
+                   or not item["text_sha256"].strip() for item in evidence)):
         raise ValueError("mission recovery not verified")
     return {"content": [{"type": "text", "text": json.dumps(result, sort_keys=True)}],
             "structuredContent": result, "isError": False}

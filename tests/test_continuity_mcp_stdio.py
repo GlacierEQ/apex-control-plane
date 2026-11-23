@@ -43,12 +43,43 @@ class MCPTests(unittest.TestCase):
     def test_owner_consumer_causally_selected(self):
         with patch.object(m, "_config", return_value=[__import__("pathlib").Path(__file__)]*3), \
              patch.object(m, "enter", return_value={"status": "MISSION_CONTEXT_READY",
-                "context": {"recovered_cursor": "continue:actual", "source_evidence": [1]}}) as consumer, \
+                "session_id": "s", "invocation_id": "i", "packet_digest": "sha256:" + "a" * 64,
+                "native_chatgpt_startup_verified": False,
+                "context": {"recovered_cursor": "continue:actual",
+                            "next_transition": "RESUME_FROM_VERIFIED_CURSOR",
+                            "native_chatgpt_startup_verified": False,
+                            "source_evidence": [{"source_id": "drive:doc", "text_sha256": "abc"}]}}) as consumer, \
              patch("pathlib.Path.is_dir", return_value=True):
             out = m.handle(req("tools/call", {"name": m.TOOL,
                 "arguments": {"session_id": "s", "invocation_id": "i"}}))
         self.assertEqual(out["structuredContent"]["context"]["recovered_cursor"], "continue:actual")
         self.assertEqual(consumer.call_count, 1)
+
+    def test_forged_success_without_causal_evidence_denied(self):
+        base = {"status": "MISSION_CONTEXT_READY", "session_id": "s",
+                "invocation_id": "i", "packet_digest": "sha256:" + "a" * 64,
+                "native_chatgpt_startup_verified": False,
+                "context": {"recovered_cursor": "continue:real",
+                            "next_transition": "RESUME_FROM_VERIFIED_CURSOR",
+                            "native_chatgpt_startup_verified": False,
+                            "source_evidence": [{"source_id": "drive:doc", "text_sha256": "abc"}]}}
+        import copy
+        for mutate in (
+            lambda r: r.update(session_id="other"),
+            lambda r: r.update(packet_digest="sha256:invalid"),
+            lambda r: r["context"].update(source_evidence=[]),
+            lambda r: r["context"].update(recovered_cursor=""),
+            lambda r: r["context"].update(source_evidence=[{"source_id": "x"}]),
+            lambda r: r["context"].update(native_chatgpt_startup_verified=True),
+        ):
+            forged = copy.deepcopy(base)
+            mutate(forged)
+            with patch.object(m, "_config", return_value=[__import__("pathlib").Path(__file__)]*3), \
+                 patch("pathlib.Path.is_dir", return_value=True):
+                with self.assertRaisesRegex(ValueError, "not verified"):
+                    m.handle(req("tools/call", {"name": m.TOOL,
+                        "arguments": {"session_id": "s", "invocation_id": "i"}}),
+                        recover=lambda **kwargs: forged)
 
     def test_unverified_recovery_denied(self):
         with patch.object(m, "_config", return_value=[__import__("pathlib").Path(__file__)]*3), \
