@@ -68,6 +68,8 @@ def handle(request, *, recover=None):
 
 def serve(input_stream=sys.stdin, output_stream=sys.stdout):
     for line in input_stream:
+        # Request identity is frame-local: malformed frames cannot inherit an earlier ID.
+        request_id = None
         try:
             request = json.loads(line)
             request_id = request.get("id") if isinstance(request, dict) else None
@@ -75,8 +77,12 @@ def serve(input_stream=sys.stdin, output_stream=sys.stdout):
             if request_id is None:
                 continue
             response = {"jsonrpc": "2.0", "id": request_id, "result": result}
+        except json.JSONDecodeError as exc:
+            response = {"jsonrpc": "2.0", "id": None,
+                        "error": {"code": -32700, "message": "invalid JSON frame"}}
+            print(type(exc).__name__ + ": " + str(exc)[:300], file=sys.stderr)
         except (ValueError, RuntimeError, OSError, TypeError, KeyError) as exc:
-            response = {"jsonrpc": "2.0", "id": request_id if "request_id" in locals() else None,
+            response = {"jsonrpc": "2.0", "id": request_id,
                         "error": {"code": -32603, "message": "continuity request rejected"}}
             print(type(exc).__name__ + ": " + str(exc)[:300], file=sys.stderr)
         output_stream.write(json.dumps(response, sort_keys=True) + "\n")
