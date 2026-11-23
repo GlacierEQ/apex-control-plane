@@ -287,25 +287,74 @@ if __name__ == "__main__":
                     stdout_truncated = counts["stdout"] > output_limit
                     stderr_truncated = counts["stderr"] > output_limit
                 else:
-                    # Portable fallback: no strict quota claim on Windows.
-                    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
-                        child = subprocess.Popen(command, stdout=out, stderr=err)
+                    # Windows: drain both pipes concurrently with bounded memory.
+                    # A quota breach kills the direct worker while it is running,
+                    # instead of filling unbounded temporary files until exit.
+                    import threading
+                    import time
+                    child = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                             stderr=subprocess.PIPE)
+                    captured = {"stdout": bytearray(), "stderr": bytearray()}
+                    overflow = threading.Event()
+                    drain_errors = []
+                    def drain(name, stream):
                         try:
-                            code = child.wait(timeout=timeout_seconds)
-                        except subprocess.TimeoutExpired:
+                            while True:
+                                data = stream.read(65536)
+                                if not data:
+                                    break
+                                remaining = max(0, disk_limit - counts[name])
+                                counts[name] += min(len(data), remaining)
+                                if len(data) > remaining:
+                                    overflow.set()
+                                room = max(0, output_limit - len(captured[name]))
+                                if room:
+                                    captured[name].extend(data[:room])
+                        except OSError as exc:
+                            drain_errors.append((name, str(exc)))
+                            overflow.set()
+                        finally:
+                            stream.close()
+                    readers = [
+                        threading.Thread(target=drain, args=(name, stream),
+                                         daemon=True)
+                        for name, stream in (("stdout", child.stdout),
+                                             ("stderr", child.stderr))
+                    ]
+                    for reader in readers:
+                        reader.start()
+                    deadline = time.monotonic() + timeout_seconds
+                    while child.poll() is None:
+                        if overflow.is_set():
+                            quota_exhausted = True
+                            break
+                        if time.monotonic() >= deadline:
                             timed_out = True
-                            child.kill()
-                            try:
-                                child.wait(timeout=5)
-                            except subprocess.TimeoutExpired:
-                                cleanup_unresolved = True
-                            code = 124
-                        out.seek(0)
-                        err.seek(0)
-                        stdout = out.read(output_limit).decode("utf-8", errors="replace")
-                        stderr = err.read(output_limit).decode("utf-8", errors="replace")
-                        stdout_truncated = out.read(1) != b""
-                        stderr_truncated = err.read(1) != b""
+                            break
+                        time.sleep(0.02)
+                    if timed_out or quota_exhausted:
+                        child.kill()
+                    try:
+                        code = child.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        cleanup_unresolved = True
+                        code = 125
+                    for reader in readers:
+                        reader.join(timeout=3)
+                    if any(reader.is_alive() for reader in readers):
+                        output_drains_unresolved = True
+                        cleanup_unresolved = True
+                    if drain_errors:
+                        cleanup_unresolved = True
+                    quota_exhausted = quota_exhausted or overflow.is_set()
+                    if timed_out:
+                        code = 124
+                    elif quota_exhausted or cleanup_unresolved:
+                        code = 125
+                    stdout = captured["stdout"].decode("utf-8", errors="replace")
+                    stderr = captured["stderr"].decode("utf-8", errors="replace")
+                    stdout_truncated = counts["stdout"] > output_limit
+                    stderr_truncated = counts["stderr"] > output_limit
             except (OSError, subprocess.TimeoutExpired) as exc:
                 code, stdout, stderr = 127, "", f"{type(exc).__name__}: {exc}"
                 stdout_truncated = stderr_truncated = False
@@ -359,9 +408,9 @@ if __name__ == "__main__":
                     "output_limit_bytes": output_limit,
                     "post_run_output_quota_bytes": disk_limit,
                     "strict_disk_quota_enforced": False,
-                    "strict_stream_quota_enforced": os.name == "posix",
-                    "stdout_bytes": counts["stdout"] if os.name == "posix" else len(stdout.encode("utf-8")),
-                    "stderr_bytes": counts["stderr"] if os.name == "posix" else len(stderr.encode("utf-8")),
+                    "strict_stream_quota_enforced": True,
+                    "stdout_bytes": counts["stdout"],
+                    "stderr_bytes": counts["stderr"],
                     "descendant_detected_after_exit": descendant_detected_after_exit,
                     "linux_subreaper_guard_active": detached_guard_active,
                     "detached_descendant_detected": detached_descendant_detected,
