@@ -1,0 +1,126 @@
+name: Condor + Hummingbot API empty-stack E2E (zero funds)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ops/crypto-paper/**'
+      - '.github/workflows/crypto-empty-stack-e2e.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  empty-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test fail-closed acceptance logic before expensive provisioning
+        run: python3 -m unittest discover -s ops/crypto-paper -p 'test_verify_empty_stack.py' -v
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: '0.13.9'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Fetch immutable official upstreams
+        run: |
+          set -euo pipefail
+          for spec in \
+            'hummingbot-api a0e714ac6ce6b90c8c9a116e9e0b6eb2d1a23614' \
+            'condor 97d9261afcbad6977e92c4eb520a09c8da84ad32'; do
+            read -r repo sha <<< "$spec"
+            mkdir -p "$RUNNER_TEMP/$repo"
+            cd "$RUNNER_TEMP/$repo"
+            git init -q
+            git remote add origin "https://github.com/hummingbot/$repo.git"
+            git fetch -q --depth=1 origin "$sha"
+            git checkout -q --detach FETCH_HEAD
+            test "$(git rev-parse HEAD)" = "$sha"
+          done
+
+      - name: Start authenticated API and broker with no exchange accounts
+        run: |
+          set -euo pipefail
+          export HBAPI_NONINTERACTIVE=1 HBAPI_SKIP_DEPS=1
+          export HBAPI_USERNAME=glaciereq_paper
+          export HBAPI_PASSWORD="$(openssl rand -hex 24)"
+          export HBAPI_CONFIG_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$HBAPI_PASSWORD"
+          echo "::add-mask::$HBAPI_CONFIG_PASSWORD"
+          echo "PAPER_API_USER=$HBAPI_USERNAME" >> "$GITHUB_ENV"
+          echo "PAPER_API_PASSWORD=$HBAPI_PASSWORD" >> "$GITHUB_ENV"
+          cd "$RUNNER_TEMP/hummingbot-api"
+          make setup
+          make deploy
+          ready=0
+          for attempt in $(seq 1 18); do
+            if make doctor > "$RUNNER_TEMP/api-doctor.log" 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 10
+          done
+          cat "$RUNNER_TEMP/api-doctor.log"
+          test "$ready" -eq 1
+
+      - name: Start free local AI model
+        run: |
+          set -euo pipefail
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for attempt in $(seq 1 18); do
+            if curl -fsS --max-time 2 http://127.0.0.1:11434/api/tags > /dev/null; then break; fi
+            sleep 3
+          done
+          ollama pull qwen3:0.6b
+
+      - name: Start Condor local dashboard with authenticated API bridge
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/condor"
+          uv sync --dev --locked
+          npm ci --prefix frontend
+          npm run build --prefix frontend
+          printf 'CONDOR_MODE=local\nADMIN_USER_ID=1\nWEB_URL=http://localhost:8088\nCONDOR_DEFAULT_AGENT=ollama:qwen3:0.6b\nCONDOR_TELEMETRY=off\n' > .env
+          uv run --locked python - <<'PY'
+          import os
+          from config_manager import get_config_manager
+          cm = get_config_manager()
+          assert cm.add_server('paper', '127.0.0.1', 8000,
+                               os.environ['PAPER_API_USER'],
+                               os.environ['PAPER_API_PASSWORD'], owner_id=1)
+          assert cm.set_default_server('paper')
+          PY
+          uv run --locked python main.py > "$RUNNER_TEMP/condor.log" 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -fsS --max-time 3 http://127.0.0.1:8088/api/v1/auth/mode > /dev/null; then break; fi
+            sleep 3
+          done
+
+      - name: Require actual no-funds end-to-end readiness
+        run: |
+          set -euo pipefail
+          python3 ops/crypto-paper/verify-empty-stack.py
+          cd "$RUNNER_TEMP/condor"
+          export PATH="$RUNNER_TEMP/condor/frontend/node_modules/.bin:$PATH"
+          uv run --locked python -m condor.doctor
+
+      - name: Capture failure and clean up ephemeral services
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/condor.log" ]; then tail -80 "$RUNNER_TEMP/condor.log"; fi
+          if [ -f "$RUNNER_TEMP/ollama.log" ]; then tail -30 "$RUNNER_TEMP/ollama.log"; fi
+          if [ -f "$RUNNER_TEMP/hummingbot-api/docker-compose.yml" ]; then
+            cd "$RUNNER_TEMP/hummingbot-api"
+            docker compose down || true
+          fi
