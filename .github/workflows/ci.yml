@@ -3,7 +3,7 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, develop]
+    branches: [main, develop, engineering/agent-linux-detached-subprocess-containment-20261122]
   pull_request:
     branches: [main]
 
