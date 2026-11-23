@@ -104,7 +104,13 @@ class LinuxAdoptedDescendants:
         except (OSError, ValueError):
             unresolved = True
         finally:
-            if self._libc.prctl(36, self._previous, 0, 0, 0) != 0:
+            try:
+                if self._libc.prctl(36, self._previous, 0, 0, 0) != 0:
+                    unresolved = True
+            except (OSError, ValueError, AttributeError):
+                # A failed restore is not verified cleanup. Preserve the
+                # fail-closed result instead of masking it with an exception.
                 unresolved = True
-            self.enabled = False
+            finally:
+                self.enabled = False
         return detected, unresolved
