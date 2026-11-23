@@ -143,3 +143,10 @@ Source `src/posix_descendant_guard.py` now catches OSError/ValueError/AttributeE
 - Updated only the CI push branch filter to include `engineering/agent-linux-detached-subprocess-containment-20261122` in commit `5fe47665926d8e9872cca64f38a3912c5af3d2f9`. Existing main/develop behavior, test steps, and privileges are unchanged. This is a branch-specific test trigger, not a scheduled automation change or production deployment.
 - Acceptance: a subsequent branch push triggers Ubuntu CI, executes full pytest with skip reasons and four explicit Linux adversarial tests; inspect native workflow jobs/logs before claiming validation.
 - Continuation: inspect GitHub Actions for this notes-update commit, read exact-head Linux results and skip reasons, repair failures in source; retain PRs unmerged and deployment unchanged.
+
+
+## 2026-11-23 — subreaper restoration regression required in Linux CI
+
+- Recovered native workflow and runtime regression source. The prior focused Linux CI selector omitted `test_linux_guard_restore_exception_is_unresolved_and_disarmed`, despite the runtime repair at d005675 and test at f037413.
+- Updated `.github/workflows/ci.yml` in commit `3b0f664418b40b98c5f4dc22dae9d1e9e4fd3c8c` to require this fifth Linux adversarial test in addition to the existing four and full suite. This is verification wiring, not proof of test execution or production runtime behavior.
+- Acceptance: provider-native Ubuntu job executes full suite plus five selected adversarial tests on exact branch head; inspect skip reasons and receipt outcome. Continuation: obtain GitHub Actions job and logs for latest head; fix any failing tests or actual scheduler defects without merging/deploying.
