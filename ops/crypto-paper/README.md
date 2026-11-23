@@ -1,5 +1,28 @@
 # $59 Coinbase-sized paper run (Hummingbot + Condor preparation)
 
+## Operator acceptance correction — unfunded but actually running
+
+Passing a Hummingbot strategy simulation and Condor unit tests **does not**
+make a working Hummingbot + Condor system. The separate
+`crypto-empty-stack-e2e.yml` workflow is the end-to-end gate for the next stage.
+It starts the real authenticated Hummingbot API, PostgreSQL, MQTT broker,
+Condor local dashboard, and a keyless local Ollama model at fixed upstream
+commits, then requires all of the following at the same time:
+
+- Hummingbot API doctor succeeds, the broker connects, and API authentication
+  works against the live stack.
+- Condor starts, local login works, its own API server selector reports
+  `online`, and the official Condor doctor reports no failures.
+- The local LLM generates an actual response rather than only reporting that
+  a model name is configured.
+- Every Hummingbot account has **zero exchange credentials** and there are
+  **zero running trading bots**. No deposit, payment, or Coinbase connection.
+
+The verification script `verify-empty-stack.py` fails closed on any missing
+stage. A GitHub-hosted successful run proves an **ephemeral unfunded stack**,
+not a persistent deployment on the Hermes Mac. Operational deployment must
+repeat the same proof on its actual host before it can be called ready.
+
 This is a **native Hummingbot paper run**, not a home-built trading simulator.
 The $59 is the simulated USD balance, **not a connection to the user's Coinbase funds**.
 No Coinbase credentials, API keys, deposits, withdrawals, orders, or real assets are accessed.
