@@ -109,6 +109,7 @@ jobs:
           set -euo pipefail
           python3 ops/crypto-paper/verify-empty-stack.py
           cd "$RUNNER_TEMP/condor"
+          export PATH="$RUNNER_TEMP/condor/frontend/node_modules/.bin:$PATH"
           uv run --locked python -m condor.doctor
 
       - name: Capture failure and clean up ephemeral services
