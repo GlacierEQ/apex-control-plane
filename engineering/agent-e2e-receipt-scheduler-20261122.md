@@ -173,3 +173,10 @@ Source `src/posix_descendant_guard.py` now catches OSError/ValueError/AttributeE
 - Regression commit `62fedaae196f51f6a2f5efa266606da2990686cc` adds `test_windows_live_stream_quota_fails_closed`, checking overflow refusal, bounded receipt output and prevention of post-overflow side effects on Windows.
 - Provider-native readback confirmed runtime blob `93ebd39812e3392b7340088fcb597066f04227bd`. The new regression is Windows-gated; Ubuntu CI cannot establish Windows runtime behavior. Neither Windows execution nor exact-head CI completion has yet been confirmed. No deployment or merge.
 - **Continuation cursor:** inspect Ubuntu CI for head after this notes commit, then execute the Windows-gated test on an authorized Windows runner; if it fails, repair reader lifecycle/termination semantics in the owning CLI, rerun, and independently read back the result. Avoid treating Windows skip on Ubuntu as validation.
+
+
+### 2026-11-23 — incremental Windows pipe-drain repair
+- Runtime commit `1c8bcfd36894322d0df29e3b3b7ad8d84dab8013`: Windows bounded reader now uses `BufferedReader.read1(65536)` instead of `read(65536)`. The latter can wait to fill a large buffered read before exposing small, flushed writes to the quota monitor, delaying enforcement for incremental producers. The former consumes available bytes promptly, preserving the 1 MiB per-stream ceiling and existing fail-closed receipt semantics.
+- Regression commit `55f8c4d3c7a0c90e2d78b328852ad5bc19676b83`: Windows-only end-to-end queue regression emits 8 KiB flushed increments, crosses the quota, and asserts no delayed side-effect marker and an unconfirmed durable outcome.
+- Verification boundary: provider source commits persisted; native Windows execution remains required. No merge, production deployment, or automation edits.
+- Continuation: execute the incremental Windows regression on a Windows runner and the full Ubuntu suite on the exact branch head; inspect quota receipt, process termination, and side-effect marker before claiming runtime verification.
