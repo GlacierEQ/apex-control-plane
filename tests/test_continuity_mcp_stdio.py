@@ -56,5 +56,22 @@ class MCPTests(unittest.TestCase):
         self.assertEqual(frames[0]["result"]["serverInfo"]["name"], "glaciereq-continuity-owner")
         self.assertEqual(frames[1]["error"]["code"], -32603)
 
+
+    def test_malformed_frame_never_reuses_previous_request_identity(self):
+        # A bad frame after an accepted session request must not impersonate it.
+        source = io.StringIO(
+            json.dumps(req("ping", request_id="previous")) + "\n"
+            + "{broken-json\n"
+            + json.dumps(req("ping", request_id="next")) + "\n"
+        )
+        target = io.StringIO()
+        m.serve(source, target)
+        frames = [json.loads(line) for line in target.getvalue().splitlines()]
+        self.assertEqual([frame["id"] for frame in frames],
+                         ["previous", None, "next"])
+        self.assertEqual(frames[1]["error"]["code"], -32700)
+        self.assertEqual(frames[2]["result"], {})
+
+
 if __name__ == "__main__":
     unittest.main()
