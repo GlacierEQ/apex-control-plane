@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.mission_enter import enter
+from scripts.mission_enter import enter, _unique_object, _reject_constant
 
 PROTOCOL = "2025-03-26"
 TOOL = "glaciereq_recover_mission_context"
@@ -95,13 +95,13 @@ def serve(input_stream=sys.stdin, output_stream=sys.stdout):
         # Request identity is frame-local: malformed frames cannot inherit an earlier ID.
         request_id = None
         try:
-            request = json.loads(line)
+            request = json.loads(line, object_pairs_hook=_unique_object,\n                                 parse_constant=_reject_constant)
             request_id = request.get("id") if isinstance(request, dict) else None
             result = handle(request)
             if request_id is None:
                 continue
             response = {"jsonrpc": "2.0", "id": request_id, "result": result}
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, ValueError) as exc:
             response = {"jsonrpc": "2.0", "id": None,
                         "error": {"code": -32700, "message": "invalid JSON frame"}}
             print(type(exc).__name__ + ": " + str(exc)[:300], file=sys.stderr)
