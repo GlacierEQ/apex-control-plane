@@ -135,3 +135,11 @@ The prior exact-head Ubuntu run 45124376032 passed 1,145 tests but its default p
 ## Linux subreaper restoration failure — 2026-11-23 HST
 
 Source `src/posix_descendant_guard.py` now catches OSError/ValueError/AttributeError raised while restoring PR_SET_CHILD_SUBREAPER, marks cleanup unresolved, and always clears guard.enabled. This prevents a restoration exception from masking the scheduler's structured fail-closed cleanup outcome. Regression `test_linux_guard_restore_exception_is_unresolved_and_disarmed` added in `tests/test_scheduler_inspector_bridge.py`. Source commit d00567593e2769cff24641746454f06f5e6dafef; regression commit f037413ea8a6407603d2923c41696127523afb3c. Tests on the new head are not yet verified. Next: run Ubuntu CI against this branch and inspect the focused adversarial selection and full-suite skip reasons; verify durable scheduler reconciliation receipt on restoration failure. No deployment or merge.
+
+
+## 2026-11-23 — branch-native Linux CI trigger repaired
+
+- Recovered owning branch and `.github/workflows/ci.yml` via GitHub native readback. The workflow previously accepted manual dispatch, main/develop pushes, and main-targeting PRs; engineering branch pushes did not trigger its Linux tests.
+- Updated only the CI push branch filter to include `engineering/agent-linux-detached-subprocess-containment-20261122` in commit `5fe47665926d8e9872cca64f38a3912c5af3d2f9`. Existing main/develop behavior, test steps, and privileges are unchanged. This is a branch-specific test trigger, not a scheduled automation change or production deployment.
+- Acceptance: a subsequent branch push triggers Ubuntu CI, executes full pytest with skip reasons and four explicit Linux adversarial tests; inspect native workflow jobs/logs before claiming validation.
+- Continuation: inspect GitHub Actions for this notes-update commit, read exact-head Linux results and skip reasons, repair failures in source; retain PRs unmerged and deployment unchanged.
