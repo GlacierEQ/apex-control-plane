@@ -48,6 +48,27 @@ def verify():
         if keys != []:
             raise AssertionError(f"Account {account!r} has trading credentials: refuse READY")
 
+    portfolio = request_json(
+        f"{api}/portfolio/state",
+        method="POST",
+        payload={"refresh": False, "skip_gateway": True},
+        headers=auth,
+    )
+    if not isinstance(portfolio, dict):
+        raise AssertionError("Hummingbot API portfolio response is invalid")
+    for account_data in portfolio.values():
+        if not isinstance(account_data, dict):
+            raise AssertionError("Unrecognized account balance structure")
+        for connector_balances in account_data.values():
+            if not isinstance(connector_balances, list):
+                raise AssertionError("Unrecognized connector balance structure")
+            for balance in connector_balances:
+                if not isinstance(balance, dict):
+                    raise AssertionError("Unrecognized asset balance structure")
+                for key in ("units", "available_units", "total_balance", "available_balance", "usd_value"):
+                    if key in balance and float(balance[key] or 0) != 0:
+                        raise AssertionError("Nonzero asset balance in unfunded API: refuse READY")
+
     bots = request_json(f"{api}/bot-orchestration/status", headers=auth)
     if bots.get("status") != "success" or bots.get("data"):
         raise AssertionError("API reports a running bot, or its status is not healthy")
@@ -92,7 +113,7 @@ def verify():
     print(
         "EMPTY_STACK_READY: API authenticated; broker connected; "
         "Condor dashboard authenticated and API online; local model generated; "
-        "ZERO exchange credentials and ZERO trading bots."
+        "ZERO exchange credentials, ZERO asset balances and ZERO trading bots."
     )
 
 
