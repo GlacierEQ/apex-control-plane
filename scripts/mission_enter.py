@@ -10,12 +10,26 @@ import sys
 from pathlib import Path
 
 
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate owner response member: ' + key)
+        result[key] = value
+    return result
+
+
+def _reject_constant(value):
+    raise ValueError('nonfinite owner response constant: ' + value)
+
+
 def _run(command):
     result = subprocess.run(command, text=True, capture_output=True, check=False)
     if result.returncode:
         raise RuntimeError("owner command failed: " + result.stderr.strip()[:800])
     try:
-        data = json.loads(result.stdout)
+        data = json.loads(result.stdout, object_pairs_hook=_unique_object,
+                          parse_constant=_reject_constant)
     except (ValueError, TypeError) as exc:
         raise ValueError("owner command returned invalid JSON") from exc
     if not isinstance(data, dict):
@@ -44,7 +58,9 @@ def enter(*, owner_script, profile, session_id, invocation_id, output_dir, datab
             or consumed.get("next_transition") != "RESUME_FROM_VERIFIED_CURSOR"
             or consumed.get("native_chatgpt_startup_verified") is not False
             or not isinstance(consumed.get("source_evidence"), list)
-            or not consumed["source_evidence"]):
+            or not consumed["source_evidence"]
+            or not isinstance(consumed.get("recovered_cursor"), str)
+            or not consumed["recovered_cursor"].strip()):
         raise ValueError("independent context consumer did not verify source-backed continuation")
     return {"status": "MISSION_CONTEXT_READY", "session_id": session_id,
             "invocation_id": invocation_id, "context": consumed,
