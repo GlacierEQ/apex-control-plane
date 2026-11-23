@@ -34,6 +34,7 @@ def verify():
     api = os.environ.get("PAPER_API_URL", "http://127.0.0.1:8000").rstrip("/")
     condor = os.environ.get("PAPER_CONDOR_URL", "http://127.0.0.1:8088").rstrip("/")
     model = os.environ.get("PAPER_MODEL_URL", "http://127.0.0.1:11434").rstrip("/")
+    model_name = os.environ.get("PAPER_MODEL_NAME", "qwen3:0.6b")
     user = os.environ["PAPER_API_USER"]
     password = os.environ["PAPER_API_PASSWORD"]
     credential = base64.b64encode(f"{user}:{password}".encode()).decode()
@@ -94,13 +95,13 @@ def verify():
         raise AssertionError("Condor's own server probe did not report online")
 
     tags = request_json(f"{model}/api/tags")
-    if not any(m.get("name", "").startswith("qwen3:0.6b") for m in tags.get("models", [])):
-        raise AssertionError("No pinned free local model is loaded")
+    if not any(m.get("name") == model_name for m in tags.get("models", [])):
+        raise AssertionError(f"Configured free model {model_name!r} is not loaded")
     generation = request_json(
         f"{model}/api/generate",
         method="POST",
         payload={
-            "model": "qwen3:0.6b",
+            "model": model_name,
             "prompt": "Reply with the single word READY.",
             "stream": False,
             "think": False,
