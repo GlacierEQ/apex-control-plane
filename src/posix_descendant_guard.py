@@ -52,6 +52,10 @@ class LinuxAdoptedDescendants:
             prev = ctypes.c_int()
             if libc.prctl(37, ctypes.byref(prev), 0, 0, 0) != 0:
                 return False
+            # A pre-existing subreaper belongs to another runtime boundary.
+            # Never adopt/kill its descendants or alter its lifecycle state.
+            if prev.value != 0:
+                return False
             if libc.prctl(36, 1, 0, 0, 0) != 0:
                 return False
         except (OSError, ValueError, AttributeError):

@@ -363,3 +363,28 @@ def test_linux_guard_unavailable_fails_closed_in_worker_source():
     source = CLI.read_text()
     assert 'if sys.platform == "linux" and not detached_guard_active:' in source
     assert 'cleanup_unresolved = True' in source.split('if sys.platform == "linux" and not detached_guard_active:', 1)[1].split('execution = ExecutionReceipt(', 1)[0]
+
+
+def test_linux_preexisting_subreaper_is_not_hijacked():
+    """A nested worker must not seize a pre-existing supervisor's children."""
+    import os
+    import pytest
+    if sys.platform != "linux":
+        pytest.skip("Linux prctl subreaper boundary")
+    import ctypes
+    from posix_descendant_guard import LinuxAdoptedDescendants
+    # Exercise in a child process so the test runner's prctl state is untouched.
+    script = (
+        "import ctypes,sys;from posix_descendant_guard import LinuxAdoptedDescendants;"
+        "libc=ctypes.CDLL(None,use_errno=True);before=ctypes.c_int();"
+        "assert libc.prctl(37,ctypes.byref(before),0,0,0)==0;"
+        "assert libc.prctl(36,1,0,0,0)==0;"
+        "guard=LinuxAdoptedDescendants();assert guard.arm() is False;"
+        "assert guard.enabled is False;after=ctypes.c_int();"
+        "assert libc.prctl(37,ctypes.byref(after),0,0,0)==0;"
+        "assert after.value==1;"
+        "assert libc.prctl(36,before.value,0,0,0)==0"
+    )
+    result = subprocess.run([sys.executable, "-c", script], cwd=ROOT / "src",
+                            capture_output=True, text=True, timeout=8)
+    assert result.returncode == 0, (result.stdout, result.stderr)
