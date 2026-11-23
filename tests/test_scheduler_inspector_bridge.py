@@ -498,3 +498,30 @@ def test_windows_live_stream_quota_fails_closed(tmp_path):
     assert details["stdout_bytes"] <= 1048576
     assert len(details["stdout"]) <= 65536
     assert not marker.exists()
+
+
+def test_windows_incremental_stream_quota_preempts_delayed_side_effect(tmp_path):
+    """Small flushed chunks must trigger quota before worker reaches its side effect."""
+    import os
+    import pytest
+    if os.name != "nt":
+        pytest.skip("Windows incremental pipe quota integration")
+    store, config, item = queued(tmp_path)
+    marker = tmp_path / "incremental-worker-survived.txt"
+    worker = (
+        "import sys,time,pathlib;"
+        "[(sys.stdout.buffer.write(b'Q'*8192),sys.stdout.buffer.flush(),time.sleep(0.005)) "
+        "for _ in range(140)];"
+        "time.sleep(2);pathlib.Path(sys.argv[1]).write_text('escaped')"
+    )
+    result = subprocess.run([
+        sys.executable, str(CLI), "--run-next-local", str(store),
+        item.capability, "--", sys.executable, "-c", worker, str(marker),
+    ], cwd=ROOT, capture_output=True, text=True, timeout=15)
+    assert result.returncode == 5, (result.stdout[:500], result.stderr)
+    assert json.loads(result.stdout)["status"] == "unconfirmed"
+    details = next(iter(recovered(store, config, item).receipts.values())).details
+    assert details["output_quota_exhausted"] is True
+    assert details["stdout_bytes"] <= 1048576
+    assert details["outcome_verified"] is False
+    assert not marker.exists()
