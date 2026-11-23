@@ -8,6 +8,7 @@ No Coinbase credentials, API keys, deposits, withdrawals, orders, or real assets
 
 - Hummingbot: https://github.com/hummingbot/hummingbot (release `v2.18.0`).
 - Condor: https://github.com/hummingbot/condor (AI agent orchestration built on Hummingbot API).
+- Condor upstream commit used for isolated tests: `97d9261afcbad6977e92c4eb520a09c8da84ad32`.
 - The Coinbase Advanced Hummingbot connector supports live spot orders **but does not provide paper trading** as of the September 2026 connector documentation: https://hummingbot.org/exchanges/coinbase/.
 - Hummingbot **does** support native paper trading for Kraken: https://hummingbot.org/client/global-configs/paper-trade/.
 - Official setup: https://hummingbot.org/installation/hummingbot-client/.
@@ -35,7 +36,16 @@ Those are separate follow-on validations before any live-money proposal.
 
 The same script is exercised by the repository's GitHub Actions paper smoke
 workflow, which uses an isolated ephemeral Docker runner and Hummingbot's
-upstream image. It must pass before treating this as runnable on the Mac.
+upstream image. That workflow also installs Condor from its locked upstream
+dependencies and runs five focused upstream test modules (87 assertions/tests
+at the pinned commit) covering leverage and risk gates, pinned-server refusals,
+write scope, and session readiness. Both checks must pass before Mac deployment.
+
+The Mac's Hermes stack remains untouched. On November 23, 2026, its container
+daemon was stopped, its internal disk had approximately 1.6 GiB available,
+and its system load was elevated. Its external `My Passport` volume had ample
+space, but no container runtime has been relocated or started there. Mac
+installation is **not** verified and must not be inferred from the CI run.
 
 ## Exact safety properties
 
@@ -48,8 +58,10 @@ upstream image. It must pass before treating this as runnable on the Mac.
 
 ## Integration boundary
 
-Condor is **not** configured to place trades here. After native paper execution
-passes, install its official harness, run `make doctor`, and connect its
-Hummingbot API to a dedicated paper-only bot before introducing any LLM model.
+Condor is **not** configured to place trades here. Its upstream risk tests
+do not establish end-to-end Condor-to-Hummingbot API behavior. After both CI
+checks pass and the Mac has capacity, install its official harness, run
+`make doctor`, and connect its Hummingbot API to a dedicated paper-only bot
+before introducing any LLM model.
 Do not give an autonomous agent a wallet, Coinbase trading permission, or
 live exchange route during this simulation stage.
