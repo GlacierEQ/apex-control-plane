@@ -48,7 +48,7 @@ class MCPTests(unittest.TestCase):
                 "context": {"recovered_cursor": "continue:actual",
                             "next_transition": "RESUME_FROM_VERIFIED_CURSOR",
                             "native_chatgpt_startup_verified": False,
-                            "source_evidence": [{"source_id": "drive:doc", "text_sha256": "abc"}]}}) as consumer, \
+                            "source_evidence": [{"source_id": "drive:doc", "text_sha256": "b" * 64}]}}) as consumer, \
              patch("pathlib.Path.is_dir", return_value=True):
             out = m.handle(req("tools/call", {"name": m.TOOL,
                 "arguments": {"session_id": "s", "invocation_id": "i"}}))
@@ -62,7 +62,7 @@ class MCPTests(unittest.TestCase):
                 "context": {"recovered_cursor": "continue:real",
                             "next_transition": "RESUME_FROM_VERIFIED_CURSOR",
                             "native_chatgpt_startup_verified": False,
-                            "source_evidence": [{"source_id": "drive:doc", "text_sha256": "abc"}]}}
+                            "source_evidence": [{"source_id": "drive:doc", "text_sha256": "b" * 64}]}}
         import copy
         for mutate in (
             lambda r: r.update(session_id="other"),
@@ -70,6 +70,9 @@ class MCPTests(unittest.TestCase):
             lambda r: r["context"].update(source_evidence=[]),
             lambda r: r["context"].update(recovered_cursor=""),
             lambda r: r["context"].update(source_evidence=[{"source_id": "x"}]),
+            lambda r: r["context"]["source_evidence"][0].update(text_sha256="abc"),
+            lambda r: r["context"]["source_evidence"][0].update(text_sha256="g" * 64),
+            lambda r: r["context"]["source_evidence"][0].update(text_sha256="A" * 64),
             lambda r: r["context"].update(native_chatgpt_startup_verified=True),
         ):
             forged = copy.deepcopy(base)

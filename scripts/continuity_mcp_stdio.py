@@ -84,7 +84,8 @@ def handle(request, *, recover=None):
                    or not isinstance(item.get("source_id"), str)
                    or not item["source_id"].strip()
                    or not isinstance(item.get("text_sha256"), str)
-                   or not item["text_sha256"].strip() for item in evidence)):
+                   or len(item["text_sha256"]) != 64
+                   or any(ch not in "0123456789abcdef" for ch in item["text_sha256"]) for item in evidence)):
         raise ValueError("mission recovery not verified")
     return {"content": [{"type": "text", "text": json.dumps(result, sort_keys=True)}],
             "structuredContent": result, "isError": False}
