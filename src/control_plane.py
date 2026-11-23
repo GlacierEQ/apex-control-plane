@@ -300,7 +300,7 @@ if __name__ == "__main__":
                     def drain(name, stream):
                         try:
                             while True:
-                                data = stream.read(65536)
+                                data = stream.read1(65536)  # Return available pipe bytes without waiting for a full buffer.
                                 if not data:
                                     break
                                 remaining = max(0, disk_limit - counts[name])
