@@ -80,9 +80,10 @@ def verify():
         method="POST",
         payload={
             "model": "qwen3:0.6b",
-            "prompt": "Reply with the single word READY. /no_think",
+            "prompt": "Reply with the single word READY.",
             "stream": False,
-            "options": {"num_predict": 45},
+            "think": False,
+            "options": {"num_predict": 70},
         },
     )
     if not generation.get("done") or not generation.get("response", "").strip():
