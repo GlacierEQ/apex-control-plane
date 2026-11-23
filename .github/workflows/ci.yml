@@ -28,7 +28,7 @@ jobs:
         env:
           PYTHONPATH: src;.
         run: |
-          python -m pytest -q -ra tests/test_scheduler_inspector_bridge.py::test_windows_live_stream_quota_fails_closed tests/test_scheduler_inspector_bridge.py::test_windows_incremental_stream_quota_preempts_delayed_side_effect
+          python -m pytest -q -ra tests/test_scheduler_inspector_bridge.py::test_windows_live_stream_quota_fails_closed tests/test_scheduler_inspector_bridge.py::test_windows_incremental_stream_quota_preempts_delayed_side_effect tests/test_scheduler_inspector_bridge.py::test_windows_quota_kills_live_grandchild_before_delayed_side_effect
 
   proactive-suite:
     name: Proactive suite
