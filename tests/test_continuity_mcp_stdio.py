@@ -118,5 +118,24 @@ class MCPTests(unittest.TestCase):
         self.assertEqual(frames[2]["result"], {})
 
 
+    def test_ambiguous_frames_rejected_without_dispatch(self):
+        frames = [
+            '{"jsonrpc":"2.0","id":"old","id":"forged","method":"ping"}',
+            '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"x","name":"y"}}',
+            '{"jsonrpc":"2.0","id":NaN,"method":"ping"}',
+            '{"jsonrpc":"2.0","id":Infinity,"method":"ping"}',
+        ]
+        source = io.StringIO("\n".join(frames) + "\n" +
+                             json.dumps(req("ping", request_id="fresh")) + "\n")
+        target = io.StringIO()
+        with patch.object(m, "handle", wraps=m.handle) as dispatch:
+            m.serve(source, target)
+        out = [json.loads(line) for line in target.getvalue().splitlines()]
+        self.assertEqual(dispatch.call_count, 1)
+        self.assertEqual([frame["id"] for frame in out], [None] * 4 + ["fresh"])
+        self.assertTrue(all(frame["error"]["code"] == -32700 for frame in out[:4]))
+        self.assertEqual(out[-1]["result"], {})
+
+
 if __name__ == "__main__":
     unittest.main()
