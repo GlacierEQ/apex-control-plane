@@ -92,7 +92,9 @@ class LinuxAdoptedDescendants:
                     try:
                         os.waitpid(pid, os.WNOHANG)
                     except ChildProcessError:
-                        pass
+                        # /proc reported a child we could not reap. This is
+                        # not proof of cleanup or ownership; fail closed.
+                        unresolved = True
                     except OSError:
                         unresolved = True
                 if time.monotonic() >= deadline:

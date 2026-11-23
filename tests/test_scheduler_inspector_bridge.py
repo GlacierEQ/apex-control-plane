@@ -421,3 +421,31 @@ def test_linux_preexisting_subreaper_is_not_hijacked():
     result = subprocess.run([sys.executable, "-c", script], cwd=ROOT / "src",
                             capture_output=True, text=True, timeout=8)
     assert result.returncode == 0, (result.stdout, result.stderr)
+
+
+def test_linux_guard_unreapable_reported_child_fails_closed(monkeypatch):
+    """A vanished waitpid ownership claim cannot certify descendant cleanup."""
+    import os
+    import pytest
+    if sys.platform != "linux":
+        pytest.skip("Linux adopted-child guard")
+    from posix_descendant_guard import LinuxAdoptedDescendants
+
+    class FakeLibc:
+        def prctl(self, *args):
+            return 0
+
+    guard = LinuxAdoptedDescendants()
+    guard.enabled = True
+    guard._libc = FakeLibc()
+    guard._previous = 0
+    calls = iter([{812345}, set()])
+    monkeypatch.setattr(guard, "_children", lambda: next(calls))
+    monkeypatch.setattr(os, "kill", lambda pid, sig: None)
+    def missing_child(pid, flags):
+        raise ChildProcessError("not our child")
+    monkeypatch.setattr(os, "waitpid", missing_child)
+    detected, unresolved = guard.finish(None, timeout=0.1)
+    assert detected is True
+    assert unresolved is True
+    assert guard.enabled is False

@@ -110,3 +110,8 @@ Recovered branch 469c76bc635a73aadd7a4d46b45ec2e45736b38c. Corrected a concrete 
 ## Linux nested-supervisor integration regression added — 2026-11-22
 
 Extended the previous pre-launch containment fix with a real Linux CLI integration regression: run the queue worker under an inherited PR_SET_CHILD_SUBREAPER supervisor, supply a command that would write a marker, assert the command never launches, the marker remains absent, the queue survives restart in RECONCILING, and the receipt records guard inactive / cleanup unresolved / exit 127. This is committed test code, **not yet an executed test**; Linux exact-head run remains the next gate. Preserve parent 6e3ea10e52d81eff47094f424075330d274403d6 for rollback.
+
+
+## Unreapable adopted-child reconciliation — 2026-11-22
+
+Recovered branch 6e8f17396f4e118ac41052882fe305f5ed2cadfd and its actual guard/scheduler/test source. Found a false-cleanup classification in LinuxAdoptedDescendants.finish(): when procfs reported an adopted PID but waitpid raised ChildProcessError, the guard silently ignored loss of reaping ownership, potentially returning cleanup_unresolved=False. Changed the real guard to mark this uncertainty unresolved, which feeds the already-wired scheduler durable RECONCILING classification; added a targeted Linux regression injecting a lost waitpid ownership claim. Source change is bounded and preserves the prior pre-launch containment gate. Validation: independently run the guard regression and Linux scheduler tests against this new exact head; full checkout unavailable while Mac offline and isolated container GitHub DNS fails. Do not claim unexecuted integration or full-suite success. No merge, deployment, credentials, permissions, or automation edits.
