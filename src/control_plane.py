@@ -333,7 +333,24 @@ if __name__ == "__main__":
                             break
                         time.sleep(0.02)
                     if timed_out or quota_exhausted:
-                        child.kill()
+                        # On Windows, killing only the direct worker leaves its
+                        # descendants running. Request a bounded tree teardown
+                        # while the parent PID still identifies the live tree.
+                        # A failed teardown is an uncertain execution outcome.
+                        try:
+                            tree_kill = subprocess.run(
+                                ["taskkill", "/PID", str(child.pid), "/T", "/F"],
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
+                                timeout=5,
+                                check=False,
+                            )
+                            if tree_kill.returncode != 0:
+                                cleanup_unresolved = True
+                        except (OSError, subprocess.TimeoutExpired):
+                            cleanup_unresolved = True
+                        if child.poll() is None:
+                            child.kill()
                     try:
                         code = child.wait(timeout=5)
                     except subprocess.TimeoutExpired:
