@@ -525,3 +525,38 @@ def test_windows_incremental_stream_quota_preempts_delayed_side_effect(tmp_path)
     assert details["stdout_bytes"] <= 1048576
     assert details["outcome_verified"] is False
     assert not marker.exists()
+
+
+def test_windows_quota_kills_live_grandchild_before_delayed_side_effect(tmp_path):
+    """Quota teardown must terminate a live worker's child process tree."""
+    import os
+    import pytest
+    if os.name != "nt":
+        pytest.skip("Windows process tree integration")
+    store, config, item = queued(tmp_path)
+    marker = tmp_path / "grandchild-escaped.txt"
+    grandchild = (
+        "import pathlib,sys,time;"
+        "time.sleep(3);pathlib.Path(sys.argv[1]).write_text('escaped')"
+    )
+    worker = (
+        "import subprocess,sys,time;"
+        "subprocess.Popen([sys.executable,'-c',sys.argv[2],sys.argv[1]],"
+        "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,"
+        "stderr=subprocess.DEVNULL);"
+        "time.sleep(0.25);"
+        "sys.stdout.buffer.write(b'Q'*1100000);sys.stdout.buffer.flush();"
+        "time.sleep(6)"
+    )
+    result = subprocess.run([
+        sys.executable, str(CLI), "--run-next-local", str(store),
+        item.capability, "--", sys.executable, "-c", worker,
+        str(marker), grandchild,
+    ], cwd=ROOT, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 5, (result.stdout[:500], result.stderr)
+    assert json.loads(result.stdout)["status"] == "unconfirmed"
+    details = next(iter(recovered(store, config, item).receipts.values())).details
+    assert details["output_quota_exhausted"] is True
+    assert details["outcome_verified"] is False
+    time.sleep(3.5)
+    assert not marker.exists()
