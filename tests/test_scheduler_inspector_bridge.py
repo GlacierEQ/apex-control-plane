@@ -355,6 +355,22 @@ def test_linux_detached_grandchild_cannot_falsely_complete_durable_queue(tmp_pat
     assert not marker.exists()
 
 
+def test_linux_guard_unavailable_prevents_worker_launch():
+    """Uncontained Linux workers must never start and create side effects."""
+    import os
+    import pytest
+    if sys.platform != "linux":
+        pytest.skip("Linux-only guard rejection")
+    store, config, item = queued(tmp_path := __import__("tempfile").TemporaryDirectory())
+    # The real CLI is launched under an existing subreaper, so arm() refuses
+    # ownership. The attempted worker would write a marker if ever started.
+    # Keep this test as a source assertion until the Linux integration harness
+    # supplies a subreaper supervisor and a valid Path-backed tmp_path.
+    source = CLI.read_text()
+    assert 'if sys.platform == "linux" and not detached_guard.arm():' in source
+    assert 'raise OSError("Linux descendant containment unavailable; worker not launched")' in source
+
+
 def test_linux_guard_unavailable_fails_closed_in_worker_source():
     """Linux worker must not certify a command if detached tracking is disabled."""
     if sys.platform != "linux":

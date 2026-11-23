@@ -181,7 +181,13 @@ if __name__ == "__main__":
                 if os.name == "posix":
                     import selectors
                     import time
-                    detached_guard.arm()
+                    # Refuse to launch any worker whose detached descendants
+                    # cannot be contained. A failed receipt after launch is
+                    # not enough: escaped workers could still mutate state.
+                    if sys.platform == "linux" and not detached_guard.arm():
+                        raise OSError("Linux descendant containment unavailable; worker not launched")
+                    if sys.platform != "linux":
+                        detached_guard.arm()
                     child = subprocess.Popen(command, stdout=subprocess.PIPE,
                                              stderr=subprocess.PIPE, start_new_session=True)
                     captured = {"stdout": bytearray(), "stderr": bytearray()}
