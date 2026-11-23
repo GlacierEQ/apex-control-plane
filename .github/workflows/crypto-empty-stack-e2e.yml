@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Test fail-closed acceptance logic before expensive provisioning
+        run: python3 -m unittest discover -s ops/crypto-paper -p 'test_verify_empty_stack.py' -v
+
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
