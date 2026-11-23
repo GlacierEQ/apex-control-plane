@@ -50,6 +50,8 @@ def handle(request, *, recover=None):
         return {}
     if method == "tools/list":
         return {"tools": [_tool_definition()]}
+    if method == "tools/call" and ("id" not in request or request["id"] is None or isinstance(request["id"], bool) or not isinstance(request["id"], (str, int))):
+        raise ValueError("mission recovery requires a request identifier")
     if method != "tools/call" or params.get("name") != TOOL:
         raise ValueError("unsupported MCP method or tool")
     args = params.get("arguments")

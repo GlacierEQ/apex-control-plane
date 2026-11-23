@@ -17,6 +17,17 @@ class MCPTests(unittest.TestCase):
         self.assertEqual(m.handle(req("tools/list"))["tools"][0]["name"], m.TOOL)
         self.assertEqual(m.handle(req("ping")), {})
 
+    def test_notification_cannot_execute_mission_recovery(self):
+        from scripts.continuity_mcp_stdio import handle, TOOL
+        for identifier in (None, True, False, [], {}):
+            request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": TOOL, "arguments": {"session_id": "s", "invocation_id": "i"}}}
+            if identifier is not None:
+                request["id"] = identifier
+            invoked = []
+            with self.assertRaises(ValueError):
+                handle(request, recover=lambda **kwargs: invoked.append(kwargs))
+            self.assertEqual(invoked, [])
+
     def test_invalid_ids_rejected_before_any_recovery(self):
         for value in ("../secret", "a:b", "", " bad ", "a"*129):
             with self.assertRaises(ValueError):
