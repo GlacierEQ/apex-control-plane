@@ -9,7 +9,7 @@ START = {"status": "REGISTERED_HANDLER_EFFECT_VERIFIED",
                             "path": "/private/packet.json", "digest": "sha256:" + "a" * 64}}
 CONSUMED = {"status": "CONTEXT_CONSUMED_PROVIDER_VERIFIED",
             "next_transition": "RESUME_FROM_VERIFIED_CURSOR",
-            "source_evidence": [{"source_id": "box:one"}],
+            "source_evidence": [{"source_id": "box:one", "text_sha256": "b" * 64}],
             "recovered_cursor": "continue:work",
             "native_chatgpt_startup_verified": False}
 KW = dict(owner_script="owner.py", profile="profile.json", session_id="new",
@@ -91,3 +91,24 @@ class StrictOwnerResponseTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             enter(**KW)
         self.assertEqual(run.call_count, 2)
+
+
+class VerifiedEvidenceBoundaryTests(unittest.TestCase):
+    @patch("scripts.mission_enter._run", side_effect=[
+        {**START, "context_packet": {**START["context_packet"], "digest": "sha256:bad"}}, CONSUMED])
+    def test_malformed_packet_digest_never_consumes(self, run):
+        with self.assertRaises(ValueError):
+            enter(**KW)
+        self.assertEqual(run.call_count, 1)
+
+    @patch("scripts.mission_enter._run", side_effect=[START, {
+        **CONSUMED, "source_evidence": [{"source_id": "box:one", "text_sha256": "0" * 63 + "G"}]}])
+    def test_invalid_source_digest_rejected(self, run):
+        with self.assertRaises(ValueError):
+            enter(**KW)
+
+    @patch("scripts.mission_enter._run", side_effect=[START, {
+        **CONSUMED, "source_evidence": ["unstructured"]}])
+    def test_unstructured_evidence_rejected(self, run):
+        with self.assertRaises(ValueError):
+            enter(**KW)
