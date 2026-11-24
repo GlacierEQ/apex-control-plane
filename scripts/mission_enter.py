@@ -5,6 +5,7 @@ This is an executable entrypoint, NOT a native ChatGPT host startup hook.
 """
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -37,6 +38,10 @@ def _run(command):
     return data
 
 
+def _digest_valid(value):
+    return isinstance(value, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", value) is not None
+
+
 def enter(*, owner_script, profile, session_id, invocation_id, output_dir, database,
           python_executable=sys.executable):
     base = [python_executable, str(owner_script)]
@@ -50,7 +55,7 @@ def enter(*, owner_script, profile, session_id, invocation_id, output_dir, datab
     if (not isinstance(packet, dict) or packet.get("next_transition") != "RESUME_FROM_VERIFIED_CURSOR"
             or packet.get("status") not in ("CONTEXT_PACKET_CREATED", "CONTEXT_PACKET_REPLAY_VERIFIED")
             or not isinstance(packet.get("path"), str) or not packet["path"]
-            or not isinstance(packet.get("digest"), str) or not packet["digest"].startswith("sha256:")):
+            or not _digest_valid(packet.get("digest"))):
         raise ValueError("startup did not produce a verified, conflict-free context packet")
     consumed = _run(base + ["context-consume"] + common + [
         "--packet-path", packet["path"], "--packet-digest", packet["digest"]])
@@ -59,6 +64,12 @@ def enter(*, owner_script, profile, session_id, invocation_id, output_dir, datab
             or consumed.get("native_chatgpt_startup_verified") is not False
             or not isinstance(consumed.get("source_evidence"), list)
             or not consumed["source_evidence"]
+            or any(not isinstance(item, dict)
+                   or not isinstance(item.get("source_id"), str)
+                   or not item["source_id"].strip()
+                   or not isinstance(item.get("text_sha256"), str)
+                   or re.fullmatch(r"[0-9a-f]{64}", item["text_sha256"]) is None
+                   for item in consumed["source_evidence"])
             or not isinstance(consumed.get("recovered_cursor"), str)
             or not consumed["recovered_cursor"].strip()):
         raise ValueError("independent context consumer did not verify source-backed continuation")
