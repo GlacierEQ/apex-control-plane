@@ -520,7 +520,11 @@ Deno.serve(async (req: Request) => {
         source_ref: "edge-function:supabase-native-mcp:v1",
         actor: role,
       });
-      return rpcResult(id, toolResult(result));
+      // Large memory pages are JSON text only: do not double-transfer the same
+      // 1-2 MB page in both content and structuredContent.
+      return rpcResult(id, name === "memory.bulk_scoped"
+        ? { content: [{ type: "text", text: JSON.stringify(result) }], isError: false }
+        : toolResult(result));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await db.from("ops_security_audit").insert({
