@@ -55,6 +55,7 @@ class Step:
     verify: Callable[[Any], bool] | None = None
     authorization: Callable[[Action], bool] | None = None
     preflight: Callable[[Action], None] | None = None
+    recover: Callable[[Action], Any] | None = None
 
 
 def _intent(action: Action) -> tuple[str, str]:
@@ -137,6 +138,48 @@ class DirectExecutor:
             db.execute("UPDATE actions SET state=?, receipt_json=? WHERE identity=?",
                        (receipt.state, serialized, identity))
 
+    def recover_internal(
+        self,
+        action: Action,
+        readback: Callable[[Action], Any],
+        *,
+        verify: Callable[[Any], bool],
+    ) -> Receipt:
+        """Recover a local immutable effect from readback; never redispatch it."""
+        identity, digest = _intent(action)
+        if action.external:
+            raise ExecutionDenied("internal recovery cannot reconcile external effects")
+        if not callable(readback) or not callable(verify):
+            raise ExecutionDenied("internal recovery requires readback and verification")
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT intent_sha256,state,external FROM actions WHERE identity=?",
+                (identity,),
+            ).fetchone()
+        if row is None or row[0] != digest or row[2] != 0:
+            raise ExecutionDenied("recovery requires the original internal reservation")
+        try:
+            result = readback(action)
+            if result is None or verify(result) is not True:
+                raise ReconciliationRequired("no verified artifact to recover")
+            receipt = Receipt(action.mission_id, action.operation_id, "VERIFIED", False,
+                              result, replayed=True)
+            serialized = json.dumps(asdict(receipt), ensure_ascii=False, sort_keys=True,
+                                    allow_nan=False)
+        except Exception as exc:
+            raise ReconciliationRequired("artifact recovery could not prove the effect") from exc
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            updated = db.execute(
+                "UPDATE actions SET state='VERIFIED',receipt_json=? "
+                "WHERE identity=? AND intent_sha256=? AND external=0 "
+                "AND state IN ('RESERVED','RECONCILE')",
+                (serialized, identity, digest),
+            ).rowcount
+            if updated != 1:
+                raise ReconciliationRequired("reservation changed during recovery")
+        return receipt
+
     def run(
         self,
         action: Action,
@@ -145,6 +188,7 @@ class DirectExecutor:
         verify: Callable[[Any], bool] | None = None,
         authorization: Callable[[Action], bool] | None = None,
         preflight: Callable[[Action], None] | None = None,
+        recover: Callable[[Action], Any] | None = None,
     ) -> Receipt:
         """Execute directly; an external action needs its own scoped authorization."""
         if not callable(effect):
@@ -161,7 +205,12 @@ class DirectExecutor:
                 raise ExecutionDenied("external effect lacks actual authorization")
             if not callable(verify):
                 raise ExecutionDenied("external effect requires provider readback")
-        replay = self._reserve(action)
+        try:
+            replay = self._reserve(action)
+        except ReconciliationRequired:
+            if not action.external and callable(recover) and callable(verify):
+                return self.recover_internal(action, recover, verify=verify)
+            raise
         if replay is not None:
             if callable(verify):
                 try:
@@ -210,6 +259,7 @@ class DirectExecutor:
                 outcomes.append(self.run(
                     step.action, step.effect, verify=step.verify,
                     authorization=step.authorization, preflight=step.preflight,
+                    recover=step.recover,
                 ))
             except ExecutionDenied as exc:
                 outcomes.append(Receipt(
@@ -300,8 +350,166 @@ def _verify_casebook(result: Any) -> bool:
     return path.is_file() and sha256(path.read_bytes()).hexdigest() == result.get("sha256")
 
 
+# Local source context is deliberately explicit: no recursive collection of
+# unrelated files, no provider calls, and no source-code execution.
+_SOURCE_FILE_LIMIT = 4 * 1024 * 1024
+_SOURCE_BUNDLE_LIMIT = 16 * 1024 * 1024
+
+
+def _source_specs(action: Action) -> tuple[Path, dict[str, str]]:
+    if action.external or action.kind != "source_bundle":
+        raise ExecutionDenied("source bundles are local operations")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", action.operation_id):
+        raise ExecutionDenied("invalid source bundle operation ID")
+    root = action.payload.get("source_root")
+    files = action.payload.get("files")
+    if not isinstance(root, str) or not Path(root).is_absolute():
+        raise ExecutionDenied("source_root must be an explicit absolute directory")
+    if not isinstance(files, list) or not files:
+        raise ExecutionDenied("source bundle requires explicit files and SHA-256 hashes")
+    specs = {}
+    for entry in files:
+        if not isinstance(entry, Mapping):
+            raise ExecutionDenied("invalid source file entry")
+        name, digest = entry.get("path"), entry.get("sha256")
+        if (not isinstance(name, str) or not name or "\\" in name or ":" in name
+                or any(part in {"", ".", ".."} for part in name.split("/"))):
+            raise ExecutionDenied("source path must be normalized and relative")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ExecutionDenied("source file requires an exact SHA-256")
+        if name in specs:
+            raise ExecutionDenied("duplicate source file")
+        specs[name] = digest
+    return Path(root), dict(sorted(specs.items()))
+
+
+def _source_bytes(root: Path, name: str) -> bytes:
+    root = root.resolve(strict=True)
+    path = (root / name).resolve(strict=True)
+    if not path.is_relative_to(root) or not path.is_file():
+        raise ExecutionDenied("source file is outside the authorized root or not a file")
+    with path.open("rb") as handle:
+        data = handle.read(_SOURCE_FILE_LIMIT + 1)
+    if len(data) > _SOURCE_FILE_LIMIT:
+        raise ExecutionDenied("source file exceeds bundle limit")
+    return data
+
+
+def build_source_bundle_action(mission_id: str, operation_id: str, source_root: str | Path,
+                               paths: Sequence[str]) -> Action:
+    """Pin explicitly selected UTF-8 source files before scheduling a bundle."""
+    root = Path(source_root).resolve(strict=True)
+    if isinstance(paths, str):
+        raise ExecutionDenied("paths must be a sequence of relative filenames")
+    files = [{"path": name, "sha256": "0" * 64} for name in paths]
+    action = Action(mission_id, operation_id, "source_bundle",
+                    {"source_root": str(root), "files": files})
+    _, specs = _source_specs(action)
+    pinned = []
+    total = 0
+    for name in specs:
+        data = _source_bytes(root, name)
+        data.decode("utf-8")
+        total += len(data)
+        if total > _SOURCE_BUNDLE_LIMIT:
+            raise ExecutionDenied("source bundle exceeds total byte limit")
+        pinned.append({"path": name, "sha256": sha256(data).hexdigest()})
+    return replace(action, payload={"source_root": str(root), "files": pinned})
+
+
+def _bundle_document(action: Action, files: list[dict[str, Any]]) -> bytes:
+    return (json.dumps({"schema": "glaciereq.source-bundle.v1",
+                        "mission_id": action.mission_id, "operation_id": action.operation_id,
+                        "source_root": action.payload["source_root"], "files": files},
+                       ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+
+
+def source_bundle_step(action: Action, output_dir: str | Path) -> Step:
+    """Create and independently recover a source-bearing, hash-bound context artifact."""
+    root, specs = _source_specs(action)
+    artifact = Path(output_dir).resolve() / (action.operation_id + ".sources.json")
+
+    def readback(candidate: Action) -> dict[str, Any] | None:
+        # Recovery uses the pinned source hashes, not the current source files.
+        # This also works after the original source directory is unavailable.
+        if candidate != action or artifact.is_symlink() or not artifact.is_file():
+            return None
+        with artifact.open("rb") as handle:
+            content = handle.read(6 * _SOURCE_BUNDLE_LIMIT + 1024 * 1024 + 1)
+        if len(content) > 6 * _SOURCE_BUNDLE_LIMIT + 1024 * 1024:
+            return None
+        doc = json.loads(content)
+        files = doc.get("files")
+        if not isinstance(files, list) or len(files) != len(specs):
+            return None
+        expected = []
+        total = 0
+        for (name, digest), row in zip(specs.items(), files):
+            if not isinstance(row, Mapping) or not isinstance(row.get("content"), str):
+                return None
+            data = row["content"].encode("utf-8")
+            if len(data) > _SOURCE_FILE_LIMIT or sha256(data).hexdigest() != digest:
+                return None
+            total += len(data)
+            if total > _SOURCE_BUNDLE_LIMIT:
+                return None
+            expected.append({"path": name, "sha256": digest, "bytes": len(data),
+                             "content": row["content"]})
+        if content != _bundle_document(action, expected):
+            return None
+        return {"artifact_ref": f"file:{artifact}", "sha256": sha256(content).hexdigest(),
+                "bytes": len(content), "files": len(expected)}
+
+    def verify(result: Any) -> bool:
+        return result is not None and result == readback(action)
+
+    def execute(candidate: Action) -> dict[str, Any]:
+        if candidate != action:
+            raise ExecutionDenied("source bundle action changed")
+        rows = []
+        total = 0
+        for name, digest in specs.items():
+            data = _source_bytes(root, name)
+            if sha256(data).hexdigest() != digest:
+                raise ExecutionDenied(f"source changed since pinning: {name}")
+            total += len(data)
+            if total > _SOURCE_BUNDLE_LIMIT:
+                raise ExecutionDenied("source bundle exceeds total byte limit")
+            rows.append({"path": name, "sha256": digest, "bytes": len(data),
+                         "content": data.decode("utf-8")})
+        content = _bundle_document(action, rows)
+        artifact.parent.mkdir(parents=True, exist_ok=True)
+        if not artifact.exists():
+            with tempfile.NamedTemporaryFile(mode="wb", dir=artifact.parent, delete=False) as temp:
+                tmp = Path(temp.name)
+                temp.write(content)
+                temp.flush()
+                os.fsync(temp.fileno())
+            try:
+                try:
+                    os.link(tmp, artifact)
+                except FileExistsError:
+                    pass
+            finally:
+                tmp.unlink(missing_ok=True)
+        result = readback(action)
+        if result is None or result["sha256"] != sha256(content).hexdigest():
+            raise ReconciliationRequired("existing source bundle differs; original preserved")
+        return result
+
+    return Step(action, execute, verify, recover=readback)
+
+
+def local_mission_step(action: Action, output_dir: str | Path) -> Step:
+    """Route supported internal work into the existing durable dispatcher."""
+    if action.kind == "source_bundle":
+        return source_bundle_step(action, output_dir)
+    return Step(action, _casebook_effect(Path(output_dir)), _verify_casebook,
+                preflight=_casebook_preflight)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Execute internal casework immediately without host boot gates")
+    parser = argparse.ArgumentParser(description="Execute internal casework or source bundles with durable receipts")
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--journal", required=True)
@@ -312,16 +520,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         raw_actions = manifest["actions"]
         if not isinstance(raw_actions, list) or not raw_actions:
             raise ExecutionDenied("manifest actions must be a nonempty array")
-        effect = _casebook_effect(Path(args.out_dir))
         steps = [
-            Step(Action(
+            local_mission_step(Action(
                 mission_id=mission_id,
                 operation_id=raw["operation_id"],
                 kind=raw["kind"],
                 payload=raw,
                 external=raw.get("external", False),
                 approval_ref=raw.get("approval_ref"),
-            ), effect, _verify_casebook, preflight=_casebook_preflight)
+            ), args.out_dir)
             for raw in raw_actions
         ]
         outcomes = DirectExecutor(args.journal).run_many(steps)
