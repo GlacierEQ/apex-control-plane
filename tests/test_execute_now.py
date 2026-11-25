@@ -178,3 +178,25 @@ def test_plain_control_plane_entrypoint_executes_configured_internal_manifest(tm
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert json.loads(proc.stdout)["results"][0]["state"] == "VERIFIED"
     assert (tmp_path / "results" / "ready-evidence.md").is_file()
+
+
+def test_context_mission_completion_requires_exhausted_frontier(tmp_path):
+    from src.execute_now import prepare_context_mission, run_context_mission
+    root = tmp_path / "source"
+    root.mkdir()
+    (root / "example.py").write_text("def entry():\n    return helper()\n\ndef helper():\n    return 42\n")
+    runner = DirectExecutor(tmp_path / "journal.sqlite3")
+    for follow in (False, True):
+        key = "full" if follow else "bounded"
+        action = prepare_context_mission(tmp_path / (key + ".json"),
+            mission_id="completion", operation_id=key, objective="entry",
+            source_root=root, paths=["example.py"], follow_dependencies=follow)
+        result = run_context_mission(runner, action, tmp_path / "output")
+        assert all(row["state"] == "VERIFIED" for row in result["receipts"])
+        assert result["status"] == ("verified" if follow else "incomplete")
+        assert result["unexpanded_dependencies"] == ([] if follow else ["helper"])
+        proc = subprocess.run([sys.executable, "-m", "src.execute_now",
+            "--manifest", str(tmp_path / (key + ".json")),
+            "--journal", str(tmp_path / "journal.sqlite3"),
+            "--out-dir", str(tmp_path / "output")], capture_output=True, text=True)
+        assert proc.returncode == (0 if follow else 1), proc.stdout + proc.stderr

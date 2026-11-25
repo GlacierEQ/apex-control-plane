@@ -117,3 +117,7 @@ deterministic source analysis is not an LLM, arbitrary mission planning,
 automatic ChatGPT invocation, dynamic external provider execution, or
 production deployment. No merge, deployment, scheduled-task configuration,
 credential or permission changes. No unrelated Linear records mutated.
+
+## Completion boundary correction
+
+A verified retrieval receipt is not a completed dependency mission. Corrected run_context_mission to return incomplete when pending dependencies remain, including explicitly bounded traversal. CLI consequently returns 1 for incomplete traversal even when every executed operation is VERIFIED. Added real local dispatcher and CLI regression for bounded versus exhausted traversal. Acceptance: bounded retains helper and exits 1; full traversal resolves helper and exits 0. Desktop Commander monthly quota prevents Mac execution; no retry or reconnect. Regression execution remains unverified at this checkpoint. Next: run tests/test_execute_now.py on exact changed head, then bind verified context into impact host. No merge or deployment.

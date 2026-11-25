@@ -991,7 +991,7 @@ def run_context_mission(executor: DirectExecutor, action: Action,
         unresolved.update(set(batch) - found)
         seen.update(found)
         pending.update(set(packet["analysis"].get("dependency_targets", [])) - seen - unresolved)
-    return {"status": "incomplete" if unresolved else "verified",
+    return {"status": "incomplete" if unresolved or pending else "verified",
             "receipts": [asdict(row) for row in receipts], "context": context,
             "followups": followups, "unresolved_dependencies": sorted(unresolved),
             "unexpanded_dependencies": sorted(pending), "visited_symbols": sorted(seen)}
