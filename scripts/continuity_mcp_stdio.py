@@ -6,6 +6,7 @@ No network listener, credentials, filesystem writes outside existing mission ent
 """
 import json
 import os
+import sqlite3
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -13,6 +14,7 @@ from scripts.mission_enter import enter, _unique_object, _reject_constant
 
 PROTOCOL = "2025-03-26"
 TOOL = "glaciereq_recover_mission_context"
+APPLY_TOOL = "glaciereq_apply_mission_context"
 
 def _tool_definition():
     return {"name": TOOL, "description": "Recover and independently verify the GLACIEREQ mission cursor and source evidence before substantive execution.",
@@ -20,6 +22,14 @@ def _tool_definition():
                 "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
                 "invocation_id": {"type": "string", "minLength": 1, "maxLength": 128}},
                 "required": ["session_id", "invocation_id"], "additionalProperties": False}}
+
+def _apply_tool_definition():
+    definition = _tool_definition()
+    definition.update(name=APPLY_TOOL, description=(
+        "Recover the mission and execute its owner-approved read-only evidence route. "
+        "Returns complete verified extracted text for the exact recovered cursor; "
+        "requires explicit owner profile route configuration."))
+    return definition
 
 def _config():
     keys = ("GLACIEREQ_CONTINUITY_PROFILE", "GLACIEREQ_CONTINUITY_OUTPUT_DIR",
@@ -49,10 +59,10 @@ def handle(request, *, recover=None):
     if method == "ping":
         return {}
     if method == "tools/list":
-        return {"tools": [_tool_definition()]}
+        return {"tools": [_tool_definition(), _apply_tool_definition()]}
     if method == "tools/call" and ("id" not in request or request["id"] is None or isinstance(request["id"], bool) or not isinstance(request["id"], (str, int))):
         raise ValueError("mission recovery requires a request identifier")
-    if method != "tools/call" or params.get("name") != TOOL:
+    if method != "tools/call" or params.get("name") not in (TOOL, APPLY_TOOL):
         raise ValueError("unsupported MCP method or tool")
     args = params.get("arguments")
     if (not isinstance(args, dict) or set(args) != {"session_id", "invocation_id"}
@@ -61,6 +71,12 @@ def handle(request, *, recover=None):
     profile, output_dir, database = _config()
     if not profile.is_file() or not output_dir.is_dir() or not database.is_file():
         raise ValueError("existing owner-private mission state required")
+    if params["name"] == APPLY_TOOL:
+        from scripts.continuity_resume import resume
+        result = resume(owner_script=Path(__file__).with_name("run_owned_continuity.py"),
+                        profile=profile, output_dir=output_dir, database=database, **args)
+        return {"content": [{"type": "text", "text": json.dumps(result, sort_keys=True)}],
+                "structuredContent": result, "isError": False}
     result = recover(owner_script=Path(__file__).with_name("run_owned_continuity.py"),
                      profile=profile, output_dir=output_dir, database=database, **args)
     context = result.get("context") if isinstance(result, dict) else None
@@ -112,7 +128,7 @@ def serve(input_stream=sys.stdin, output_stream=sys.stdout):
             response = {"jsonrpc": "2.0", "id": None,
                         "error": {"code": -32700, "message": "invalid JSON frame"}}
             print(type(exc).__name__ + ": " + str(exc)[:300], file=sys.stderr)
-        except (ValueError, RuntimeError, OSError, TypeError, KeyError) as exc:
+        except (ValueError, RuntimeError, OSError, TypeError, KeyError, sqlite3.Error) as exc:
             response = {"jsonrpc": "2.0", "id": request_id,
                         "error": {"code": -32603, "message": "continuity request rejected"}}
             print(type(exc).__name__ + ": " + str(exc)[:300], file=sys.stderr)
