@@ -489,6 +489,9 @@ class ContinuousControlPlane:
                     receipt.provider_receipt_id
                     and existing.provider_receipt_id == receipt.provider_receipt_id
                     and existing.source_system == receipt.source_system
+                    and existing.work_id == receipt.work_id
+                    and existing.mission_id == receipt.mission_id
+                    and existing.correlation_id == receipt.correlation_id
                 ):
                     return existing
             self.store.append_receipt(receipt)

@@ -242,6 +242,32 @@ def test_provider_receipt_dedupe_is_scoped_by_source_system(tmp_path):
     assert {r.source_system for r in cp.receipts.values()} >= {"github","buildkite"}
 
 
+def test_provider_receipt_dedupe_preserves_independent_work_identity(tmp_path):
+    cp = plane(tmp_path)
+    first_work = cp.ingest_event(event("gmail.reply.received"))[0]
+    second_work = cp.ingest_event(event("call_e.call.completed"))[0]
+    assert first_work.work_id != second_work.work_id
+
+    receipts = [
+        ExecutionReceipt(
+            work_id=work.work_id,
+            mission_id=work.mission_id,
+            correlation_id=work.correlation_id,
+            receipt_kind="verification",
+            status="verified",
+            source_system="gmail",
+            provider_receipt_id="shared-native-message-1",
+            details={"verified_work_id": work.work_id},
+        )
+        for work in (first_work, second_work)
+    ]
+    assert cp.record_receipt(receipts[0]).receipt_id == receipts[0].receipt_id
+    assert cp.record_receipt(receipts[1]).receipt_id == receipts[1].receipt_id
+    assert {r.work_id for r in cp.receipts.values()} == {
+        first_work.work_id, second_work.work_id,
+    }
+
+
 def test_imminent_filing_preempts_forensic_worker(tmp_path):
     cp = plane(tmp_path)
     forensic = cp.submit_work(
