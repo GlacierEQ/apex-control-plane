@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.1.0",
+  "plane": "supabase-backend-ops",
+  "project_id": "dyhprklicgewmrimecey",
+  "parity_mode": "semantic_source_recovery_with_deployment_identity_lock",
+  "authority": {
+    "github_is_versioned_code_authority": true,
+    "supabase_is_live_runtime_projection": true,
+    "mutable_provider_state_is_not_embedded": true,
+    "deployment_bundle_hash_is_not_raw_index_ts_hash": true
+  },
+  "functions": [
+    {"slug":"apex-oci-bootstrap-activate","version":2,"verify_jwt":false,"deployment_bundle_sha256":"09fc27b13d7cb11c36e07b165838e59ee3a83fd7b56ec8846b90298c2414ffaa"},
+    {"slug":"apex-oci-census-once","version":1,"verify_jwt":false,"deployment_bundle_sha256":"d11c7262fcbc537f5e097bdb3fe3a27ba942c0f91498a865be25f38387882eee"},
+    {"slug":"apex-oci-instance-inspect-once","version":1,"verify_jwt":false,"deployment_bundle_sha256":"de12cba9d105aada397c914aa9976362296f645a2b2cca7ed288fdf17d78e65f"},
+    {"slug":"apex-oci-agent-config-once","version":1,"verify_jwt":false,"deployment_bundle_sha256":"5db457a28d6925a7069c1b5d158e47166a82585fbedf415788d55659bc348668"},
+    {"slug":"apex-oci-run-command-probe","version":2,"verify_jwt":false,"deployment_bundle_sha256":"bf8fd085f2db7df77c03d4f3365f81b6b906f9b289eecd053670e49e485748c3"},
+    {"slug":"apex-oci-run-command-readback","version":1,"verify_jwt":false,"deployment_bundle_sha256":"201087d5bf39935459f905c2c87176b8cc67ea38ae03dc29f385125a9e9ce0c3"},
+    {"slug":"apex-oci-enable-run-command","version":1,"verify_jwt":false,"deployment_bundle_sha256":"7d29c65e197f9add5607192bf132a6bff5c4285718674cb0dd4d77cc5a38fff2"},
+    {"slug":"apex-oci-run-command-iam-inspect","version":1,"verify_jwt":false,"deployment_bundle_sha256":"6a6d0d17e556260199818a2e9a9ea8871dbb6f9a408316ddd34b1be0e8dd7418"}
+  ],
+  "recovered_runtime_invariants": [
+    "credentials_resolve_through_keymaster",
+    "bootstrap_ciphertext_is_authenticated_before_use",
+    "provider_identity_is_verified_before_runtime_promotion",
+    "resource_census_is_provider_readback",
+    "selected_compute_target_is_provider_readback",
+    "run_command_execution_has_terminal_provider_readback",
+    "credential_plaintext_is_not_returned"
+  ],
+  "rejected_donor_state": [
+    "hardcoded tenancy-specific OCIDs",
+    "fixed region and availability domain",
+    "fixed subnet and image identifiers",
+    "local plaintext OCI CLI configuration dependency",
+    "mutable deployment observations"
+  ]
+}
