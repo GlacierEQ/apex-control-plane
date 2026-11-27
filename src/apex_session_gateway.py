@@ -394,9 +394,16 @@ def run_admitted_session(
             digest="",
         )
         from dataclasses import replace
+        # Own the validated envelope independently of both model and store.
+        envelope = deepcopy(envelope)
         envelope = replace(envelope, digest=_envelope_digest(envelope))
+        expected_digest = envelope.digest
+        callback_envelope = deepcopy(envelope)
         try:
-            checkpoint = persist(envelope)
+            checkpoint = persist(callback_envelope)
+            if (callback_envelope != envelope
+                    or _envelope_digest(callback_envelope) != expected_digest):
+                raise GatewayDenied("persistence callback mutated admitted output")
             if checkpoint is None:
                 raise GatewayDenied("no durable checkpoint was returned")
             persisted = readback(checkpoint)
@@ -406,7 +413,8 @@ def run_admitted_session(
             raise GatewayDenied("continuation persistence or readback failed") from exc
         if not isinstance(persisted, ContinuationEnvelope):
             raise GatewayDenied("continuation readback missing typed envelope")
-        if (persisted != envelope or persisted.digest != _envelope_digest(persisted)):
+        if (persisted != envelope or persisted.digest != expected_digest
+                or _envelope_digest(persisted) != expected_digest):
             raise GatewayDenied("continuation readback differs from admitted output")
         return output
 
