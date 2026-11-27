@@ -53,6 +53,7 @@ def execute_with_recovered_context(
     execute: Callable[[AdmissionReceipt], Any],
     apply_context: Callable[[Any], ContextApplication] | None,
     fact_keys: Sequence[str] = (),
+    before_application: Callable[[], None] | None = None,
 ) -> Any:
     """Recover, apply, then execute -- all from host-supplied objects.
 
@@ -86,6 +87,7 @@ def execute_with_recovered_context(
         raise GatewayDenied("journal supplies no recoverable context")
     if not isinstance(recovery, Recovery):
         raise GatewayDenied("recovered context must be a Recovery")
+    recovery = _owned_recovery(recovery)
     if recovery.mission_id != expected_mission_id:
         raise GatewayDenied("recovered context belongs to a different mission; not the requested mission")
     if requested_facts and not set(requested_facts).issubset(set(recovery.facts)):
@@ -99,22 +101,35 @@ def execute_with_recovered_context(
     material = bool(recovery.material_context_found or recovery.corrections
                     or recovery.facts or recovery.cursor.strip())
     application = None
+    if material and not callable(apply_context):
+        raise GatewayDenied("historical context application callback required")
+    if before_application is not None:
+        before_application()
     if material:
         if not callable(apply_context):
             raise GatewayDenied("historical context application callback required")
-        application = apply_context(recovery)
-        if not isinstance(application, ContextApplication):
+        callback_recovery = _owned_recovery(recovery)
+        application = apply_context(callback_recovery)
+        if _owned_recovery(callback_recovery) != recovery:
+            raise GatewayDenied("context application callback mutated recovered source bindings")
+        if type(application) is not ContextApplication:
             raise GatewayDenied("context application must be a ContextApplication")
-        if (not isinstance(application.application_ref, str)
+        if (type(application.application_ref) is not str
                 or not application.application_ref.strip()
                 or application.mission_id != recovery.mission_id
                 or application.source_ref != recovery.source_ref
                 or application.cursor != recovery.cursor
-                or not isinstance(application.corrections, tuple)
-                or not isinstance(application.facts, tuple)
+                or type(application.corrections) is not tuple
+                or type(application.facts) is not tuple
+                or any(type(x) is not str for x in (*application.corrections, *application.facts))
+                or any(type(x) is not str for x in (application.mission_id, application.source_ref, application.cursor))
                 or application.corrections != recovery.corrections
                 or application.facts != recovery.facts):
             raise GatewayDenied("source-matched context application receipt required")
+        application = ContextApplication(
+            recovery.mission_id, recovery.source_ref, recovery.cursor,
+            recovery.corrections, recovery.facts, application.application_ref,
+        )
     receipt = AdmissionReceipt(
         mission_id=recovery.mission_id,
         chat_session_id=chat_session_id,
@@ -129,6 +144,20 @@ def execute_with_recovered_context(
 
 class GatewayDenied(RuntimeError):
     """The host cannot certify provenance or durable continuation."""
+
+
+def _owned_recovery(value: Recovery) -> Recovery:
+    if type(value) is not Recovery:
+        raise GatewayDenied("recovered context must have immutable typed source bindings")
+    mission, source, cursor = value.mission_id, value.source_ref, value.cursor
+    corrections, facts, material = value.corrections, value.facts, value.material_context_found
+    if (any(type(x) is not str for x in (mission, source, cursor))
+            or not mission.strip() or not source.strip()
+            or type(material) is not bool
+            or type(corrections) is not tuple or type(facts) is not tuple
+            or any(type(x) is not str for x in (*corrections, *facts))):
+        raise GatewayDenied("recovered context must have immutable typed source bindings")
+    return Recovery(mission, source, cursor, corrections, facts, material)
 
 
 @dataclass(frozen=True)
@@ -333,18 +362,24 @@ def run_admitted_session(
     if any(":" in part for part in (mission, turn, session)):
         raise GatewayDenied("ambiguous operation identity component")
 
-    def after_admission(receipt: AdmissionReceipt) -> GatewayModelOutput:
+    key = ":".join((mission, "model", session, turn))
+
+    def reserve_before_application() -> None:
         # Reservation occurs BEFORE any potentially effectful model callback.
         # On failure the reservation stays reserved: a host must reconcile
         # provider state before retrying an uncertain invocation.
-        key = ":".join((mission, "model", session, turn))
         try:
             reserved = reserve(key)
         except Exception as exc:
             raise GatewayDenied("durable reservation unavailable") from exc
         if reserved is not True:
             raise GatewayDenied("operation already reserved; reconcile before replay")
-        output = invoke_model(receipt)
+    def after_admission(receipt: AdmissionReceipt) -> GatewayModelOutput:
+        from copy import deepcopy
+        callback_receipt = deepcopy(receipt)
+        output = invoke_model(callback_receipt)
+        if callback_receipt != receipt:
+            raise GatewayDenied("model callback mutated admitted context")
         _validate_output(output, receipt, resolve_source)
         envelope = ContinuationEnvelope(
             operation_key=key,
@@ -379,4 +414,5 @@ def run_admitted_session(
         journal=journal, chat_session_id=session, kernel=kernel,
         expected_mission_id=mission, execute=after_admission,
         apply_context=apply_context,
+        before_application=reserve_before_application,
     )
