@@ -263,6 +263,37 @@ def _verify_assertion(
         raise GatewayDenied("source text does not match original byte span")
 
 
+def _owned_assertion(value: SourceAssertion) -> SourceAssertion:
+    if type(value) is not SourceAssertion:
+        raise GatewayDenied("attribution must have an original-source assertion")
+    fields = (value.source_ref, value.speaker, value.verbatim,
+              value.start_byte, value.end_byte, value.source_sha256)
+    if (any(type(fields[i]) is not str for i in (0, 1, 2, 5))
+            or any(type(fields[i]) is not int for i in (3, 4))):
+        raise GatewayDenied("source assertion requires exact primitive types")
+    return SourceAssertion(*fields)
+
+
+def _owned_output(value: GatewayModelOutput) -> GatewayModelOutput:
+    if type(value) is not GatewayModelOutput:
+        raise GatewayDenied("model must produce a structured gateway output")
+    response, assertions, proposals, corrections = (
+        value.text, value.attributions, value.memory_proposals,
+        value.corrections_applied,
+    )
+    if (type(response) is not str or type(assertions) is not tuple
+            or type(proposals) is not tuple or type(corrections) is not tuple
+            or any(type(item) is not str for item in corrections)):
+        raise GatewayDenied("model output requires exact immutable types")
+    owned_proposals = []
+    for proposal in proposals:
+        if type(proposal) is not MemoryProposal or type(proposal.kind) is not str:
+            raise GatewayDenied("memory promotion must carry a typed source proposal")
+        owned_proposals.append(MemoryProposal(proposal.kind, _owned_assertion(proposal.source)))
+    return GatewayModelOutput(response, tuple(_owned_assertion(a) for a in assertions),
+                              tuple(owned_proposals), corrections)
+
+
 def _validate_output(
     output: GatewayModelOutput,
     receipt: AdmissionReceipt,
@@ -377,7 +408,7 @@ def run_admitted_session(
     def after_admission(receipt: AdmissionReceipt) -> GatewayModelOutput:
         from copy import deepcopy
         callback_receipt = deepcopy(receipt)
-        output = invoke_model(callback_receipt)
+        output = _owned_output(invoke_model(callback_receipt))
         if callback_receipt != receipt:
             raise GatewayDenied("model callback mutated admitted context")
         _validate_output(output, receipt, resolve_source)
