@@ -249,16 +249,19 @@ def _verify_assertion(
         source = resolve_source(ref)
     except Exception as exc:
         raise GatewayDenied("original source readback failed") from exc
-    if not isinstance(source, OriginRecord) or not isinstance(source.original_bytes, bytes):
+    if type(source) is not OriginRecord:
         raise GatewayDenied("source readback requires original bytes and speaker")
-    if source.speaker != assertion.speaker:
+    speaker, original_bytes = source.speaker, source.original_bytes
+    if type(speaker) is not str or type(original_bytes) is not bytes:
+        raise GatewayDenied("source readback requires original bytes and speaker")
+    if speaker != assertion.speaker:
         raise GatewayDenied("source speaker does not match original record")
-    actual = "sha256:" + sha256(source.original_bytes).hexdigest()
+    actual = "sha256:" + sha256(original_bytes).hexdigest()
     if assertion.source_sha256 != actual:
         raise GatewayDenied("original source digest mismatch")
-    if assertion.end_byte > len(source.original_bytes):
+    if assertion.end_byte > len(original_bytes):
         raise GatewayDenied("source byte span out of bounds")
-    span = source.original_bytes[assertion.start_byte:assertion.end_byte]
+    span = original_bytes[assertion.start_byte:assertion.end_byte]
     if span != assertion.verbatim.encode("utf-8"):
         raise GatewayDenied("source text does not match original byte span")
 
