@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from hashlib import sha256
 import json
 from pathlib import Path
+import re
 from typing import Any, Mapping
 
 from authenticated_session_bridge import ProviderObservation, build_read_receipt
@@ -193,13 +194,38 @@ def _provider_input(target: Mapping[str, Any]) -> Mapping[str, Any]:
     return _required_mapping(target.get("provider_input"), "request.target.provider_input")
 
 
+_SQL_COMMENT_RE = re.compile(r"(--[^\n]*|/\*.*?\*/)", re.DOTALL)
+_DISALLOWED_SQL_PATTERNS = [
+    re.compile(r"\binto\b", re.IGNORECASE),  # blocks SELECT INTO
+    re.compile(
+        r"\b(insert|update|delete|drop|alter|truncate|create|grant|revoke|call|execute|copy)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bfor\s+(update|share|no\s+key\s+update|key\s+share)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(pg_sleep|set_config|pg_terminate_backend|pg_cancel_backend|lo_export|lo_import|dblink|pg_read_file|pg_write_file)\b",
+        re.IGNORECASE,
+    ),
+]
+
+
 def _validate_query_read_input(connector: str, operation: str, target: Mapping[str, Any]) -> None:
     if connector != "supabase" or operation != "query.read":
         return
     query = _required_text(_provider_input(target).get("query"), "query.read provider_input.query")
-    compact = " ".join(query.split()).lower()
+    stripped = _SQL_COMMENT_RE.sub(" ", query).strip()
+    compact = " ".join(stripped.split()).lower()
     if not compact.startswith("select ") or ";" in compact:
         raise SessionDispatchError("supabase query.read accepts one SELECT statement only")
+    for pattern in _DISALLOWED_SQL_PATTERNS:
+        if pattern.search(compact):
+            raise SessionDispatchError(
+                "supabase query.read accepts read-only SELECT statements only; "
+                "mutating, DDL, locking, or side-effecting operations are forbidden"
+            )
 
 
 def build_session_operation_plan(

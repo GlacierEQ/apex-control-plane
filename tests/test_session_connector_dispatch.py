@@ -127,6 +127,47 @@ def test_query_read_rejects_non_select_or_multi_statement_input():
     with pytest.raises(SessionDispatchError, match="SELECT"):
         build_session_operation_plan(request=payload, catalog=catalog)
 
+    # SELECT INTO rejected
+    catalog, payload = request(
+        "supabase",
+        "query.read",
+        "structured_state_review",
+        {"query": "select * into target_table from receipts"},
+    )
+    with pytest.raises(SessionDispatchError, match="forbidden"):
+        build_session_operation_plan(request=payload, catalog=catalog)
+
+    # Side-effecting / admin functions rejected
+    for bad_fn in ["pg_sleep(10)", "set_config('a', 'b', false)", "pg_terminate_backend(1)"]:
+        catalog, payload = request(
+            "supabase",
+            "query.read",
+            "structured_state_review",
+            {"query": f"select {bad_fn}"},
+        )
+        with pytest.raises(SessionDispatchError, match="forbidden"):
+            build_session_operation_plan(request=payload, catalog=catalog)
+
+    # Row locking clauses rejected
+    catalog, payload = request(
+        "supabase",
+        "query.read",
+        "structured_state_review",
+        {"query": "select * from receipts for update"},
+    )
+    with pytest.raises(SessionDispatchError, match="forbidden"):
+        build_session_operation_plan(request=payload, catalog=catalog)
+
+    # Clean SELECT with comments allowed
+    catalog, payload = request(
+        "supabase",
+        "query.read",
+        "structured_state_review",
+        {"query": "select /* comment */ * from receipts where id = 1"},
+    )
+    plan = build_session_operation_plan(request=payload, catalog=catalog)
+    assert plan.provider_operation == "execute_sql"
+
 
 def test_plan_and_receipt_refuse_action_claims():
     catalog, payload = request(

@@ -1,8 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  buildInternalWorkerHeaders,
+  runtimeServiceKeys,
+} from "../_shared/worker_auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SERVICE_KEYS = runtimeServiceKeys();
+const SERVICE_ROLE = SERVICE_KEYS[0] || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_runtime_unavailable");
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -50,13 +55,13 @@ Deno.serve(async (req: Request) => {
     response = await fetch(WORKER_URL, {
       method: "POST",
       signal: AbortSignal.timeout(60000),
-      headers: {
+      headers: buildInternalWorkerHeaders("apex-github-webhook-wake", {
         authorization: `Bearer ${SERVICE_ROLE}`,
         apikey: SERVICE_ROLE,
         "content-type": "application/json",
         accept: "application/json",
         "user-agent": "APEX-GitHub-Webhook-Wake/1.0",
-      },
+      }),
       body: JSON.stringify({ limit }),
     });
   } catch (error) {

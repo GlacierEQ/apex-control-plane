@@ -1,8 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  buildInternalWorkerHeaders,
+  requirePrivilegedWorkerAuth,
+  runtimeServiceKeys,
+} from "../_shared/worker_auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SERVICE_KEYS = runtimeServiceKeys();
+const SERVICE_ROLE = SERVICE_KEYS[0] || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_runtime_unavailable");
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -90,13 +96,13 @@ async function routerCall(event: EventRow, operation: string, args: Json): Promi
     response = await fetch(ROUTER_URL, {
       method: "POST",
       signal: AbortSignal.timeout(35000),
-      headers: {
+      headers: buildInternalWorkerHeaders("apex-github-webhook-worker", {
         authorization: `Bearer ${SERVICE_ROLE}`,
         apikey: SERVICE_ROLE,
         "content-type": "application/json",
         accept: "application/json",
         "user-agent": `APEX-GitHub-Webhook-Worker/${WORKER_VERSION}`,
-      },
+      }),
       body: JSON.stringify({
         operation,
         repository: event.repository,
@@ -156,6 +162,8 @@ async function finishEvent(eventId: string, status: "completed" | "failed" | "ig
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response(JSON.stringify({ ok: false, error: "method_not_allowed" }), { status: 405, headers: HEADERS });
+  const authFailure = requirePrivilegedWorkerAuth(req, { headers: HEADERS });
+  if (authFailure) return authFailure;
 
   let payload: Json = {};
   try {

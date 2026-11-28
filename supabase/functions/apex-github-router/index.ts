@@ -1,8 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  buildInternalWorkerHeaders,
+  requirePrivilegedWorkerAuth,
+  runtimeServiceKeys,
+} from "../_shared/worker_auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SERVICE_KEYS = runtimeServiceKeys();
+const SERVICE_ROLE = SERVICE_KEYS[0] || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_runtime_unavailable");
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -275,13 +281,13 @@ async function gatewayCall(operation: string, repository: string | null, args: J
       response = await fetch(GATEWAY_URL, {
         method: "POST",
         signal: AbortSignal.timeout(30000),
-        headers: {
+        headers: buildInternalWorkerHeaders("apex-github-router", {
           authorization: `Bearer ${SERVICE_ROLE}`,
           apikey: SERVICE_ROLE,
           "content-type": "application/json",
           accept: "application/json",
           "user-agent": `APEX-GitHub-Router/${ROUTER_VERSION}`,
-        },
+        }),
         body: JSON.stringify({ operation, repository, args, request_id: requestId, actor }),
       });
     } catch (error) {
@@ -354,6 +360,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (req.method !== "POST") throw new RouterError(405, "method_not_allowed");
+    const authFailure = requirePrivilegedWorkerAuth(req, { headers: HEADERS });
+    if (authFailure) return authFailure;
     input = await readJson(req);
     operation = stringValue(input.operation, "operation", 128);
     requestId = stringValue(input.request_id, "request_id", 256, false) || crypto.randomUUID();

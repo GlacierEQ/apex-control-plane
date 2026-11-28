@@ -1,12 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { requirePrivilegedWorkerAuth } from "../_shared/worker_auth.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-Deno.serve(async (_req: Request) => {
+Deno.serve(async (req: Request) => {
+  if (req.method !== "POST" && req.method !== "GET") {
+    return Response.json({ ok: false, error: "method_not_allowed" }, { status: 405 });
+  }
+  const authFailure = requirePrivilegedWorkerAuth(req);
+  if (authFailure) return authFailure;
   const started = Date.now();
   try {
     const now = new Date();

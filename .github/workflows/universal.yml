@@ -55,8 +55,12 @@ jobs:
 
       - name: No committed secrets
         run: |
-          if git grep -nEI '(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|gh[os]_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{15,}|eyJ[A-Za-z0-9_-]{30,}|ntn_[A-Za-z0-9]{20,})' -- ':!*.example'; then
-            echo "::error::possible committed secret"
+          matches=$(git grep -lEI '(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|gh[os]_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{15,}|eyJ[A-Za-z0-9_-]{30,}|ntn_[A-Za-z0-9]{20,})' -- ':!*.example' || true)
+          if [ -n "$matches" ]; then
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+              echo "::error file=$file::possible committed secret pattern matched in $file (contents redacted)"
+            done <<< "$matches"
             exit 1
           fi
           echo "  no secret-shaped strings"

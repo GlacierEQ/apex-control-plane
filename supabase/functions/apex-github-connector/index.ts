@@ -2,9 +2,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { importPKCS8, SignJWT } from "npm:jose@6";
+import {
+  requirePrivilegedWorkerAuth,
+  runtimeServiceKeys,
+} from "../_shared/worker_auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SERVICE_KEYS = runtimeServiceKeys();
+const SERVICE_ROLE = SERVICE_KEYS[0] || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_runtime_unavailable");
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -1312,6 +1317,8 @@ Deno.serve(async (req: Request) => {
   const started = Date.now();
   const correlationId = crypto.randomUUID();
   if (req.method !== "POST") return respond(405, { ok: false, error: "method_not_allowed", correlation_id: correlationId });
+  const authFailure = requirePrivilegedWorkerAuth(req);
+  if (authFailure) return authFailure;
 
   let input: Json = {};
   let requestId = "";

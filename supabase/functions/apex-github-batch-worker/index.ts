@@ -1,8 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  buildInternalWorkerHeaders,
+  requirePrivilegedWorkerAuth,
+  runtimeServiceKeys,
+} from "../_shared/worker_auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SERVICE_KEYS = runtimeServiceKeys();
+const SERVICE_ROLE = SERVICE_KEYS[0] || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 if (!SUPABASE_URL || !SERVICE_ROLE) throw new Error("supabase_runtime_unavailable");
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -62,14 +68,14 @@ async function routerCall(item:Item):Promise<{ok:boolean;status:number;body:Json
     const res = await fetch(ROUTER_URL, {
       method:"POST",
       signal:AbortSignal.timeout(40000),
-      headers:{
+      headers:buildInternalWorkerHeaders("apex-github-batch-worker", {
         authorization:`Bearer ${SERVICE_ROLE}`,
         apikey:SERVICE_ROLE,
         "content-type":"application/json",
         accept:"application/json",
         "user-agent":`APEX-GitHub-Batch-Worker/${WORKER_VERSION}`,
         "x-region":"us-east-1",
-      },
+      }),
       body:JSON.stringify(payload),
     });
     const raw = await res.text();
@@ -98,14 +104,14 @@ async function bulkReadCallV6(items:Item[]):Promise<{ok:boolean;status:number;bo
     const response=await fetch(BULK_CONNECTOR_URL,{
       method:"POST",
       signal:AbortSignal.timeout(120000),
-      headers:{
+      headers:buildInternalWorkerHeaders("apex-github-batch-worker", {
         authorization:`Bearer ${SERVICE_ROLE}`,
         apikey:SERVICE_ROLE,
         "content-type":"application/json",
         accept:"application/json",
         "user-agent":`APEX-GitHub-Batch-Worker/${WORKER_VERSION}`,
         "x-region":"us-east-1",
-      },
+      }),
       body:JSON.stringify({
         operation:"bulk.read",
         request_id:parentRequestId,
@@ -353,6 +359,8 @@ async function pendingBackendItems():Promise<number> {
 
 Deno.serve(async (req:Request) => {
   if (req.method !== "POST") return reply(405,{ok:false,error:"method_not_allowed"});
+  const authFailure = requirePrivilegedWorkerAuth(req, { headers: HEADERS });
+  if (authFailure) return authFailure;
   let input:Json = {};
   try { const raw=await req.text(); input=raw?obj(JSON.parse(raw)):{}; }
   catch { return reply(400,{ok:false,error:"invalid_json"}); }
@@ -417,7 +425,12 @@ Deno.serve(async (req:Request) => {
         try {
           await fetch(WORKER_URL,{
             method:"POST",signal:AbortSignal.timeout(60000),
-            headers:{authorization:`Bearer ${SERVICE_ROLE}`,apikey:SERVICE_ROLE,"content-type":"application/json","x-region":"us-east-1"},
+            headers:buildInternalWorkerHeaders("apex-github-batch-worker", {
+              authorization:`Bearer ${SERVICE_ROLE}`,
+              apikey:SERVICE_ROLE,
+              "content-type":"application/json",
+              "x-region":"us-east-1",
+            }),
             body:JSON.stringify({limit:requestLimit,max_cycles:maxCycles})
           });
         } catch {}
